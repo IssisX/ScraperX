@@ -195,8 +195,14 @@ public:
     // Safety dogs on a guide: a pawl drops into a rack tooth every `pitch`
     // of travel, so the body climbs its guide but never falls back more than
     // one tooth. Teeth are counted down from max_travel, so the top of travel
-    // is a tooth.
-    void set_dogs(GuideIndex guide, float pitch);
+    // is a tooth. With `from`, the rack starts there: no tooth below it, so a
+    // jolt near the bottom of travel settles back onto the guide's stop.
+    void set_dogs(GuideIndex guide, float pitch, float from = -1.0e9F);
+
+    // A platform on a vertical guide (declared, J-108): while it rests at
+    // either end of its travel it is a floor to the Matron, as a hoist's car
+    // at its stop is (hoists() below; matron.hpp platforms_at_rest).
+    void set_platform(GuideIndex guide);
 
     // Guide shoe friction: static and dynamic friction along the guide axis
     // when not actively driven by the governor motor.
@@ -612,9 +618,10 @@ public:
     [[nodiscard]] float lever_angle(LeverIndex lever) const noexcept;
     [[nodiscard]] float guide_travel(GuideIndex guide) const noexcept;
     // Read only: every body on a vertical guide that a catch holds (a hoist),
-    // its guide's travel, and what frees each of its catches: a pin on its own
-    // guide (shoved clear along it), or the hanging handle a trip line pulls
-    // its lever by (weighed down).
+    // or that is declared a platform (set_platform), its guide's travel, and
+    // what frees each of its catches: a pin on its own guide (shoved clear
+    // along it), or the hanging handle a trip line pulls its lever by
+    // (weighed down).
     struct HoistPin {
         BodyIndex pin;
         JPH::Vec3 axis = JPH::Vec3::sAxisZ();   // the pin's guide: travel along it frees the catch
@@ -625,6 +632,8 @@ public:
         JPH::Vec3 axis = JPH::Vec3::sAxisY();
         float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
         bool held = false;                       // a catch latched on it now
+        bool caught = false;                     // a catch is on it (a hoist)
+        bool platform = false;                   // declared a floor at its stops (set_platform)
         std::vector<HoistPin> pins;
         std::vector<BodyIndex> weights;          // trip-line handles that free a lever catch
     };
@@ -665,6 +674,8 @@ private:
         float peak_speed = 0.0F;
         float dog_pitch = 0.0F;     // 0: no dogs
         float dog_floor = 0.0F;     // the tooth the pawl rests above
+        float dog_from = -1.0e9F;   // the rack's lowest travel (set_dogs)
+        bool platform = false;      // a floor to her at its stops (set_platform)
         BodyIndex gap_joint;        // invalid: no rail gap
         JPH::RVec3 gap_seat = JPH::RVec3::sZero();
         JPH::Vec3 gap_axis = JPH::Vec3::sAxisX();
