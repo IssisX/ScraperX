@@ -7,7 +7,7 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-1), native-tests (matron-slices-3), godot-touch (touch-3)",
  "commands": [
   "6777898125:87",
   "6798247735:46",
@@ -15,7 +15,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "c639ffb434bf41fcc6dce8b15fbf9e2ae8ed8ded",
+ "head": "99a758a97dfe6a9a5326f71be243bcfd1d7f4b03",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -753,7 +753,10 @@
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T11:09:00Z",
+    "why": "new head 99a758a9"
+   },
    "created": "2026-11-12T10:02:04Z",
    "dead": "2026-11-12T17:47:00Z",
    "dead_lettered": null,
@@ -772,6 +775,31 @@
    "version": "c639ffb434bf41fcc6dce8b15fbf9e2ae8ed8ded",
    "via": "relay",
    "what": "review #372 @ c639ffb4"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T11:09:00Z",
+   "dead": "2026-11-12T19:09:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T15:09:00Z",
+   "id": "O-52dcda4f",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T11:09:00Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:99a758a97dfe6a9a5326f71be243bcfd1d7f4b03",
+   "via": "email",
+   "what": "#372 proof red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-1), native-tests (matron-slices-3), godot-touch (touch-3) (new head 99a758a9 since O-bec9c29b was acked at 13d44d83)"
   }
  ],
  "outcome": null,
@@ -783,7 +811,7 @@
   299,
   372
  ],
- "review": "waiting",
- "state": "review",
- "updated": "2026-11-12T10:02:04Z"
+ "review": "",
+ "state": "working",
+ "updated": "2026-11-12T11:09:00Z"
 }

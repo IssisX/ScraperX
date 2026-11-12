@@ -1822,3 +1822,8 @@
 {"ev": "state", "frm": "working", "job": "J-038", "t": "2026-11-12T10:02:04Z", "to": "review"}
 {"attempt": 1, "ev": "sent", "id": "O-cddd136b", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-12T10:02:04Z", "to": "codex", "via": "relay"}
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T10:02:04Z", "tries": 1}
+{"due": "2026-11-12T15:09:00Z", "ev": "obligation", "id": "O-52dcda4f", "job": "J-038", "kind": "fix", "ref": "PR|#372", "t": "2026-11-12T11:09:00Z", "to": "muse", "via": "email"}
+{"ev": "closed", "id": "O-cddd136b", "job": "J-038", "t": "2026-11-12T11:09:00Z", "why": "new head 99a758a9"}
+{"ev": "state", "frm": "review", "job": "J-038", "t": "2026-11-12T11:09:00Z", "to": "working"}
+{"attempt": 1, "ev": "sent", "id": "O-52dcda4f", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-12T11:09:00Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T11:09:00Z", "tries": 1}
