@@ -290,3 +290,16 @@ No `.github/workflows/` file changes. Run: `python3 -m unittest discover -s tool
   its limit Muse lands work instead of starting more. The numbers (Muse 6, Claude 4) are the integrator's to tune.
 - **Review capacity is the real ceiling on landing** (Codex's review limit ran out on #343). More of it is money.
 - **One session as planner, ruler and last reviewer** is a sessions question.
+
+### Already on this branch, from another agent (1d9c70c7): not part of this design
+
+`tools/switchboard/job_control.py` (170 lines, no tests, called by nothing) was pushed to
+`claude/integrate-collab-rebuild` while this was written. It is kept as pushed and unchanged. It takes the other
+road, and the integrator should rule on it before anything is built:
+- Its store is labels, with `state:ready`, `state:active`, `state:parked` typed by hand. That is R4 and point 1
+  above: a typed state, no order, one write per issue.
+- `merge_problem` refuses a merge when the job is parked or the branch is not the owner's. CLAUDE.md says only
+  real physics, gameplay or test failures block a merge, and "done work is never parked" (Cory 11-12).
+- Worth keeping for B2: its `Blocked-by:` cycle walk, its "two vendors have branches" check (B4's `NOT-OWNER`)
+  and "STARTED but no remote branch" (B4's `UNPUSHED`). Its Muse limit is 4; this file proposes 6.
+Two agents on one job's branch is failure 1 happening to this job: `NOT-OWNER` would have listed it.
