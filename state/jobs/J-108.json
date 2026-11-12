@@ -2,32 +2,36 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-j108": "8a678bff202058b9673505617e61175581013cca",
-  "claude/integrate-protected-j108": "db5c57ed030a68358bfee748019554bed019bd5b"
+  "claude/integrate-j108": "1d700c04b19d51a316a20fe614598142b227bea8",
+  "claude/integrate-protected-j108": "bd124e3c3a2a411b4b0779dbcacf686a313a0a06"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T22:08:00Z",
- "deadline": "2026-11-11T23:17:00Z",
- "head": "8a678bff202058b9673505617e61175581013cca",
+ "deadline": null,
+ "head": "1d700c04b19d51a316a20fe614598142b227bea8",
  "issue": 0,
  "job": "J-108",
  "landed": {
   "claude/integrate-j108": [
-   "8a678bff202058b9673505617e61175581013cca",
+   "1d700c04b19d51a316a20fe614598142b227bea8",
    "",
-   "2026-11-11T22:08:00Z"
+   "2026-11-12T13:11:40Z"
   ],
   "claude/integrate-protected-j108": [
-   "db5c57ed030a68358bfee748019554bed019bd5b",
+   "bd124e3c3a2a411b4b0779dbcacf686a313a0a06",
    "",
-   "2026-11-11T22:08:00Z"
+   "2026-11-12T13:11:40Z"
   ]
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T13:11:40Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -52,7 +56,11 @@
    "what": "`claude/integrate-protected-j108` proof red: native-tests (athletic-traversal-1), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T13:11:40Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -85,5 +93,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-11T23:09:21Z"
+ "updated": "2026-11-12T13:11:40Z"
 }

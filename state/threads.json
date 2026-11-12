@@ -1288,6 +1288,34 @@
    "version": "6813112670",
    "via": "session",
    "what": "ask from Muse on #384"
+  },
+  {
+   "ack": {
+    "at": "2026-11-12T13:15:13Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T13:13:29Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T13:11:40Z",
+   "dead": "2026-11-12T17:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T15:17:00Z",
+   "id": "O-e879bac6",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #427",
+   "sends": 0,
+   "thread": 427,
+   "to": "claude",
+   "unseen": null,
+   "version": "6824591684",
+   "via": "session",
+   "what": "ask from ChatGPT on #427"
   }
  ]
 }
