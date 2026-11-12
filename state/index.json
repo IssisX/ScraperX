@@ -74,7 +74,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T20:56:16Z",
      "missing": 3,
-     "rechecked": "2026-11-12T00:23:47Z",
+     "rechecked": "2026-11-12T06:49:02Z",
      "ref": "ASK|ask on #108",
      "sends": 1,
      "sent_by": "live",
@@ -745,7 +745,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-12T00:23:47Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-007": {
    "attempt": 1,
@@ -1333,7 +1333,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": "2026-11-09T20:56:16Z",
-     "missing": 1,
+     "missing": 2,
      "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags",
      "sends": 1,
      "sent_by": "live",
@@ -1699,7 +1699,7 @@
    ],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-12T05:48:38Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-011": {
    "attempt": 0,
@@ -2009,7 +2009,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
-     "missing": 1,
+     "missing": 2,
      "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396",
      "sends": 1,
      "sent_by": "shadow",
@@ -2056,7 +2056,7 @@
    "prs": [],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-12T05:48:38Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-015": {
    "attempt": 1,
@@ -2145,7 +2145,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-12T00:23:47Z",
+     "rechecked": "2026-11-12T06:49:02Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
      "sends": 1,
      "sent_by": "shadow",
@@ -2713,7 +2713,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-12T03:39:03Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-016": {
    "attempt": 0,
@@ -3291,7 +3291,8 @@
    "ci": "green",
    "commands": [
     "6777898125:87",
-    "6798247735:46"
+    "6798247735:46",
+    "6816038840:84"
    ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T18:17:00Z",
@@ -3971,7 +3972,12 @@
      "what": "ask from Muse on #169"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-12T06:02:46Z",
+      "by": "Muse",
+      "comment": "6816038840",
+      "how": "/ack"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 2,
@@ -4839,7 +4845,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 2,
      "ref": "BRANCH|fb-bot/integrate-j044c-gains",
      "sends": 0,
      "thread": 0,
@@ -4864,7 +4870,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-12T00:23:47Z",
+     "rechecked": "2026-11-12T06:49:02Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks",
      "sends": 0,
      "thread": 0,
@@ -4939,7 +4945,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-12T05:48:38Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-044d": {
    "attempt": 0,
@@ -4959,7 +4965,7 @@
     "fb-bot/integrate-j044d": [
      "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
      "",
-     "2026-11-12T00:23:47Z"
+     "2026-11-12T06:49:02Z"
     ]
    },
    "obligations": [
@@ -4998,7 +5004,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-12T03:39:03Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-044l": {
    "attempt": 0,
@@ -5427,7 +5433,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-12T00:23:47Z",
+     "rechecked": "2026-11-12T06:49:02Z",
      "ref": "BRANCH|fb-bot/integrate-j049-pr1",
      "sends": 0,
      "thread": 278,
@@ -5899,7 +5905,7 @@
    ],
    "review": "waiting",
    "state": "working",
-   "updated": "2026-11-12T00:23:47Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-050": {
    "attempt": 0,
@@ -6411,7 +6417,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-12T00:23:47Z",
+     "rechecked": "2026-11-12T06:49:02Z",
      "ref": "JOB|#294",
      "sends": 0,
      "thread": 294,
@@ -6430,7 +6436,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-12T00:23:47Z"
+   "updated": "2026-11-12T06:49:02Z"
   },
   "J-058": {
    "attempt": 0,

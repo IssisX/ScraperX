@@ -55,7 +55,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 2,
    "ref": "BRANCH|fb-bot/integrate-j044c-gains",
    "sends": 0,
    "thread": 0,
@@ -80,7 +80,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-12T00:23:47Z",
+   "rechecked": "2026-11-12T06:49:02Z",
    "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks",
    "sends": 0,
    "thread": 0,
@@ -155,5 +155,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T05:48:38Z"
+ "updated": "2026-11-12T06:49:02Z"
 }

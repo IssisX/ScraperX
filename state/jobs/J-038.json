@@ -10,7 +10,8 @@
  "ci": "green",
  "commands": [
   "6777898125:87",
-  "6798247735:46"
+  "6798247735:46",
+  "6816038840:84"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
@@ -690,7 +691,12 @@
    "what": "ask from Muse on #169"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T06:02:46Z",
+    "by": "Muse",
+    "comment": "6816038840",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,

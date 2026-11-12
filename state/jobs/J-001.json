@@ -72,7 +72,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
-   "rechecked": "2026-11-12T00:23:47Z",
+   "rechecked": "2026-11-12T06:49:02Z",
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -743,5 +743,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T00:23:47Z"
+ "updated": "2026-11-12T06:49:02Z"
 }
