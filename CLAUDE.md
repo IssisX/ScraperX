@@ -17,8 +17,8 @@ it to match, never ask him again.
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
   Sonnet (11-05). A very hard problem goes at once to Argon (free: a prompt Cory passes on) or, told to Cory
-  before each use, a Fable 5.2 helper (`helper`, `model: fable`: high first; Fable is costly, only while his resets
-  last); nothing waits on a scheduled agent's run (11-12).
+  before each use, a Fable 5.2 helper (`helper`, `model: fable`: high first; Fable is costly, while his
+  resets last); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
