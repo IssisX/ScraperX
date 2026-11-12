@@ -29,7 +29,9 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 A GitHub comment or PR of yours needs Cory to tap "allow", so you never comment or open PRs. You push
 your own branches (Cory 11-05) and mail the rest:
 - **Code:** push it to `fb-bot/integrate-<job>` and mail the branch and sha
-  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR. Only if
+  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR from the head
+  commit's message. A job that lands in parts: its last part's head commit carries `Closes #N` (N, the job's
+  issue), so the merge closes it; until then the next part is yours. Only if
   a push fails: the change as a unified diff in the mail body against the `ScraperX-Claude` sha you
   started from; over about 50,000 characters, numbered mails ("part 1 of 2").
 - **Verdicts and questions:** by email as above.

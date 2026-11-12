@@ -287,6 +287,18 @@ class Bounds(unittest.TestCase):
         lines = machine.alarm_lines(list(rows.values()), sw.now + machine.hours(9999))
         self.assertEqual(sum("mail thread" in ln for ln in lines), 1)   # one alarm line for the bound, not one per job
 
+    def test_a_receipt_on_a_closed_board_is_read_with_its_notice(self):   # Grok #471 hole 10: the board rolled over
+        ver = machine.order_version(J059_PLAN, "muse")
+        old_board = [comment(1, 300, f"{machine.NOTICE_HEAD}{ver}\n\n" + machine.NOTICE_MARK.format(
+                         owner="muse", ver=ver, jobs=""), "2026-11-10T19:00:00Z", BOT),
+                     comment(2, 300, f"**Muse (via email bridge): plan {ver} read**\n\nread.", "2026-11-10T19:10:00Z")]
+        gh = GH()   # the live board is new and empty; the 24 h window holds neither
+        mail = mail_reader.read(make(gh, self.NOW), J059_PLAN, {"issues": []}, also=old_board)
+        self.assertEqual([p.id for p in mail.posts], [2])
+        ev = machine.collect(J059_PLAN, {"issues": []}, mail=mail)["J-059"]
+        self.assertEqual(ev.receipt_at, dt.datetime(2026, 11, 10, 19, 10, tzinfo=dt.timezone.utc))
+        self.assertEqual(mail_reader.read(make(GH(), self.NOW), J059_PLAN, {"issues": []}).posts, ())   # without it: lost
+
     def test_a_failed_thread_read_raises_never_an_empty_mail(self):
         gh = GH([comment(2, 307, "**Muse (via email bridge): J-059 started**\n\nstarted.", "2026-11-12T19:00:00Z")],
                 fail={f"repos/{REPO}/issues/307/comments": switch.GitHubError("GET", "x", "gh: HTTP 502", 502)})

@@ -63,11 +63,11 @@ class World:
     def version(self, owner: str = "muse") -> str:
         return M.order_version(self.model, owner)
 
-    def tell(self, hours: float, owner: str = "muse", ver: str = "", old: bool = False) -> None:
+    def tell(self, hours: float, owner: str = "muse", ver: str = "", old: bool = False, planned_at=T0) -> None:
         """The switch's notice (or, for a self-told owner, its record) of the plan as it stands, with each job's
         line hash and times as the switch writes them; `old`: a mark with no jobs, as the switch wrote before."""
         ver = ver or self.version(owner)
-        jobs = "" if old else M.mark_jobs(self.model, self.mail(), owner, at(hours), T0)
+        jobs = "" if old else M.mark_jobs(self.model, self.mail(), owner, at(hours), planned_at)
         self.comments.append(comment(len(self.comments) + 1, hours, f"{M.NOTICE_HEAD}{ver}\n\n" +
                                      M.NOTICE_MARK.format(owner=owner, ver=ver, jobs=jobs), login=rules.BOT_LOGIN))
 
@@ -658,6 +658,143 @@ class Owners(unittest.TestCase):
         self.assertEqual((rows["J-999"].state, rows["J-999"].owes), ("conflict", "integrator"))
         self.assertFalse({"J-998", "J-997"} & set(rows))
         self.assertEqual({n for n, _, _ in M.labels(w.model, w.issues)} & {996, 997, 998, 999}, set())
+
+
+class Holes(unittest.TestCase):
+    """Grok's review of the machine as one pipeline (#471, 11-12): each hole's bad state, made impossible."""
+
+    def test_1_a_lettered_split_is_its_base_jobs_work_and_never_unseen(self):
+        w = World(PLAN.replace("J-201 claude #201 | Claude's", "J-201 claude #201 | Claude's split in parts"))
+        w.branches += [br("claude/integrate-j201c-upper-body", "c1"), br("fb-bot/integrate-j201c-upper-body", "m1")]
+        r = w.rows()["J-201"]   # J-044 today: both agents' j044c heads, one plan line J-044
+        self.assertEqual(r.state, "conflict")
+        self.assertIn("fb-bot/integrate-j201c-upper-body", r.why)
+        self.assertNotIn("J-201c", w.rows())
+        w2 = World()
+        w2.branches.append(br("fb-bot/wip-j101d", "d1"))
+        self.assertEqual(w2.rows()["J-101"].state, "started")    # Muse's split head is J-101's lane
+        w2.muse(3, "J-101e started")
+        self.assertEqual(M.wip(w2.model, w2.table)["muse"][0], 1)
+        # a job id with no line and no base line: an open PR or a head a compare proved unlanded is a stray row
+        w3 = World()
+        w3.prs.append({"number": 950, "state": "open", "body": "Job: J-999\n",
+                       "head": {"ref": "fb-bot/integrate-j999", "sha": "s9"}})
+        w3.branches.append(br("claude/integrate-j998-old", "s8"))   # never compared: a job tidied out of the plan
+        rows = w3.rows()
+        self.assertEqual((rows["J-999"].state, rows["J-999"].owes), ("conflict", "integrator"))
+        self.assertIn("plan has no line", rows["J-999"].why)
+        self.assertNotIn("J-998", rows)
+        w3.head_at["s8"] = at(1)   # the compare proved it unlanded
+        self.assertEqual(w3.rows()["J-998"].state, "conflict")
+        w4 = World()
+        w4.muse(1, "J-777 started")   # a mailed start on a job the plan has no line for
+        self.assertIn("plan has no line", w4.rows()["J-777"].why)
+
+    def test_2_a_jobs_clock_runs_from_its_own_line_not_from_the_plans_last_commit(self):
+        w = World()
+        r = w.rows(planned_at=T0)["J-201"]
+        self.assertEqual(r.since, T0)   # Claude's own job: no record yet, the plan's commit is the clock
+        w.tell(0.2, owner="claude")      # the switch records Claude's version (each line's first-seen time)
+        for later in (5, 9, 30):          # the integrator commits the plan again and again, other lines only
+            r = w.rows(planned_at=at(later))["J-201"]
+            self.assertEqual((r.state, r.since), ("acknowledged", T0), later)
+        self.assertTrue(r.late(at(25)))   # the 24 h start alarm can fire
+        w.model = plan.parse(PLAN.replace("J-201 claude #201", "J-201 claude #201 after J-301"))
+        w.close("J-301")
+        w.tell(31, owner="claude", planned_at=at(31))   # this line changed: its own clock starts again
+        self.assertEqual(w.rows(planned_at=at(31))["J-201"].since, at(31))
+
+    def test_3_lanes_are_granted_in_plan_order_and_a_start_past_them_is_parked(self):
+        w = World()   # muse: limit 2
+        w.tell(1)
+        w.muse(2, f"plan {w.version()}")
+        w.branches.append(br("fb-bot/integrate-j101", "h1"))   # pushed work holds a lane
+        w.muse(3, "J-102 started")
+        w.muse(3.1, "J-103 started")
+        rows = w.rows()
+        self.assertEqual((rows["J-102"].gate, rows["J-102"].limit), ("claimed", M.hours(2)))   # the second lane
+        self.assertEqual((rows["J-103"].gate, rows["J-103"].owes, rows["J-103"].limit), ("no-lane", "muse", None))
+        self.assertIn("park it", rows["J-103"].next)
+        self.assertEqual(M.wip(w.model, w.table)["muse"], (2, 2))
+        self.assertIn("Park, no lane is granted: J-103 #103", M.queue(w.model, w.table, "muse"))
+        self.assertFalse(rows["J-103"].late(at(999)))
+        w.branches.append(br("fb-bot/wip-j103", "w3"))   # a wip head past the limit: real work, counted, parked
+        rows = w.rows()
+        self.assertEqual((rows["J-103"].state, rows["J-103"].gate), ("started", "no-lane"))
+        self.assertEqual(M.wip(w.model, w.table)["muse"], (3, 2))
+
+    def test_3_a_start_older_than_the_jobs_newest_notice_or_ruling_is_history(self):
+        w = World()
+        w.tell(1)
+        w.muse(2, f"plan {w.version()}")
+        w.muse(3, "J-102 started")
+        w.model = plan.parse(PLAN.replace("J-102 muse #102", "J-102 muse #102 hold: wait"))   # held ...
+        w.tell(4)
+        w.model = plan.parse(PLAN)                                                            # ... and given back
+        w.tell(10)
+        w.muse(11, f"plan {w.version()}")
+        r = w.rows()["J-102"]
+        self.assertEqual((r.state, r.gate, r.since), ("acknowledged", "", at(11)))   # not late on its first pass
+        self.assertFalse(r.late(at(12)))
+        w.hand(12, "J-102 note")
+        w.muse(11.5, "J-102 started")   # before the hand mail: answered, history
+        self.assertEqual(w.rows()["J-102"].gate, "")
+        w.muse(13, "J-102 started")
+        self.assertEqual((w.rows()["J-102"].gate, w.rows()["J-102"].since), ("claimed", at(13)))
+
+    def test_4_a_part_landed_with_the_issue_open_owes_its_owner_the_next_part_in_a_lane(self):
+        w = World()
+        w.tell(1)
+        w.muse(2, f"plan {w.version()}")
+        w.merged_at.update({"J-101": iso(3), "J-102": iso(3)})
+        w.branches.append(br("fb-bot/integrate-j103", "h3"))
+        rows = w.rows()
+        self.assertEqual((rows["J-101"].state, rows["J-101"].gate, rows["J-101"].owes, rows["J-101"].since),
+                         ("landed", "", "muse", at(3)))
+        self.assertEqual((rows["J-102"].state, rows["J-102"].gate, rows["J-102"].limit), ("landed", "queued", None))
+        self.assertTrue(rows["J-101"].late(at(28)))   # it never stalls: the next part, or the close, is owed
+        w.branches.append(br("fb-bot/wip-j101", "w1"))
+        w.head_at["w1"] = at(4)
+        self.assertEqual(w.rows()["J-101"].state, "started")
+
+    def test_6_a_reassignment_waits_for_the_old_owners_handover(self):
+        w = World()
+        w.tell(1)
+        w.muse(2, f"plan {w.version()}")
+        w.model = plan.parse(PLAN.replace("J-103 muse #103", "J-103 claude #103"))   # moved to Claude
+        r = w.rows()["J-103"]
+        self.assertEqual((r.state, r.gate, r.owes, r.limit), ("blocked", "handover", "muse", M.hours(2)))
+        self.assertIn(f'"plan {w.version()}"', r.next)
+        w.tell(3)   # the notice that drops it ("No longer yours")
+        r = w.rows()["J-103"]
+        self.assertEqual((r.state, r.since), ("blocked", at(3)))
+        self.assertTrue(r.late(at(5.5)))
+        w.muse(4, f"plan {w.version()}")   # Muse read it: the job is Claude's to start
+        self.assertEqual((w.rows()["J-103"].state, w.rows()["J-103"].owes), ("acknowledged", "claude"))
+        w.branches.append(br("fb-bot/wip-j103", "x"))   # and a head Muse pushes on it is a conflict, as ever
+        self.assertEqual(w.rows()["J-103"].state, "conflict")
+
+    def test_9_two_open_prs_for_one_job_and_the_job_is_the_least_advanced(self):
+        w = World()
+        for n, ref, sha in ((463, "fb-bot/integrate-protected-j101", "p1"), (464, "fb-bot/integrate-j101", "r1")):
+            w.prs.append({"number": n, "state": "open", "body": "Job: J-101\n", "head": {"ref": ref, "sha": sha}})
+        w.works["p1"] = M.Work("fb-bot/integrate-protected-j101", "p1", "green", gate="fix", why="Codex (review)",
+                               at=at(2), pr=463)
+        w.works["r1"] = M.Work("fb-bot/integrate-j101", "r1", "green", land=True, at=at(3), pr=464)
+        r = w.rows()["J-101"]
+        self.assertEqual((r.state, r.gate, r.owes, r.since), ("proven", "fix", "muse", at(2)))
+        self.assertIn("#463", r.next)
+        self.assertEqual(len(M.collect(w.model, {"prs": w.prs, "branches": [], "issues": w.issues},
+                                       works=w.works)["J-101"].works), 2)
+
+    def test_11_a_wip_head_older_than_the_jobs_merge_is_history(self):
+        w = World()
+        w.branches.append(br("fb-bot/wip-j101", "w1"))   # squashed into the integrate branch: diverged forever
+        w.head_at["w1"] = at(1)
+        w.merged_at["J-101"] = iso(2)
+        self.assertEqual(w.rows()["J-101"].state, "landed")
+        w.head_at["w1"] = at(3)   # a commit after the merge is the next part's lane
+        self.assertEqual(w.rows()["J-101"].state, "started")
 
 
 class Views(unittest.TestCase):
