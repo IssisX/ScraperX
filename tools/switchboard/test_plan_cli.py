@@ -3,6 +3,7 @@ import importlib.util
 import pathlib
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parents[1] / "board"
 spec = importlib.util.spec_from_file_location("collab_plan_editor", HERE / "plan.py")
@@ -47,6 +48,43 @@ class Editor(unittest.TestCase):
     def test_corrupt_source_is_never_edited(self):
         with self.assertRaisesRegex(ValueError, "plan invalid"):
             editor.change("bad order\n", "limit", ["muse", "3"])
+
+    def test_inactive_branch_head_does_not_force_a_handoff(self):
+        past = {"name": "fb-bot/integrate-j101", "commit": {"sha": "landed"}}
+        got = editor.change(SOURCE, "give", ["J-101", "claude"],
+                            branches=[past], inactive={"landed"})
+        self.assertIn("J-101 claude #101", got)
+
+    def test_editor_rejects_handoff_when_only_remote_head_is_on_page_six(self):
+        class PagingGH:
+            repo = "IssisX/ScraperX"
+
+            def paged(self, path, key=""):
+                if "/issues?" in path:
+                    return [{"number": 101, "title": "J-101 first", "state": "open"},
+                            {"number": 102, "title": "J-102 second", "state": "open"}]
+                if "/branches" in path:
+                    return [{"name": f"archive/historical-{i}", "commit": {"sha": "old"}}
+                            for i in range(500)]
+                if "/pulls?" in path:
+                    return []
+                raise AssertionError(path)
+
+            def get(self, path, accept=""):
+                if "/branches?" in path and "page=6" in path:
+                    return [{"name": "fb-bot/integrate-j101", "commit": {"sha": "remote-work"}}]
+                if "/compare/" in path:
+                    return {"status": "ahead", "commits": []}
+                raise AssertionError(path)
+
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "plan.md"
+            path.write_text(SOURCE)
+            with mock.patch.object(editor, "GitHub", return_value=PagingGH()):
+                code = editor.main(["--plan", str(path), "--expect", editor.sha(SOURCE),
+                                    "--again", "initial reconciliation", "give", "J-101", "claude"])
+            self.assertEqual(code, 2)
+            self.assertEqual(path.read_text(), SOURCE)
 
     def test_atomic_write_checks_source(self):
         with tempfile.TemporaryDirectory() as d:
