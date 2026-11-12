@@ -17,7 +17,7 @@ Every run, first: `get_session` (no id). Effort is his call, seen in `get_sessio
 Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
 says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 48`, Claude's red branches, idle PRs over
-24 h) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
+4 h, as the ledger) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
 1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.

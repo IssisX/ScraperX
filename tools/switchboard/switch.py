@@ -95,6 +95,8 @@ INBOX_KEYS = re.compile(r"^<!-- switchboard:inbox keys=([0-9a-f,]*) -->$", re.MU
 INBOX_BRANCH_PREFIXES = ("fb-bot/integrate-", "claude/integrate-")
 INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a LAND this long was so at the sweep before
 INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
+INBOX_FIX_STUCK = dt.timedelta(hours=6)        # FIX with no new head this long, past the reconciler's send and re-send
+                                               # (11-12: #389 and #396 each sat a day on a Codex FIX)
 INBOX_BRANCH_RED = dt.timedelta(hours=1)       # a red integrate branch with no PR this long
 INBOX_RUNS_WINDOW = dt.timedelta(hours=24)     # proof runs read per sweep, as tools/board/sweep.py's branch window
 RED_RUN_KEYS = ("id", "head_branch", "head_sha", "status", "conclusion", "created_at", "updated_at", "html_url",
@@ -103,7 +105,7 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, and on the switch's hourly full pass, so nothing is lost; held between sweeps in the state.
 DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN"})
@@ -690,6 +692,17 @@ class Switch:
             return ()
         return self.red_tests(max(runs, key=lambda r: r["created_at"])["id"]) if runs else ()
 
+    def run_state_or_none(self, run: dict) -> tuple[str, str, int, str] | None:
+        """run_state, or None when GitHub would not answer its jobs read (11-12: intermittent 502s on
+        actions/runs/*/jobs). Only for a side read that the next sweep can make again; a rate limit still raises."""
+        try:
+            return self.run_state(run)
+        except RateLimited:
+            raise
+        except GitHubError as err:
+            self.out(f"NOTE        proof run {run.get('id')}'s jobs were not read ({err_text(err)}): read again next sweep")
+            return None
+
     def run_state(self, run: dict) -> tuple[str, str, int, str]:
         """One proof run, judged by its jobs: (state, url, run id, finished at)."""
         jobs = self.run_jobs(run["id"])
@@ -698,18 +711,28 @@ class Switch:
         failed = [j["name"] for j in jobs if j["name"] not in NOT_COUNTED and j["conclusion"] not in ("success", "skipped")]
         return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"], run["id"], run.get("updated_at") or ""
 
-    def verdicts(self, number: int) -> tuple[list[rules.Verdict], list[dict]]:
+    def verdicts(self, number: int, job: str | None = None) -> tuple[list[rules.Verdict], list[dict]]:
+        """The PR's verdicts and its comments. With `job` (the PR's job, "" for none), the eye's FIX is read again
+        under today's look sets (rules.eye_relook, 11-12 #453)."""
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
         reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
+        looks = (getattr(self, "looks", None) or {}).get("sets") if job is not None else None
         out = []
         for c in comments:
             body = c.get("body") or ""
             v = rules.parse_verdict(body, c["created_at"], c["user"]["login"], self.team) or \
-                rules.parse_codex_state(body, c.get("updated_at") or c["created_at"], c["user"]["login"])
+                rules.parse_codex_state(body, c.get("updated_at") or c["created_at"], c["user"]["login"]) or \
+                rules.parse_codex_receipt(body, c["created_at"], c["user"]["login"])
             # J-056: an automatic review whose MAC checks for this PR, the whole head it names and its verdict.
             if v and rules.is_api_review(v) and signed_for(body, self.review_key, self.gh.repo, number, v.sha,
                                                            signed_verdict(v)):
                 v = dataclasses.replace(v, signed=True)
+            if v and looks and v.kind == "eye" and v.verdict == "FIX":
+                again = rules.eye_relook(v, body, looks, job or "", self.jobs())
+                if again.verdict != v.verdict:
+                    self.out(f"RELOOK      #{number} the eye's FIX @{v.sha[:8]} is a LAND under today's "
+                             "work/looks/sets.yml: every set it failed is now another open job's known defect")
+                v = again
             if v:
                 out.append(v)
         for r in reviews:
@@ -777,9 +800,9 @@ class Switch:
         full = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
         commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")
         proof, url, run_id, proof_done_at = self.proof(sha)
-        verdicts, comments = self.verdicts(number)
         job = rules.job_of_pr(pr.get("body")) or \
             rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(number, "")
+        verdicts, comments = self.verdicts(number, job)
         issue = self.jobs().get(job)
         # Muse's mailed verdicts land on the job issue or the board (the bridge cannot comment on a PR).
         off_pr = self.board_comments() + (self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
@@ -1831,6 +1854,18 @@ class Switch:
                                 "both" if owner == "muse" else "claude"))
         if d.action == "FIX" and owner:
             out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
+            # 11-12 (#389, #396): the FIX item goes once per head and the reconciler re-sends it once, so a FIX whose
+            # owner never moved sat a day with nobody told. No new head for INBOX_FIX_STUCK: the integrator hears it,
+            # naming the owner, and so does Muse on its own PR.
+            on_head = [parse_time(r["created_at"]) for r in runs
+                       if r.get("head_branch") == f.head_ref and r.get("head_sha") == f.head_sha]
+            since = min(on_head) if on_head else parse_time(f.head_committed_at)
+            if since:
+                self.ripen(f.number, since + INBOX_FIX_STUCK)
+            if since and now - since >= INBOX_FIX_STUCK:
+                name = self.team.agent_name.get(owner, owner)
+                out.append(item("FIX-STUCK", f"{plain('; '.join(d.reasons))}, and no new head from its owner "
+                                             f"{name} for {hours(now - since)}", "both" if owner == "muse" else "claude"))
         api_note = [v for v in f.verdicts if v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
                     and rules.names_head(v, f.head_sha)]
         if api_note and f.proof == "green" and rules.needs_review(f, author, self.team):
@@ -1867,8 +1902,8 @@ class Switch:
                 out.append(item("RED-TWICE", f"{plain(', '.join(jobs))} failed again on attempt {attempt} of the same "
                                              f"proof run ({proof_link})", both, run_id=rid))
             elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(runs_here):
-                before = self.run_state(runs_here[ids.index(ctx["run_id"]) + 1])[0]
-                failed = [j for j in jobs if j in red_jobs(before)]
+                before = self.run_state_or_none(runs_here[ids.index(ctx["run_id"]) + 1])
+                failed = [j for j in jobs if j in red_jobs(before[0])] if before else []   # unread: next sweep
                 if failed:
                     out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})",
                                     both, run_id=rid))
@@ -1907,8 +1942,14 @@ class Switch:
                 or int(run.get("run_attempt") or 1) >= 2 or not head or head in self.rerun_heads
                 or not (run.get("head_branch") or "").startswith(INBOX_BRANCH_PREFIXES)):
             return None
-        steps = setup_only(self.run_jobs(rid))
-        if not steps or any(int(r.get("run_attempt") or 1) >= 2 for r in self.head_runs(head)):
+        try:
+            steps = setup_only(self.run_jobs(rid))
+            if not steps or any(int(r.get("run_attempt") or 1) >= 2 for r in self.head_runs(head)):
+                return None
+        except RateLimited:
+            raise
+        except GitHubError as err:   # 11-12: one jobs read GitHub answered 502 never ends the inbox part
+            self.out(f"NOTE        proof run {rid}'s jobs were not read ({err_text(err)}): no re-run this sweep")
             return None
         try:
             self.gh.write("POST", f"repos/{self.gh.repo}/actions/runs/{rid}/rerun", None,
@@ -1952,6 +1993,9 @@ class Switch:
                 text = no_verdict(plain((c.get("body") or "").strip()[:MAX_MUSE_FINDING]))
                 link = c.get("html_url") or ""
                 return f"{text}\n{link}" if link else text
+        if rules.is_codex_app(v):   # 11-12: the state comment holds no finding; they are inline threads, so say where
+            return (f"Codex's findings are unresolved review threads on the diff; fix them, or answer and resolve each: "
+                    f"https://github.com/{self.gh.repo}/pull/{f.number}/files")
         return ""
 
     def branch_inbox_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
@@ -1989,11 +2033,18 @@ class Switch:
                 read += 1
                 try:
                     now_head = self.gh.get(f"repos/{self.gh.repo}/branches/{quote(name, safe='/')}")["commit"]["sha"]
+                    state = self.run_state(run) if now_head == head else None
+                except RateLimited:
+                    raise
                 except GitHubError as err:
-                    if "HTTP 404" not in err.detail:
-                        raise
-                    now_head = ""   # deleted since its proof ran
-                checked[(name, head)] = (now_head, self.run_state(run) if now_head == head else None)
+                    if "HTTP 404" in err.detail:
+                        now_head, state = "", None   # deleted since its proof ran
+                    else:   # 11-12: a 502 on one branch's read never ends the inbox part; the next sweep reads it
+                        self.out(f"NOTE        {untrusted(name)}: its head or proof jobs were not read ({err_text(err)}); "
+                                 "the next sweep reads it")
+                        pending[name] = {k: run.get(k) for k in RED_RUN_KEYS}
+                        continue
+                checked[(name, head)] = (now_head, state)
             now_head, state = checked[(name, head)]
             if now_head != head or state is None:   # gone, or a newer head: its own proof decides
                 continue
