@@ -167,32 +167,35 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
         last = m.position;
         const double d = std::hypot(m.position.x - p.x, m.position.z - p.z);
         if (m.state == kStateHunting && m.stage == stage && d < 9.0) {
-            if (turned > 0 || (m.stalking && d < 3.4)) {
-                (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
-                const auto b = s.kit_body_position(body);
-                const bool in_front =
-                    ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
-                ++turned;
-                require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
-                        "hard blow: the piece comes round in front of him");
-                const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
-                box_was = b;
-                coming = in_front && swing < 0.002 && turned >= static_cast<int>(Simulation::kTickRateHz) / 4 &&
-                         m.turn == 0;
-                if (coming) {
-                    release_d = d;
-                    release_speed = m.speed;
-                    release_stalking = m.stalking ? 1 : 0;
-                }
-            } else if (m.stalking) {
+            if (m.stalking && d >= 3.4) {
+                // She holds under his gaze; look away and let her close.
                 (void)s.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
             } else {
+                // Face her, and throw only once the piece has come round in
+                // front of him and settled there: a throw released while it
+                // still swings at his side flies half a metre off her centre
+                // (the last throw's box met her 0.49 m south, a graze worth
+                // 0.155 m/s), whatever the aim. She closes while it settles;
+                // the throw meets her where she is, on her torso. The
+                // settling count runs only once she is in range, so a slow
+                // close does not trip it.
                 (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
-                coming = d < 3.4;
-                if (coming) {
-                    release_d = d;
-                    release_speed = m.speed;
-                    release_stalking = m.stalking ? 1 : 0;
+                const auto b = s.kit_body_position(body);
+                const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
+                box_was = b;
+                if (d < 3.4) {
+                    const bool in_front =
+                        ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
+                    ++turned;
+                    require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
+                            "hard blow: the piece comes round in front of him");
+                    coming = in_front && swing < 0.002 &&
+                             turned >= static_cast<int>(Simulation::kTickRateHz) / 4 && m.turn == 0;
+                    if (coming) {
+                        release_d = d;
+                        release_speed = m.speed;
+                        release_stalking = m.stalking ? 1 : 0;
+                    }
                 }
             }
         }
