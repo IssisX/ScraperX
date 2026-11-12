@@ -131,134 +131,37 @@ struct Thrown {
     double box_hit_dx = 0.0;   // the piece's east-west offset from her centre at the hit
     double box_hit_dz = 0.0;   // the piece's north-south offset from her centre at the hit
 };
-// Throws the piece in his hands at her as she hunts in, holding `stage` the
-// whole way; `look_pitch` aims the throw (0 at her chest, down low). She
-// hunts in at the creep pace, on her feet: a Dangerous or Changed matron at
-// her hunt speed is crouched, her base 0.45 m and her take bar 1.90 m/s, and
-// no throwable carries that (a toolbox reads 0.80 m/s). At the creep she is
-// upright, her take bar 0.244 m/s, and the throw takes her balance. The Turn
-// fires on a slow approach, and its lunge brings her onto him: the throw
-// releases only when she is upright and not lunging, in her wind-up or
-// between Turns, so the blow lands while she can be taken. A wind-up throw
-// puts her down (her step is nothing there); any other lands a stagger.
-// Either is the blow taking her balance. The wait is the matron-heave
-// beat's: still, the piece held, until she comes for him in sight, her
-// stalk keeping her from turning on him; the throw once the piece has come
-// round in front of him and settled (or she is so close it cannot miss).
+// Throws the piece in his hands at her as she reaches for him, holding
+// `stage` the whole way; `look_pitch` aims the throw (0 at her chest, down
+// low). A Dangerous or Changed matron at her hunt speed is crouched, her
+// base 0.45 m and her take bar 1.90 m/s, and no throwable carries that (a
+// toolbox reads 0.80 m/s); a free throw at range never gets a clean window
+// either, because her Turn's lunge closes the distance and takes the piece
+// from his hands on contact. The throw that lands is the one thrown as she
+// reaches: in her Grab she is upright, her take bar 0.244 m/s, the piece
+// still in his hands, and she is an arm's length off, so it cannot miss. A
+// chest throw staggers her; a low one puts her down (her step is nothing
+// low). The reach is staged the way the hold case stages it: to the meeting
+// spot on her line, and she hunts in and reaches.
 Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     Thrown out;
     const std::uint64_t piece = s.snapshot().carrying_entity_id;
     const std::uint32_t body = s.kit_body_index(piece);
-    s.debug_fix_matron_pace(0);  // creep: she closes upright, under the crouch bar
-    require(walk_to(s, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "hard blow: west along the band with it");
-    // Let the piece settle in front of him before she closes: the carry
-    // swings it at his side after the walks, and she is still straining
-    // (not yet hunting), so there is time. A throw released while it swings
-    // flies half a metre off her centre. Bounded, and it yields the moment
-    // she is in range: the wait below takes over from there.
-    {
-        const double hz = static_cast<double>(Simulation::kTickRateHz);
-        int settled = 0;
-        auto was = s.kit_body_position(body);
-        for (int i = 0; i < 3 * static_cast<int>(hz) && settled < static_cast<int>(hz) / 4; ++i) {
-            s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
-            tick(s);
-            const auto m = s.matron_state();
-            const auto p = s.snapshot().player_position;
-            const double dx = m.position.x - p.x;
-            const double dz = m.position.z - p.z;
-            const double dd = std::hypot(dx, dz);
-            if (dd > 1.0e-3) {
-                (void)s.set_facing(dx / dd, dz / dd);
-            }
-            if (m.state == kStateHunting && dd < 3.4) {
-                break;
-            }
-            const auto b = s.kit_body_position(body);
-            const bool in_front = dd > 1.0e-3 && ((b.x - p.x) * dx + (b.z - p.z) * dz) / dd > 0.3;
-            const double swing = std::hypot(b.x - was.x, b.z - was.z);
-            was = b;
-            settled = in_front && swing < 0.002 ? settled + 1 : 0;
-        }
-    }
-    bool coming = false;
-    int turned = 0;
-    int settled = 0;
-    int seen_turn = 0;
-    double release_d = 0.0;
-    double release_speed = 0.0;
-    int release_stalking = -1;
-    auto box_was = s.kit_body_position(body);
-    auto last = s.matron_state().position;
-    for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
+    require(walk_to(s, -6.0, -129.0, 10.0, 0.15), "hard blow: to the meeting spot with it");
+    s.debug_matron_hold(0, 3.0);
+    bool reaching = false;
+    for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !reaching; ++i) {
         s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
         tick(s);
-        const auto m = s.matron_state();
-        const auto p = s.snapshot().player_position;
-        if (m.turn != seen_turn) {
-            seen_turn = m.turn;
-            std::cout << "  hard blow turn: turn=" << m.turn << " at "
-                      << std::hypot(m.position.x - p.x, m.position.z - p.z) << " m, her speed " << m.speed
-                      << " m/s\n";
-        }
-        const double hz = static_cast<double>(Simulation::kTickRateHz);
-        // No lead on her: she creeps at him, so the box meets her torso
-        // head-on if it is thrown at her centre. A lead aims ahead of her
-        // along her instant heading, and she turns toward him as she closes:
-        // the last throw's box met her 0.51 m south of her centre, a graze
-        // worth 0.105 m/s, on a 0.22 s lead.
-        const double lead = 0.0;
-        const double ax = m.position.x + (m.position.x - last.x) * hz * lead - p.x;
-        const double az = m.position.z + (m.position.z - last.z) * hz * lead - p.z;
-        last = m.position;
-        const double d = std::hypot(m.position.x - p.x, m.position.z - p.z);
-        if (m.state == kStateHunting && m.stage == stage && d < 9.0) {
-            if (m.stalking && d >= 3.4) {
-                // She holds under his gaze; look away and let her close.
-                (void)s.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
-            } else {
-                // Face her. The piece settles while she closes, at any
-                // range: the carry swings it at his side after the walk, and
-                // a throw released while it swings flies half a metre off
-                // her centre. Count the settling from the first facing tick,
-                // so the throw can release the instant she is in range; count
-                // the wait itself only in range, so a slow close does not
-                // trip it. She closes while it settles; the throw meets her
-                // where she is, on her torso. The throw releases only while
-                // she can be taken: upright (her speed at or under the 1.0
-                // m/s crouch bar) and not lunging (a lunge is a crouch, and
-                // the blow would do nothing). In her wind-up it releases
-                // too, and puts her down; between Turns it staggers her.
-                // At arm's length it cannot miss, settled or not: she is
-                // right there, and the throw's aim is on her torso.
-                (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
-                const auto b = s.kit_body_position(body);
-                const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
-                box_was = b;
-                const bool in_front =
-                    ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
-                settled = in_front && swing < 0.002 ? settled + 1 : 0;
-                if (d < 3.4) {
-                    const bool takable = m.turn != 2 && m.speed <= 1.0;
-                    if (takable) {
-                        ++turned;
-                        require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
-                                "hard blow: the piece comes round in front of him");
-                    }
-                    coming = takable && (settled >= static_cast<int>(Simulation::kTickRateHz) / 4 || d < 1.5);
-                    if (coming) {
-                        release_d = d;
-                        release_speed = m.speed;
-                        release_stalking = m.stalking ? 1 : 0;
-                    }
-                }
-            }
-        }
+        reaching = s.matron_state().state == kStateGrab && !s.snapshot().held_by_matron;
     }
-    require(coming, "hard blow: she comes for him, the piece in his hands");
-    out.release_m = release_d;
-    out.release_speed = release_speed;
-    out.release_stalking = release_stalking;
+    require(reaching, "hard blow: she reaches for him, the piece in his hands");
+    const auto me = s.snapshot().player_position;
+    const auto her = s.matron_state().position;
+    out.release_m = std::hypot(her.x - me.x, her.z - me.z);
+    out.release_speed = s.matron_state().speed;
+    out.release_stalking = s.matron_state().stalking ? 1 : 0;
+    (void)s.set_facing(her.x - me.x, her.z - me.z);
     (void)s.set_look_pitch(look_pitch);
     tick(s);
     // The drawn path's end is the throw's aim: where the ray from his eye
@@ -266,11 +169,11 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     // error and a centred aim with a south hit reads as a flight error.
     {
         const auto path = s.throw_prediction();
-        const auto her = s.matron_state().position;
+        const auto her_now = s.matron_state().position;
         if (!path.empty()) {
             const auto end = path.back();
             std::cout << "  hard blow aim: path ends (" << end.x << ", " << end.y << ", " << end.z << "), her centre ("
-                      << her.x << ", " << her.y << ", " << her.z << ")\n";
+                      << her_now.x << ", " << her_now.y << ", " << her_now.z << ")\n";
         }
     }
     const auto throws0 = s.snapshot().throw_count;
@@ -617,3 +520,4 @@ void run_hard_blow() {
 }
 SCRAPERX_GROUP("hard_blow", 875, run_hard_blow);
 SCRAPERX_SLICE("hard-blow", run_hard_blow);
+
