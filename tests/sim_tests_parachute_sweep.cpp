@@ -29,8 +29,10 @@
 // tower), south -z (toward it), west -x (the wind side), east +x.
 #include "sim_tests.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
+#include <string>
 
 namespace {
 using scraperx::sim::InitialSpawn;
@@ -88,7 +90,7 @@ struct CaseResult {
 bool probe_edge_line(Simulation &s, const double top, const Face &face, const double lateral,
                      double &edge_r, double &edge_support) {
     bool found = false;
-    for (double r = 2.0; r <= 32.0; r += 0.5) {
+    for (double r = 2.0; r <= 40.0; r += 0.5) {
         const double x = kTowerCentreX + face.dx * r - face.dz * lateral;
         const double z = kTowerCentreZ + face.dz * r + face.dx * lateral;
         const double support = s.debug_support_y(Vector3{x, top + 2.0, z}, 4.0);
@@ -208,7 +210,7 @@ CaseResult run_case(const double level, const Face &face) {
     result.land_z = end.player_position.z;
     result.impact_mps = end.last_impact_speed_mps;
     result.time_to_ground_s = land_t < 0.0 ? -1.0 : land_t - airborne_t;
-    const bool in_second_tower = end.land_z <= kSecondTowerFaceZ;
+    const bool in_second_tower = end.player_position.z <= kSecondTowerFaceZ;
     const bool alive = end.death_count == 0 && end.player_grounded;
     const bool snagged = max_hit >= kSnagClosingMps;
     const bool hard_landing = end.last_impact_speed_mps >= kWalkAwayImpactMps;
