@@ -87,9 +87,6 @@ KNOWN_GAPS = {
         "climber is on 143, so PICK UP is never offered; PR #29 proposes "
         "a staging fix. Wire it into a shard together with a fix"
     ),
-    "touch_slab_trap": (
-        "shard line lands in a workflow PR right after this PR"
-    ),
 }
 
 

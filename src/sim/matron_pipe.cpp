@@ -215,8 +215,17 @@ bool Matron::pipe_grip_in_reach(const RVec3 at) const {
         return pipe_in_hand_reach(at, pipe_hand_);
     case PipeGrip::Feet: {
         const float below = float(at.GetY() - pipe_hand_.GetY());
-        return std::abs(float(at.GetZ() - pipe_hand_.GetZ())) <= kPipeFootSpanM + 0.01F && below >= kStandCentre - 0.1F &&
-               below <= kStandCentre + 0.3F;
+        // Her soles within kPipeFootSpanM of her middle (her soles' span,
+        // matron.hpp): the full horizontal distance, not the z component
+        // alone. The Perch step drives her middle along x toward kPipeDeckX
+        // away from the planted take point, so the z-only check let the
+        // point sit 0.26-0.28 m off her middle — past her span — while
+        // still calling it held, and the contact truth exported a floor her
+        // soles cannot be on (S6, J-063: 5 ticks on the pipe descent).
+        // Out of reach it is let go, and the step below takes what is in
+        // her reach now.
+        const float across = std::hypot(float(at.GetX() - pipe_hand_.GetX()), float(at.GetZ() - pipe_hand_.GetZ()));
+        return across <= kPipeFootSpanM + 0.01F && below >= kStandCentre - 0.1F && below <= kStandCentre + 0.3F;
     }
     case PipeGrip::Legs:
         return true;
