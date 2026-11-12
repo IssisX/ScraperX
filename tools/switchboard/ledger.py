@@ -1189,15 +1189,18 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             except Exception as err:   # noqa: BLE001
                 problems.append(f"proof run {r.id} jobs: {type(err).__name__}")
 
+    # Read every open issue, not only those already labelled job: the missing job label
+    # is itself a collaboration defect and must never make the job disappear.
+    all_open_issues = gh.paged(f"repos/{repo}/issues?state=open")
     issues: list[IssueIn] = []
-    for it in gh.paged(f"repos/{repo}/issues?labels=job&state=open"):
-        if "pull_request" in it:
+    for it in all_open_issues:
+        if "pull_request" in it or not rules.job_of_title(it.get("title") or ""):
             continue
         labels = tuple(l["name"] for l in it.get("labels") or [])
         issues.append(IssueIn(it["number"], it.get("html_url") or "", it.get("title") or "", labels,
                               touched_at(it.get("created_at"), it.get("updated_at"), touches, it["number"], since_touch)))
 
-    open_threads = {int(i["number"]) for i in gh.paged(f"repos/{repo}/issues?state=open")}
+    open_threads = {int(i["number"]) for i in all_open_issues}
     stream = []
     for c in comments:
         try:
