@@ -4,6 +4,7 @@
 // run_plate_wreckage (G/H/I) and run_crane_wreckage (J/K/L) do.
 #include "sim_tests.hpp"
 
+#include "sim/loose_stock.hpp"
 #include "sim/vertical/vertical_route.hpp"
 
 #include <algorithm>
@@ -41,6 +42,85 @@ void run_s1_wreckage() {
             "S1 wreck: ridden to deck 2 after the empty trip, alive");
     std::cout << "PASS scraperx_sim stack wreckage S1: ride_s=" << ride.seconds
               << " rider_y=" << s.snapshot().player_position.y << '\n';
+}
+
+// S2 stepped on, the bolt shoved out, and straight back off onto deck 4:
+// the ballast cart sends the empty cage up the beam to deck 6. The way on
+// is S2 itself: the empty cage returns by itself, and it is boarded again
+// and ridden to deck 6.
+void run_s2_wreckage() {
+    Simulation s(InitialSpawn::Deck4South);
+    (void)s.advance_frame(0.5);
+    require(shove_s2_bolt(s), "S2 wreck: into the cage and the bolt shoved out");
+    require(walk_to(s, 10.0, -130.5, 4.0) && walk_to(s, 10.0, -125.5, 4.0, 0.10),
+            "S2 wreck: straight back off onto deck 4 before the cage rises");
+    const auto stepped_off = s.snapshot();
+    require(stepped_off.player_position.y < 46.5 &&
+                stepped_off.support_entity_id != Simulation::kStackS2CageEntityId,
+            "S2 wreck: the rider stayed on deck 4, not carried up");
+    bool sent_up = false;
+    bool back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 180 && !back; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.stack_state();
+        sent_up = sent_up || state.s2_cage_travel >= 22.0 - 0.01;
+        back = sent_up && std::abs(state.s2_cage_travel) <= 0.02 && s2_bolt_at_rest(s);
+    }
+    const auto spent = s.stack_state();
+    std::cout << "  S2 wreck: sent_up " << sent_up << " back " << back << " travel " << spent.s2_cage_travel
+              << " bolt_shot " << spent.s2_bolt_shot << " bolt_travel " << spent.s2_bolt_travel
+              << " cage_latched " << spent.s2_cage_latched << '\n';
+    require(sent_up && back, "S2 wreck: the empty cage sent up and back down by itself");
+    require(shove_s2_bolt(s), "S2 wreck: boarded again, the bolt shoved out");
+    const S2Ride ride = ride_s2(s, 20.0);
+    require(ride.reached_top && ride.rode_on_cage && s.snapshot().death_count == 0,
+            "S2 wreck: ridden to deck 6 after the empty trip, alive");
+    require(walk_to(s, 10.0, -133.0, 6.0) && walk_to(s, 10.0, -126.0, 6.0),
+            "S2 wreck: off the cage onto deck 6");
+    std::cout << "PASS scraperx_sim stack wreckage S2: ride_s=" << ride.seconds
+              << " deck6_y=" << s.snapshot().player_position.y << '\n';
+}
+
+// S3's pig set in the pan, and the rider straight back off onto deck 8:
+// the car sends the empty cage up to deck 12. The way on is S3 itself:
+// the empty cage returns by itself, and it is boarded again and ridden to
+// deck 12.
+void run_s3_wreckage() {
+    Simulation s(InitialSpawn::Deck8North);
+    (void)s.advance_frame(0.5);
+    require(load_s3_pan(s), "S3 wreck: the pig in the pan, the brake tripped");
+    require(walk_to(s, -8.0, -164.0, 3.0) && walk_to(s, -8.0, -170.0, 3.0, 0.10),
+            "S3 wreck: straight back off onto deck 8 before the cage rises");
+    const auto stepped_off = s.snapshot();
+    require(stepped_off.player_position.y < 90.0 &&
+                stepped_off.support_entity_id != Simulation::kStackS3CageEntityId,
+            "S3 wreck: the rider stayed on deck 8, not carried up");
+    bool sent_up = false;
+    bool back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 180 && !back; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.stack_state();
+        sent_up = sent_up || state.s3_cage_travel >= 44.0 - 0.01;
+        back = sent_up && std::abs(state.s3_cage_travel) <= 0.08 && state.s3_brake_latched;
+    }
+    const auto spent = s.stack_state();
+    const std::uint64_t pig =
+        scraperx::sim::LooseStock::kFirstEntity + s.loose_stock_machine_weights_begin();
+    const auto pig_at = s.kit_body_position(s.kit_body_index(pig));
+    std::cout << "  S3 wreck: sent_up " << sent_up << " back " << back << " travel " << spent.s3_cage_travel
+              << " brake_latched " << spent.s3_brake_latched << " pan_rest " << s3_pan_at_rest(s) << " pig at ("
+              << pig_at.x << ", " << pig_at.y << ", " << pig_at.z << ")\n";
+    require(sent_up && back, "S3 wreck: the empty cage sent up and back down by itself");
+    require(pig_at.y < 90.0, "S3 wreck: the pig came back down with the cage, in its pan");
+    require(walk_to(s, -8.0, -164.0, 6.0) && walk_to(s, -8.0, -158.75, 6.0, 0.06),
+            "S3 wreck: boarded again, into the cage with the pig in its pan");
+    const S3Ride ride = ride_s3(s, 25.0);
+    require(ride.reached_top && ride.rode_on_cage && s.snapshot().death_count == 0,
+            "S3 wreck: ridden to deck 12 after the empty trip, alive");
+    require(walk_to(s, -8.0, -164.0, 6.0) && walk_to(s, -8.0, -171.2, 6.0),
+            "S3 wreck: off the cage onto deck 12");
+    std::cout << "PASS scraperx_sim stack wreckage S3: ride_s=" << ride.seconds
+              << " deck12_y=" << s.snapshot().player_position.y << '\n';
 }
 
 // M's chock pulled with its shackle free: the reel falls its shaft for
@@ -211,6 +291,144 @@ void run_de_wreckage() {
             "D/E wreck: the band's route climbed past both spent lifts to TP-340");
     std::cout << "PASS scraperx_sim AS-007 wreckage D+E: d_travel=" << w.wet_state().d_platform_travel
               << " e_travel=" << w.wet_state().e_cab_travel << " top_y=" << w.snapshot().player_position.y << '\n';
+}
+
+// F's hose coupled, the valve thrown, and the rider straight back off onto
+// E's deck before the platform rises: the accumulator dumps and F's platform
+// goes up empty to TP-340. The way on is the band's climbing route from
+// E's deck: the 308 ladder, the 330 panel, the TP-340 ladder. (A spent F
+// platform returns only when the header's dump is thrown from TP-340, which
+// a rider left on E's deck cannot reach; the test watches for a return
+// first and says so in its diagnostic either way.)
+void run_f_wreckage() {
+    Simulation f(InitialSpawn::Ring220North);
+    (void)f.advance_frame(1.0);
+    require(seat_wet_spool(f), "F wreck: the spool carried aboard and set in its gap");
+    require(wait_for(f, 120.0,
+                     [&](const scraperx::sim::Snapshot &) {
+                         return f.wet_state().d_platform_travel >= 35.95;
+                     }) &&
+                on_support(f.snapshot(), Simulation::kWetDPlatformEntityId),
+            "F wreck: D carries the rider to 256.25");
+    require(drop_into_wet_e(f), "F wreck: from D's platform through E's doors, off the sill");
+    require(wait_wet_e_top(f, 60.0) && on_support(f.snapshot(), Simulation::kWetEDeckEntityId),
+            "F wreck: E blows the rider up its shaft to 298.25, standing on its deck");
+    require(walk_to(f, 13.4, -137.2, 4.0) && walk_to(f, 13.4, -139.9, 6.0),
+            "F wreck: from E's cab over the rim onto F's platform");
+    require(couple_wet_hose(f), "F wreck: F's hose coupled");
+    require(pull_wet_stop_valve(f), "F wreck: F's stop valve thrown");
+    require(walk_to(f, 13.4, -137.2, 3.0, 0.15), "F wreck: straight back off onto E's deck");
+    // The platform is rising under the rider as they step off its north
+    // edge, so they may still be falling to E's deck when the walk lands:
+    // wait for them to be grounded on it before judging the step-off.
+    const bool settled = wait_for(f, 5.0, [&](const scraperx::sim::Snapshot &snap) {
+        return snap.player_grounded && snap.support_entity_id == Simulation::kWetEDeckEntityId &&
+               snap.player_position.y < 300.0;
+    });
+    const auto stepped_off = f.snapshot();
+    std::cout << "  F wreck: stepped off (" << stepped_off.player_position.x << ", " << stepped_off.player_position.y
+              << ", " << stepped_off.player_position.z << ") support " << stepped_off.support_entity_id
+              << " grounded " << stepped_off.player_grounded << " f_travel " << f.wet_state().f_platform_travel
+              << " deaths " << stepped_off.death_count << '\n';
+    require(settled, "F wreck: the rider stayed on E's deck, not carried up");
+    const bool f_up = wait_for(f, 90.0, [&](const scraperx::sim::Snapshot &) {
+        return f.wet_state().f_platform_travel >= 41.95;
+    });
+    require(f_up, "F wreck: the platform gone up empty to TP-340");
+    bool f_back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 60 && !f_back; ++tick) {
+        (void)f.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = f.wet_state();
+        f_back = state.f_platform_travel <= 0.05 && state.f_catch_latched;
+    }
+    const auto spent = f.wet_state();
+    std::cout << "  F wreck: platform back " << f_back << " travel " << spent.f_platform_travel
+              << " catch_latched " << spent.f_catch_latched
+              << " accumulator_travel " << spent.f_accumulator_travel << '\n';
+    if (f_back) {
+        require(walk_to(f, 13.4, -139.9, 6.0) && pull_wet_stop_valve(f),
+                "F wreck: back onto the platform and the valve thrown again");
+        require(wait_for(f, 90.0,
+                         [&](const scraperx::sim::Snapshot &) {
+                             return f.wet_state().f_platform_travel >= 41.95;
+                         }) &&
+                    on_support(f.snapshot(), Simulation::kWetFPlatformEntityId),
+                "F wreck: ridden to TP-340 after the platform came back, alive");
+        require(walk_to(f, 13.0, -137.2, 6.0), "F wreck: off the platform onto TP-340");
+        std::cout << "PASS scraperx_sim AS-007 wreckage F: returned and ridden, top_y="
+                  << f.snapshot().player_position.y << '\n';
+        return;
+    }
+    // The platform did not come back: the way on is the band's climbing
+    // route from E's deck. E's deck ends 12 m above the 286 ring, so the
+    // first step is the drop off its edge onto the ring deck — not onto
+    // the ladder's boards, which the fall overshoots into the void.
+    const bool dropped = walk_to(f, 5.0, -133.0, 8.0, 0.1);
+    const bool landed = wait_for(f, 5.0, [&](const scraperx::sim::Snapshot &snap) {
+        return snap.player_grounded && snap.player_position.y < 290.0 && snap.player_position.y > 280.0;
+    });
+    const auto at_ring = f.snapshot();
+    std::cout << "  F wreck: dropped onto the 286 ring " << dropped << " landed " << landed << " ("
+              << at_ring.player_position.x << ", " << at_ring.player_position.y << ", "
+              << at_ring.player_position.z << ") deaths " << at_ring.death_count << " grounded "
+              << at_ring.player_grounded << " support " << at_ring.support_entity_id << " limping "
+              << at_ring.limping << " limp_s " << at_ring.limp_seconds_left << '\n';
+    require(dropped && landed && at_ring.death_count == 0,
+            "F wreck: from E's deck down to the 286 ring, alive");
+    // The 12 m drop lands at ~15 m/s, over the 12 m/s ankle bar: the limp
+    // halves the jump for 30 s, and the panel needs a full jump. Wait it
+    // out on the ring before climbing on.
+    const bool healed = wait_for(f, 40.0, [&](const scraperx::sim::Snapshot &snap) { return !snap.limping; });
+    std::cout << "  F wreck: ankle healed " << healed << " limp_s " << f.snapshot().limp_seconds_left << '\n';
+    require(healed, "F wreck: the ankle heals before the climb");
+    // The route's own approach: the boards to the ladder's foot.
+    require(walk_to(f, 4.0, -133.0, 6.0, 0.1) && walk_to(f, 4.0, -135.1, 6.0, 0.1),
+            "F wreck: the boards to the 308 ladder's foot");
+    const auto at_foot = f.snapshot();
+    std::cout << "  F wreck: at the ladder foot (" << at_foot.player_position.x << ", " << at_foot.player_position.y
+              << ", " << at_foot.player_position.z << ") deaths " << at_foot.death_count << " grounded "
+              << at_foot.player_grounded << " support " << at_foot.support_entity_id << " grip "
+              << at_foot.grip_available << '\n';
+    require(climb_wet_hold(f, 3.0, -135.1, 0.0, 1.0, false, 308.5),
+            "F wreck: the 308 ladder to the 308 ring");
+    const auto at_308 = f.snapshot();
+    std::cout << "  F wreck: on the 308 ring (" << at_308.player_position.x << ", " << at_308.player_position.y
+              << ", " << at_308.player_position.z << ") deaths " << at_308.death_count << " grounded "
+              << at_308.player_grounded << " support " << at_308.support_entity_id << '\n';
+    require(walk_to(f, 1.5, -134.0, 6.0, 0.1), "F wreck: the catwalk across the 308 ring");
+    const auto at_panel = f.snapshot();
+    std::cout << "  F wreck: at the panel (" << at_panel.player_position.x << ", " << at_panel.player_position.y
+              << ", " << at_panel.player_position.z << ") deaths " << at_panel.death_count << " grounded "
+              << at_panel.player_grounded << " support " << at_panel.support_entity_id << " grip "
+              << at_panel.grip_available << '\n';
+    // The panel jump, step by step: climb_wet_hold's jump fails here
+    // while the same call passes in the route test, so say which step.
+    require(walk_to(f, 1.5, -135.95, 8.0, 0.08), "F wreck: onto the catwalk under the panel");
+    const auto under_panel = f.snapshot();
+    std::cout << "  F wreck: under the panel (" << under_panel.player_position.x << ", "
+              << under_panel.player_position.y << ", " << under_panel.player_position.z << ") deaths "
+              << under_panel.death_count << " grounded " << under_panel.player_grounded << " support "
+              << under_panel.support_entity_id << " grip " << under_panel.grip_available << " limping "
+              << under_panel.limping << " limp_s " << under_panel.limp_seconds_left << '\n';
+    (void)f.set_facing(0.0, 1.0);
+    (void)f.advance_frame(0.4);
+    (void)f.request_jump();
+    const bool grabbed = hold_stick(f, 0.0, 0.6, 0.0, 1.0, 3.0,
+                                    [](const scraperx::sim::Snapshot &state) { return is_climbing(state); });
+    const auto after_jump = f.snapshot();
+    std::cout << "  F wreck: after the panel jump grabbed " << grabbed << " (" << after_jump.player_position.x
+              << ", " << after_jump.player_position.y << ", " << after_jump.player_position.z << ") climbing "
+              << is_climbing(after_jump) << '\n';
+    require(grabbed, "F wreck: the jump caught the panel");
+    require(hold_stick(f, 0.0, 1.0, 0.0, 1.0, 60.0,
+                       [](const scraperx::sim::Snapshot &state) { return standing_above(state, 330.5); }),
+            "F wreck: the panel climbed to the 330 ring");
+    require(climb_wet_hold(f, 3.0, -134.9, 0.0, -1.0, false, 340.5),
+            "F wreck: the ladder on TP-340's face, onto the plate");
+    require(standing_above(f.snapshot(), 340.4) && f.snapshot().death_count == 0,
+            "F wreck: on TP-340 past the spent lift, alive");
+    std::cout << "PASS scraperx_sim AS-007 wreckage F: climbed the route, top_y=" << f.snapshot().player_position.y
+              << " f_travel=" << f.wet_state().f_platform_travel << '\n';
 }
 
 
@@ -389,7 +607,10 @@ void run_wreck_way_on() {
     run_mast_helix_wreckage();
     run_crown_wreckage();
     run_de_wreckage();
+    run_f_wreckage();
     run_s1_wreckage();
+    run_s2_wreckage();
+    run_s3_wreckage();
     run_m_wreckage();
     run_n_wreckage();
     run_o_wreckage();
