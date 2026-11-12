@@ -132,16 +132,21 @@ struct Thrown {
     double box_hit_dz = 0.0;   // the piece's north-south offset from her centre at the hit
 };
 // Throws the piece in his hands at her as she hunts in, holding `stage` the
-// whole way; `look_pitch` aims the throw (0 at her chest, down low). The
-// wait is the matron-heave beat's: still, the piece held, until she comes
-// for him in sight, her stalk keeping her from turning on him; the throw
-// once the piece has come round in front of him and settled, and only while
-// she is not turning (in a wind-up her step is nothing, and any blow over
-// her take bar would put her down instead of staggering her).
+// whole way; `look_pitch` aims the throw (0 at her chest, down low). She
+// hunts in at the creep pace, on her feet: a Dangerous or Changed matron at
+// her hunt speed is crouched, her base 0.45 m and her take bar 1.90 m/s, and
+// no throwable carries that (a toolbox reads 0.80 m/s). At the creep she is
+// upright, her take bar 0.244 m/s, and the throw takes her balance. The wait
+// is the matron-heave beat's: still, the piece held, until she comes for him
+// in sight, her stalk keeping her from turning on him; the throw once the
+// piece has come round in front of him and settled, and only while she is
+// not turning (in a wind-up her step is nothing, and any blow over her take
+// bar would put her down instead of staggering her).
 Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     Thrown out;
     const std::uint64_t piece = s.snapshot().carrying_entity_id;
     const std::uint32_t body = s.kit_body_index(piece);
+    s.debug_fix_matron_pace(0);  // creep: she closes upright, under the crouch bar
     require(walk_to(s, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "hard blow: west along the band with it");
     // Let the piece settle in front of him before she closes: the carry
     // swings it at his side after the walks, and she is still straining
@@ -176,6 +181,7 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     bool coming = false;
     int turned = 0;
     int settled = 0;
+    int seen_turn = 0;
     double release_d = 0.0;
     double release_speed = 0.0;
     int release_stalking = -1;
@@ -186,8 +192,14 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
         tick(s);
         const auto m = s.matron_state();
         const auto p = s.snapshot().player_position;
+        if (m.turn != seen_turn) {
+            seen_turn = m.turn;
+            std::cout << "  hard blow turn: turn=" << m.turn << " at "
+                      << std::hypot(m.position.x - p.x, m.position.z - p.z) << " m, her speed " << m.speed
+                      << " m/s\n";
+        }
         const double hz = static_cast<double>(Simulation::kTickRateHz);
-        // No lead on her: she runs at him, so the box meets her torso
+        // No lead on her: she creeps at him, so the box meets her torso
         // head-on if it is thrown at her centre. A lead aims ahead of her
         // along her instant heading, and she turns toward him as she closes:
         // the last throw's box met her 0.51 m south of her centre, a graze
