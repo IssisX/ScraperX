@@ -53,6 +53,7 @@ import budget as money  # noqa: E402
 import rules  # noqa: E402
 import ghapi  # noqa: E402
 import muse_queue  # noqa: E402
+import job_control  # noqa: E402
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -612,12 +613,19 @@ class Switch:
         return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
 
     def jobs(self) -> dict[str, dict]:
-        """Open issues labeled `job`, by J-NNN."""
+        """All open J-NNN issues, including ones missing the job label.
+
+        Missing or ambiguous metadata is a reported defect, never an invisible job.
+        """
         if self._jobs is None:
             self._jobs = {}
-            for it in self.gh.paged(f"repos/{self.gh.repo}/issues?labels=job&state=open"):
-                if "pull_request" not in it and rules.job_of_title(it["title"]):
-                    self._jobs[rules.job_of_title(it["title"])] = it
+            for it in self.gh.paged(f"repos/{self.gh.repo}/issues?state=open"):
+                if "pull_request" not in it and rules.job_of_title(it.get("title") or ""):
+                    job = rules.job_of_title(it["title"])
+                    if job in self._jobs:
+                        self.out(f"ERROR       {job}: multiple open job issues, including #{it['number']}")
+                    else:
+                        self._jobs[job] = it
         return self._jobs
 
     def proof(self, sha: str) -> tuple[str, str, int, str]:
@@ -1029,6 +1037,19 @@ class Switch:
                 block, never = self.rule_check_block(facts.number, facts.head_sha)
                 facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
                 d = rules.merge_decision(facts, author, self.team, token, key)
+        # A review and green proof are not permission to merge work for a job that was
+        # reassigned or parked. Recheck the issue on the merge path, not the queue file.
+        if d.action in ("MERGE", "HUMAN-MERGE") and ctx.get("job") and (
+                facts.head_ref.startswith(("fb-bot/", "claude/"))):
+            job = ctx["job"]
+            with self.gh.fresh():
+                issue = self.jobs().get(job)
+                if issue:
+                    issue = self.gh.get(f"repos/{self.gh.repo}/issues/{issue['number']}")
+            why = job_control.merge_problem(job, facts.head_ref, issue)
+            if why:
+                d = rules.MergeDecision("WAIT", (f"job authority: {why}",), d.land_by)
+                self.out(f"HOLD        #{facts.number}: {why}")
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         seen = Steered(facts, ctx, d)
