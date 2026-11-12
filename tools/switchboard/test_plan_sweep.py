@@ -396,5 +396,63 @@ class Shadow(Sweeps):
         self.assertEqual((self.hub.reads, self.hub.writes, sw.lines, rows), ([], [], [], {}))
 
 
+class InTheSweep(unittest.TestCase):
+    """run_sweep itself (test_sweep_calls' harness): where the plan part runs, and what its failure costs."""
+
+    def run_sweep(self, mode: str, check, state=None, remaining=None):
+        from unittest import mock
+        import test_sweep_calls as T
+        gh = T.CountingGH([T.pr(1)])
+        seen = []
+
+        def plan_check(sw, steered=()):
+            seen.append(dict(sw.gh.state.get("steer") or {}).get("stamp"))
+            if remaining is None:
+                return check()
+            raise AssertionError("not reached under the rate floor")
+
+        probe = switch.rate_probe
+
+        def rate(sw):   # the sweep's first act: what GitHub says is left of the hour
+            probe(sw)
+            if remaining is not None:
+                sw.gh.limit, sw.gh.remaining = 1000, remaining
+
+        with mock.patch.object(switch.Switch, "plan_mode", lambda self: mode), \
+                mock.patch.object(switch.Switch, "plan_check", plan_check), \
+                mock.patch.object(switch, "rate_probe", rate):
+            status, _, sw = T.sweep(gh, state)
+        return status, seen, gh.state.get("steer"), T
+
+    def boom(self):
+        raise RuntimeError("a bug in the plan part")
+
+    def test_in_shadow_it_runs_once_after_the_sweep_state_is_set_and_its_failure_costs_nothing(self):
+        quiet, _, base, T = self.run_sweep("off", lambda: None)
+        for check in (lambda: None, self.boom):
+            status, seen, state, _ = self.run_sweep("shadow", check)
+            self.assertEqual(seen, [T.iso(T.NOW)])          # one call, and this sweep's state was already written
+            self.assertEqual((status, state), (quiet, base))   # the sweep ends as it does with no plan at all
+
+    def test_live_it_runs_before_the_state_is_set_and_a_failure_is_the_sweeps_to_report_and_retry(self):
+        status, seen, state, T = self.run_sweep("live", lambda: None)
+        self.assertEqual((seen, status), ([None], 0))       # before the inbox and the state: its late jobs are listed
+        self.assertNotIn("plan", state["retry"])
+        status, seen, state, _ = self.run_sweep("live", self.boom)
+        self.assertEqual((status, seen), (2, [None]))
+        self.assertIn("plan", state["retry"])
+
+    def test_in_shadow_it_is_left_out_under_the_rate_floor(self):
+        quiet, _, base, _ = self.run_sweep("off", lambda: None, remaining=1)
+        status, seen, state, _ = self.run_sweep("shadow", lambda: None, remaining=1)
+        self.assertEqual((seen, status, state), ([], quiet, base))
+
+    def test_a_fast_sweep_never_runs_it(self):
+        import test_sweep_calls as T
+        for mode in ("shadow", "live"):
+            _, seen, _, _ = self.run_sweep(mode, self.boom, state=T.last_state([T.pr(1)], minutes=10))
+            self.assertEqual(seen, [], mode)
+
+
 if __name__ == "__main__":
     unittest.main()

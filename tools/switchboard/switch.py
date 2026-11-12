@@ -3227,9 +3227,11 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
         return None
 
-    # The plan's whole-repository audit runs on the full pass only. A fast
-    # proof rerun retains its established rate-budget and read count.
-    if steer and not targeted and delta is None:
+    # The job machine's pass runs on the full pass only (a fast sweep keeps its read count). Live, it runs here:
+    # the inbox below lists its late jobs and the queue check counts from its table. In shadow it only prints,
+    # so it runs at the very end of this function, after every live part.
+    plan_due = bool(steer and not targeted and delta is None)
+    if plan_due and sw.plan_mode() == "live":
         part("plan", lambda: sw.plan_check(steered))
 
     if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
@@ -3394,6 +3396,16 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
                                                          if deferred else []))
+    if plan_due and sw.plan_mode() == "shadow":
+        # Shadow: after every live part, the heartbeat and the sweep state. No live part waits for its reads, and
+        # nothing in it fails the sweep, is retried, or changes what the next sweep does.
+        if isinstance(sw.gh.remaining, int) and sw.gh.remaining < floor():
+            sw.out("NOTE        plan (shadow): left out this pass, under the rate floor")
+        else:
+            try:
+                sw.plan_check(steered)
+            except Exception as err:   # noqa: BLE001  plan_check keeps its own errors in shadow; this is the last guard
+                sw.out(f"NOTE        plan (shadow): not computed this pass ({type(err).__name__})")
     return 2 if failed else 0
 
 
