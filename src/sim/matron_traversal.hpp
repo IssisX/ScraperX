@@ -124,6 +124,15 @@ struct Budget {
     JPH::Vec3 velocity = JPH::Vec3::sZero();   // hers relative to the support (hold or floor) at the tick's start
     float brake_used = 0.0F;    // watts of braking (negative work) granted: capped by force alone, never by power
     JPH::Vec3 take(JPH::Vec3 want) noexcept;
+    // J-001: the same take for a limb of hers (a hand's or the knee's spring)
+    // whose force acts on the limb's own body, its reaction on hers. Same caps;
+    // the effort ledger books it under `ledger_path` (an effort::Path) with
+    // -granted on her, as the limb applies it. `velocity` is the limb's
+    // relative to her.
+    JPH::Vec3 take_limb(JPH::Vec3 want, std::uint8_t ledger_path) noexcept;
+
+private:
+    JPH::Vec3 grant(JPH::Vec3 want) noexcept;
 };
 
 struct Hold {

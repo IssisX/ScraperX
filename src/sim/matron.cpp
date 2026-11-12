@@ -2373,7 +2373,18 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     leg_jump_vy_ = 0.0F;
     // Her tick's one account, handed to the way that has her (matron_mover.hpp).
     const traversal::Limits law{};
-    feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
+    // J-001: hands first. What her hands and knee asked for last tick is
+    // held back from her feet, and given back to her limbs (limb_budget).
+    // Her feet keep the swat's stability floor (kSwatMinFeetN) of it: held
+    // back in full (no floor) her carry to the rail measured too weak to
+    // dangle him head down (matron grab still).
+    limb_reserve_n_ = std::min(limb_want_n_, law.total_force_n - kSwatMinFeetN);
+    limb_reserve_w_ = std::min(limb_want_w_, law.power_w);
+    limb_want_n_ = 0.0F;
+    limb_want_w_ = 0.0F;
+    limb_reserve_held_ = true;
+    feet_budget_ = traversal::Budget{law.total_force_n - limb_reserve_n_, 0.0F, law.power_w - limb_reserve_w_, 0.0F,
+                                     Vec3::sZero()};
     feet_budget_lunge_ = false;
     if (swat_budget_ticks_ > 0) {
         --swat_budget_ticks_;
@@ -5180,6 +5191,15 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         foot_power_w_ = feet_budget_.power_used;
     }
     return granted;
+}
+
+traversal::Budget &Matron::limb_budget() noexcept {
+    if (limb_reserve_held_) {
+        feet_budget_.left += limb_reserve_n_;
+        feet_budget_.power_left += limb_reserve_w_;
+        limb_reserve_held_ = false;
+    }
+    return feet_budget_;
 }
 
 Vec3 Matron::grant_swat_force(const Vec3 wanted, const Vec3 player_point_velocity) noexcept {

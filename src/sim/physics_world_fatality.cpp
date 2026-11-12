@@ -218,11 +218,14 @@ void Simulation::PhysicsWorld::fatality_drive(JPH::BodyInterface &bodies, const 
         if (force.Length() > Matron::kKneePinN) {
             force *= Matron::kKneePinN / force.Length();
         }
+        // J-001: her knee's push draws from her one account too (take_limb), charged.
+        const JPH::Vec3 relative_v = bodies.GetLinearVelocity(knee_id_) - bodies.GetLinearVelocity(matron_->body());
+        matron_->add_limb_want(force, relative_v);
+        traversal::Budget &account = matron_->limb_budget();
+        account.velocity = relative_v;
+        force = account.take_limb(force, static_cast<std::uint8_t>(effort::Path::Knee));
         bodies.AddForce(knee_id_, force);
         bodies.AddForce(matron_->body(), -force);
-        // J-046 measurement only.
-        effort::add_force(effort::Path::Knee, force,
-                          bodies.GetLinearVelocity(knee_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     }
 
     // ---- her fist: legs, collar ------------------------------------------

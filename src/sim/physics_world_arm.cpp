@@ -266,11 +266,15 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     if (force.Length() > cap) {
         force *= cap / force.Length();
     }
+    // J-001: her second hand draws from the same one account as her first
+    // hand and her feet (Budget::take_limb), charged; past it, it pulls no harder.
+    const JPH::Vec3 relative_v = bodies.GetLinearVelocity(hand2_id_) - bodies.GetLinearVelocity(matron_->body());
+    matron_->add_limb_want(force, relative_v);
+    traversal::Budget &account = matron_->limb_budget();
+    account.velocity = relative_v;
+    force = account.take_limb(force, static_cast<std::uint8_t>(effort::Path::Hand2Spring));
     bodies.AddForce(hand2_id_, force);
     bodies.AddForce(matron_->body(), -force);
-    // J-046 measurement only.
-    effort::add_force(effort::Path::Hand2Spring, force,
-                      bodies.GetLinearVelocity(hand2_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     JPH::Vec3 throw_v;
     if (matron_->take_arm_throw(throw_v) && arm_in_hand_ != nullptr) {
         destroy_grab_constraint(arm_in_hand_);

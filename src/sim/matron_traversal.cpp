@@ -264,6 +264,22 @@ Climber::Climber(PhysicsSystem &physics, const BodyID body, const Ignore ignore,
     : physics_(physics), body_(body), ignore_(ignore), limits_(limits) {}
 
 Vec3 Budget::take(const Vec3 want) noexcept {
+    const Vec3 granted = grant(want);
+    const float g = granted.Length();
+    // J-046 measurement only: what this take grants, as charged.
+    effort::add(effort::Path::Budget, g, granted.Dot(velocity), g, granted);
+    return granted;
+}
+
+Vec3 Budget::take_limb(const Vec3 want, const std::uint8_t ledger_path) noexcept {
+    const Vec3 granted = grant(want);
+    const float g = granted.Length();
+    // J-046 measurement only: charged in full, its reaction (-granted) on her.
+    effort::add(static_cast<effort::Path>(ledger_path), g, granted.Dot(velocity), g, -granted);
+    return granted;
+}
+
+Vec3 Budget::grant(const Vec3 want) noexcept {
     const float length = want.Length();
     if (length <= 1.0e-6F || left <= 0.0F) {
         return Vec3::sZero();
@@ -288,8 +304,6 @@ Vec3 Budget::take(const Vec3 want) noexcept {
     const float g = granted.Length();
     left -= g;
     used += g;
-    // J-046 measurement only: what this take grants, as charged.
-    effort::add(effort::Path::Budget, g, granted.Dot(velocity), g, granted);
     return granted;
 }
 

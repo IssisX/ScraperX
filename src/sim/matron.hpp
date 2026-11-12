@@ -113,6 +113,7 @@
 #include "sim/matron_routecraft.hpp"
 #include "sim/matron_traversal.hpp"
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <cstdint>
@@ -1909,6 +1910,16 @@ public:
     // A swat draws from the same per-tick force/power account as her feet.
     // The caller applies only this grant and its equal opposite reaction.
     [[nodiscard]] JPH::Vec3 grant_swat_force(JPH::Vec3 wanted, JPH::Vec3 player_point_velocity) noexcept;
+    // J-001: her hands' and her knee's springs draw from the same per-tick
+    // account as her feet, hands first: pre_step holds back from her feet
+    // what her limbs asked for the tick before (add_limb_want), and the
+    // first limb_budget() call of the tick gives it back for the limbs to
+    // take (Budget::take_limb). Whatever her feet leave is theirs too.
+    [[nodiscard]] traversal::Budget &limb_budget() noexcept;
+    void add_limb_want(const JPH::Vec3 force, const JPH::Vec3 relative_velocity) noexcept {
+        limb_want_n_ += force.Length();
+        limb_want_w_ += std::max(0.0F, force.Dot(relative_velocity));
+    }
     // Her hand's body where the world has it (beat 1: her swat lands once it
     // reaches his chest); `present` false while she has no hand body.
     void set_hand_at(const JPH::RVec3 at, const bool present) noexcept {
@@ -3403,6 +3414,13 @@ private:
     // her crawl all draw from it, so together they stay within her Budget.
     traversal::Budget feet_budget_{};
     bool feet_budget_lunge_ = false;   // the Turn's lunge has raised it to its own caps this tick
+    // J-001: what her limbs' springs asked for (newtons, watts): this tick's
+    // so far, and the share pre_step held back from her feet for them.
+    float limb_want_n_ = 0.0F;
+    float limb_want_w_ = 0.0F;
+    float limb_reserve_n_ = 0.0F;
+    float limb_reserve_w_ = 0.0F;
+    bool limb_reserve_held_ = false;
     // A standing jump asked of her legs (follow_line): the take-off speed it
     // wants, driven through her planted foot by walk_toward, 0 for none.
     float leg_jump_vy_ = 0.0F;

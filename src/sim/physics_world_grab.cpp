@@ -440,24 +440,34 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     if (ladder_pull) {
         cap = std::min(cap, std::max(0.0F, Matron::kLadderPullMaxForceN - matron_->foot_force_n()));
     }
-    // Her hand at its cap with him in it: he does not come to her pull.
-    matron_->set_hand_at_cap(grip_ != nullptr && force.Length() > cap);
+    bool at_cap = force.Length() > cap;
     matron_->set_player_caught(snag_ != nullptr);
     if (force.Length() > cap) {
         force *= cap / force.Length();
     }
+    const JPH::Vec3 relative_v = hand_v - bodies.GetLinearVelocity(matron_->body());
     if (ladder_pull) {
-        const JPH::Vec3 relative_v = hand_v - bodies.GetLinearVelocity(matron_->body());
         const float power = force.Dot(relative_v);
         const float available = std::max(0.0F, Matron::kLadderPullMaxPowerW - matron_->foot_power_w());
         if (power > available) force *= available / power;
+    }
+    // J-001: her hand's pull is drawn from her one account (8 kN, 44 kW with
+    // her feet and her other hand and knee), hands first; what it does not
+    // grant her hand does not pull. The ledger books it charged.
+    matron_->add_limb_want(force, relative_v);
+    traversal::Budget &account = matron_->limb_budget();
+    account.velocity = relative_v;
+    const JPH::Vec3 wanted = force;
+    force = account.take_limb(wanted, static_cast<std::uint8_t>(effort::Path::GrabSpring));
+    at_cap = at_cap || force.Length() < wanted.Length() - 1.0F;
+    // Her hand at its cap with him in it: he does not come to her pull.
+    matron_->set_hand_at_cap(grip_ != nullptr && at_cap);
+    if (ladder_pull) {
         ladder_pull_force_n_ = force.Length() + matron_->foot_force_n();
         ladder_pull_power_w_ = std::max(0.0F, force.Dot(relative_v)) + matron_->foot_power_w();
     }
     bodies.AddForce(hand_id_, force);
     bodies.AddForce(matron_->body(), -force);
-    // J-046 measurement only.
-    effort::add_force(effort::Path::GrabSpring, force, hand_v - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     // S1 measurement only: report the held body's tip every tick. The
     // force above is unchanged; this call writes no force, no velocity.
     const bool in_her_hands = grip_ != nullptr || hand2_grip_ != nullptr || matron_->regripping();
