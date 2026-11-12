@@ -131,43 +131,73 @@ struct Thrown {
     double box_hit_dx = 0.0;   // the piece's east-west offset from her centre at the hit
     double box_hit_dz = 0.0;   // the piece's north-south offset from her centre at the hit
 };
-// Throws the piece in his hands at her as she reaches for him, holding
-// `stage` the whole way; `look_pitch` aims the throw (0 at her chest, down
-// low). A Dangerous or Changed matron at her hunt speed is crouched, her
-// base 0.45 m and her take bar 1.90 m/s, and no throwable carries that (a
-// toolbox reads 0.80 m/s); a free throw at range never gets a clean window
-// either, because her Turn's lunge closes the distance and takes the piece
-// from his hands on contact. The throw that lands is the one thrown as she
-// reaches: in her Grab she is upright, her take bar 0.244 m/s, the piece
-// still in his hands, and she is an arm's length off, so it cannot miss. A
-// chest throw staggers her; a low one puts her down (her step is nothing
-// low). The reach is staged the way the hold case stages it: to the meeting
-// spot on her line, and she hunts in and reaches.
+// Throws the piece in his hands at her as she bursts from her locker,
+// holding `stage` the whole way; `look_pitch` aims the throw (0 at her
+// chest, down low). A Dangerous or Changed matron at her hunt speed is
+// crouched, her base 0.45 m and her take bar 1.90 m/s, and no throwable
+// carries that (a toolbox reads 0.80 m/s). The throw that lands is the one
+// thrown at her burst: she comes out of her locker upright, at the creep,
+// her take bar 0.244 m/s, and he is standing still a few metres off with
+// the piece settled, so the throw is clean and square. A free throw at
+// range never gets that window: her Turn's lunge closes the distance, and
+// on contact she shoves him, and a throw released while he is moving
+// carries his velocity with it (a toolbox thrown at 2.6 m/s, north of her
+// line, reads no blow at all). The throw releases on her first hunting
+// tick in range, before her Turn can fire; a wind-up throw puts her down
+// (her step is nothing there), any other staggers her. Either is the blow
+// taking her balance. A chest throw staggers her; a low one puts her down
+// (her step is nothing low).
 Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     Thrown out;
     const std::uint64_t piece = s.snapshot().carrying_entity_id;
     const std::uint32_t body = s.kit_body_index(piece);
-    require(walk_to(s, -6.0, -129.0, 10.0, 0.15), "hard blow: to the meeting spot with it");
-    s.debug_matron_hold(0, 3.0);
-    bool reaching = false;
-    for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !reaching; ++i) {
+    s.debug_fix_matron_pace(0);  // creep: she comes out upright, under the crouch bar
+    // A few metres east of her post, on her line: she bursts out of her
+    // locker at (-10.3, -129.0) and he is in throw range the moment she
+    // comes out. The walk is inside her strain, so she is still in the
+    // locker while he gets there.
+    require(walk_to(s, -6.8, -129.0, 10.0, 0.15), "hard blow: to the burst spot with it");
+    bool coming = false;
+    int settled = 0;
+    double release_d = 0.0;
+    double release_speed = 0.0;
+    int release_stalking = -1;
+    auto box_was = s.kit_body_position(body);
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
         s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
         tick(s);
-        // She reaches, not yet holding, and has come off her lunge: she
-        // arrives in the Grab still carrying its speed (5.7 m/s), past him
-        // and moving away at the piece's own speed, so a throw released
-        // then chases her and never lands. Wait until she has planted and
-        // slowed, still reaching, before the throw.
         const auto m = s.matron_state();
-        reaching = m.state == kStateGrab && !s.snapshot().held_by_matron && m.speed <= 1.0;
+        const auto p = s.snapshot().player_position;
+        const double dx = m.position.x - p.x;
+        const double dz = m.position.z - p.z;
+        const double d = std::hypot(dx, dz);
+        // Face her every tick, as the heave beat does: the throw's aim is
+        // the facing, and a facing set once goes stale while she closes.
+        if (d > 1.0e-3) {
+            (void)s.set_facing(dx / d, dz / d);
+        }
+        const auto b = s.kit_body_position(body);
+        const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
+        box_was = b;
+        const bool in_front = d > 1.0e-3 && ((b.x - p.x) * dx + (b.z - p.z) * dz) / d > 0.3;
+        settled = in_front && swing < 0.002 ? settled + 1 : 0;
+        // She bursts: hunting, in range, the piece settled, and not
+        // lunging. The throw releases on the first such tick, before her
+        // Turn fires (half a second of far sight) and before she can close
+        // on him and shove him. A wind-up throw puts her down; any other
+        // staggers her.
+        if (m.state == kStateHunting && m.stage == stage && d < 3.6 && m.turn != 2 &&
+            settled >= static_cast<int>(Simulation::kTickRateHz) / 4) {
+            coming = true;
+            release_d = d;
+            release_speed = m.speed;
+            release_stalking = m.stalking ? 1 : 0;
+        }
     }
-    require(reaching, "hard blow: she reaches for him, the piece in his hands");
-    const auto me = s.snapshot().player_position;
-    const auto her = s.matron_state().position;
-    out.release_m = std::hypot(her.x - me.x, her.z - me.z);
-    out.release_speed = s.matron_state().speed;
-    out.release_stalking = s.matron_state().stalking ? 1 : 0;
-    (void)s.set_facing(her.x - me.x, her.z - me.z);
+    require(coming, "hard blow: she bursts, the piece in his hands");
+    out.release_m = release_d;
+    out.release_speed = release_speed;
+    out.release_stalking = release_stalking;
     (void)s.set_look_pitch(look_pitch);
     tick(s);
     // The drawn path's end is the throw's aim: where the ray from his eye
@@ -205,7 +235,6 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
         if (out.turn_at_hit < 0 && m.blow_mps > 0.0) {
             out.turn_at_hit = m.turn;
             const auto bv = s.kit_body_velocity(body);
-            const auto bp = s.kit_body_position(body);
             out.box_hit_mps = std::hypot(bv.x, bv.y, bv.z);
             out.box_hit_y = bp.y;
             out.box_hit_dx = bp.x - m.position.x;
@@ -539,4 +568,5 @@ void run_hard_blow() {
 }
 SCRAPERX_GROUP("hard_blow", 875, run_hard_blow);
 SCRAPERX_SLICE("hard-blow", run_hard_blow);
+
 
