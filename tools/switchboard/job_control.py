@@ -18,12 +18,12 @@ MUSE_WIP_LIMIT = 4
 
 def job_id(title: str) -> str:
     found = JOB.match(title or "")
-    return found.group(1).upper() if found else ""
+    return found.group(1)[:5].upper() + found.group(1)[5:].lower() if found else ""
 
 
 def branch_job(ref: str) -> str:
     match = BRANCH_JOB.search(ref or "")
-    return ("J-" + match.group(1)[1:].lstrip("-").zfill(3)).upper() if match else ""
+    return "J-" + match.group(1)[1:].lstrip("-").zfill(3).lower() if match else ""
 
 
 def label_names(issue: dict) -> frozenset[str]:
@@ -81,7 +81,7 @@ def validate(issue: dict) -> Job:
     if len(states) != 1 or states[0] not in STATES:
         errors.append("requires one state:ready, state:active or state:parked")
     matches = DEPENDENCY.findall(issue.get("body") or "")
-    deps = tuple(dict.fromkeys(x.upper() for row in matches for x in JOB_REF.findall(row)))
+    deps = tuple(dict.fromkeys(x[:5].upper() + x[5:].lower() for row in matches for x in JOB_REF.findall(row)))
     if name in deps:
         errors.append("depends on itself")
     return Job(name, int(issue["number"]), owners[0] if len(owners) == 1 else "",
