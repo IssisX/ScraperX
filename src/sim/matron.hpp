@@ -1649,10 +1649,16 @@ public:
         float axis_y = 1.0F;
         float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
         bool held = false;
+        bool caught = true;      // a catch is on it: a hoist she may ride
+        bool platform = false;   // a floor to her at its stops (Kit::set_platform)
         std::vector<Pin> pins;
         std::vector<JPH::BodyID> weights;
     };
     void set_hoists(std::vector<HoistFeed> hoists) { hoists_ = std::move(hoists); }
+    // The world's platforms (HoistFeed::platform) resting at a stop now, with
+    // a level floor: her scan reads them as floor where they stand
+    // (matron_hoist.cpp, the same view of a car at rest as a hoist's).
+    [[nodiscard]] std::vector<JPH::BodyID> platforms_at_rest() const;
     struct HoistView {
         int phase = 0;              // 0 none, 1 to its stop, 2 boarding, 3 freeing it, 4 riding, 5 stepping off
         int hoist = -1;
