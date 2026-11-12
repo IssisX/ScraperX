@@ -988,14 +988,26 @@ void Matron::feel_floor(const float dt) {
     // as walk_toward's drive gate (a step, a beam, a ladder foot with her
     // middle past its edge). Where her middle is over the floor this reads
     // exactly as before.
+    // J-040: while she lies down her middle stays at standing height, so a
+    // ray from her middle meets a weight lying on her body and reads its
+    // fall as "the floor is moving" — a slab on her made her ride. While
+    // lying, her floor ray starts from her lying body's underside (her real
+    // lowest point), a hair above it so the ray begins in open air and not
+    // inside the floor she lies on; only what is under her can make her
+    // ride. The upright rays are unchanged.
+    RVec3 ray_from = at;
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        ray_from = RVec3(at.GetX(), body_box.mMin.GetY() + 0.02F, at.GetZ());
+    }
     const auto floor_hit = [&](const RVec3 &from) {
         return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self);
     };
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     const Vec3 across(std::cos(yaw_), 0.0F, -std::sin(yaw_));
-    if (floor_hit(at) || floor_hit(at + across * kFootSpanM) || floor_hit(at - across * kFootSpanM) ||
-        floor_hit(at + facing * kFootSpanM) || floor_hit(at - facing * kFootSpanM)) {
-        feet_y_ = float(at.GetY()) - reach * hit.mFraction;
+    if (floor_hit(ray_from) || floor_hit(ray_from + across * kFootSpanM) || floor_hit(ray_from - across * kFootSpanM) ||
+        floor_hit(ray_from + facing * kFootSpanM) || floor_hit(ray_from - facing * kFootSpanM)) {
+        feet_y_ = float(ray_from.GetY()) - reach * hit.mFraction;
         // The bay's leaf on its stop under its motor is a walkway: what it
         // gives under her stride is not a floor going.
         floor_vy = hit.mBodyID == bay_leaf_ && bay_open_ ? 0.0F : bodies.GetLinearVelocity(hit.mBodyID).GetY();
