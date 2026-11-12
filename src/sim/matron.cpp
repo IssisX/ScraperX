@@ -2941,7 +2941,19 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                                          : (lead_seen_ ? lose_track
                                                                         : std::min(lose_track, kAcousticMemorySeconds));
             const float heard_limit = (by_way_held && !wary_) ? lose_track : kAcousticMemorySeconds;
-            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit)) {
+            // A sound's source reached: she is there, nothing to chase —
+            // she looks about at once instead of standing in the hunt
+            // until the pursuit clock runs out (J-038: the clock alone
+            // held her 7 s at the break point, on top of the 8 s look).
+            // Only a heard lead, on her own level and standing on its
+            // steel: a lead three decks up is not reached because she
+            // stands under it (elsewhere), nor one she is still climbing
+            // toward (her feet off her floor). A seen lead is still hers
+            // to catch, and a wary one still peers from its vantage.
+            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit) ||
+                (!elsewhere && !wary_ && !lead_seen_ &&
+                 distance_xz(ax, az, heard_x_, heard_z_) <= 1.5F &&
+                 std::abs(feet_y - floor_y) <= 1.0F)) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
                     // where she lost them, at its top.
