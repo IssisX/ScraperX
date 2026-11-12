@@ -79,8 +79,8 @@ def feed(**kw):
     return L.Feed(**base)
 
 
-def mk_pass(f, now, comments=(), sent=()):
-    return R.Pass(f, L.classify(f, now, ROSTER), list(comments), set(sent))
+def mk_pass(f, now, comments=(), sent=(), plan_live=False):
+    return R.Pass(f, L.classify(f, now, ROSTER), list(comments), set(sent), plan_live=plan_live)
 
 
 def cmt(cid, thread, when, body, login="IssisX"):
@@ -208,8 +208,10 @@ class Harness:
         self.roster = roster or RROSTER
         self.log: list[str] = []
 
+    plan_live = False   # work/switchboard.yml `plan: live`: the job machine owns starts, a FIX needs a new head
+
     def run(self, f, now, comments=(), sent=(), tokens=None, open_threads=None, **kw):
-        p = mk_pass(f, now, comments, sent)
+        p = mk_pass(f, now, comments, sent, self.plan_live)
         p.tokens = tokens or {}
         p.open_threads = open_threads
         return R.run_pass(self.store, p, self.roster, self.lookups, now, self.outbox, self.log.append,
@@ -953,6 +955,18 @@ class Rules(unittest.TestCase):
         h.run(feed(issues=[fresh], branches=[b]), NOW + 24 * H)
         self.assertEqual(h.obs("J-540", NOW + 24 * H)[0]["ack"]["how"], "work pushed")
 
+    def test_with_the_plan_live_a_quiet_assigned_job_is_owed_no_start_from_here(self):
+        h = Harness()
+        h.plan_live = True
+        fresh = issue(540, job="J-540", owner="owner:muse")
+        h.run(feed(issues=[fresh]), NOW)
+        self.assertEqual((h.state().jobs["J-540"]["state"], h.obs("J-540")), ("assigned", []))
+        h.run(feed(issues=[fresh]), NOW + 23 * H)
+        self.assertEqual(h.obs("J-540", NOW + 23 * H), [])
+        b = L.BranchIn("fb-bot/integrate-j540-go", SHA["f"], t(23.5))
+        h.run(feed(issues=[fresh], branches=[b]), NOW + 24 * H)
+        self.assertEqual(h.obs("J-540", NOW + 24 * H), [])
+
     def test_a_parked_job_is_never_owed_a_start(self):
         h = Harness()
         quiet = issue(541, job="J-541", owner="owner:muse")
@@ -1571,6 +1585,27 @@ class Noise(unittest.TestCase):
                       {"kind": "fix", "via": "session", "ref": "PR|#401", "version": f"red:{SHA['a']}"},
                       {"kind": "ask", "via": "email", "ref": "ASK|ask on #340", "version": "7001"}):
             self.assertEqual(R.switch_muse_keys(other), [], other)
+
+
+class OpenFixRequiresEvidence(unittest.TestCase):
+    """With the plan live, a receipt of a P1 FIX does not close the PR's unresolved work."""
+
+    def test_ack_of_an_unchanged_fix_is_seen_but_not_settled(self):
+        h = Harness()
+        h.plan_live = True
+        f = feed(prs=[pr(401, "fb-bot/integrate-j500", action="FIX",
+                         reasons=("unresolved P1",))],
+                 issues=[issue(500, owner="owner:muse")])
+        h.run(f, NOW)
+        obs = h.obs("J-500", kind="fix")
+        self.assertTrue(any(o["version"].startswith("fix:") for o in obs))
+        oid = next(o["id"] for o in obs if o["version"].startswith("fix:"))
+        receipt = cmt(8801, 401, NOW + M, f"/ack {oid}")
+        h.run(f, NOW + 2 * M, comments=[receipt])
+        again = next(o for o in h.obs("J-500", kind="fix") if o["id"] == oid)
+        self.assertIsNone(again["ack"])
+        self.assertEqual(again["seen"]["how"], "/ack")
+        self.assertTrue(R.is_open(again))
 
 
 class AckedStaysQuiet(unittest.TestCase):

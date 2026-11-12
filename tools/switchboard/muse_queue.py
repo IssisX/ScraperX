@@ -17,9 +17,9 @@ A queue line names a job as `J-NNN #N`. Its verdict, the first that holds:
 Reads per check, each listing once (Reads): the job's issue, the PRs newest first down to the oldest queued job's
 issue number (a PR for a job comes after its issue: issues and PRs share one number line), the branch listing, the
 head commit of each branch that names a queued job (immutable, so the ETag cache answers it free after the first),
-and the comments of an issue still OK after those. Every listing is capped (MAX_PR_PAGES, MAX_BRANCH_PAGES,
-MAX_COMMIT_READS); a cap reached is a note, and an unread branch counts as moved (the safe side: a job is counted as
-unstarted only when nothing says otherwise).
+and the comments of an issue still OK after those. Every listing is capped (MAX_PR_PAGES, MAX_COMMIT_READS); a cap
+reached is a note, and an unread branch counts as moved (the safe side: a job is counted as unstarted only when
+nothing says otherwise). The branch listing is whole (plan.whole: 647 branches on 11-12); past its bound it raises.
 """
 
 from __future__ import annotations
@@ -29,12 +29,13 @@ import datetime as dt
 import re
 import urllib.parse
 
+import plan
+
 QUEUE_FILE = "work/tasks/muse.md"
 LOW_UNDER = 8          # fewer really-unstarted jobs than this: QUEUE-LOW (Cory 11-03, 11-11)
 REFILL_TO = 15
 RECENT_H = 72
 MAX_PR_PAGES = 5       # PRs read newest first, 100 a page
-MAX_BRANCH_PAGES = 10  # 596 branches on 11-11: six pages
 MAX_COMMIT_READS = 60  # head commits of branches that name a queued job
 JOB_LINE = re.compile(r"\bJ-(\d{3})[a-z]?\s+#(\d+)")
 WAITS = re.compile(r"(?:after|on)\s+J-(\d{3})", re.I)
@@ -144,16 +145,10 @@ class Reads:
         return merged, opened
 
     def branches(self) -> list[dict]:
+        """Every branch (plan.whole: the same pages the plan read and auto-open read; past plan.ALL_PAGES pages it
+        raises, and check() passes the raise on: a short listing would show a moved job as unstarted)."""
         if self._branches is None:
-            got: list[dict] = []
-            for page in range(1, MAX_BRANCH_PAGES + 1):
-                batch = self.gh.get(f"repos/{self.gh.repo}/branches?per_page=100&page={page}") or []
-                got.extend(batch)
-                if len(batch) < 100:
-                    break
-            else:
-                self.notes.append(f"the branch listing stopped at its cap ({MAX_BRANCH_PAGES * 100} branches)")
-            self._branches = got
+            self._branches = plan.whole(self.gh, f"repos/{self.gh.repo}/branches")
         return self._branches
 
     def recent_branches(self, num: str) -> list[str]:
