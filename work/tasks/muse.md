@@ -55,7 +55,7 @@ job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one
 Finish line (rule 56): the finish plan's A5 (`03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md`).
 Finish (in flight): J-043 #241 rail move, J-059 #307 wire-up, J-063 #321, J-127 #451, J-049 #278 parts 2-3 (F11), J-098 #416 (F13), J-105 #424 step 1 only (F10), J-045 (F3), J-053 #82, J-021 #128 waterfall fix only, J-077, J-078 #396, J-079 #397, J-080 #398 (push, land, then stop). J-044c: stop after the split you hold.
 Not yours (owner:claude, Claude's helpers; never push): J-001, J-015, J-038, J-106, J-108, J-109.
-Done work is never parked (Cory 11-12): J-040, J-044c (as held), J-054, J-055, J-081, J-091, J-094, J-095, J-100, J-014: if the groups it reaches pass locally, push now; if not, mail one line of what is left. J-114: pushed, let it land.
+Done work is never parked (Cory 11-12): J-040, J-044c (as held), J-054, J-055, J-081, J-091, J-094, J-095, J-100, J-014: if the groups it reaches pass locally, push now; if not, mail one line of what is left. J-114: let it land.
 Parked (not started; back as missions or after the finish): J-044d to k and n, J-060, J-036, J-099, J-022, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-112, J-113, J-120 to J-123, J-088, J-086 (until J-001's grab code lands). Close: J-067, J-082.
 Unstarted, in order (11-12):
 1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous).
