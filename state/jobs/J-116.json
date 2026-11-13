@@ -6,13 +6,13 @@
   "fb-bot/integrate-protected-j116": "09b04270abb3542c94dc2cd49092bda555ce3b1f"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "red: host-build",
  "commands": [
   "6829010752:44"
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "09b04270abb3542c94dc2cd49092bda555ce3b1f",
+ "head": "4b79a7739a7973a325bb13f03c41667111ce7089",
  "issue": 438,
  "job": "J-116",
  "landed": {
@@ -23,8 +23,8 @@
   ],
   "fb-bot/integrate-protected-j116": [
    "09b04270abb3542c94dc2cd49092bda555ce3b1f",
-   "",
-   "2026-11-13T15:53:29Z"
+   "merged #514",
+   "2026-11-13T19:47:25Z"
   ]
  },
  "obligations": [
@@ -90,13 +90,13 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 514,
+ "pr": 487,
  "pr_done": "",
  "prs": [
   487,
   514
  ],
- "review": "LAND",
- "state": "landable",
- "updated": "2026-11-13T18:13:09Z"
+ "review": "",
+ "state": "working",
+ "updated": "2026-11-13T19:47:25Z"
 }

@@ -2753,3 +2753,47 @@
 {"ev": "matched", "ident": "PR|#513", "job": "", "t": "2026-11-13T18:13:09Z"}
 {"ev": "matched", "ident": "PR|#514", "job": "", "t": "2026-11-13T18:13:09Z"}
 {"ev": "pass", "job": "", "jobs": 111, "status": "ok", "t": "2026-11-13T18:13:09Z", "tries": 1}
+{"branch": "fb-bot/integrate-j077", "ev": "landed", "how": "merged #516", "job": "J-077", "sha": "20ac7723d95564358416315cc16676fbfe297356", "t": "2026-11-13T19:47:25Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-077", "pr": 516, "t": "2026-11-13T19:47:25Z"}
+{"branch": "fb-bot/integrate-j089", "ev": "landed", "how": "merged #521", "job": "J-089", "sha": "028f9a9ba9ad9eae341ea25add9627e08e237986", "t": "2026-11-13T19:47:25Z"}
+{"branch": "fb-bot/integrate-protected-j100", "ev": "landed", "how": "merged #513", "job": "J-100", "sha": "31b98c50fc83d7b1eb537f21981145a140f6ebaf", "t": "2026-11-13T19:47:25Z"}
+{"branch": "fb-bot/integrate-protected-j105", "ev": "landed", "how": "merged #524", "job": "J-105", "sha": "d62cd247bb0fdbdde395a8745cedc1fab793766d", "t": "2026-11-13T19:47:25Z"}
+{"branch": "fb-bot/integrate-protected-j116", "ev": "landed", "how": "merged #514", "job": "J-116", "sha": "09b04270abb3542c94dc2cd49092bda555ce3b1f", "t": "2026-11-13T19:47:25Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-119", "pr": 480, "t": "2026-11-13T19:47:25Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-125", "pr": 481, "t": "2026-11-13T19:47:25Z"}
+{"branch": "fb-bot/integrate-j129", "ev": "landed", "how": "merged #525", "job": "J-129", "sha": "75e88726694ad8144572968eece5fa6fab658c7f", "t": "2026-11-13T19:47:25Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-131", "pr": 485, "t": "2026-11-13T19:47:25Z"}
+{"ev": "state", "frm": "proof", "job": "J-021", "t": "2026-11-13T19:47:25Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-059", "t": "2026-11-13T19:47:25Z", "to": "review"}
+{"ev": "state", "frm": "review", "job": "J-072", "t": "2026-11-13T19:47:25Z", "to": "landable"}
+{"ev": "state", "frm": "landable", "job": "J-077", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-084", "t": "2026-11-13T19:47:25Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-089", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-090", "t": "2026-11-13T19:47:25Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-094", "t": "2026-11-13T19:47:25Z", "to": "landable"}
+{"ev": "state", "frm": "proof", "job": "J-096", "t": "2026-11-13T19:47:25Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-098", "t": "2026-11-13T19:47:25Z", "to": "landable"}
+{"ev": "state", "frm": "landable", "job": "J-100", "t": "2026-11-13T19:47:25Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-105", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "state", "frm": "landable", "job": "J-116", "t": "2026-11-13T19:47:25Z", "to": "working"}
+{"ev": "state", "frm": "landable", "job": "J-119", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "state", "frm": "landable", "job": "J-125", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-129", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "state", "frm": "landable", "job": "J-131", "t": "2026-11-13T19:47:25Z", "to": "merged"}
+{"ev": "unmatched", "ident": "PR|#531", "job": "", "t": "2026-11-13T19:47:25Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#530", "job": "", "t": "2026-11-13T19:47:25Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "READ|read 12", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-481 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 13", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-484 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 14", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-485 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 15", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-510 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 16", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-511 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 17", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-514 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 18", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-516 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 19", "job": "", "t": "2026-11-13T19:47:25Z", "why": "a listing was cut short or failed: items may be missing (proof runs: 500 or more in the window, the rest not read)"}
+{"ev": "matched", "ident": "BRANCH|ccr-eb2b1a51-n4lyvu", "job": "", "t": "2026-11-13T19:47:25Z"}
+{"ev": "matched", "ident": "PR|#517", "job": "", "t": "2026-11-13T19:47:25Z"}
+{"ev": "matched", "ident": "PR|#518", "job": "", "t": "2026-11-13T19:47:25Z"}
+{"ev": "matched", "ident": "PR|#519", "job": "", "t": "2026-11-13T19:47:25Z"}
+{"attempt": 2, "ev": "sent", "id": "O-2b456642", "job": "", "ref": "BRANCH|claude/integrate-systest-red", "send": 2, "t": "2026-11-13T19:47:25Z", "to": "claude", "via": "session"}
+{"ev": "needs_you", "job": "", "keys": ["gap:2026-11-13T18:13:09Z"], "n": 1, "t": "2026-11-13T19:47:25Z"}
+{"ev": "pass", "job": "", "jobs": 111, "status": "ok", "t": "2026-11-13T19:47:25Z", "tries": 1}

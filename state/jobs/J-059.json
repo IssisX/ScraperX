@@ -14,7 +14,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "e7163216f58af8a412a30be36a9b1beb8d1e9c61",
+ "head": "8577bd75c0f1d47e3b11142e351afee3456078e8",
  "issue": 307,
  "job": "J-059",
  "landed": {
@@ -908,7 +908,7 @@
  "prs": [
   343
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-13T15:53:29Z"
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-13T19:47:25Z"
 }

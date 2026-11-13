@@ -1,5 +1,5 @@
 {
- "attempt": 11,
+ "attempt": 17,
  "blocked": null,
  "branches": {
   "claude/integrate-j072-board-source": "8b68ebd4834fb3db28f79d9916bf2334d52d95aa",
@@ -13,6 +13,8 @@
   "claude/integrate-j072-reconciler-live": "56617dc53771e4946d1808895cba0f5ff6198ac9",
   "claude/integrate-j072-review-all-findings": "8bebcd7a313132fd83bef76fbff544a6400681e0",
   "claude/integrate-j072-trackers": "21b30001fff6ca527e70e719de24d5d5c7197ad0",
+  "claude/integrate-plan-step10": "2dfe67fc702fe54305e0f19a5aab5792e5ad300f",
+  "claude/integrate-plan-step7": "e1a500fa17b857c14f0e6bbb5983dbdcf52e0527",
   "claude/integrate-rate-budget": "566cd4bd28dadedc2fd425630823fae559a25a41",
   "claude/integrate-rate-hourly": "2fc9595909b86e81c53fdf1457ffd6e5c7643e95",
   "claude/integrate-system-gaps": "259c886b5cc7b2a6a7275c7fbf7b915926b75d14",
@@ -25,7 +27,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-13T20:59:50Z",
- "head": "51cf8c99b6424bbe658e66f4e6b77a262ec39a56",
+ "head": "424283aa5c7a692070c12c4d96e2a3bf97509bb3",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -83,6 +85,16 @@
    "21b30001fff6ca527e70e719de24d5d5c7197ad0",
    "merged #382",
    "2026-11-10T15:09:20Z"
+  ],
+  "claude/integrate-plan-step10": [
+   "2dfe67fc702fe54305e0f19a5aab5792e5ad300f",
+   "",
+   "2026-11-13T19:47:25Z"
+  ],
+  "claude/integrate-plan-step7": [
+   "e1a500fa17b857c14f0e6bbb5983dbdcf52e0527",
+   "",
+   "2026-11-13T19:47:25Z"
   ],
   "claude/integrate-rate-budget": [
    "566cd4bd28dadedc2fd425630823fae559a25a41",
@@ -621,7 +633,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-13T16:59:50Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #350",
    "sends": 1,
    "sent_by": "live",
@@ -636,7 +648,7 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 506,
+ "pr": 526,
  "pr_done": "merged",
  "prs": [
   359,
@@ -649,9 +661,15 @@
   503,
   510,
   515,
-  512
+  512,
+  529,
+  528,
+  527,
+  526,
+  518,
+  517
  ],
- "review": "",
- "state": "review",
- "updated": "2026-11-13T18:13:09Z"
+ "review": "waiting",
+ "state": "landable",
+ "updated": "2026-11-13T19:47:25Z"
 }

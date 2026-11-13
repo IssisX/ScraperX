@@ -1,11 +1,11 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j094": "35a51aeb1d7080cab2663266440e5487dcfae3fe"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
  "deadline": null,
@@ -52,10 +52,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 522,
  "pr_done": "",
- "prs": [],
- "review": "",
- "state": "proof",
- "updated": "2026-11-12T21:45:56Z"
+ "prs": [
+  522
+ ],
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-13T19:47:25Z"
 }

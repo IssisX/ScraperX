@@ -84,11 +84,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 480,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   480
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-13T18:13:09Z"
+ "state": "merged",
+ "updated": "2026-11-13T19:47:25Z"
 }

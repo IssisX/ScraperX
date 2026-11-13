@@ -15,8 +15,8 @@
  "landed": {
   "fb-bot/integrate-protected-j105": [
    "d62cd247bb0fdbdde395a8745cedc1fab793766d",
-   "",
-   "2026-11-12T03:39:03Z"
+   "merged #524",
+   "2026-11-13T19:47:25Z"
   ]
  },
  "obligations": [
@@ -56,6 +56,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "merged",
+ "updated": "2026-11-13T19:47:25Z"
 }

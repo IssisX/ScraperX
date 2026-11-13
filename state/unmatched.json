@@ -1,132 +1,162 @@
 {
- "BRANCH|ccr-eb2b1a51-n4lyvu": {
-  "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "unknown branch prefix (no proof run on its head (not an integrate branch))"
- },
  "BRANCH|claude/integrate-systest-red": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "no job id (branch name or head commit `Job:` line) (proof red: scope, no PR)"
  },
  "BRANCH|fable/finish-audit": {
   "first_seen": "2026-11-12T14:29:46Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (no proof run on its head (not an integrate branch))"
  },
  "BRANCH|ideas/climb-ways-up": {
   "first_seen": "2026-11-11T18:18:52Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (no proof run on its head (not an integrate branch))"
  },
  "BRANCH|ideas/player-moments-20261111": {
   "first_seen": "2026-11-11T14:01:59Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (no proof run on its head (not an integrate branch))"
  },
  "BRANCH|switchboard/candidate-480": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (green, no PR: open one)"
  },
  "BRANCH|switchboard/candidate-481": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (green, no PR: open one)"
  },
  "BRANCH|switchboard/candidate-484": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (green, no PR: open one)"
  },
  "BRANCH|switchboard/candidate-485": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (green, no PR: open one)"
  },
  "BRANCH|switchboard/candidate-510": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (green, no PR: open one)"
  },
  "BRANCH|switchboard/candidate-511": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (green, no PR: open one)"
  },
  "BRANCH|switchboard/candidate-514": {
   "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "unknown branch prefix (proof red: scope, no PR)"
  },
- "PR|#517": {
-  "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+ "PR|#530": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"
  },
- "PR|#518": {
-  "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"
- },
- "PR|#519": {
-  "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+ "PR|#531": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"
  },
  "READ|read 1": {
   "first_seen": "2026-11-12T16:58:14Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of ideas/climb-ways-up not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-registry-1100 not read (25 per sweep))"
  },
  "READ|read 10": {
   "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-516 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of ideas/player-moments-20261111 not read (25 per sweep))"
  },
  "READ|read 11": {
   "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-480 not read (25 per sweep))"
+ },
+ "READ|read 12": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-481 not read (25 per sweep))"
+ },
+ "READ|read 13": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-484 not read (25 per sweep))"
+ },
+ "READ|read 14": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-485 not read (25 per sweep))"
+ },
+ "READ|read 15": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-510 not read (25 per sweep))"
+ },
+ "READ|read 16": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-511 not read (25 per sweep))"
+ },
+ "READ|read 17": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-514 not read (25 per sweep))"
+ },
+ "READ|read 18": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-516 not read (25 per sweep))"
+ },
+ "READ|read 19": {
+  "first_seen": "2026-11-13T19:47:25Z",
+  "last_seen": "2026-11-13T19:47:25Z",
   "why": "a listing was cut short or failed: items may be missing (proof runs: 500 or more in the window, the rest not read)"
  },
  "READ|read 2": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of ideas/player-moments-20261111 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-rule-check-protected not read (25 per sweep))"
  },
  "READ|read 3": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-480 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-switchboard-merge not read (25 per sweep))"
  },
  "READ|read 4": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-481 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-system-gaps not read (25 per sweep))"
  },
  "READ|read 5": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-484 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-system-test not read (25 per sweep))"
  },
  "READ|read 6": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-485 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-systest-red not read (25 per sweep))"
  },
  "READ|read 7": {
   "first_seen": "2026-11-13T16:59:50Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-510 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of claude/integrate-wake-cut not read (25 per sweep))"
  },
  "READ|read 8": {
   "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-511 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of fable/finish-audit not read (25 per sweep))"
  },
  "READ|read 9": {
   "first_seen": "2026-11-13T18:13:09Z",
-  "last_seen": "2026-11-13T18:13:09Z",
-  "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-514 not read (25 per sweep))"
+  "last_seen": "2026-11-13T19:47:25Z",
+  "why": "a listing was cut short or failed: items may be missing (head commit of ideas/climb-ways-up not read (25 per sweep))"
  }
 }
