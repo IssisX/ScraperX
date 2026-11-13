@@ -116,8 +116,8 @@ class StartedAndAcks(unittest.TestCase):
         self.assertTrue(lines[4].startswith("- MERGE-BY-HAND [#256]"))
         self.assertTrue(lines[5].startswith("- digest, nothing to decide: STARTED #292 Muse: J-094 started "
                                             "https://github.com/IssisX/ScraperX/issues/292#issuecomment-501"), lines[5])
-        self.assertEqual(ti.marker_keys(body), [switch.inbox_key("MERGE-BY-HAND", "#256", ti.HEAD),
-                                                switch.inbox_key("STARTED", "#292", "501")])
+        self.assertEqual(ti.ring(gh), [switch.inbox_key("MERGE-BY-HAND", "#256", ti.HEAD),
+                                       switch.inbox_key("STARTED", "#292", "501")])
         self.assertEqual(sw2.digest_held, ())
         sw3 = ti.make(gh)   # carried once: never again
         self.assertEqual(sw3.inbox([ti.human_merge()]), 0)
@@ -160,7 +160,7 @@ class StartedAndAcks(unittest.TestCase):
         gh = GH(comments=[ti.comment(504, 292, "To Claude: J-094 started")], open_issues=[292])
         self.assertEqual([i.kind for i in ti.items_of(gh)], ["TO-CLAUDE"])
 
-    def test_the_hourly_full_pass_carries_the_digest_alone(self):
+    def test_a_flush_carries_the_digest_alone(self):   # 11-13: no longer every hourly full pass (test_wake_cut)
         gh = GH(comments=[bridge(505, *STARTED)], open_issues=[292])
         sw = ti.make(gh)
         self.assertEqual(sw.inbox([], flush=True), 1)
@@ -168,7 +168,7 @@ class StartedAndAcks(unittest.TestCase):
         lines = body.split("\n")
         self.assertTrue(lines[2].startswith("Nothing to decide at "), lines[2])
         self.assertTrue(lines[4].startswith("- digest, nothing to decide: STARTED #292"), lines[4])
-        self.assertEqual(ti.marker_keys(body), [switch.inbox_key("STARTED", "#292", "505")])
+        self.assertEqual(ti.ring(gh), [switch.inbox_key("STARTED", "#292", "505")])
         self.assertEqual(ti.make(gh).inbox([], flush=True), 0)   # listed once
         self.assertEqual(len(gh.posts), 1)
         self.assertEqual(ti.make(GH()).inbox([], flush=True), 0)   # nothing held: no comment

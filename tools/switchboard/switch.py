@@ -109,7 +109,15 @@ RED_RUN_KEYS = ("id", "head_branch", "head_sha", "status", "conclusion", "create
                 "run_attempt")
 QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-hours
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
-MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
+MAX_INBOX_KEYS = 600                           # keys kept in the sweep state's inbox ring (gh.state["inbox"])
+# 11-13 (Cory's "A", #282 measure): every inbox comment is a full wake of the integrator, priced by its context, not
+# by the message. So asks wake at once, the integrator's own work lines post at most once per INBOX_HOLD, and
+# reports ride the next post (or post alone once the oldest has waited DIGEST_FLUSH_AFTER). The keys left the comment
+# for the sweep state: the relay to the session cuts a comment near 4,000 characters, and the keys were most of it.
+INBOX_HOLD = dt.timedelta(minutes=30)
+DIGEST_FLUSH_AFTER = dt.timedelta(hours=3)
+INBOX_MAX_CHARS = 3500                         # a comment's whole text, under the relay's cut with room to spare
+PLAN_WAKES = frozenset({"claude", "integrator"})   # a late job's next step owed by these reaches the integrator
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
 MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
 MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
@@ -117,12 +125,16 @@ MAX_PLAN_LABELS = 20                           # issues whose labels a live pass
 # compares, 60 proof reads, the listings), a third of a full pass's own. So in shadow it runs in the full pass of
 # every sixth hour, four times a day, and only with twice the rate floor left. Live, it runs every full pass.
 PLAN_SHADOW_EVERY_H = 6
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
-# comment that does wake, and on the switch's hourly full pass, so nothing is lost; held between sweeps in the state.
-DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN"})
+# comment that does wake, or post alone once the oldest has waited DIGEST_FLUSH_AFTER (11-13: it was every hourly full
+# pass), so nothing is lost; held between sweeps in the state. FYI is a Muse mail that only reports (muse_report).
+# Beside these, inbox_class rides the late-job (PLAN) lines whose next step another owner holds.
+DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
-MAX_DIGEST_HELD = 60                           # digest entries kept between sweeps (timers["digest"])
+MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); a full post's
+                                               # worth posts at once, so this is reached only while posts keep failing
+MAX_INBOX_HELD = 200                           # wake items held between sweeps (gh.state["inbox"]["held"]), likewise
 MAX_RERUN_HEADS = 200                          # heads re-run, kept between sweeps (timers["rerun"]): one re-run per head
 # A Muse bridge title that is only "J-NNN started" (J-040 take_blow started: one name may sit between), or a bare ack.
 MUSE_STARTED = re.compile(r"^(?:MUSE_TO_CLAUDE:\s*)?J-\d{3,}[a-z]?(?:\s+(?!not\b|never\b)[A-Za-z0-9_][\w.-]*)?\s+started[.!]?$",
@@ -133,9 +145,38 @@ MUSE_ACK = re.compile(r"^(?:MUSE_TO_CLAUDE:\s*)?(?:J-\d{3,}[a-z]?(?:\s+(?!not\b)
                       re.IGNORECASE)
 ACK_ID = re.compile(r"/ack\s+O-[0-9a-f]+", re.IGNORECASE)   # the reconciler's obligation id in an ack: no sha
 # What still wakes at once in a started or ack post (#422): a question, a sha, a red or failure, a finding, "taken".
+# 11-13 (#282 measure): "to claude" left it: Muse opens every mail body "To Claude:", so it woke every started post.
 MUSE_WAKES = re.compile(r"\?|\b(?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b|\btaken\b|\bred\b|\bfail\w*|"
                         r"\bblock\w*|\bstuck\b|\bfinding\w*|\bfound\b|\bbug\w*|\berror\w*|\bbroke\w*|\bcannot\b|"
-                        r"\bcan't\b|\bto claude\b|\bproposal\b|\bneeds? (?:your|a)\b", re.IGNORECASE)
+                        r"\bcan't\b|\bproposal\b|\bneeds? (?:your|a)\b", re.IGNORECASE)
+# 11-13: a Muse mail is a report (it rides the digest) only when its title says so and nothing in it asks; anything
+# else wakes at once. The title: tagged FYI, or a routine word (pushed, in work, done, status, parked, ...), or a LAND
+# review verdict. Tagged ASK, or a `To <Name>:` in the title (work/tasks/muse.md's ask subject), always wakes.
+MUSE_TAG = re.compile(r"(?:^|[\s:(\[])(ASK|FYI)(?=$|[\s:,.)\]-])")
+MUSE_ASK_SUBJECT = re.compile(r"\bTo [A-Z][\w-]*:")
+# The routine word must be the title's headline, in its first clause or opening its last ("J-009 #377 FIX — ack"):
+# "J-082 sha — lane touched it, pushed now" answers an ask (it wakes); "J-078 pushed @ ddceb919 — ..." reports a push.
+MUSE_REPORT_TITLE = re.compile(r"\b(?:started|re-?ack(?:ed)?|ack(?:ed|nowledged)?|in work|in progress|pushed|"
+                               r"dispatched|done|status|parked|passed|green|landed|merged|running|resumed)\b",
+                               re.IGNORECASE)
+TITLE_CLAUSE = re.compile(r"\s+[—–-]+\s+|:\s")
+MUSE_LAND_TITLE = re.compile(r"\breview of #\d+ @ [0-9a-f]{7,40}:?\s*LAND\**$")
+# What turns a report into an ask: a question mark (outside quoted lines and links), a relay to another agent, or a
+# word that asks for a ruling, a call, an answer, help, a stop, a resend or Cory.
+MUSE_ASKS = re.compile(
+    r"\?|\bTo (?!Claude\b)[A-Z][\w-]*:|"
+    r"\b(?:not|never)\s+(?:yet\s+)?(?:started|pushed|done|landed|merged|passed|green|running)\b|"
+    r"\b(?:need|needs|needed|want|wants|waiting on|wait for|waits for|awaiting|asking for|ask for|asks for)\s+"
+    r"(?:your|you|a|an|claude|cory|the integrator)\b|"
+    r"(?<!per )(?<!on )(?<!after )(?<!under )\byour (?:call|ruling|answer|decision|ok|okay|go|pick|view)\b"
+    r"(?!\s*(?:\)|,|\.|;|$|-|—))|"
+    r"\b(?:ruling needed|rule on|decide|decision needed|which (?:way|one|option)|or split|waiver|question\w*|please|"
+    r"approve|approval|propos\w*|blocked|blocker|stop|stopped|halt\w*|resend|re-send|taken|handover|yours|deviat\w*|"
+    r"cory|stale|wrong|unclear|unsure|not sure)\b", re.IGNORECASE)
+# A routine start or ack that names its own test plan ("failing test first") reports no failure.
+FAILING_FIRST = re.compile(r"\bfailing[- ](?:first|tests?)\b", re.IGNORECASE)
+MAILED_FOOTER = re.compile(r"^_Mailed .*_$", re.MULTILINE)
+LINK = re.compile(r"https?://\S+")
 # A proof job's setup steps (wo000-delivery-spine.yml): the runner's own, the checkout, the cache restores, the package,
 # NDK, SDK, Godot and render-prerequisite installs, Java. Every build, test and verify step is named otherwise.
 SETUP_STEP = re.compile(r"^(?:Set up job|Check ?out|Restore|Install|Configure)\b")
@@ -366,7 +407,29 @@ def muse_routine(first: str, body: str) -> str:
     title = first[len(BRIDGE_POST):].lstrip(":").strip()
     title = title[:-2].strip() if title.endswith("**") else title
     kind = "STARTED" if MUSE_STARTED.match(title) else "ACK" if MUSE_ACK.match(title) else ""
-    return "" if not kind or MUSE_WAKES.search(ACK_ID.sub("", body)) else kind
+    if kind:
+        return "" if MUSE_WAKES.search(FAILING_FIRST.sub(" ", ACK_ID.sub("", body))) else kind
+    return "FYI" if muse_report(title, body) else ""
+
+
+def unquoted(body: str) -> str:
+    """A mail's own words: no quoted (`>`) line, no link (a query's `?` is no question), no ack id, no bridge footer."""
+    own = "\n".join(line for line in body.split("\n") if not line.lstrip().startswith(">"))
+    return LINK.sub(" ", ACK_ID.sub(" ", MAILED_FOOTER.sub("", own)))
+
+
+def muse_report(title: str, body: str) -> bool:
+    """11-13: a Muse mail that only reports (FYI): its title is tagged FYI or reads as a routine report, the title
+    holds no ASK tag and no `To <Name>:` ask, and neither the title nor the body asks (MUSE_ASKS). Unsure is an ask:
+    an untagged title with no routine word wakes, and so does any question mark."""
+    tag = MUSE_TAG.findall(title)
+    if "ASK" in tag or MUSE_ASK_SUBJECT.search(title):
+        return False
+    clauses = TITLE_CLAUSE.split(title)
+    if "FYI" not in tag and not MUSE_REPORT_TITLE.search(clauses[0]) \
+            and not MUSE_REPORT_TITLE.match(clauses[-1].strip()) and not MUSE_LAND_TITLE.search(title):
+        return False
+    return not MUSE_ASKS.search(title) and not MUSE_ASKS.search(unquoted(body))
 
 
 def http_status(detail: str) -> int:
@@ -437,6 +500,7 @@ class InboxItem:
     # for a red whose logs this audience may want: its proof run, so muse() reads them only once it knows the item
     # is not sent yet (its keys are on the board and the job issues, read after the items are built)
     run_id: int | None = dataclasses.field(default=None, compare=False)
+    since: str = dataclasses.field(default="", compare=False)   # when it was first held, unposted (11-13)
 
     @property
     def unread(self) -> str:
@@ -479,37 +543,105 @@ def queue_item_of(record) -> tuple[InboxItem, ...]:
     return (InboxItem("QUEUE-LOW", muse_queue.QUEUE_FILE, record["head"], record["line"]),)
 
 
+def inbox_class(it: InboxItem) -> str:
+    """11-13: how an item reaches the integrator. "now": an ask, posted at once (TO-CLAUDE: every non-Muse ask, and
+    every Muse mail muse_report cannot call a report). "ride": a report, never a post alone (DIGEST_KINDS, a late
+    job whose next step another owner holds). "hold": the integrator's own work,
+    posted at most once per INBOX_HOLD, or sooner riding an ask. Any kind not named here holds, so a new kind is
+    never only a digest entry."""
+    if it.kind == "TO-CLAUDE":
+        return "now"
+    if it.kind in DIGEST_KINDS:
+        return "ride"
+    if it.kind == "PLAN":
+        return "hold" if it.dest in PLAN_WAKES else "ride"
+    return "hold"   # Muse's FIX-STUCK and RED-TWICE too: a fix failed twice is the integrator's to route (CLAUDE.md)
+
+
 def digest_record(it: InboxItem) -> dict:
-    """A digest entry as the sweep state keeps it between sweeps (J-103)."""
-    return {"kind": it.kind, "target": it.target, "head": it.head, "line": it.line}
+    """A held entry as the sweep state keeps it between sweeps (J-103; 11-13: any class, with its dest, its failing
+    tests and when it was first held)."""
+    rec = {"kind": it.kind, "target": it.target, "head": it.head, "line": it.line}
+    if it.dest != "claude":
+        rec["dest"] = it.dest
+    if it.tests:
+        rec["tests"] = list(it.tests)
+    if it.since:
+        rec["since"] = it.since
+    return rec
 
 
-def digest_of(records) -> tuple[InboxItem, ...]:
-    """The held digest entries back from the sweep state; anything malformed is dropped."""
+def held_of(records, classes: frozenset[str]) -> tuple[InboxItem, ...]:
+    """Held entries back from the sweep state, only those whose class is in `classes`; anything malformed is dropped."""
     out = []
     for r in records if isinstance(records, list) else []:
-        if isinstance(r, dict) and r.get("kind") in DIGEST_KINDS and all(isinstance(r.get(k), str)
-                                                                          for k in ("target", "head", "line")):
-            out.append(InboxItem(r["kind"], r["target"], r["head"], r["line"]))
+        if not (isinstance(r, dict) and r.get("kind") in INBOX_ORDER and all(isinstance(r.get(k), str)
+                                                                             for k in ("target", "head", "line"))):
+            continue
+        dest, tests, since = r.get("dest", "claude"), r.get("tests") or [], r.get("since", "")
+        if not (isinstance(dest, str) and isinstance(since, str) and isinstance(tests, list)
+                and all(isinstance(t, str) for t in tests)):
+            continue
+        it = InboxItem(r["kind"], r["target"], r["head"], r["line"], dest, tests=tuple(tests), since=since)
+        if inbox_class(it) in classes:
+            out.append(it)
     return tuple(out)
 
 
-def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str,
+def digest_of(records) -> tuple[InboxItem, ...]:
+    """The held digest entries back from the sweep state: reports only; anything else or malformed is dropped."""
+    return held_of(records, frozenset({"ride"}))
+
+
+def item_text(it: InboxItem, room: int) -> str:
+    """One item's lines in an inbox comment, within `room` characters: its failing tests are cut first (the proof
+    link in its line names them all), then the line itself (11-13: the relay cuts a long comment)."""
+    head = f"- {it.line}"
+    tests = [f"  - {untrusted(t, MAX_FAIL_CHARS + 40)}" for t in it.tests]
+    for n in range(len(tests), -1, -1):
+        more = [f"  - ({len(tests) - n} more failing lines on its proof)"] if n < len(tests) else []
+        text = "\n".join([head] + tests[:n] + more)
+        if len(text) <= room:
+            return text
+    return head[:max(0, room - 3)] + "..."
+
+
+def inbox_body(items: list[InboxItem], held: int, when: str,
                digest: list[InboxItem] = (), digest_left: int = 0) -> str:
-    """The inbox comment: the header line first, one line per item, then the digest's one line (J-103), the keys in
-    a hidden marker last."""
+    """The inbox comment: the header line first, one line per item, then the digest's one line (J-103). 11-13: no
+    keys in it any more (the sweep state holds them)."""
     lines = [INBOX_HEADER, "", f"{len(items)} new for the integrator at {when} (each is listed once per head):" if items
-             else f"Nothing to decide at {when}: the digest of what did not wake you (the hourly full pass):", ""]
-    for it in items:
-        lines.append(f"- {it.line}")
-        lines += [f"  - {untrusted(t, MAX_FAIL_CHARS + 40)}" for t in it.tests]
+             else f"Nothing to decide at {when}: the digest of what did not wake you:", ""]
+    lines += [item_text(it, INBOX_MAX_CHARS) for it in items]
     if held:
-        lines.append(f"- ({held} more next sweep)")
+        lines.append(f"- ({held} more held for the next post)")
     if digest:
         lines.append("- digest, nothing to decide: " + "; ".join(it.line for it in digest)
                      + (f" (and {digest_left} more next time)" if digest_left else ""))
-    body = "\n".join(lines).replace("@", "")   # nothing in an inbox comment can mention anyone
-    return f"{body}\n\n{INBOX_MARK.format(keys=','.join(keys))}"
+    return "\n".join(lines).replace("@", "")   # nothing in an inbox comment can mention anyone
+
+
+def fit_inbox(wake: list[InboxItem], digest: list[InboxItem], when: str
+              ) -> tuple[list[InboxItem], list[InboxItem], str]:
+    """11-13: the items and digest entries one comment carries, in order, while its whole text stays within
+    INBOX_MAX_CHARS (and MAX_INBOX_LINES, MAX_DIGEST_ITEMS); the rest stay held. The first wake item always goes,
+    its failing tests cut to fit (item_text). Returns (shown, carried, body)."""
+    def body(shown, carried):
+        return inbox_body(shown, len(wake) - len(shown), when, carried, len(digest) - len(carried))
+    shown: list[InboxItem] = []
+    for it in wake[:MAX_INBOX_LINES]:
+        if shown and len(body(shown + [it], [])) > INBOX_MAX_CHARS:
+            break
+        shown.append(it)
+    if shown and len(body(shown, [])) > INBOX_MAX_CHARS:   # one item, too long whole: its tests are cut to fit
+        room = INBOX_MAX_CHARS - len(body([], [])) - 1
+        shown = [dataclasses.replace(shown[0], line=item_text(shown[0], room)[2:], tests=())]
+    carried: list[InboxItem] = []
+    for it in digest[:MAX_DIGEST_ITEMS]:
+        if len(body(shown, carried + [it])) > INBOX_MAX_CHARS:
+            break
+        carried.append(it)
+    return shown, carried, body(shown, carried)
 
 
 class Switch:
@@ -1379,41 +1511,104 @@ class Switch:
         return opened
 
     # ---------- the integrator inbox (J-051) ----------
+    def inbox_box(self) -> dict:
+        """11-13: the inbox's own part of the sweep state, saved with the signed cache (ghapi.save_etags): "keys",
+        every key listed (the ring, MAX_INBOX_KEYS), "at", the last post, and "held", wake items not posted yet."""
+        state = getattr(self.gh, "state", None)
+        if not isinstance(state, dict):
+            state = self.gh.state = {}
+        box = state.get("inbox")
+        if not isinstance(box, dict):
+            box = state["inbox"] = {}
+        return box
+
+    def inbox_due(self, held: list[InboxItem], digest: list[InboxItem], last: dt.datetime | None) -> bool:
+        """11-13: does a comment go now? An ask: at once. Else only INBOX_HOLD after the last post, and only for the
+        integrator's own work held, or a digest that is a full post's worth or whose oldest entry has waited
+        DIGEST_FLUSH_AFTER."""
+        if any(inbox_class(it) == "now" for it in held):
+            return True
+        if last is not None and self.now - last < INBOX_HOLD:
+            return False
+        oldest = min((parse_time(it.since) or self.now for it in digest), default=self.now)
+        return bool(held) or len(digest) >= MAX_DIGEST_ITEMS or (bool(digest) and self.now - oldest >= DIGEST_FLUSH_AFTER)
+
+    def inbox_clock(self) -> bool:
+        """11-13: a quiet sweep's question: is a held item or the digest due by its clock alone? Reads no GitHub."""
+        box = self.inbox_box()
+        return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"}))), list(self.digest_held),
+                              parse_time(str(box.get("at") or "")))
+
     def inbox(self, steered: list[Steered], flush: bool = False) -> int:
-        """After a full steer sweep, one comment on the inbox PR listing what needs the integrator and was not
-        listed before. Each item's key (kind, PR or branch, head sha) goes in the comment's hidden marker, which
-        carries the earlier keys forward too: a key is listed once, a new head is a new key. Nothing new, no
-        comment. J-103: a DIGEST_KINDS item never posts alone: it is held (digest_held, kept in the sweep state) and
-        rides as one digest line on the next comment that has an item that wakes, or on the hourly full pass
-        (`flush`). Returns how many items were posted (or printed, in a dry run), digest entries included."""
+        """After a sweep, at most one comment on the inbox PR listing what needs the integrator and was not listed
+        before. An item's key (kind, PR or branch, head sha) is listed once; a new head is a new key. 11-13: the keys
+        live in the sweep state's ring (inbox_box), no longer in the comment (inbox_reported still reads the old
+        markers). Each item has a class (inbox_class): an ask posts at once; the integrator's own work posts at most
+        once per INBOX_HOLD, riding any ask sooner; a report (J-103's digest) never posts alone until the digest is
+        due (inbox_due). What waits is held in the state, never dropped: a comment carries what fits under
+        INBOX_MAX_CHARS (fit_inbox) and the rest waits for the next. `flush` posts whatever is held now. Returns how
+        many items were posted (or printed, in a dry run), digest entries included."""
+        box = self.inbox_box()
         reported = self.inbox_reported()
-        seen = set(reported)
+        posted_before = frozenset(reported)
+        when = iso_z(self.now)
+        heads = {f"#{s.facts.number}": s.facts.head_sha for s in steered}
+        held: dict[tuple, InboxItem] = {}   # (kind, target, head): one item, however its tests read
+        for it in held_of(box.get("held"), frozenset({"now", "hold"})):
+            # a PR read this sweep at a newer head: this head's items are moot, the new head's come below
+            if not it.listed(posted_before) and heads.get(it.target, it.head) == it.head:
+                held.setdefault((it.kind, it.target, it.head), it)
+        # held items count as listed for the reads: no log is read again for one, unless its log went unread
+        seen = set(reported) | {it.key for it in held.values()}
         new: list[InboxItem] = []
-        for it in self.inbox_items(steered, frozenset(reported)):
-            if not it.listed(seen):
-                seen.add(it.key)
-                new.append(it.read_now(seen))
-        wake = [it for it in new if it.kind not in DIGEST_KINDS]
-        held: dict[str, InboxItem] = {}
-        for it in list(self.digest_held) + [it for it in new if it.kind in DIGEST_KINDS]:
+        for it in self.inbox_items(steered, frozenset(seen)):
+            if not it.line or it.listed(seen):
+                continue
+            seen.add(it.key)
+            it = dataclasses.replace(it.read_now(posted_before), since=when)
+            prev = held.get((it.kind, it.target, it.head))
+            if prev is not None:   # held with its log unread, read now: the read copy replaces it, its clock kept
+                if prev.unread and not it.unread:
+                    held[(it.kind, it.target, it.head)] = dataclasses.replace(it, since=prev.since)
+                continue
+            new.append(it)
+            if inbox_class(it) != "ride":
+                held[(it.kind, it.target, it.head)] = it
+        wake = sorted(held.values(), key=lambda it: (inbox_class(it) != "now", INBOX_ORDER.index(it.kind)))
+        rides: dict[str, InboxItem] = {}
+        for it in list(self.digest_held) + [it for it in new if inbox_class(it) == "ride"]:
             if it.key not in reported:
-                held.setdefault(it.key, it)
-        digest = list(held.values())
-        self.digest_held = tuple(digest[-MAX_DIGEST_HELD:])   # kept until a comment carries it, even if the post fails
+                rides.setdefault(it.key, it if it.since else dataclasses.replace(it, since=when))
+        digest = list(rides.values())
         self.inbox_keys = set(reported)   # J-097: what the inbox holds after this call (run_sweep's queue clock)
-        if not wake and not (flush and digest):
-            self.out("INBOX       nothing new" + (f"; {len(digest)} held for the digest (J-103)" if digest else ""))
+        last = parse_time(str(box.get("at") or ""))
+        self.digest_held = self.keep_held(digest, MAX_DIGEST_HELD, "digest")
+        if not getattr(self.gh, "dry_run", False):   # kept until a comment carries it, even if the post fails
+            box["held"] = [digest_record(it) for it in self.keep_held(wake, MAX_INBOX_HELD, "wake")]
+        if not (wake or digest) or not (flush or self.inbox_due(wake, digest, last)):
+            self.out("INBOX       nothing new" + (f"; {len(wake)} held for the next post (the hold)" if wake else "")
+                     + (f"; {len(digest)} held for the digest (J-103)" if digest else ""))
             return 0
-        shown = wake[:MAX_INBOX_LINES]
-        carried = digest[:MAX_DIGEST_ITEMS]
-        keys = (reported + [it.key for it in shown + carried])[-MAX_INBOX_KEYS:]
-        body = inbox_body(shown, len(wake) - len(shown), keys, central(self.now), carried, len(digest) - len(carried))
+        shown, carried, body = fit_inbox(wake, digest, central(self.now))
+        posted = wake[:len(shown)] + digest[:len(carried)]   # the items as held: their keys, whatever fit_inbox cut
         self.out(body)
         self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s)"
                                         + (f" and {len(carried)} digest entries" if carried else "") + f" on #{INBOX_PR}")
-        self.inbox_keys |= {it.key for it in shown + carried}
+        self.inbox_keys |= {it.key for it in posted}
         self.digest_held = tuple(digest[len(carried):][-MAX_DIGEST_HELD:])
+        if not getattr(self.gh, "dry_run", False):
+            ring = [k for k in box.get("keys") or [] if isinstance(k, str)]
+            box["keys"] = list(dict.fromkeys(ring + reported + [it.key for it in posted]))[-MAX_INBOX_KEYS:]
+            box["at"] = when
+            box["held"] = [digest_record(it) for it in wake[len(shown):][-MAX_INBOX_HELD:]]
         return len(shown) + len(carried)
+
+    def keep_held(self, items: list[InboxItem], cap: int, what: str) -> tuple[InboxItem, ...]:
+        """The newest `cap` held items; any dropped are named in the run's log, never lost silently."""
+        if len(items) > cap:
+            self.out(f"NOTE        inbox: {len(items) - cap} {what} item(s) over the cap of {cap} dropped, the oldest: "
+                     + plain("; ".join(it.line[:80] for it in items[:len(items) - cap][:3])))
+        return tuple(items[-cap:])
 
     def muse_keys(self, comments: list[dict]) -> list[str]:
         """The muse-<KIND> keys in the switch's own muse markers on these comments, oldest first."""
@@ -1698,11 +1893,12 @@ class Switch:
         return asks, last_post, fresh
 
     def inbox_reported(self) -> list[str]:
-        """The keys in the switch's own inbox markers, oldest first. Only the inbox PR's newest 200 comments are
-        read: the newest marker carries every earlier key forward. A marker by any other login never counts."""
+        """The keys listed before, oldest first: the sweep state's ring (11-13), then the keys in the switch's own
+        inbox markers, which comments carried until 11-13. Only the inbox PR's newest 200 comments are read: the
+        newest marker carries every earlier key forward. A marker by any other login never counts."""
+        keys = [k for k in self.inbox_box().get("keys") or [] if isinstance(k, str)]
         count = int((self.gh.get(f"repos/{self.gh.repo}/issues/{INBOX_PR}") or {}).get("comments") or 0)
         last = max(1, -(-count // 100))
-        keys: list[str] = []
         for page in range(max(1, last - 1), last + 1):
             for c in self.gh.get(f"repos/{self.gh.repo}/issues/{INBOX_PR}/comments?per_page=100&page={page}") or []:
                 if c["user"]["login"] == rules.BOT_LOGIN:
@@ -1861,7 +2057,8 @@ class Switch:
         board = machine.board(model, rows, self.now)
         if mode != "live":
             return
-        self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}")
+        # 11-13: dest is who owes the next step; only the integrator's own wake it (inbox_class), the rest ride
+        self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
                                 for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
         for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
             c = machine.notice_comment(notes, owner, ver)
@@ -3287,15 +3484,18 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.rerun_heads = frozenset(reran_before)
     if steer and not targeted and not quiet:   # the inbox reads a whole sweep, so a run for one PR posts none
         inbox_ran = True
-        part("inbox", lambda: sw.inbox(steered, flush=delta is None))   # J-103: the hourly full pass carries the digest
+        # 11-13: no hourly flush any more: the digest posts on its own clock (inbox_due), so a full pass wakes no one
+        part("inbox", lambda: sw.inbox(steered))
         part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
         if not not_done & {"inbox", "muse"}:   # a failed read found no red run: the old ones are kept
             timers["red"] = list(getattr(sw, "red_pending", {}).values())
-    elif steer and not targeted and (red_ripe or queue_due):   # J-072: a quiet sweep, but a clock is up: just those
-        if red_ripe:
+    elif steer and not targeted and (red_ripe or queue_due or sw.inbox_clock()):   # J-072: a quiet sweep, but a clock is
+        if red_ripe:                                                                 # up: just those (11-13: or the inbox's)
             sw.out(f"RIPE        RED-BRANCH clock: {', '.join(sorted(r.get('head_branch') or '?' for r in red_ripe))}")
         if queue_due:
             sw.out("RIPE        QUEUE-LOW: the queue changed and its item is not in the inbox yet")
+        if not red_ripe and not queue_due:
+            sw.out("RIPE        inbox: held items are due (an ask, the hold's end, or the digest's clock)")
         sw.ripe_runs = red_ripe
         inbox_ran = True
         part("inbox", lambda: sw.inbox(steered))

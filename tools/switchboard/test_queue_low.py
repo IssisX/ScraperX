@@ -194,7 +194,7 @@ class Raise(unittest.TestCase):
         sw.inbox([])
         gh.by_issue[500] = [bridged(1, 500, "J-500")]   # Muse starts one
         gh.issues[500]["comments"] = 1
-        sw = make(gh)
+        sw = test_inbox.later(gh)   # a sweep past the hold on the integrator's own work (11-13)
         sw.queue_check(queue(5))
         self.assertEqual(sw.inbox([]), 1)
         self.assertIn("QUEUE-LOW: 4 unstarted", gh.posts[1][1])
