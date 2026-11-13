@@ -20,6 +20,7 @@ Read through: 1794492989 (2026-11-11 last quiet run)
 - Open with Muse: J-053 swing bar up <=0.2 m (else Cory's game call); J-077 gate fix; J-059 gap-89 (protected); J-078 #396 FIX nudged; J-044c held.
 - Session wiring (11-13): this session (made from the app) is the integrator; it holds the overview, both checks and the PAT
   reminder. The old session's copies are paused, not deleted (deleting a task can delete sessions it touched).
+- Cory 11-13: when the system passes its real-world test, do NOT start game coding: alert Cory (phone push + a big emoji banner message, e.g. "🚨✅ SYSTEM COMPLETE ✅🚨") and wait for his go.
 - Cory 11-13: remove failure modes, never just relocate them (a page, an unsubscribe or a retry is a backstop, not the fix).
 - Cory 11-13: Fable is for the very hardest problems only, like Argon; when one shows up, alert Cory first with why it needs Fable.
 - Fable low fixed named causes right first try (J-106, J-015). Fable designs, Opus builds from a finished design (Cory 11-12).

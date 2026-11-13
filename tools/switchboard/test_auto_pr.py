@@ -89,7 +89,9 @@ class FakeGH:
             return {"jobs": list(self.jobs.get(rid, []))}
         if "/commits/" in path:
             head = path.rsplit("/commits/", 1)[1]
-            return {"sha": head, "commit": {"message": self.commits[head]}}
+            got = self.commits[head]   # a message, or {"message", "committer"}; no date: committed just now
+            return {"sha": head, "commit": got if isinstance(got, dict) else
+                    {"message": got, "committer": {"date": NOW.strftime("%Y-%m-%dT%H:%M:%SZ")}}}
         raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
 
     def write(self, method, path, body=None, what=""):
@@ -210,6 +212,16 @@ class AutoOpen(unittest.TestCase):
         gh.prior = {"claude/integrate-j042-ammo": [{"number": 497, "state": "closed", "merged_at": "2026-11-13T13:00:00Z"}]}
         self.assertEqual(make(gh).auto_open_prs(), 0)
         self.assertEqual(gh.writes, [])
+
+    def test_an_old_claude_branch_is_never_opened_or_listed(self):
+        # 11-13: 77 old claude/integrate-* heads with no PR; the first pass after #498 listed every one
+        gh, head = green_setup(name="claude/integrate-agent-tools-20261027", job="J-042")
+        gh.commits[head] = {"message": gh.commits[head], "committer": {"date": "2026-10-27T12:00:00Z"}}
+        self.assertEqual(make(gh).auto_open_prs(), 0)
+        self.assertEqual((gh.writes, [g for g in gh.gets if "pulls?state=all" in g]), ([], []))
+        gh, head = green_setup(name="fb-bot/integrate-j042-windup", job="J-042")   # Muse's: unchanged
+        gh.commits[head] = {"message": gh.commits[head], "committer": {"date": "2026-10-27T12:00:00Z"}}
+        self.assertEqual(make(gh).auto_open_prs(), 1)
 
     def test_the_integrators_own_branches_never_open(self):
         for name in ("claude/integrator-inbox", "claude/j042-ammo", "claude/wip-j042"):
