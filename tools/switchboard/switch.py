@@ -9,7 +9,7 @@ Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
   steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
-         issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
+         issue, opening PRs for finished fb-bot/ and claude/ integrate-* branches, the 7:00 AM Central digest, and
          after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051; QUEUE-LOW when
          work/tasks/muse.md holds under 8 really-unstarted jobs, J-097; a Muse "J-NNN started" or bare ack, and the
          one re-run of a proof red only in setup, ride as a digest line on the next comment that wakes, J-103),
@@ -87,7 +87,9 @@ MAX_ARTIFACT_BYTES = 60_000_000
 MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
 MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
-AUTO_PR_PREFIX = "fb-bot/integrate-"   # fb-bot/integrate-protected-* matches too; claude/* never does
+# The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
+# helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
+AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -1452,7 +1454,7 @@ class Switch:
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
-        """Open PRs for finished fb-bot/integrate-* branches with no PR yet (J-047).
+        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* branches with no PR yet (J-047).
 
         A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
         that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
@@ -3246,7 +3248,7 @@ class SweepDelta:
     prs: set[int]                 # the open PRs to read this sweep
     comments: int                 # comments posted since the last sweep
     finished: set[str]            # branches whose proof run finished since the last sweep
-    finished_auto: set[str]       # of those, the auto-open's (fb-bot/integrate-*)
+    finished_auto: set[str]       # of those, the auto-open's (AUTO_PR_PREFIX)
     threads: set[int] = dataclasses.field(default_factory=set)    # every issue or PR something touched (the ledger's)
     active: set[str] = dataclasses.field(default_factory=set)     # branches with a proof run started or finished
     pipe: bool = False            # a CLAUDE_TO_MUSE ask or a bridge post: pipe health reads again
