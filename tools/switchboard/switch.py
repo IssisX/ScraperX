@@ -158,6 +158,16 @@ MAX_ASK_LATE = 10                              # ASK-LATE items per pass; the re
 # RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
 # a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
 TRUNK_RUN_READS = 6
+GRAPHQL_PRS = 8        # PRs in one GraphQL query (prefetch): each brings up to 100 comments with their text
+GRAPHQL_MIN_PRS = 2    # fewer PRs to read than this: REST (one PR's five reads cost less than a query's setup)
+GRAPHQL_PAGE = 100     # comments, reviews and files read per PR; a PR with more is read over REST
+GRAPHQL_PR_FIELDS = (
+    "fragment F on PullRequest { number headRefOid mergeable "
+    "commits(last: 1) { nodes { commit { oid committedDate } } } "
+    "files(first: 100) { totalCount nodes { path } } "
+    "comments(last: 100) { totalCount nodes { databaseId body createdAt updatedAt url author { __typename login } } } "
+    "reviews(last: 100) { totalCount nodes { databaseId body state submittedAt author { __typename login } "
+    "commit { oid } } } }")
 CANDIDATE_PREFIX = "switchboard/candidate-"   # the switchboard's own merge-candidate branches (merge_candidate)
 COMPARE_FILES_CAP = 300   # GitHub's compare lists at most this many files: a list that long may be cut (base_skew)
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
@@ -916,11 +926,13 @@ class Switch:
         failed = [j["name"] for j in jobs if j["name"] not in NOT_COUNTED and j["conclusion"] not in ("success", "skipped")]
         return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"], run["id"], run.get("updated_at") or ""
 
-    def verdicts(self, number: int, job: str | None = None) -> tuple[list[rules.Verdict], list[dict]]:
+    def verdicts(self, number: int, job: str | None = None, batch: dict | None = None) -> tuple[list[rules.Verdict], list[dict]]:
         """The PR's verdicts and its comments. With `job` (the PR's job, "" for none), the eye's FIX is read again
-        under today's look sets (rules.eye_relook, 11-12 #453)."""
-        comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
-        reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
+        under today's look sets (rules.eye_relook, 11-12 #453). `batch`: prefetch's read of them, when whole."""
+        comments = batch["comments"] if batch and batch.get("comments") is not None else \
+            self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
+        reviews = batch["reviews"] if batch and batch.get("reviews") is not None else \
+            self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
         looks = (getattr(self, "looks", None) or {}).get("sets") if job is not None else None
         out = []
         for c in comments:
@@ -1000,14 +1012,43 @@ class Switch:
                     lines.append(f"({len(findings) - len(shown)} more lines not shown)")
         return "\n".join(lines)
 
+    def prefetch(self, numbers: list[int]) -> None:
+        """11-13: the facts of the PRs this sweep reads, in GraphQL queries of GRAPHQL_PRS each (aliased by number),
+        instead of five REST reads a PR (the PR for mergeable, its head commit, its comments, reviews and files). A PR
+        whose comments, reviews or files run past one page, a head that moved, or any failure of the query is read
+        over REST as before (pr_facts). Never inside gh.fresh(): a merge is still decided on its own fresh reads."""
+        memo = self.__dict__.setdefault("_batch", {})
+        todo = [n for n in numbers if n not in memo]
+        if len(todo) < GRAPHQL_MIN_PRS or not hasattr(self.gh, "graphql"):
+            return
+        owner, name = self.gh.repo.split("/", 1)
+        for i in range(0, len(todo), GRAPHQL_PRS):
+            part = todo[i:i + GRAPHQL_PRS]
+            query = ("query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { "
+                     + " ".join(f"p{n}: pullRequest(number: {int(n)}) {{ ...F }}" for n in part)
+                     + " } } " + GRAPHQL_PR_FIELDS)
+            try:
+                data = self.gh.graphql(query, {"owner": owner, "name": name})
+            except GitHubError as err:   # GraphQL's own limit too: REST reads them, within this run's budget
+                self.out(f"NOTE        the GraphQL read of {len(part)} PR(s) failed ({err_text(err)}): read over REST")
+                return
+            repo = data.get("repository") or {}
+            for n in part:
+                got = rest_shapes(repo.get(f"p{n}"))
+                if got:
+                    memo[n] = got
+
     def pr_facts(self, pr: dict) -> tuple[rules.PrFacts, dict]:
         number, sha = pr["number"], pr["head"]["sha"]
-        full = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
-        commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")
+        batch = None if getattr(self.gh, "fresh_only", False) else self.__dict__.get("_batch", {}).get(number)
+        if batch and batch["head"] != sha:
+            batch = None   # the head moved since the query: read it all again
+        full = batch["pr"] if batch else self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
+        commit = batch["commit"] if batch else self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")
         proof, url, run_id, proof_done_at = self.proof(sha)
         job = rules.job_of_pr(pr.get("body")) or \
             rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(number, "")
-        verdicts, comments = self.verdicts(number, job)
+        verdicts, comments = self.verdicts(number, job, batch)
         issue = self.jobs().get(job)
         # Muse's mailed verdicts land on the job issue or the board (the bridge cannot comment on a PR).
         off_pr = self.board_comments() + (self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
@@ -1015,7 +1056,8 @@ class Switch:
         verdicts += self.bridged_verdicts(number, off_pr)
         labels = [l["name"] for l in pr.get("labels", [])] + ([l["name"] for l in issue["labels"]] if issue else [])
         needs = frozenset(l.split(":", 1)[1] for l in labels if l.startswith("needs:"))
-        files = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/files")
+        files = batch["files"] if batch and batch.get("files") is not None else \
+            self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/files")
         facts = rules.PrFacts(
             number=number, head_sha=sha, head_ref=pr["head"]["ref"], base_ref=pr["base"]["ref"], draft=bool(pr["draft"]),
             mergeable=full.get("mergeable"), head_committed_at=commit["commit"]["committer"]["date"], proof=proof,
@@ -3603,6 +3645,7 @@ def main() -> int:
         sw.out(f"GITHUB      {sw.gh.calls} call(s), {sw.gh.not_modified} answered 304 from the ETag cache"
                + (f", {sw.gh.spent()} counted of this run's budget of {sw.gh.budget}" if sw.gh.budget else "")
                + (f" ({sw.gh.over_budget} read(s) refused past it)" if sw.gh.over_budget else "")
+               + (f", {sw.gh.graphql_calls} GraphQL" if sw.gh.graphql_calls else "")
                + (f", {sw.gh.remaining} left this hour" if sw.gh.remaining is not None else ""))
         top = sorted(((n, k) for k, n in sw.gh.tally.items() if n > 0), reverse=True)
         if top:
@@ -3688,6 +3731,47 @@ COMMENT_FLOOR_HOURS = 6   # a comment listing's since: 00, 06, 12 or 18 UTC. An 
 
 WINDOW_KEPT_FOR = dt.timedelta(hours=6)   # a kept comment window older than this is read whole again (comments_since)
 COMMENT_KEPT_CHARS = 16000                 # of a kept comment's body: every reader looks at its first 4,000 at most
+
+
+def gql_login(author) -> str:
+    """REST's login for a GraphQL author: a Bot's carries "[bot]" there (github-actions[bot]), as rules' logins do."""
+    if not isinstance(author, dict):
+        return "ghost"   # a deleted account, as REST names it
+    login = str(author.get("login") or "ghost")
+    return f"{login}[bot]" if author.get("__typename") == "Bot" else login
+
+
+def rest_shapes(node) -> dict | None:
+    """One prefetched PR as pr_facts reads it over REST: {"head", "pr", "commit", "comments", "reviews", "files"}; a
+    list that did not fit one page is None (read over REST). None for a PR not read."""
+    if not isinstance(node, dict) or not node.get("headRefOid"):
+        return None
+    commits = ((node.get("commits") or {}).get("nodes") or [{}])
+    head = (commits[-1] or {}).get("commit") or {}
+    if head.get("oid") != node["headRefOid"] or not head.get("committedDate"):
+        return None
+
+    def whole(conn) -> list | None:
+        conn = conn or {}
+        nodes = conn.get("nodes")
+        return nodes if isinstance(nodes, list) and int(conn.get("totalCount") or 0) <= min(GRAPHQL_PAGE, len(nodes)) else None
+
+    comments, reviews, files = (whole(node.get(k)) for k in ("comments", "reviews", "files"))
+    return {
+        "head": node["headRefOid"],
+        "pr": {"number": node.get("number"),
+               "mergeable": {"MERGEABLE": True, "CONFLICTING": False}.get(node.get("mergeable"))},
+        "commit": {"sha": head["oid"], "commit": {"committer": {"date": head["committedDate"]}}},
+        "comments": None if comments is None else [
+            {"id": c.get("databaseId"), "body": c.get("body") or "", "created_at": c.get("createdAt"),
+             "updated_at": c.get("updatedAt"), "html_url": c.get("url"), "user": {"login": gql_login(c.get("author"))}}
+            for c in comments],
+        "reviews": None if reviews is None else [
+            {"id": r.get("databaseId"), "body": r.get("body") or "", "state": r.get("state"),
+             "submitted_at": r.get("submittedAt"), "commit_id": (r.get("commit") or {}).get("oid"),
+             "user": {"login": gql_login(r.get("author"))}} for r in reviews],
+        "files": None if files is None else [{"filename": f.get("path")} for f in files],
+    }
 
 
 def slim_comment(c: dict) -> dict:
@@ -3797,6 +3881,35 @@ def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
             "cold": bool(cold)}
 
 
+RUN_EVERY = dt.timedelta(minutes=5)   # the pace assumes a run this often (11-13: ten sweeps an hour, triggers in bursts)
+MIN_RUN_CALLS = 30   # a run inside the merge floor gets this many: a merge's fresh reads (the floor stops the rest)
+
+
+def hour_pace(want: int, full: bool, remaining, reset, limit, now: dt.datetime, per_run: int,
+              movable: bool = True) -> tuple[int, bool]:
+    """(this run's budget, whether its full pass goes) so the hour cannot run dry: what is left above the merge floor
+    until the token's reset is shared over the runs still to come (one each RUN_EVERY, at most an hour's), keeping a
+    fast sweep's share for each. A full pass goes when it fits beside those; one that does not waits for the next run
+    if `movable`, else goes with what is left after them (its rest waits for the next full pass: run_sweep BUDGET).
+    A fast sweep gets its share. Unknown rate: the run's own budget stands."""
+    if not isinstance(remaining, int) or not isinstance(reset, int):
+        return want, full
+    spare = remaining - rate_floor(limit if isinstance(limit, int) else None)
+    left_s = min(3600.0, max(0.0, reset - now.timestamp()))
+    runs_left = max(1, -(-int(left_s) // int(RUN_EVERY.total_seconds())))
+    if spare <= 0:   # inside the merge floor: the run is merge-only (run_sweep's rate floor), this many at most
+        return min(want, MIN_RUN_CALLS), full
+    share = max(1, spare // runs_left)
+    if not full:
+        return min(want, share), False
+    after = spare - (runs_left - 1) * per_run   # what the full pass may spend and still leave each later run its share
+    if after >= want:
+        return want, True
+    if movable:
+        return min(per_run, share), False
+    return min(want, max(share, after)), True
+
+
 def call_budget(args, ask: bool, steer: bool, full: bool) -> int:
     """This run's call budget (CALL_BUDGET): a dry run's, a run for one PR or sha, else the part's full or fast pass."""
     if args.dry_run:
@@ -3868,6 +3981,27 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.out(f"RETRY       {', '.join(sorted(retry & FULL_PARTS))} did not finish last sweep: a full pass now")
         full = True
     sw.gh.budget = call_budget(args, ask, steer, full or targeted)
+    if not targeted:   # a dry run too (the selftest's): it spends the same hour
+        # 11-13: the hour's budget beside the run's. Runs pile up (33 triggers in the hour from 14:13, ten of them
+        # sweeps), so each paces itself on what the token has left until its reset, and a full pass the hour can no
+        # longer afford waits (a fast sweep, the merges kept) rather than run the hour dry
+        # only the hourly full pass can wait, and only once: a retried part (the reconciler, the ledger) or a full
+        # pass already an hour late goes now, inside what the hour can spare
+        movable = full and not args.dry_run and sweep_state_ok(state) and not retry & FULL_PARTS and \
+            now - parse_time(state["full_at"]) < 2 * FULL_EVERY
+        paced, keep_full = hour_pace(sw.gh.budget, full, sw.gh.remaining, sw.gh.reset, sw.gh.limit, now,
+                                     CALL_BUDGET["fast"] + (CALL_BUDGET["ask-fast"] if ask else 0), movable)
+        if movable and not keep_full:
+            full = False
+            paced = min(paced, call_budget(args, ask, steer, False))
+            sw.out(f"HOUR        {sw.gh.remaining} calls left until the reset: no full pass this run (it waits for "
+                   "an hour that can afford it); a fast sweep, the merges kept")
+        if paced < sw.gh.budget:
+            sw.out(f"HOUR        this run's budget is {paced} (the hour's pace), not {sw.gh.budget}")
+        sw.gh.budget = paced
+        if isinstance(sw.gh.remaining, int) and sw.gh.remaining <= floor() and not sw.merge_only:
+            sw.merge_only = True   # at the floor itself (low() is below it): only merges spend the reserve
+            sw.out(f"::warning::RATE FLOOR  {sw.gh.remaining} calls left: the merge path only this run")
     failed = 0
     if ask:
         failed += sw.watch_sessions()
@@ -3892,6 +4026,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                f"the full pass (the ledger's reading, the reconciler, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
     records: dict[str, dict] = dict((state or {}).get("prs") or {}) if delta is not None else {}
     read = 0
+    sw.prefetch([p["number"] for p in prs if delta is None or p["number"] in delta.prs])
     for pr in prs:
         if delta is not None and pr["number"] not in delta.prs:
             continue

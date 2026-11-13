@@ -116,6 +116,55 @@ class Budget(unittest.TestCase):
         self.assertEqual(ghapi.call_kind("GET", "repos/IssisX/ScraperX/commits/0123abcd"), "GET commits/S")
 
 
+class Hour(unittest.TestCase):
+    """11-13: runs pile up (33 triggers in the hour from 14:13; ten sweeps ran, spending 271-459 each fast and 879 on
+    the full pass, plus the ask part's 15-147), so each run also paces itself on the hour (switch.hour_pace)."""
+
+    START = dt.datetime(2026, 11, 13, 14, 32, tzinfo=dt.timezone.utc)
+
+    def hour(self, runs: int, fast_demand=459 + 147, full_demand=879 + 147) -> list[int]:
+        """`runs` sweeps spread over one rate window, each wanting today's measured spend; the token's remaining
+        after each sweep that was not merge-only. A cut run spends its budget and leaves the rest (OverBudget)."""
+        args = argparse.Namespace(part="all", pr=0, sha="", issue=0, label="", digest=False, force_digest=False,
+                                  dry_run=False)
+        remaining, reset, left = 5000, int((self.START + dt.timedelta(hours=1)).timestamp()), []
+        for i in range(runs):
+            now = self.START + dt.timedelta(seconds=3600 * i / runs)
+            full = i == 0
+            want = switch.call_budget(args, True, True, full)
+            budget, full = switch.hour_pace(want, full, remaining, reset, 5000, now,
+                                            switch.CALL_BUDGET["fast"] + switch.CALL_BUDGET["ask-fast"], movable=False)
+            if remaining <= switch.rate_floor(5000):   # run_sweep's rate floor: the merge path alone, from the reserve
+                remaining -= min(20, budget)
+                continue
+            remaining -= min(full_demand if full else fast_demand, budget)
+            left.append(remaining)
+        return left
+
+    def test_no_sweep_eats_into_the_merge_reserve_at_todays_trigger_rate_or_four_times_it(self):
+        floor = switch.rate_floor(5000)
+        for runs in (10, 20, 40):   # today's ten sweeps an hour; every trigger a sweep; twice that
+            left = self.hour(runs)
+            self.assertGreaterEqual(min(left), floor, (runs, left))
+        self.assertGreater(self.hour(10)[-1], 2500, "today's rate spends under half the hour (it spent 3,414 in 80 min)")
+
+    def test_without_the_pace_forty_runs_would_cross_the_floor(self):
+        # the per-run budgets alone: a full pass and 39 fast sweeps of today's demand cut to their budgets
+        b = switch.CALL_BUDGET
+        spent = b["full"] + b["ask-full"] + 39 * (b["fast"] + b["ask-fast"])
+        self.assertGreater(spent, 5000 - switch.rate_floor(5000))
+
+    def test_a_full_pass_the_hour_cannot_afford_waits_unless_it_is_a_retry_or_late(self):
+        reset = int((self.START + dt.timedelta(hours=1)).timestamp())
+        per = switch.CALL_BUDGET["fast"] + switch.CALL_BUDGET["ask-fast"]
+        budget, full = switch.hour_pace(1200, True, 1500, reset, 5000, self.START, per, movable=True)
+        self.assertEqual((full, budget <= per), (False, True))
+        budget, full = switch.hour_pace(1200, True, 1500, reset, 5000, self.START, per, movable=False)
+        self.assertTrue(full)
+        self.assertLessEqual(budget, (1500 - switch.rate_floor(5000)) // 12 + 1, "a retry goes, on the run's share")
+        self.assertEqual(switch.hour_pace(1200, True, None, None, None, self.START, per), (1200, True))
+
+
 class EscapedLogs(unittest.TestCase):
     """gh refused six red job logs with colour codes, 3 tries each, every sweep (run 43436037307)."""
     REFUSED = (b"the response contains terminal escape sequences; pass --allow-escape-sequences to output it anyway")

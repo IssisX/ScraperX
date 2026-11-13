@@ -145,6 +145,7 @@ class GitHub:
         # every GET raises OverBudget at once, costing nothing; a write still goes (each is a decision already made).
         self.budget: int | None = None
         self.over_budget = 0                # the GETs refused for the budget
+        self.graphql_calls = 0              # GraphQL reads: GraphQL's own hourly points, not the REST hour
         self.fresh_only = False             # fresh(): no answer comes from the cache (the merge facts, J-072)
         self.cache_key = b""                # the cache file's HMAC key (load_etags/save_etags), b"" for none
 
@@ -252,6 +253,8 @@ class GitHub:
             self.log(f"NOTE        the ETag cache was not saved: {err}")
 
     def _note_rate(self, headers: dict[str, str]) -> None:
+        if headers.get("x-ratelimit-resource", "core") != "core":
+            return   # GraphQL's points (and search's) are their own limit: `remaining` is the REST hour's
         rem, reset, limit = (headers.get(f"x-ratelimit-{k}", "") for k in ("remaining", "reset", "limit"))
         if rem.isdigit():
             self.remaining = int(rem)
@@ -357,9 +360,19 @@ class GitHub:
             detail = detail.replace(token, "[token]")
         raise (TimedOut if timed_out else GitHubError)(method, path, detail, status)
 
+    def graphql(self, query: str, variables: dict | None = None) -> dict:
+        """One GraphQL read (11-13: the open PRs' facts in one query, not five REST reads each). It spends GraphQL's
+        own hourly points, not the REST hour the budget counts. Never cached; GitHub's `errors` raise GitHubError."""
+        self.graphql_calls += 1
+        got = self._run("POST", "graphql", {"query": query, "variables": variables or {}}) or {}
+        if got.get("errors") or not isinstance(got.get("data"), dict):
+            msg = "; ".join(str(e.get("message") or e)[:160] for e in got.get("errors") or [{}])[:400]
+            raise GitHubError("POST", "graphql", msg or "no data", 0)
+        return got["data"]
+
     def spent(self) -> int:
         """The calls this run made that count against the hour's limit (a 304 does not)."""
-        return self.calls - self.not_modified
+        return self.calls - self.not_modified - self.graphql_calls
 
     # reads
     def get(self, path: str, accept: str = "") -> Any:
