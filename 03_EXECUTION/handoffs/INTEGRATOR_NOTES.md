@@ -11,7 +11,7 @@ Read through: 1794600995 (2026-11-13 mail+asks)
 - THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
   done = the real test passing. NOW: 2-4 landed (19:47Z). #526 landed; #530 (5) #531 (8) open, 7/9/10 auto-open; 6 after
   #530+#526, cut from trunk, brief it with the reads fix's touches; reads fix (xhigh) running. REAL TEST = plan sec 5 table read
-  over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 proofs re-run).
+  over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven (3 trunk reds 11-13: key 1090, voice picks, J-098 picks). Trunk red since #523 (Muse, mailed; send_later revert check).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
