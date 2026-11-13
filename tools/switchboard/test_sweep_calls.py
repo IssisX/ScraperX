@@ -516,6 +516,57 @@ class Retry(unittest.TestCase):
         self.assertIn(f"RED-BRANCH `{name}`", inbox_posts[0])
         self.assertIn("inbox", retry_mark)
 
+    def test_a_failed_full_pass_part_makes_the_next_sweep_a_full_pass_once(self):
+        # was the ledger's retry test (D2): auto-open is a full-pass part, so its retry needs every PR read again
+        from unittest import mock
+        calls = []
+
+        def auto_open_once(only):
+            calls.append(only)
+            if len(calls) == 1:
+                raise switch.GitHubError("GET", f"repos/{REPO}/branches", "gh: (HTTP 403)", 403)
+            return 0
+
+        full_at = []
+        state = None
+        with mock.patch.object(switch.Switch, "auto_open_prs", side_effect=auto_open_once):
+            for minutes in (0, 10, 20):                              # the hour's full pass is not due again
+                gh = CountingGH(self.prs, dry_run=False)
+                status, _, _ = sweep(gh, now=NOW + dt.timedelta(minutes=minutes), whole=state)
+                if minutes == 0:
+                    self.assertEqual(status, 2, "the auto-open part failed: the run exits non-zero")
+                    self.assertEqual(gh.state["steer"]["retry"], ["auto-open"])
+                full_at.append(gh.state["steer"]["full_at"])
+                state = self.carry(gh)
+        retried = iso(NOW + dt.timedelta(minutes=10))
+        self.assertEqual(full_at, [iso(NOW), retried, retried], "a full pass at the very next sweep, then not again")
+        self.assertEqual(calls, [None, None], "auto-open ran again over every branch, once")
+        self.assertEqual(state["steer"]["retry"], [])
+
+    def test_a_failed_part_keeps_its_old_timers(self):
+        # was the ledger's (D2): a full pass whose auto-open or one PR read failed keeps every cached timer no good
+        # run replaced, here the heads already re-run (J-103), so nothing is lost before the retry
+        from unittest import mock
+        heads = ["a" * 40, "b" * 40]
+
+        def fails(only):
+            raise switch.GitHubError("GET", f"repos/{REPO}/branches", "gh: (HTTP 403)", 403)
+
+        for failing in ("auto-open", "prs"):
+            with self.subTest(failing=failing):
+                state = last_state(self.prs, minutes=61)                # a full pass is due
+                state["timers"]["rerun"] = list(heads)
+                gh = CountingGH(self.prs)
+                if failing == "prs":
+                    gh.fail_once = (f"repos/{REPO}/pulls/{self.prs[0]['number']}",)
+                    sweep(gh, state)
+                else:
+                    with mock.patch.object(switch.Switch, "auto_open_prs", side_effect=fails):
+                        sweep(gh, state)
+                saved = gh.state["steer"]
+                self.assertEqual(saved["retry"], [failing])
+                self.assertEqual(saved["timers"].get("rerun"), heads)
+
     def test_under_the_rate_floor_nothing_is_marked_done(self):
         class Low(CountingGH):
             def route(self, path):
