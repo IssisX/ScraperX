@@ -381,3 +381,4 @@
 {"job": "J-138", "kind": "review", "note": "review#507@729a0d92 claude-opus-5-5 in=52697 out=109759 stop=end_turn", "phase": "end", "run": "973521c7bd00", "ts": "2026-11-13T17:51:39Z", "usd": "2.405968"}
 {"job": "J-072", "kind": "review", "note": "review#506@51cf8c99 in=25325", "phase": "reserve", "run": "59605c3fa023", "ts": "2026-11-13T17:51:39Z", "usd": "1.381300"}
 {"job": "J-072", "kind": "review", "note": "review#506@51cf8c99 claude-opus-5-5 in=25758 out=4874 stop=end_turn", "phase": "end", "run": "59605c3fa023", "ts": "2026-11-13T17:51:39Z", "usd": "0.200512"}
+{"job": "J-072", "kind": "review", "note": "review#503@ce0f1a96 month cap $100.00: spent $98.24, this call up to $2.66", "phase": "refused", "run": "e7408c45839c", "ts": "2026-11-13T17:51:39Z", "usd": "0"}
