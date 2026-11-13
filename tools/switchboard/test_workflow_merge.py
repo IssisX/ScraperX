@@ -439,15 +439,19 @@ class TheCacheBoundary(unittest.TestCase):
                          [("switchboard-etags-ask", "ask/etags.json"), ("switchboard-etags-steer", "steer/etags.json")])
 
     def test_one_cache_scope_so_two_states_never_both_fire_a_timer(self):
-        # Caches are scoped by ref. The default branch is trunk, so every event but a pull_request runs there; a run
+        # Caches are scoped by ref. The default branch is trunk, so every event but the selftest's push runs there; a run
         # on another ref (a dispatch) skips the cache, the provision run (its own concurrency group) skips it, and
         # the sweeps share one concurrency group that never runs two at once.
         flow = self.flow()
         cin, cout = flow["jobs"]["cache-in"], flow["jobs"]["cache-out"]
         self.assertTrue(cin["if"].startswith("github.ref == 'refs/heads/ScraperX-Claude' && "
-                                             "github.event_name != 'pull_request' && !inputs.provision && "))
+                                             "github.event_name != 'push' && !inputs.provision && "))
         self.assertIn("needs.cache-in.result == 'success'", cout["if"])
         self.assertIn("inputs.dry_run != true", cout["if"])
+        # 11-13: the selftest runs on an agent's push, never on a pull_request the bot opened (it waits for approval)
+        self.assertNotIn("pull_request", flow[True])
+        self.assertEqual(flow["jobs"]["selftest"]["if"], "github.event_name == 'push'")
+        self.assertIn("github.event_name != 'push'", flow["jobs"]["steer"]["if"])
         self.assertFalse(flow["concurrency"]["cancel-in-progress"])
         self.assertIn("|| 'switchboard'))", flow["concurrency"]["group"])
         keys = [s["with"]["key"] for j in (cin, cout) for s in j["steps"] if "key" in s.get("with", {})]
