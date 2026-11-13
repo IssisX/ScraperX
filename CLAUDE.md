@@ -9,7 +9,7 @@ This file is only the rules that change what an agent does. Add a rule here only
 - One goal: Claude and Muse build the game. Judge the system by what lands.
 - Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: a
   day went to patches around two switchboard changes).
-- Build and test only what changed. Blocker first: nothing lower while it is stuck. A delay is a failure, never "wait".
+- Build and test only what changed. Blocker first, nothing lower while it is stuck. A delay is a failure, never "wait".
 - Fix only what is measured broken, one small change at a time; no new machinery, no side projects.
 
 ## Settled: never reopen (Cory's calls)
@@ -28,7 +28,8 @@ it to match, never ask him again.
   "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
   helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
-- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
+- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Ask him the effort
+  before starting any helper (11-13).
 - Claude types no clock time (11-11): an event is named by its link; a time decision
   runs `date`. Hooks refuse them; `time_audit.py` counts slips.
 
@@ -56,7 +57,7 @@ it to match, never ask him again.
   loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
   ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
-- Never ask him to merge, approve or review. Only exception: what this session's safety check refuses (say it once).
+- Never ask him to merge, approve or review, except what this session's safety check refuses (say it once).
 - Say unasked, at once: your own mistakes, the system's holes, a better way, and any setting (effort, model) that
   changes how Claude works for him (11-07, 11-11).
 
@@ -114,6 +115,5 @@ it to match, never ask him again.
   is Cory's call: give him its run time, model, effort (11-12).
 - **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
   current; after a compact re-read it, this file and the hourly file, and say what may be lost.
-- **Keep reads small:** subscribe only to PRs you merge yourself; big reads go to a helper; read only the section a
-  job needs (`REPO_MAP.md`, grep). Caps: the board 100 comments (then a fresh board), a job
+- **Keep reads small:** subscribe only to PRs you merge; big reads go to a helper; read only what a job needs. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.
