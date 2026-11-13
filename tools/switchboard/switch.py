@@ -48,9 +48,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent / "board"))   # after this dir: tools/board has a plan.py too
 
-import asks  # noqa: E402  tools/board/asks.py: the one judge of asks
 import budget as money  # noqa: E402
 import rules  # noqa: E402
 import ghapi  # noqa: E402
@@ -59,8 +57,6 @@ import plan as collab_plan  # noqa: E402
 import machine  # noqa: E402
 import mail_reader  # noqa: E402
 import work_reader  # noqa: E402
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "ci"))
-import proof_scope  # noqa: E402  ci/proof_scope.py: which proof groups a changed file reaches (base_skew)
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -73,19 +69,6 @@ def only_wake_left(jobs: list[dict]) -> bool:
     """True when the proof's one unfinished job is the one waking this sweep: every proof job is done."""
     return any(j["name"] == WAKE_JOB for j in jobs) and all(
         j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
-
-
-BUILD_JOBS = ("host-build", "native-tests", "godot-touch", "android-build")   # the game's build and tests
-
-
-def built_run(jobs: list[dict]) -> bool:
-    """Did this proof run build or test the game: a host-build, native-tests, godot-touch or android-build job that
-    was not skipped (a failed host-build counts: its tests are skipped because it failed)? A push that changes only
-    notes, rules or the switchboard skips them all (ci/proof_scope.py) and reads green, so such a run says nothing
-    about trunk's code (RED-TRUNK)."""
-    return any((j.get("name") or "").startswith(BUILD_JOBS) and j.get("conclusion") != "skipped" for j in jobs)
-
-
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
 STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switchboard/reconciler.py, J-072)
@@ -107,11 +90,6 @@ MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047
 # The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
 # helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
 AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
-# 11-13: 77 claude/integrate-* branches from before (landed straight to trunk, or abandoned) never had a PR. Only a
-# head committed in the last AUTO_PR_MAX_AGE is opened there, and an older one costs no PR listing: the first full
-# pass after #498 read all of them and the token's hour ran out (run 43440567620: 0 of 5000 left).
-AUTO_PR_RECENT_ONLY = ("claude/integrate-",)
-AUTO_PR_MAX_AGE = dt.timedelta(days=3)
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -148,22 +126,7 @@ MAX_PLAN_LABELS = 20                           # issues whose labels a live pass
 # compares, 60 proof reads, the listings), a third of a full pass's own. So in shadow it runs in the full pass of
 # every sixth hour, four times a day, and only with twice the rate floor left. Live, it runs every full pass.
 PLAN_SHADOW_EVERY_H = 6
-# An ask to Claude still open this long reaches the integrator again as ASK-LATE, once (CLAUDE.md: a `To <you>:` ask
-# is answered before your next step; work/tasks/integrator-hourly.md counts asks to Claude over 1 h). Read on the full
-# pass from the ledger's window; one older than INBOX_RUNS_WINDOW is the reconciler's daily line to Cory instead.
-ASK_LATE = dt.timedelta(hours=1)
-MAX_ASK_LATE = 10                              # ASK-LATE items per pass; the rest come next pass
-# RED-TRUNK (11-13: trunk's full proof was red about a day, J-129's doubled order key 1100, and nobody owned it: the
-# notes-only pushes after it skip the build, so trunk's newest run read green). Trunk's proof is its newest run that
-# RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
-# a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
-TRUNK_RUN_READS = 6
-CANDIDATE_PREFIX = "switchboard/candidate-"   # the switchboard's own merge-candidate branches (merge_candidate)
-COMPARE_FILES_CAP = 300   # GitHub's compare lists at most this many files: a list that long may be cut (base_skew)
-# The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
-# the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
-MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
-INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
@@ -270,10 +233,6 @@ BRIDGE_VERSION_ENV = "SWITCHBOARD_BRIDGE_VERSION"   # the dispatch's bridge_vers
 # of an App's 5,000.
 RATE_FLOOR_SHARE = 0.16
 RATE_FLOOR_MIN = 150
-CALLS_SHOWN = 8          # the CALLS line's biggest kinds of call (ghapi.call_kind), the rest summed
-RED_TESTS_KEPT = 80       # finished red runs whose failing-test lines the sweep state keeps (red_tests)
-RED_TESTS_TRIES = 3       # sweeps in a row that try a log that could not be read; after them, once each RED_TESTS_RETRY
-RED_TESTS_RETRY = dt.timedelta(hours=2)
 AGENT_TOKEN_ENV = "AGENT_GITHUB_TOKEN"   # the hosted agent's token: its rate is logged once, never used by the switch
 HC_TIMEOUT_S = 10
 DRY_SUMMARY = ("### DRY RUN: no action taken\n\nEvery action this run printed was printed only, none was taken "
@@ -592,7 +551,7 @@ def inbox_class(it: InboxItem) -> str:
     job whose next step another owner holds). "hold": the integrator's own work,
     posted at most once per INBOX_HOLD, or sooner riding an ask. Any kind not named here holds, so a new kind is
     never only a digest entry."""
-    if it.kind in ("TO-CLAUDE", "ASK-LATE", "RED-TRUNK"):   # RED-TRUNK: every agent's proof stands on trunk
+    if it.kind == "TO-CLAUDE":
         return "now"
     if it.kind in DIGEST_KINDS:
         return "ride"
@@ -839,19 +798,6 @@ class Switch:
         memo = self.__dict__.setdefault("_red_tests", {})
         if run_id in memo:
             return memo[run_id]
-        # 11-13: a finished run's logs never change, so its lines are kept between sweeps (the sweep state): the
-        # digest's held red items were read again every sweep, 6 logs x 3 tries each (run 43436037307). A read that
-        # failed is tried at the next sweeps, RED_TESTS_TRIES in all, then once each RED_TESTS_RETRY.
-        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
-        kept = state.get("red_tests") if isinstance(state.get("red_tests"), dict) else {}
-        old = kept.get(str(run_id)) if isinstance(run_id, int) else None
-        if isinstance(old, dict) and isinstance(old.get("lines"), list) and all(isinstance(x, str) for x in old["lines"]):
-            at = parse_time(str(old.get("t") or ""))
-            tries = old.get("tries") if isinstance(old.get("tries"), int) else 1
-            if not any(x.endswith(LOG_UNREAD) for x in old["lines"]) or (
-                    tries >= RED_TESTS_TRIES and at and self.now - at < RED_TESTS_RETRY):
-                memo[run_id] = tuple(old["lines"])
-                return memo[run_id]
         out: list[str] = []
         try:
             jobs = self.run_jobs(run_id) if isinstance(run_id, int) else []
@@ -882,11 +828,6 @@ class Switch:
         if len(failed) > MAX_FAIL_JOBS:
             out.append(f"and {len(failed) - MAX_FAIL_JOBS} more failed test jobs, their logs not read")
         memo[run_id] = tuple(out)
-        if isinstance(run_id, int) and jobs and isinstance(getattr(self.gh, "state", None), dict):
-            kept = dict(kept)
-            tries = (old.get("tries") or 1) + 1 if isinstance(old, dict) and isinstance(old.get("tries"), int) else 1
-            kept[str(run_id)] = {"t": iso_z(self.now), "lines": list(out), "tries": tries}
-            self.gh.state["red_tests"] = dict(sorted(kept.items(), key=lambda kv: int(kv[0]))[-RED_TESTS_KEPT:])
         return memo[run_id]
 
     def red_tests_at(self, sha: str) -> tuple[str, ...]:
@@ -1048,43 +989,9 @@ class Switch:
         return list(memo[(path, key)])
 
     def comments_since(self, since: dt.datetime) -> list:
-        """Every comment updated since `since`, floored to COMMENT_FLOOR (J-072). Callers filter to their exact window.
-        11-13: kept between sweeps (the sweep state's "comment_window"), so a sweep reads only what was posted or
-        edited since the last read: the whole window was read every sweep, about 600 comments, 5 pages oldest first
-        and 5 newest first, and almost none answered 304 (an edit anywhere shifts every page)."""
+        """Every comment updated since `since`, floored to COMMENT_FLOOR (J-072): the URL then repeats for hours, and
+        as the listing is oldest first, every page but the newest answers 304. Callers filter to their exact window."""
         floor = comment_floor(since)
-        memo = self.__dict__.setdefault("_comment_window", {})
-        if floor in memo:
-            return list(memo[floor])
-        got = self.window_since(floor)
-        memo[floor] = got
-        return list(got)
-
-    def window_since(self, floor: dt.datetime) -> list:
-        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
-        kept = (state or {}).get("comment_window")
-        start, read_at = (parse_time(str(kept.get(k) or "")) for k in ("from", "read_at")) if isinstance(kept, dict) \
-            else (None, None)
-        if (state is not None and start is not None and read_at is not None and start <= floor
-                and self.now - read_at <= WINDOW_KEPT_FOR and isinstance(kept.get("items"), list)):
-            seen = getattr(self, "_delta_comments", None)   # sweep_delta's own read, when it reaches back far enough
-            fresh = (seen[1] if seen and seen[0] <= read_at - SWEEP_OVERLAP and len(seen[1]) < 100 else
-                     self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={iso_z(read_at - SWEEP_OVERLAP)}"))
-            if len(fresh) < COMMENT_LISTING_CAP:
-                by_id = {c.get("id"): c for c in kept["items"] if isinstance(c, dict)}
-                by_id.update({c.get("id"): slim_comment(c) for c in fresh})   # an edit replaces its old text
-                got = sorted((c for c in by_id.values() if (parse_time(str(c.get("updated_at") or "")) or floor) >= floor),
-                             key=lambda c: (str(c.get("created_at") or ""), int(c.get("id") or 0)))
-                state["comment_window"] = {"from": iso_z(floor), "read_at": iso_z(self.now), "items": got}
-                return got
-        got = self.whole_window(floor)
-        if state is not None:
-            state["comment_window"] = {"from": iso_z(floor), "read_at": iso_z(self.now),
-                                       "items": [slim_comment(c) for c in got]}
-        return got
-
-    def whole_window(self, floor: dt.datetime) -> list:
-        """The window read whole: the first sweep, a window the state does not hold, or a gap too long to trust."""
         got = self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(floor)}")
         if len(got) < COMMENT_LISTING_CAP:
             return got
@@ -1092,7 +999,7 @@ class Switch:
         # 11-10, 620 comments in the window, the last ~120 (Muse's mails, new asks) were never read and nothing woke
         # the integrator. Read the window again newest first and merge by id.
         self.out(f"NOTE        comment listing since {iso_z(floor)} hit its {COMMENT_LISTING_CAP} cap; read newest first too")
-        newest = self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(floor)}&sort=created&direction=desc")
+        newest = self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(since)}&sort=created&direction=desc")
         seen = {c.get("id") for c in got}
         return got + [c for c in reversed(newest) if c.get("id") not in seen]
 
@@ -1264,14 +1171,8 @@ class Switch:
         if d.action in ("MERGE", "HUMAN-MERGE"):
             with self.gh.fresh():   # the rule check and the decision on it: no answer from the cache either
                 block, never = self.rule_check_block(facts.number, facts.head_sha)
-                facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never,
-                                            trunk_skew=self.base_skew(facts))
+                facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
                 d = rules.merge_decision(facts, author, self.team, token, key)
-                if d.action == "WAIT" and d.reasons == (f"{rules.SKEW} ({facts.trunk_skew})",):
-                    state, note = self.merge_candidate(facts)
-                    facts = dataclasses.replace(facts, candidate=state)
-                    d = rules.merge_decision(facts, author, self.team, token, key)
-                    self.out(f"CANDIDATE   #{facts.number} {state}: {note}")
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         seen = Steered(facts, ctx, d)
@@ -1318,141 +1219,6 @@ class Switch:
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
-
-    def base_skew(self, facts: rules.PrFacts) -> str:
-        """Why this head's proof does not cover current trunk, or "": GitHub's compare of the head with trunk lists
-        trunk's commits the head lacks and the files they change, and ci/proof_scope.py says which of those files
-        any proof group reads. Notes, rules and switchboard commits reach none, so they never hold a merge; any game
-        file does, and so does a compare that cannot be read or is cut short (any doubt holds, as the proof's scope
-        does). The fix is the owner's: merge trunk in and push, so the proof runs on the combination."""
-        try:
-            cmp = self.gh.get(f"repos/{self.gh.repo}/compare/{facts.head_sha}...{rules.TRUNK}") or {}
-        except RateLimited:
-            raise
-        except GitHubError as err:
-            return f"trunk's commits since this head were not read ({err_text(err)})"
-        ahead = int(cmp.get("ahead_by") or 0)
-        if cmp.get("status") in ("identical", "behind") or not ahead:
-            return ""
-        commits = cmp.get("commits") or []
-        if commits and len(commits) >= ahead:   # oldest first: the last is trunk's head (merge_candidate)
-            self.__dict__.setdefault("_skew_trunk", {})[facts.number] = commits[-1].get("sha") or ""
-        files = [f.get("filename") or "" for f in cmp.get("files") or []]
-        if len(cmp.get("commits") or []) < ahead or len(files) >= COMPARE_FILES_CAP:
-            return f"trunk is {ahead} commit(s) ahead, too many to list"
-        reached = [f for f in files if proof_scope.groups_of(f)]
-        if not reached:
-            return ""
-        return (f"trunk is {ahead} commit(s) ahead with {len(reached)} file(s) its proof reads, "
-                f"e.g. {untrusted(reached[0], 80)}")
-
-    def trunk_moved_game(self, old: str, new: str) -> bool:
-        """Did trunk's commits from `old` to `new` change any file a proof reads (or could that not be read)?"""
-        if old == new:
-            return False
-        try:
-            cmp = self.gh.get(f"repos/{self.gh.repo}/compare/{old}...{new}") or {}
-        except RateLimited:
-            raise
-        except GitHubError:
-            return True
-        files = [f.get("filename") or "" for f in cmp.get("files") or []]
-        ahead = int(cmp.get("ahead_by") or 0)
-        return (cmp.get("status") not in ("ahead", "identical") or len(cmp.get("commits") or []) < ahead
-                or len(files) >= COMPARE_FILES_CAP or any(proof_scope.groups_of(f) for f in files))
-
-    def merge_candidate(self, facts: rules.PrFacts) -> tuple[str, str]:
-        """11-13, merge skew without stalling the owner: trunk moved game code under a green, landed head, so its
-        proof is of an older trunk (J-127 #482 and J-129 #483, each green alone, trunk red a day together). The
-        switchboard proves the merge itself: its own branch CANDIDATE_PREFIX<pr> at the head, trunk merged in by
-        GitHub (POST merges), the proof dispatched on it. (state, why): "green" (the merge's proof is green and trunk
-        has moved no game code since: merge), "proving", "red" or "conflict" (the owner's: a real conflict, or the
-        combination fails), "" (not built: the owner merges trunk in, as before). Never writes an agent's branch.
-        Inside gh.fresh() (steer_pr): nothing from the cache decides it. The state only says which commit to read: the
-        commit must be a merge of exactly this head and a trunk commit, and its proof a dispatch on our branch."""
-        repo, branch, key = self.gh.repo, f"{CANDIDATE_PREFIX}{facts.number}", str(facts.number)
-        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
-        cands = state.setdefault("candidates", {}) if isinstance(state, dict) else {}
-        trunk = self.__dict__.get("_skew_trunk", {}).get(facts.number, "")
-        if not trunk:   # the compare failed or was cut short: no exact trunk to prove against, so the owner's (as before)
-            return "", f"{rules.TRUNK}'s head was not read from the compare"
-        try:
-            rec = cands.get(key) if isinstance(cands.get(key), dict) else {}
-            same = rec.get("head") == facts.head_sha and rec.get("trunk") and (
-                rec.get("trunk") == trunk or not self.trunk_moved_game(str(rec["trunk"]), trunk))
-            if same and rec.get("conflict"):
-                return "conflict", f"{rules.TRUNK} @ {str(rec['trunk'])[:8]} does not merge into it cleanly"
-            if same and rec.get("sha"):
-                got = self.read_candidate(facts, branch, str(rec["sha"]), str(rec["trunk"]))
-                if got:
-                    return got
-            if self.gh.dry_run:
-                self.out(f"DRY  candidate #{facts.number}: {branch} at @{facts.head_sha[:8]}, {rules.TRUNK} @ "
-                         f"{trunk[:8]} merged in, the proof dispatched on it")
-                return "proving", "a dry run builds no candidate"
-            try:
-                self.gh.write("PATCH", f"repos/{repo}/git/refs/heads/{branch}", {"sha": facts.head_sha, "force": True},
-                              f"reset {branch} to #{facts.number}'s head")
-            except GitHubError as err:
-                if http_status(err.detail) not in (404, 422):
-                    raise
-                self.gh.write("POST", f"repos/{repo}/git/refs", {"ref": f"refs/heads/{branch}", "sha": facts.head_sha},
-                              f"make {branch} at #{facts.number}'s head")
-            try:
-                made = self.gh.write("POST", f"repos/{repo}/merges",
-                                     {"base": branch, "head": trunk, "commit_message":
-                                      f"Merge candidate: #{facts.number} @{facts.head_sha[:8]} with {rules.TRUNK} "
-                                      f"@{trunk[:8]} (switchboard, proved before the merge)"},
-                                     f"merge {rules.TRUNK} into {branch}")
-            except GitHubError as err:
-                if http_status(err.detail) == 409:
-                    cands[key] = {"head": facts.head_sha, "trunk": trunk, "conflict": True, "at": iso_z(self.now)}
-                    return "conflict", f"{rules.TRUNK} @ {trunk[:8]} does not merge into it cleanly"
-                raise
-            sha = (made or {}).get("sha") or ""
-            if not sha:
-                return "", "GitHub's merge made no commit"
-            self.gh.write("POST", f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/dispatches", {"ref": branch},
-                          f"dispatch the proof on {branch}")
-            cands[key] = {"head": facts.head_sha, "trunk": trunk, "sha": sha, "at": iso_z(self.now)}
-            return "proving", f"{branch} @ {sha[:8]} ({rules.TRUNK} @ {trunk[:8]} merged in), its proof dispatched"
-        except RateLimited:
-            raise
-        except GitHubError as err:
-            return "", f"the merge candidate was not built or read ({err_text(err)})"
-
-    def read_candidate(self, facts: rules.PrFacts, branch: str, sha: str, trunk: str) -> tuple[str, str] | None:
-        """The state of a candidate already built, or None when it is not this head's merge with that trunk."""
-        commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}") or {}
-        if [p.get("sha") for p in commit.get("parents") or []] != [facts.head_sha, trunk]:
-            return None
-        runs = [r for r in self.head_runs(sha) if r.get("event") == "workflow_dispatch" and r.get("head_branch") == branch]
-        if not runs:
-            return "proving", f"{branch} @ {sha[:8]}: its proof has not started yet"
-        state, url, _, _ = self.run_state(max(runs, key=lambda r: r["created_at"]))
-        if state == "green":
-            return "green", f"{branch} @ {sha[:8]}, this head merged with {rules.TRUNK} @ {trunk[:8]}, is green ({url})"
-        if state.startswith("red"):
-            return "red", f"this head merged with {rules.TRUNK} @ {trunk[:8]} is red on {branch} ({url})"
-        return "proving", f"{branch} @ {sha[:8]}: its proof is {state} ({url})"
-
-    def drop_candidates(self, open_now: set[str]) -> None:
-        """The full pass: the candidate branches of PRs no longer open are deleted (the switchboard's own, never an
-        agent's), and their records dropped."""
-        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
-        cands = state.get("candidates") if isinstance(state.get("candidates"), dict) else {}
-        for key in sorted(set(cands) - open_now):
-            if not self.gh.dry_run and key.isdigit():
-                try:
-                    self.gh.write("DELETE", f"repos/{self.gh.repo}/git/refs/heads/{CANDIDATE_PREFIX}{key}",
-                                  what=f"delete {CANDIDATE_PREFIX}{key}: #{key} is closed")
-                except RateLimited:
-                    raise
-                except GitHubError as err:
-                    if http_status(err.detail) not in (404, 422):
-                        self.out(f"NOTE        {CANDIDATE_PREFIX}{key} not deleted ({err_text(err)})")
-                        continue
-            cands.pop(key, None)
 
     def codex_counts(self, author: str, ctx: dict) -> bool:
         """Is Codex asked to review this PR: it is on the team, its review can land this author's work
@@ -1717,20 +1483,12 @@ class Switch:
             if branch in open_refs:
                 continue
             try:
-                known = self.gh.state.get("prior_pr") or [] if isinstance(getattr(self.gh, "state", None), dict) else []
-                if branch in known:   # a branch that had a PR: no read at all (prior_pr's own memo)
-                    self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
-                    continue
-                commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]   # immutable: a free 304 later
-                message = commit["message"]
-                job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
-                if not job:
-                    continue
-                at = parse_time(((commit.get("committer") or {}).get("date")) or "")
-                if branch.startswith(AUTO_PR_RECENT_ONLY) and (at is None or self.now - at > AUTO_PR_MAX_AGE):
-                    continue   # 11-13: 77 old claude/integrate-* branches never had a PR; none is opened, none is read
                 if self.prior_pr(branch):
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
+                    continue
+                message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
+                job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
+                if not job:
                     continue
                 proof, url, _, _ = self.proof(sha)
                 if proof != "green":
@@ -2171,11 +1929,7 @@ class Switch:
         items += self.branch_inbox_items(runs, reported, prefix)
         if not prefix:
             items += getattr(self, "plan_items", ())
-            items += getattr(self, "ask_items", ())   # set by the plan pass on a full pass (ask_late_items)
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
-        if ripe is None:
-            audience = ("muse", "both") if prefix else ("claude", "both")
-            items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
         if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
@@ -2222,85 +1976,9 @@ class Switch:
             notes = self.plan_notice_comments(model, reads)   # the switch's own notices: never lost to a read window
             mail = mail_reader.read(self, model, reads, also=notes)   # posts and notices from one comment set
             mail = dataclasses.replace(mail, receipts={**machine.recorded_receipts(notes), **mail.receipts})
-            replies = self.comment_receipts(model, mail, notes)   # Grok's and Builder's, by comment
-            mail = dataclasses.replace(mail, receipts={**{k: t for k, (t, _) in replies.items()}, **mail.receipts})
             rows = machine.table(model, machine.collect(model, reads, works=works, mail=mail,
                                                         planned_at=reads.get("planned_at")))
             memo = self.__dict__["_plan_table"] = (model, reads, mail, rows)
-        return memo
-
-    def roster(self):
-        import ledger as board_ledger
-        memo = self.__dict__.get("_roster")
-        if memo is None:
-            memo = self.__dict__["_roster"] = board_ledger.Roster(load_yaml(self.root / "work/agents.yml") or {})
-        return memo
-
-    def agent_of_name(self, name: str) -> str:
-        """A name (Muse, Builder, PE, Claude) or a plan owner (muse, builder) -> its agents.yml key."""
-        p = self.roster().of_name(name)
-        return p.agent if p else name.lower()
-
-    def open_asks(self, model, reads) -> tuple[list[dict], dict[int, str]]:
-        """Every open ask that waits on an answer (asks.blocking: a question or BLOCKED), as the one judge reads the
-        ledger's 3-day window (ledger.shared_window: read once a run, the ledger's own read reuses it), and each
-        job's threads (its plan issue, its open PRs) -> the job. Once a run."""
-        memo = self.__dict__.get("_open_asks")
-        if memo is None:
-            import ledger as board_ledger
-            thread_job = {ln.issue: ln.job for ln in model.lines}
-            by_job = model.by_job()
-            for p in reads.get("prs") or []:
-                m = collab_plan.PR_JOB.match(p.get("body") or "")
-                job = collab_plan.plan_job(m.group(1) if m else collab_plan.job_of_branch((p.get("head") or {}).get("ref")
-                                                                                         or ""), by_job)
-                if job and p.get("number"):
-                    thread_job[int(p["number"])] = job
-            comments, cut = board_ledger.shared_window(self, self.now)
-            if cut:
-                self.out("NOTE        asks: the comment window was cut short; an ask in its middle may be missed")
-            stream = []
-            for c in comments:
-                try:
-                    n = int((c.get("issue_url") or "").rsplit("/", 1)[1])
-                except (ValueError, IndexError):
-                    continue
-                stream.append({"n": n, "t": parse_time(c.get("created_at") or ""), "url": c.get("html_url") or "",
-                               "body": c.get("body") or "", "id": str(c.get("id")),
-                               "login": (c.get("user") or {}).get("login") or ""})
-            stream = [c for c in stream if c["t"]]
-            open_threads = {int(i["number"]) for i in board_ledger.open_issues(self)}
-            found = asks.unanswered(stream, open_threads, self.now - board_ledger.LIVE,
-                                    job_threads=frozenset(thread_job), who=self.agent_of_name)
-            memo = ([a for a in found if a["login"] != rules.BOT_LOGIN and asks.blocking(a["body"])], thread_job)
-            self.__dict__["_open_asks"] = memo
-        return memo
-
-    def ask_late_items(self, open_asks: list[dict]) -> tuple[InboxItem, ...]:
-        """ASK-LATE: an ask to Claude that waits on an answer, open past ASK_LATE and inside the inbox's day, once
-        per comment id (its key). It goes at once (inbox_class "now"): the TO-CLAUDE line went when it was posted."""
-        out = []
-        for a in open_asks:
-            age = self.now - a["t"]
-            if self.agent_of_name(a["target"]) != "claude" or not ASK_LATE <= age < INBOX_RUNS_WINDOW:
-                continue
-            first = re.sub(r"\s+", " ", a["body"]).strip()
-            out.append(InboxItem("ASK-LATE", f"#{a['n']}", str(a["id"]),
-                                 f"ASK-LATE #{a['n']} {a['a']} asked Claude {hours(age)} ago and has no answer: "
-                                 f"{no_verdict(plain(untrusted(first, 120)))} {a['url']}"))
-        return tuple(out[:MAX_ASK_LATE])
-
-    def comment_receipts(self, model, mail, notes) -> dict:
-        """machine.comment_receipts over the board's comments and the day's (the inbox's own listing, no extra
-        read): a receipt once found is written into its notice (RECEIPT_MARK), so it outlives this window."""
-        if not machine.COMMENT_OWNERS.keys() & {ln.owner for ln in model.lines}:
-            return {}
-        memo = self.__dict__.get("_comment_receipts")
-        if memo is None:
-            seen = {c.get("id"): c for c in list(notes) + list(self.comments_since(self.now - INBOX_RUNS_WINDOW))}
-            memo = machine.comment_receipts(list(seen.values()), mail, machine.versions(model),
-                                            self.team.verdict_logins, asks.author)
-            self.__dict__["_comment_receipts"] = memo
         return memo
 
     def plan_notice_comments(self, model, reads) -> list[dict]:
@@ -2313,7 +1991,7 @@ class Switch:
             memo = list(self.board_comments())
             vers = machine.versions(model)
             sent = {(n.owner, n.ver) for n in machine.sent_notices(memo)}
-            marked = (machine.NOTICE_OWNERS | machine.SELF_TOLD) & {ln.owner for ln in model.lines}
+            marked = (machine.MAIL_OWNERS | machine.SELF_TOLD) & {ln.owner for ln in model.lines}
             if any((o, vers[o]) not in sent for o in marked):
                 for old in self.old_boards():
                     memo += self.bounded_comments(old, MAX_OLD_BOARD_PAGES)
@@ -2325,7 +2003,7 @@ class Switch:
         board section) are computed and printed, and nothing is written; an error here is a printed note, never a
         failed sweep. Live: the late jobs go to the integrator's inbox once each, the plan notice goes to a mail
         owner once per order version, the labels and the board's job section are made to match."""
-        self.plan_items = self.ask_items = ()
+        self.plan_items = ()
         mode = self.plan_mode()
         if mode == "off":
             return
@@ -2352,11 +2030,7 @@ class Switch:
             self.out(f"PLAN-LATE   {plain(line[:400])}")
         aliases = {key: frozenset(a.get("owner_labels") or ())
                    for key, a in ((load_yaml(self.root / "work/agents.yml") or {}).get("agents") or {}).items()}
-        open_asks, thread_job = self.open_asks(model, reads)
-        waiting = machine.waits(model, open_asks, thread_job, self.agent_of_name)
-        for job, w in sorted(waiting.items())[:MAX_PLAN_LINES]:
-            self.out(f"PLAN-WAIT   {job} {machine.wait_text(w, self.now)}")
-        changes = machine.labels(model, reads["issues"], aliases, frozenset(waiting))
+        changes = machine.labels(model, reads["issues"], aliases)
         for number, add, remove in changes[:MAX_PLAN_LINES]:
             self.out(f"PLAN-LABEL  #{number} add {', '.join(add) or '-'}; remove {', '.join(remove) or '-'}")
         notices, receipts = [], []
@@ -2367,20 +2041,12 @@ class Switch:
                 if not any(n.ver == vers[o] for n in machine.marks(mail, o))]
         for owner in seen:
             self.out(f"PLAN-SEEN   {owner} plan {vers[owner]}" + ("" if mode == "live" else " (shadow: not written)"))
-        replies = self.comment_receipts(model, mail, notes)
-        recorded = machine.recorded_receipts(notes)
-        for owner in sorted(machine.NOTICE_OWNERS & owners):
+        for owner in sorted(machine.MAIL_OWNERS & owners):
             ver = vers[owner]
             sent = machine.notice_at(mail, owner, ver)
-            if owner in machine.COMMENT_OWNERS:   # a reply on GitHub: recorded once, like a mail's receipt
-                got = replies.get((owner, ver))
-                answer = machine.Post(got[1], 0, got[0], "", "", False) if got and sent else None
-                if answer and (owner, ver) not in recorded:
-                    receipts.append((owner, ver, answer))
-            else:
-                answer = machine.receipt_post(mail, ver, sent) if sent else None
-                if answer and (owner, ver) not in mail.receipts:
-                    receipts.append((owner, ver, answer))
+            answer = machine.receipt_post(mail, ver, sent) if sent else None
+            if answer and (owner, ver) not in mail.receipts:
+                receipts.append((owner, ver, answer))
             unread = sent and any(r.owner == owner and r.state == "told" and r.late(self.now) for r in rows)
             again = machine.NOTICE_AGAIN.format(owner=owner, ver=ver)
             if sent and not (unread and not any(again in (c.get("body") or "") and
@@ -2391,14 +2057,10 @@ class Switch:
             self.out(f"PLAN-NOTICE {owner} plan {ver}{' (again)' if sent else ''}" +
                      ("" if mode == "live" else " (shadow: not sent)"))
             self.out(text)
-        board = machine.board(model, rows, self.now, waiting)
-        late_asks = self.ask_late_items(open_asks)
-        for it in late_asks:
-            self.out(f"PLAN-ASK    {it.line[:300]}" + ("" if mode == "live" else " (shadow: not listed)"))
+        board = machine.board(model, rows, self.now)
         if mode != "live":
             return
         # 11-13: dest is who owes the next step; only the integrator's own wake it (inbox_class), the rest ride
-        self.ask_items = late_asks
         self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
                                 for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
         for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
@@ -2426,17 +2088,15 @@ class Switch:
 
     def send_plan_notice(self, model, mail, owner: str, ver: str, text: str, resend: bool, planned_at=None) -> None:
         """One plan notice to a mail owner, on the board, the way muse() sends: the comment, then the wake:muse
-        label, then the marker. A comment owner (machine.COMMENT_OWNERS) gets the comment and the marker only: its
-        runs read comments that open `To <Name>:`, and the notice opens so (machine.notice_head) (so a failed label leaves no marker and the next pass sends it again). The marker
+        label, then the marker (so a failed label leaves no marker and the next pass sends it again). The marker
         carries each job's line hash and when it was first told and acknowledged (machine.mark_jobs)."""
         where = self.board_issue()
         jobs = machine.mark_jobs(model, mail, owner, self.now, planned_at)
         mark = (machine.NOTICE_AGAIN.format(owner=owner, ver=ver) if resend else
                 machine.NOTICE_MARK.format(owner=owner, ver=ver, jobs=jobs))
         resp = self.gh.comment(where, text, f"plan: notice of plan {ver} to {owner} on #{where}")
-        if owner not in machine.COMMENT_OWNERS:   # Grok and Builder read the comment itself: no mail, no label
-            self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
-                          f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+        self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
+                      f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
         cid = (resp if isinstance(resp, dict) else {}).get("id")
         if cid is not None:
             self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": f"{text}\n\n{mark}"},
@@ -2599,9 +2259,6 @@ class Switch:
         if ready and (d.action == "HUMAN-MERGE" or (d.action == "WAIT" and never)):
             out.append(item("MERGE-BY-HAND", f"green, LAND by {lands[-1].who}, but the switchboard will not merge it: "
                                              f"{plain('; '.join(d.reasons))}"))
-        elif ready and f.trunk_skew and d.reasons in ((f"{rules.SKEW} ({f.trunk_skew})",),
-                                                     (f"{rules.PROVING} ({f.trunk_skew})",)):
-            pass   # 11-13: only trunk's newer game code holds it: the switchboard's candidate, or its owner's CONFLICT
         elif ready and (d.action == "WAIT" or s.merge_note):   # a MERGE that merged (or a dry run's) is no item
             times = [t for t in (parse_time(ctx.get("proof_done_at") or ""), parse_time(lands[0].created_at)) if t]
             if times:
@@ -2635,15 +2292,6 @@ class Switch:
             # 11-10 #343: a conflict was told to its owner only by the reconciler's hourly pass; this sweep tells it now
             out.append(item("CONFLICT", f"{rules.CONFLICT}: merge {rules.TRUNK} into {plain(f.head_ref)} and push",
                             owner))
-        elif f.trunk_skew and f.candidate in ("", "red", "conflict") and owner and \
-                not any(it.kind == "NOT-MERGED" for it in out):
-            # 11-13: green and landed, but trunk moved game code under it, and the switchboard's own merge with trunk
-            # (merge_candidate) conflicts, is red, or could not be built: only then is it the owner's
-            why, fix = {"red": ("its merge with trunk is red on the switchboard's candidate", ", fix the red,"),
-                        "conflict": ("it does not merge with trunk cleanly", ", resolve the conflict,")
-                        }.get(f.candidate, (rules.SKEW, ""))
-            out.append(item("CONFLICT", f"green and landed, but {why} ({plain(f.trunk_skew)}): merge "
-                                        f"{rules.TRUNK} into {plain(f.head_ref)}{fix} and push", owner))
         codex_tag = MARK.format(kind="ask-codex", pr=f.number, head=f.head_sha)
         if any(codex_tag in (c.get("body") or "") and (c.get("user") or {}).get("login") == rules.BOT_LOGIN
                for c in ctx.get("comments") or []) and rules.needs_review(f, author, self.team):
@@ -2832,85 +2480,6 @@ class Switch:
                                      dest, tests=self.red_tests(rid) if wanted and not self.defer_logs else (),
                                      run_id=rid if wanted else None))
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
-
-    def trunk_proof(self, runs: list[dict]) -> dict:
-        """Trunk's proof as the sweep state keeps it: {"sha", "run", "url", "state", "at", "first_red", "pr",
-        "branch"}, from the newest trunk run in `runs` that ran the build (built_run), read newest first back to the
-        run kept (at most TRUNK_RUN_READS jobs reads). A run that skipped the build (a notes-only push,
-        ci/proof_scope.py) never replaces it, so a red stays until a green full proof. `first_red`: the head of the
-        first red run of this red streak, and `pr`/`branch`: the PR whose merge it is (its merge message), whose
-        owner is paged. Once per run; {} when no full trunk run has been seen."""
-        memo = self.__dict__.get("_trunk_proof")
-        if memo is not None:
-            return memo
-        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
-        kept = dict(state.get("trunk_proof") or {}) if isinstance(state.get("trunk_proof"), dict) else {}
-        trunk = sorted((r for r in runs if r.get("head_branch") == rules.TRUNK and r.get("status") == "completed"),
-                       key=lambda r: r.get("created_at") or "", reverse=True)
-        checked = max(str(kept.get("checked") or ""), str(kept.get("created") or ""))
-        newest, done_all = (trunk[0].get("created_at") or "") if trunk else "", True
-        for i, r in enumerate(trunk):
-            if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
-                break   # nothing newer than the runs already judged
-            if i >= TRUNK_RUN_READS:
-                done_all = False   # the rest wait for the next sweep: nothing past them is marked judged
-                break
-            try:
-                if not built_run(self.run_jobs(r["id"])):
-                    continue   # the build was skipped: this run proves nothing about trunk's code
-                proof, url, rid, done = self.run_state(r)
-            except RateLimited:
-                raise
-            except GitHubError as err:
-                self.out(f"NOTE        trunk proof run {r.get('id')}'s jobs were not read ({err_text(err)}): read next sweep")
-                done_all = False
-                break
-            sha = r.get("head_sha") or ""
-            red = proof.startswith("red")
-            first = (kept.get("first_red") or sha) if red and str(kept.get("state", "")).startswith("red") else sha
-            new = {"sha": sha, "run": rid, "url": url, "state": proof, "at": done, "created": r.get("created_at") or ""}
-            if red:
-                new["first_red"] = first
-                if first == kept.get("first_red") and kept.get("pr") is not None:
-                    new["pr"], new["branch"] = kept.get("pr"), kept.get("branch") or ""
-                else:   # the commit that broke it: trunk's commits are PR merges, so its message names the branch
-                    try:
-                        msg = (self.gh.get(f"repos/{self.gh.repo}/commits/{first}") or {}).get("commit", {}).get("message", "")
-                    except GitHubError:
-                        msg = ""
-                    m = MERGE_FROM.match(msg or "")
-                    branch = m.group(2).removeprefix(self.gh.repo.split("/")[0] + "/") if m else ""
-                    new["pr"], new["branch"] = (int(m.group(1)), branch) if m else (0, "")
-            kept = new
-            break
-        if done_all and newest > checked and kept:   # every run down to the judged ones was read: none is read again
-            kept = dict(kept, checked=newest)
-        if not getattr(self.gh, "dry_run", False) and kept and isinstance(getattr(self.gh, "state", None), dict):
-            self.gh.state["trunk_proof"] = kept
-        self.__dict__["_trunk_proof"] = kept
-        return kept
-
-    def trunk_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
-        """RED-TRUNK: trunk's full proof is red (trunk_proof). One item per red streak (its first red head), at once
-        (inbox_class "now"), to the integrator, and to Muse too when the PR whose merge first went red was hers
-        (its fb-bot/ branch): the owner of the commit that broke it. The board's TRUNK line (ledger.py) stays until
-        a green full proof clears it."""
-        t = self.trunk_proof(runs)
-        if not str(t.get("state", "")).startswith("red"):
-            return []
-        first = t.get("first_red") or t.get("sha") or ""
-        branch = t.get("branch") or ""
-        dest = "both" if owner_of(branch) == "muse" else "claude"   # Claude's own trunk pushes, too: the integrator
-        by = f"; first red at {first[:8]}, the merge of #{t['pr']} ({untrusted(branch)})" if t.get("pr") else \
-            f"; first red at {first[:8]}"
-        since = parse_time(str(t.get("at") or "")) or self.now
-        wanted = dest in ("muse", "both") if prefix == "muse-" else True
-        return [InboxItem("RED-TRUNK", rules.TRUNK, first,
-                          f"RED-TRUNK trunk's full proof is red on {plain(', '.join(red_jobs(t['state'])))} "
-                          f"({hours(self.now - since)}){by}. Every proof stands on trunk: fix it first "
-                          f"([proof]({t.get('url') or ''}))", dest,
-                          tests=self.red_tests(t.get("run")) if wanted and not getattr(self, "defer_logs", False) else (),
-                          run_id=t.get("run") if wanted else None)]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments. With no job issue, the board's
@@ -3601,13 +3170,7 @@ def main() -> int:
         if save_cache:
             sw.gh.save_etags(cache)
         sw.out(f"GITHUB      {sw.gh.calls} call(s), {sw.gh.not_modified} answered 304 from the ETag cache"
-               + (f", {sw.gh.spent()} counted of this run's budget of {sw.gh.budget}" if sw.gh.budget else "")
-               + (f" ({sw.gh.over_budget} read(s) refused past it)" if sw.gh.over_budget else "")
                + (f", {sw.gh.remaining} left this hour" if sw.gh.remaining is not None else ""))
-        top = sorted(((n, k) for k, n in sw.gh.tally.items() if n > 0), reverse=True)
-        if top:
-            sw.out("CALLS       " + "; ".join(f"{n} {k}" for n, k in top[:CALLS_SHOWN])
-                   + (f"; {sum(n for n, _ in top[CALLS_SHOWN:])} other" if len(top) > CALLS_SHOWN else ""))
 
 
 def write_summary(path: str | None, title: str, lines: list[str]) -> None:
@@ -3658,45 +3221,12 @@ FULL_EVERY = dt.timedelta(minutes=60)
 SWEEP_OVERLAP = dt.timedelta(minutes=3)   # each delta read starts this long before the last sweep's stamp
 PROOF_SPAN = dt.timedelta(hours=6)        # proof runs created this long before the stamp can finish after it
 COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")
-# 11-13: a HUMAN-MERGE waits on a person or a review: a LAND, a review or a push reaches it through the delta (a
-# comment, updated_at, a head), so it is read again then, or after this long for its review clocks (Codex's wait,
-# the fallback ask). Read every sweep, five of them cost about 120 of a fast sweep's 205 calls (run 43436037307).
-HUMAN_RECHECK = dt.timedelta(minutes=30)
-CANDIDATE_RECHECK = dt.timedelta(hours=2)   # a PR whose merge candidate is being proved, if its run's finish is missed
-# 11-13, the hard per-run call budgets (counted calls: a 304 is free). The token's 5,000 an hour ran out at 14:02
-# with fast sweeps at 205-449, the full pass at 1,005 and each selftest dry run at 1,368 (rate_audit, run 43434511508).
-# Past its budget a run's every further read waits for the next sweep (ghapi.OverBudget, read as a rate limit), so a
-# creep shows as a BUDGET warning and the CALLS line, never as an empty hour. test_call_budget holds them.
-CALL_BUDGET = {
-    "full": 1000,     # the hourly full pass: every PR, the ledger, the plan, the reconciler, auto-open (877 counted
-                      # live with a cache cut to its cap every hour; 196 in a dry run on a cache that held its reads)
-    "fast": 90,       # a fast sweep: the changed PRs, the inbox, Muse (198 replayed on trunk's code, 51 on this)
-    "ask-full": 200,  # the ask part's full pass (128 live)
-    "ask-fast": 30,   # the ask part between
-    "dry": 300,       # a dry run (the selftest's two against the live repo): it decides nothing, so it gets less
-    "one": 120,       # a run for one PR, sha, issue or the digest
-}
-# An hour holds about ten sweeps: 1,000 + 9 x 90 + 200 + 9 x 30 + two selftests (600) is 2,880, inside the 4,200 the
-# merge floor (16% of 5,000) leaves.
 FULL_PARTS = frozenset({"ledger", "prs", "the reconciler", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
 
 
 COMMENT_LISTING_CAP = ghapi.MAX_PAGES * 100   # a paged listing never returns more (ghapi.paged)
 COMMENT_FLOOR_HOURS = 6   # a comment listing's since: 00, 06, 12 or 18 UTC. An hour's floor changed at every hourly
                           # full pass, so none of its pages was ever a 304 (the warm pass: 9 counted reads)
-
-
-WINDOW_KEPT_FOR = dt.timedelta(hours=6)   # a kept comment window older than this is read whole again (comments_since)
-COMMENT_KEPT_CHARS = 16000                 # of a kept comment's body: every reader looks at its first 4,000 at most
-
-
-def slim_comment(c: dict) -> dict:
-    """What a kept comment carries (comments_since): the fields the readers use, the body bounded."""
-    user = c.get("user") if isinstance(c.get("user"), dict) else {}
-    return {"id": c.get("id"), "issue_url": c.get("issue_url"), "html_url": c.get("html_url"),
-            "created_at": c.get("created_at"), "updated_at": c.get("updated_at"),
-            "user": {"login": user.get("login"), "type": user.get("type")},
-            "author_association": c.get("author_association"), "body": (c.get("body") or "")[:COMMENT_KEPT_CHARS]}
 
 
 def comment_floor(since: dt.datetime) -> dt.datetime:
@@ -3738,7 +3268,6 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
     finished = {r.get("head_branch") or "" for r in runs if r.get("status") == "completed"
                 and (parse_time(r.get("updated_at") or "") or since) >= since}
     comments = sw.gh.get(f"repos/{repo}/issues/comments?since={iso_z(since)}&per_page=100") or []
-    sw._delta_comments = (since, comments)   # comments_since adds them to its kept window with no read of its own
     nums = {p["number"] for p in prs}
     recs = state.get("prs") or {}
     auto = {b for b in finished if b.startswith(AUTO_PR_PREFIX)}
@@ -3759,8 +3288,7 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
         if (not isinstance(rec, dict) or rec.get("head") != (p.get("head") or {}).get("sha")
                 or rec.get("updated") != p.get("updated_at") or not rec.get("cold")
                 or (ripen is not None and ripen <= now)   # an inbox clock (NOT-MERGED, RED-STUCK, QUIET) ripened
-                or (p.get("head") or {}).get("ref") in finished
-                or f"{CANDIDATE_PREFIX}{p['number']}" in finished):   # 11-13: its merge candidate's proof finished
+                or (p.get("head") or {}).get("ref") in finished):
             changed.add(p["number"])
     by_issue: dict[int, set[int]] = {}
     for k, rec in recs.items():
@@ -3780,12 +3308,6 @@ def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
     """What the next sweep compares (sweep_delta): the head, updated_at, the job issue, and whether only a new
     head or comment can change this PR (cold)."""
     cold = seen is None or seen.decision.action in COLD_ACTIONS
-    if seen is not None and seen.decision.action == "HUMAN-MERGE":
-        cold = True
-        sw.ripen(facts.number, sw.now + HUMAN_RECHECK)
-    if seen is not None and getattr(seen.facts, "candidate", "") == "proving":
-        cold = True   # 11-13: its candidate's proof finishing wakes it (sweep_delta); a clock in case that is missed
-        sw.ripen(facts.number, sw.now + CANDIDATE_RECHECK)
     if ask and not sw.stale(facts):   # the ask part is done with a head once its review and eye are posted
         author = sw.team.vendor_of_branch(facts.head_ref)
         comments = ctx.get("comments") or []
@@ -3797,24 +3319,12 @@ def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
             "cold": bool(cold)}
 
 
-def call_budget(args, ask: bool, steer: bool, full: bool) -> int:
-    """This run's call budget (CALL_BUDGET): a dry run's, a run for one PR or sha, else the part's full or fast pass."""
-    if args.dry_run:
-        return CALL_BUDGET["dry"]
-    if args.pr or args.sha or args.issue or args.digest or args.force_digest:
-        return CALL_BUDGET["one"]
-    if ask and not steer:
-        return CALL_BUDGET["ask-full" if full else "ask-fast"]
-    return CALL_BUDGET["full" if full else "fast"] + (CALL_BUDGET["ask-full" if full else "ask-fast"] if ask else 0)
-
-
 def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | None = None) -> int:
     """One run's parts (main). Exit status: 2 only when the sweep itself could not finish: a part failed, or
     every PR read failed. One PR's error is that PR's line and a step-summary line, not an outage (J-072: run
     42663592988 failed for one write to #357, so the watchdog read the switchboard as down). Under rate_floor()
     calls left only the merge path runs; a rate-limited item waits for the next sweep."""
     steer, ask = args.part in ("steer", "all"), args.part in ("ask", "all")
-    sw.gh.budget = CALL_BUDGET["dry" if args.dry_run else "one"]   # set again below once the pass is known
     rate_probe(sw)
     skipped: list[str] = []
 
@@ -3867,7 +3377,6 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     if retry & FULL_PARTS:
         sw.out(f"RETRY       {', '.join(sorted(retry & FULL_PARTS))} did not finish last sweep: a full pass now")
         full = True
-    sw.gh.budget = call_budget(args, ask, steer, full or targeted)
     failed = 0
     if ask:
         failed += sw.watch_sessions()
@@ -4094,12 +3603,6 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         not_done.add("the reconciler")
     if delta is None and (item_errors or deferred):
         not_done.add("prs")   # the ledger read those PRs as missing: a full pass again
-    if getattr(sw.gh, "over_budget", 0) and not_done & FULL_PARTS:
-        # a budget-cut full pass is not redone at the next sweep (that sweep would be cut the same way, every sweep):
-        # its rest waits for the next full pass, and the ETag cache makes the part it read a 304 then
-        sw.out(f"BUDGET      {', '.join(sorted(not_done & FULL_PARTS))} not finished within the budget: "
-               "at the next full pass")
-        not_done -= FULL_PARTS
     if not_done:
         sw.out(f"RETRY       next sweep: {', '.join(sorted(not_done))}")
     if steer and not (args.pr or args.sha):
@@ -4107,11 +3610,6 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sweep_heartbeat(hc_sweep, failed, sw.out)
     if not targeted and isinstance(sw.gh.state, dict) and not sw.merge_only:
         open_now = {str(p["number"]) for p in prs}
-        if steer and delta is None:   # 11-13: the merge candidates of closed PRs go (the full pass reads every PR)
-            try:
-                sw.drop_candidates(open_now)
-            except GitHubError as err:   # a rate limit too: the next full pass tries again
-                sw.out(f"NOTE        merge candidates not tidied ({err_text(err)})")
         ripen = getattr(sw, "_ripen", {})
         for k, rec in records.items():   # the inbox's clocks, read after the loop: a cold PR is read again then
             if int(k) in ripen:

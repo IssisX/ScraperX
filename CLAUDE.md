@@ -4,6 +4,14 @@ The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00
 This file is only the rules that change what an agent does. Add a rule here only by replacing or shortening one
 (Cory 11-04).
 
+## Fundamentals (Cory 11-13)
+
+- One goal: Claude and Muse build the game. Judge the system by what lands.
+- Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: a
+  day went to patches around two switchboard changes).
+- Build and test only what changed. Blocker first, nothing lower while it is stuck. A delay is a failure, never "wait".
+- Fix only what is measured broken, one small change at a time; no new machinery, no side projects.
+
 ## Settled: never reopen (Cory's calls)
 
 Reloaded word for word after every compact. Only Cory changes a line. Anything that disagrees is wrong: fix
@@ -20,13 +28,13 @@ it to match, never ask him again.
   "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
   helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
-- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
+- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Ask him the effort
+  before starting any helper (11-13).
 - Claude types no clock time (11-11): an event is named by its link; a time decision
   runs `date`. Hooks refuse them; `time_audit.py` counts slips.
 
 ## Test only what a change reaches
 
-*"dont be wasteful"* (10-18 to 11-04).
 - While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`).
 - Once fixed, run the native groups and touch scenarios the change reaches once; say which. Never
   re-run a passed check on same code; read PASS/FAIL lines. The full suite, every touch scenario and the Android
@@ -49,8 +57,9 @@ it to match, never ask him again.
   loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
   ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
-- Never ask him to merge, approve or review. Only exception: what this session's safety check refuses (say it once).
-- Say unasked, the moment you see it: your own mistakes and the system's holes (11-07, 11-11), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
+- Never ask him to merge, approve or review, except what this session's safety check refuses (say it once).
+- Say unasked, at once: your own mistakes, the system's holes, a better way, and any setting (effort, model) that
+  changes how Claude works for him (11-07, 11-11).
 
 ## The game
 
@@ -99,16 +108,12 @@ it to match, never ask him again.
 
 ## The integrator
 
-- Event-driven (11-10): Muse mail, proofs, reviews and merges wake it via the inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
-  Muse's proposals ruled within the hour, every ask answered. The switchboard checks Muse's ready-work floor and
-  in-flight ceiling (work/plan.md); when full, finish and land work.
-- **Claude sessions:** one Opus session (the integrator); helpers are its sub-agents
-  (11-06), at most four (11-12), each code-editing one in a worktree. Ask Cory before a second session. Effort: integrator
-  his call (`get_session`); raise it only when he throttles; jobs start at high and climb the ladder (11-12). A worker whose job landed retires. Stopping a working helper
+- Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
+  loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
+- **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
+  a new job gets a fresh helper, never a resumed one (11-13). Ask Cory before a second session. Stopping a working helper
   is Cory's call: give him its run time, model, effort (11-12).
-- **Context:** no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
-  (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact, and say what may be lost.
-- **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, threads)
-  go to a helper; only its answer comes back; read the function or section a job needs, found via
-  `REPO_MAP.md` or grep, not the whole game. Caps: the board 100 comments (then a fresh board), a job
+- **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
+  current; after a compact re-read it, this file and the hourly file, and say what may be lost.
+- **Keep reads small:** subscribe only to PRs you merge; big reads go to a helper; read only what a job needs. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

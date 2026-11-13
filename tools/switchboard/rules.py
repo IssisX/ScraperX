@@ -158,9 +158,6 @@ def _has_repro(body: str) -> bool:
 
 
 CONFLICT = "merge conflict with the base"   # the reason merge_decision gives; the switch and the reconciler match it
-SKEW = "its proof never ran with trunk's newer game code"   # the reason for a head behind trunk's game code (merge skew)
-# 11-13: the switchboard proves the head merged with trunk itself (switch.Switch.merge_candidate) while that runs
-PROVING = "its merge with trunk's newer game code is being proved"
 CODEX_LOGIN = "chatgpt-codex-connector[bot]"   # the Codex GitHub app: reviews a PR a person opens, and on a person's "@codex review"
 _CODEX_STATE = re.compile(r"codex-review-state:v1\s+(\{.*?\})\s*-->", re.DOTALL)
 
@@ -327,14 +324,6 @@ class PrFacts:
     touches_workflows: bool
     never_edit: bool = False        # the rule check BLOCKs a never-edited file (protected-file): nothing lifts it
     codex_failed: bool = False      # the Codex app's newest state for this head is "failed" (its usage limit)
-    # 11-13 (merge skew): why this head's green proof does not cover current trunk ("" when it does, or was not read):
-    # trunk has commits of game code the head does not contain. J-127 #482 and J-129 #483 were each green alone,
-    # both merged, and only the combined trunk had order key 1100 twice: trunk red about a day. Read only when the
-    # rest of the rule says MERGE (switch.Switch.base_skew).
-    trunk_skew: str = ""
-    # 11-13: the switchboard's proof of this head merged with trunk (switch.Switch.merge_candidate): "green" covers
-    # the skew, "proving" waits on it, "red" and "conflict" are the owner's, "" is none (not built: the owner's too).
-    candidate: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -449,10 +438,6 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
         waits.append(CONFLICT)
     elif pr.mergeable is None:
         waits.append("GitHub is still computing mergeability")
-    if pr.trunk_skew and pr.candidate == "proving":
-        waits.append(f"{PROVING} ({pr.trunk_skew})")
-    elif pr.trunk_skew and pr.candidate != "green":
-        waits.append(f"{SKEW} ({pr.trunk_skew})")
     if waits:
         return MergeDecision("WAIT", tuple(waits))
     land_by = lands[-1].who

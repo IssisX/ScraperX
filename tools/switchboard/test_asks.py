@@ -185,26 +185,15 @@ class Author(unittest.TestCase):
         ):
             self.assertEqual(asks.author(body), want, body)
 
-    def test_an_address_with_no_signature_after_it_is_unsigned_never_a_guess(self):
-        # 11-13 (Cory): no name right after the address: Claude by its footer, else unsigned. It was ChatGPT, and 8
-        # of the 9 such posts of 11-11 to 11-13 were Grok's or Grok Bot's.
-        U = asks.UNSIGNED
-        self.assertEqual(asks.author("To Claude: warp audit for J-064.\n\nLikely cause: spawn_body."), U)
+    def test_an_address_with_no_signature_after_it_falls_back_as_before(self):
+        # no name right after the address: Claude by its footer, else ChatGPT (its file asks it to sign)
+        self.assertEqual(asks.author("To Claude: warp audit for J-064.\n\nLikely cause: spawn_body."), "ChatGPT")
         self.assertEqual(asks.author("To Grok: J-062 is yours, at your 10 AM run." + FOOT), "Claude")
         # a name later in the line, or a possessive, is not a signature
-        self.assertEqual(asks.author("To Claude: the ruling Grok gave on #320 does not hold."), U)
-        self.assertEqual(asks.author("To ChatGPT: Grok's architecture investigation, answering your brief."), U)
+        self.assertEqual(asks.author("To Claude: the ruling Grok gave on #320 does not hold."), "ChatGPT")
+        self.assertEqual(asks.author("To ChatGPT: Grok's architecture investigation, answering your brief."), "ChatGPT")
         # the switchboard's own notices are signed by no agent: "ask from Muse" is not Muse writing
-        self.assertEqual(asks.author("To Claude: ask from Muse on #128\n\nDue 11-09 11:17 PM Central."), U)
-        self.assertNotIn(U, asks.AGENTS)
-
-    def test_an_unsigned_post_answers_no_ones_ask_not_even_the_threads_open_one(self):
-        # 6727860486 on #322 was ChatGPT's, unsigned, while the thread's open ask was Claude's to Grok: read as the
-        # open ask's addressee it would have closed Grok's ask a day early. It stays open until Grok's own post.
-        got = {(a["id"], a["target"]): a for a in judge(at(9, "12:00"))}
-        self.assertEqual(got[("6727860486", "Claude")]["a"], asks.UNSIGNED)
-        for cid in ("6721943546", "6722247011", "6722391933"):
-            self.assertEqual(got[(cid, "Grok")]["answer"], "", cid)
+        self.assertEqual(asks.author("To Claude: ask from Muse on #128\n\nDue 11-09 11:17 PM Central."), "ChatGPT")
 
     def test_other_posts_are_read_as_before(self):
         self.assertEqual(asks.author("Claude (integrator): To Muse: resent, reworded." + FOOT), "Claude")
