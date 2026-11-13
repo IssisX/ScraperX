@@ -94,15 +94,17 @@ def no_ledger(*args, **kw):
     return type("Led", (), {"pending": []})()
 
 
-def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None, ledger_notifies=True):
+def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None, ledger_notifies=True, plan_mode="off"):
     """One sweep. `ledger_notifies` is what work/switchboard.yml says (reconciler.ledger_notifies): True is the
-    ledger sending its own notices (no `notices: v2`), which the clock tests below are about."""
+    ledger sending its own notices (no `notices: v2`), which the clock tests below are about. `plan_mode` likewise
+    (work/switchboard.yml `plan`): off, since the plan part has its own sweep tests (test_plan_sweep)."""
     from unittest import mock
     sw = test_inbox.make(gh, now)
     sw.root = HERE.parents[1]
     sw.merge_token = sw.review_key = ""
     sw._jobs = None
     sw._board = None
+    sw.plan_mode = lambda: plan_mode
     gh.state = whole if whole is not None else {"steer": state} if state is not None else {}
     gh.remaining = gh.limit = gh.reset = None
     args = argparse.Namespace(part="steer", pr=0, sha="", issue=0, label="", digest=False, force_digest=False,
