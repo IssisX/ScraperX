@@ -871,7 +871,7 @@ func _open_pause(from_system: bool = false) -> void:
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
-		position.y, checkpoint.y, int(_ctx["deaths"])])
+		position.y, checkpoint.y, int(_ctx["deaths"])], _ctx.get("objectives", []))
 	get_tree().paused = true
 	_audio.ui_tap()
 
