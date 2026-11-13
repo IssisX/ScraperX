@@ -95,8 +95,7 @@ it to match, never ask him again.
   green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
   rules within the hour (11-10, an inbox NOTE-REVIEW); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
-  another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
-  Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
+  another vendor, protected changes included, workflow-file changes too (11-13).
 - **Protected changes** (a test's checks, world geometry, the save layout, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
