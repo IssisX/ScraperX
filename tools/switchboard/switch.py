@@ -3214,14 +3214,13 @@ def rate_probe(sw: "Switch") -> None:
             sw.out(f"RATE        {AGENT_TOKEN_ENV}: its rate could not be read ({http_status(err.detail) or 'no status'})")
 
 
-# A full pass at least this often: the ledger's reading, the reconciler, owner labels. Every clock is checked each
-# sweep (the timers), so this only bounds how late the ledger finds a new input: its shortest deadline is ACT, 2 h,
-# counted from the input's own time, so a find within the hour still sends on time. (J-072: was 30 minutes.)
+# A full pass at least this often: every PR read, owner labels. Every clock is checked each sweep (the timers).
+# (J-072: was 30 minutes. D2: the ledger and the reconciler no longer run in it.)
 FULL_EVERY = dt.timedelta(minutes=60)
 SWEEP_OVERLAP = dt.timedelta(minutes=3)   # each delta read starts this long before the last sweep's stamp
 PROOF_SPAN = dt.timedelta(hours=6)        # proof runs created this long before the stamp can finish after it
 COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")
-FULL_PARTS = frozenset({"ledger", "prs", "the reconciler", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
+FULL_PARTS = frozenset({"prs", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
 
 
 COMMENT_LISTING_CAP = ghapi.MAX_PAGES * 100   # a paged listing never returns more (ghapi.paged)
@@ -3372,7 +3371,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     state = sw.gh.state.get(part_key) if isinstance(sw.gh.state, dict) else None
     full = targeted or not sweep_state_ok(state) or now - parse_time(state["full_at"]) >= FULL_EVERY
     # J-072 (ChatGPT on #360): a part that failed or was skipped is due again at the next sweep, never at the next
-    # hour. A full-pass part (the ledger needs every PR read) makes the next sweep a full pass.
+    # hour. A full-pass part (it needs every PR read) makes the next sweep a full pass.
     retry = set((state or {}).get("retry") or []) if not full else set()
     if retry & FULL_PARTS:
         sw.out(f"RETRY       {', '.join(sorted(retry & FULL_PARTS))} did not finish last sweep: a full pass now")
@@ -3385,20 +3384,11 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     deferred: list[str] = []
     prs = sw.target_prs(args.pr, args.sha)
     delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state)
-    if delta is not None and steer and not targeted:
-        import ledger as board_ledger   # a ripe ledger deadline on an item that changed: the ledger reads it all
-        seen = state.get("dirty") or {}
-        dirty_now = {"threads": sorted(set(seen.get("threads") or []) | delta.threads),
-                     "branches": sorted(set(seen.get("branches") or []) | delta.active)}
-        if any(board_ledger.touched_by(t, dirty_now)
-               for t in board_ledger.ripe((state.get("timers") or {}).get("ledger") or [], now)):
-            sw.out("RIPE        a ledger deadline on an item that changed since the full pass: a full pass now")
-            delta, full = None, True
     if steer and not targeted and not sw.merge_only and full:
         sw.sweep_owner_labels()
     if delta is not None:
         sw.out(f"FAST SWEEP  {len(delta.prs)} of {len(prs)} PR(s) changed since {central(parse_time(state['stamp']))}; "
-               f"the full pass (the ledger's reading, the reconciler, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
+               f"the full pass (every PR read, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
     records: dict[str, dict] = dict((state or {}).get("prs") or {}) if delta is not None else {}
     read = 0
     for pr in prs:
@@ -3429,9 +3419,10 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     quiet = delta is not None and not delta.prs and not delta.comments and not delta.finished and \
         not retry & {"inbox", "muse"}
     timers: dict = dict((state or {}).get("timers") or {}) if sweep_state_ok(state) else {}   # kept until replaced
+    timers.pop("ledger", None)   # D2: the ledger left the sweep; an old cache's clock for it is dropped
     dirty: dict = dict((state or {}).get("dirty") or {}) if delta is not None else {}
     not_done: set[str] = set()   # the parts that failed or were skipped: retried at the next sweep
-    if delta is not None:   # what changed since the full pass: a cached ledger notice about it is not sent blind
+    if delta is not None:   # what changed since the full pass
         dirty = {"threads": sorted(set(dirty.get("threads") or []) | delta.threads),
                  "branches": sorted(set(dirty.get("branches") or []) | delta.active)}
 
@@ -3510,7 +3501,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             timers["red"] = [r for r in timers.get("red") or [] if r.get("id") not in fired] + \
                 list(getattr(sw, "red_pending", {}).values())
     if steer and not targeted:
-        sw.mark_reruns(steered)   # J-103: before the ledger and the reconciler read `steered`
+        sw.mark_reruns(steered)   # J-103
         if not queue_key or (inbox_ran and "inbox" not in not_done and queue_key in getattr(sw, "inbox_keys", set())):
             queue_timer["listed"] = queue_key
         if queue_timer.get("item") or queue_timer.get("listed"):
@@ -3549,60 +3540,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                       "wake": getattr(sw, "wake_numbers", None)}
     timers["pipe"] = pipe_state
 
-    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, on the board
-        import ledger as board_ledger
-        import reconciler   # J-072: `notices: v2` beside a live reconciler: the ledger writes its section, posts nothing
-        led = board_ledger.sweep(sw, steered, sw.board_issue(), MUSE_LABEL, PROOF_WORKFLOW,
-                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now),
-                                 reconciler.ledger_notifies(sw.root))
-        timers["ledger"] = list(getattr(led, "pending", None) or [])
-
-    def ledger_clock() -> None:   # J-072: the ledger deadlines that ripened since the full pass, sent from the cache
-        import ledger as board_ledger
-        import reconciler
-        import yaml
-        if not reconciler.ledger_notifies(sw.root):   # `notices: v2`: a cached ledger notice is never fired
-            timers["ledger"] = []
-            return
-        ripe = board_ledger.ripe(timers.get("ledger") or [], now)
-        if not ripe:
-            return
-        if any(board_ledger.touched_by(t, dirty) for t in ripe):   # its item changed: the next sweep is a full pass
-            sw.out("RIPE        ledger deadline on an item that changed since the full pass: a full pass next sweep")
-            not_done.add("ledger")
-            return
-        roster = board_ledger.Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
-        sw.out(f"RIPE        ledger clock: {len(ripe)} deadline(s), sent from the full pass's reading")
-        # the board's number is read only when a notice goes on the board itself; one on a job thread costs no read
-        board = sw.board_issue() if board_ledger.fires_on_board(ripe, roster) else sw.board_known()
-        posted = board_ledger.fire(sw.gh, ripe, roster, now, board, sw.out, MUSE_LABEL)
-        timers["ledger"] = board_ledger.advance(timers.get("ledger") or [], posted, now)
-
-    if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
-        part("ledger", ledger_part, subprocess.SubprocessError)
-        # J-072: the reconciler (work/switchboard.yml `reconciler: live` or `shadow`; absent is off) is a part like the
-        # ledger (ChatGPT, comment 6752048443): a raise or a dropped pass fails the sweep, a rate-limit backoff is left
-        # for the next sweep, and either is due again then. Its own reads (about 58) wait under the floor.
-        def reconciler_part() -> None:
-            import reconciler
-            res = reconciler.sweep(sw, steered, sw.board_issue(), PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH},
-                                   {INBOX_PR})
-            status = getattr(res, "status", "")
-            if status == "gave-up":
-                raise RuntimeError("the pass was dropped: the state branch kept moving")
-            if status == "backoff":
-                skipped.append("the reconciler")
-                not_done.add("the reconciler")
-                sw.out("RATE LIMIT  the reconciler: backed off, left for the next sweep")
-
-        if not args.dry_run:
-            part("the reconciler", reconciler_part, Exception)
-    if steer and not targeted and delta is not None:
-        part("ledger clock", ledger_clock, subprocess.SubprocessError)
-    if steer and not targeted and delta is None and not args.dry_run and "the reconciler" in skipped:
-        not_done.add("the reconciler")
     if delta is None and (item_errors or deferred):
-        not_done.add("prs")   # the ledger read those PRs as missing: a full pass again
+        not_done.add("prs")   # those PRs were not read: a full pass again
     if not_done:
         sw.out(f"RETRY       next sweep: {', '.join(sorted(not_done))}")
     if steer and not (args.pr or args.sha):
@@ -3619,7 +3558,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.gh.state[part_key] = {"stamp": iso_z(now), "full_at": iso_z(now) if delta is None else state["full_at"],
                                  "prs": {k: v for k, v in records.items() if k in open_now},
                                  "timers": timers, "retry": sorted(not_done),
-                                 "dirty": {} if delta is None and "ledger" not in not_done else dirty}
+                                 "dirty": {} if delta is None else dirty}
     write_summary(summary, "Item errors (the sweep finished; each is retried next sweep)",
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
