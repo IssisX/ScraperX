@@ -450,12 +450,63 @@ class TheCacheBoundary(unittest.TestCase):
         self.assertIn("inputs.dry_run != true", cout["if"])
         # 11-13: the selftest runs on an agent's push, never on a pull_request the bot opened (it waits for approval)
         self.assertNotIn("pull_request", flow[True])
-        self.assertEqual(flow["jobs"]["selftest"]["if"], "github.event_name == 'push'")
+        self.assertEqual(flow["jobs"]["selftest"]["if"], "github.event_name == 'push' && !github.event.deleted")
         self.assertIn("github.event_name != 'push'", flow["jobs"]["steer"]["if"])
         self.assertFalse(flow["concurrency"]["cancel-in-progress"])
         self.assertIn("|| 'switchboard'))", flow["concurrency"]["group"])
         keys = [s["with"]["key"] for j in (cin, cout) for s in j["steps"] if "key" in s.get("with", {})]
         self.assertEqual(sorted(set(k.split("${{")[0] for k in keys)), ["switchboard-etags-ask-", "switchboard-etags-steer-"])
+
+
+    def test_the_selftest_tests_every_push_to_a_branch_that_changes_the_switch(self):
+        # #503's review: a PR from any branch, and a follow-up push that touches no switch file, still get the unit
+        # tests; what runs is the head with trunk merged in, as refs/pull/N/merge was; a draft skips the dry run.
+        flow = self.flow()
+        self.assertEqual(flow[True]["push"], {"branches-ignore": [rules.TRUNK]})   # no paths filter
+        job = flow["jobs"]["selftest"]
+        self.assertFalse(self.holds_secret(job))
+        self.assertEqual(set(job["permissions"].values()), {"read"})
+        scope, *rest = job["steps"]
+        self.assertEqual(scope["id"], "scope")
+        self.assertEqual([s.get("if") for s in rest], ["steps.scope.outputs.run == 'true'"] * len(rest))
+        self.assertIn("unittest discover -s src/tools/switchboard", rest[1]["run"])
+        self.assertIn('elif .[0].draft then "draft"', rest[2]["run"])
+        import shutil
+        import tempfile
+        if not (shutil.which("git") and shutil.which("bash")):
+            self.skipTest("git or bash missing")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            def git(*args: str, cwd: pathlib.Path = root / "origin") -> str:
+                return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd,
+                                      check=True, capture_output=True, text=True).stdout.strip()
+            (root / "origin/tools/switchboard").mkdir(parents=True)
+            git("init", "-q", "-b", rules.TRUNK)
+            git("config", "uploadpack.allowfilter", "true")
+            git("config", "uploadpack.allowAnySHA1InWant", "true")
+            def commit(name: str, text: str) -> str:
+                (root / "origin" / name).write_text(text, encoding="utf-8")
+                git("add", "-A")
+                git("commit", "-qm", name)
+                return git("rev-parse", "HEAD")
+            commit("tools/switchboard/s.py", "a\n")
+            git("switch", "-qc", "claude/fix-switch")
+            commit("tools/switchboard/s.py", "b\n")
+            follow_up = commit("README", "docs only\n")
+            git("switch", "-q", rules.TRUNK)
+            git("switch", "-qc", "claude/game")
+            game = commit("game.gd", "g\n")
+            git("switch", "-q", rules.TRUNK)
+            commit("NOTES", "trunk moved on\n")
+            (root / "gitconfig").write_text(f'[url "file://{root}/origin"]\n\tinsteadOf = https://github.com/o/r.git\n',
+                                            encoding="utf-8")
+            for sha, run, merged in ((follow_up, "run=true", True), (game, "run=false", False)):
+                work = pathlib.Path(tempfile.mkdtemp(dir=tmp))
+                env = {**os.environ, **scope["env"], "SHA": sha, "REPO": "o/r", "TRUNK": rules.TRUNK,
+                       "GITHUB_OUTPUT": str(work / "out"), "GIT_CONFIG_GLOBAL": str(root / "gitconfig")}
+                subprocess.run(["bash", "-c", scope["run"]], cwd=work, env=env, check=True, capture_output=True)
+                self.assertEqual((work / "out").read_text(encoding="utf-8").strip(), run)
+                self.assertEqual((work / "src/NOTES").exists(), merged)   # trunk merged in only when it runs
 
 
 class TheSecurityPass(unittest.TestCase):

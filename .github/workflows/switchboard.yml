@@ -60,17 +60,15 @@ on:
         description: The live Muse bridge's version (set by the bridge's clock; leave empty)
         type: string
         default: ""
-  # 11-13: a push to an integrate branch, not a pull_request event. The switchboard opens the claude/integrate-* PRs
+  # 11-13: the selftest runs on a push, not on a pull_request event. The switchboard opens the claude/integrate-* PRs
   # with the workflow token, and GitHub holds a pull_request run that github-actions[bot] triggers for someone's
   # approval ("action_required" on #503 and #505, a pop-up for Cory), or fails it at the start (#500, #502). A push
   # is the agent's own, so its run needs no approval, and it comes once per head, not again for every PR event.
+  # Every branch but trunk, and no paths filter: a PR can come from any branch, and a paths filter sees only the
+  # pushed commits, so a follow-up push that touches no switch file would leave the PR's new head untested. The
+  # selftest's first step decides instead, from the whole branch against trunk, and ends at once when none changed.
   push:
-    branches: ['*/integrate-*']
-    paths:
-      - "tools/switchboard/**"
-      - "work/*.yml"
-      - "work/looks/**"
-      - ".github/workflows/switchboard.yml"
+    branches-ignore: [ScraperX-Claude]
 
 permissions: {}
 
@@ -100,9 +98,9 @@ env:
   SWITCHBOARD_BRIDGE_VERSION: ${{ inputs.bridge_version }}
 
 jobs:
-  # A push that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
+  # A branch that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
   selftest:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && !github.event.deleted
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -111,32 +109,69 @@ jobs:
       pull-requests: read
       actions: read
     steps:
-      - name: Check out the pushed head
+      # What would land, as the pull_request run's refs/pull/N/merge was: the pushed head with trunk merged in. The
+      # files that decide whether it runs were that trigger's paths filter, now read from the whole branch against
+      # trunk (its merge base), so every push to a branch that changes the switch is tested, whatever it touched.
+      - name: Check out the pushed head with trunk merged in, if the branch changes the switch
+        id: scope
         env:
           SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          SWITCH_FILES: '^(tools/switchboard/|work/[^/]+\.yml$|work/looks/|\.github/workflows/switchboard\.yml$)'
         run: |
           set -euo pipefail
           git clone -q --filter=blob:none --no-checkout "https://github.com/${REPO}.git" src
           git -C src fetch -q --no-tags origin "$SHA" "+refs/heads/${TRUNK}:refs/remotes/origin/${TRUNK}"
           git -C src checkout -q --detach "$SHA"
+          if ! git -C src merge-base "origin/${TRUNK}" "$SHA" > /dev/null; then
+            echo "::notice::this branch shares no history with ${TRUNK}: no switch change to test"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git -C src diff --no-renames --name-only "origin/${TRUNK}...${SHA}")
+          if ! grep -qE "$SWITCH_FILES" <<< "$changed"; then
+            echo "::notice::this branch changes no switch file against ${TRUNK}: nothing to test"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git -C src -c user.name=selftest -c user.email=selftest@invalid merge -q --no-edit "origin/${TRUNK}"; then
+            echo "::error::this branch conflicts with ${TRUNK}: merge ${TRUNK} into it"
+            exit 1
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
       - name: Install the hash-pinned dependencies (wheels only)
+        if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           python3 -m venv .venv
           .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
             -r src/tools/switchboard/requirements.txt
       - name: Unit tests of the switch's decisions
+        if: steps.scope.outputs.run == 'true'
         run: .venv/bin/python -m unittest discover -s src/tools/switchboard -p 'test_*.py' -v
       # Cory 11-12, "only run what changed": the dry run cost 550 to 1,368 calls of the repo's shared hourly
-      # GitHub limit (it starved the live sweep on #476). 11-13: a dry run's own budget is 300 calls
-      # (switch.py CALL_BUDGET), so both together cost at most 600.
-      - name: Dry run against the live repo
+      # GitHub limit (it starved the live sweep on #476). A draft PR runs only the unit tests above. A push with no
+      # PR yet (the switchboard opens it, never as a draft) or to a ready PR runs the dry run too; a PR marked ready
+      # gets it on its next push. 11-13: a dry run's own budget is 300 calls (switch.py CALL_BUDGET), so both
+      # together cost at most 600.
+      - name: Dry run against the live repo, unless the branch's PR is a draft
+        if: steps.scope.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          if ! pr=$(gh api -X GET "repos/$REPO/pulls" -f head="$OWNER:$BRANCH" -f base="$TRUNK" -f state=open \
+              --jq 'if length == 0 then "none" elif .[0].draft then "draft" else "ready" end' 2> /dev/null); then
+            echo "::warning::the branch's PR was not read, so the dry run is skipped; the next push runs it"
+            exit 0
+          fi
+          if [ "$pr" = draft ]; then
+            echo "::notice::the branch's PR is a draft: unit tests only; the dry run waits for a push to it once ready"
+            exit 0
+          fi
           .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO"
           .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO" --part steer --force-digest
 
