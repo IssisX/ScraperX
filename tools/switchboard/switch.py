@@ -155,7 +155,9 @@ MAX_INBOX_KEYS = 600                           # keys kept in the sweep state's 
 # for the sweep state: the relay to the session cuts a comment near 4,000 characters, and the keys were most of it.
 INBOX_HOLD = dt.timedelta(minutes=30)
 INBOX_MAX_CHARS = 3500                         # a comment's whole text, under the relay's cut with room to spare
-PLAN_WAKES = frozenset({"claude", "integrator"})   # a late job's next step owed by these reaches the integrator
+# A late job's next step owed by these reaches the integrator. "switchboard" since 11-13: a step only the switchboard
+# can take (open the PR, read a proof) rode the digest alone, so J-084's sat 44 h (6856712417, 6858117862).
+PLAN_WAKES = frozenset({"claude", "integrator", "switchboard"})
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
 MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
 MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
@@ -642,6 +644,16 @@ def queue_item_of(record) -> tuple[InboxItem, ...]:
     if not isinstance(record, dict) or not isinstance(record.get("head"), str) or not isinstance(record.get("line"), str):
         return ()
     return (InboxItem("QUEUE-LOW", muse_queue.QUEUE_FILE, record["head"], record["line"]),)
+
+
+def plan_item_head(r) -> str:
+    """A late job's PLAN item key part: its step (machine.Step.key). A step the switchboard owes names counts that move
+    with trunk ("trunk is 157 commit(s) ahead with 43 file(s)"), and it wakes the integrator (PLAN_WAKES) since 11-13:
+    its counts are left out, so it is listed once per job and step, not once per trunk commit."""
+    if r.owes != "switchboard":
+        return r.key()
+    step = re.sub(r"\b\d+\b", "N", f"{r.job}|{r.state}|{r.gate}|{r.owes}|{r.next}")
+    return hashlib.sha256(step.encode()).hexdigest()[:16]
 
 
 def inbox_class(it: InboxItem) -> str:
@@ -2730,7 +2742,7 @@ class Switch:
             return
         # 11-13: dest is who owes the next step; only the integrator's own wake it (inbox_class), the rest ride
         self.ask_items = late_asks
-        self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
+        self.plan_items = tuple(InboxItem("PLAN", r.job, plan_item_head(r), f"PLAN {plain(line[:600])}", r.owes or "claude")
                                 for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
         for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
             c = machine.notice_comment(notes, owner, ver)
@@ -2817,6 +2829,11 @@ class Switch:
             model, _, _, rows = self.plan_table()
             waiting = [r.job for r in rows if r.owner == "muse" and r.state in ("planned", "told", "acknowledged")]
             self.queue_items = ()
+            flying, limit = machine.wip(model, rows).get("muse", (0, 0))
+            if limit and flying >= limit:   # 11-13 (6859703698: "4 unstarted" with 27 of 10 lanes in flight): no lane
+                self.out(f"QUEUE       {len(waiting)} unstarted Muse job(s), but {flying} of {limit} lanes are in "
+                         "flight: none can start, so the queue is not low")
+                return self.queue_items
             if len(waiting) < muse_queue.LOW_UNDER:
                 line = (f"QUEUE-LOW: {len(waiting)} unstarted Muse jobs in work/plan.md (under {muse_queue.LOW_UNDER}). "
                         f"Unstarted: {', '.join(waiting) or 'none'}")

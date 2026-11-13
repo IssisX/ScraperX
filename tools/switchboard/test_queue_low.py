@@ -310,5 +310,32 @@ class Cli(unittest.TestCase):
 # the job machine at the cutover: test_machine.Owners.
 
 
+class LiveQueueLanes(unittest.TestCase):
+    """11-13 (inbox 6859703698): QUEUE-LOW said "4 unstarted, under 8" while Muse had 27 of 10 lanes in flight:
+    no unstarted job could start, so a refill was asked for nothing."""
+
+    def check(self, flying: int, unstarted: int, limit: int = 10):
+        import types
+        import machine
+        rows = [machine.Step(f"J-{n:03d}", "muse", "pushed") for n in range(flying)] + \
+            [machine.Step(f"J-{500 + n:03d}", "muse", "planned") for n in range(unstarted)]
+        model = types.SimpleNamespace(limits={"muse": limit}, fingerprint=lambda: "fp")
+        sw = test_inbox.make(test_inbox.FakeGH())
+        sw.plan_mode = lambda: "live"
+        sw.plan_table = lambda: (model, {}, None, rows)
+        return sw.queue_check(), sw
+
+    def test_no_queue_low_while_muses_lanes_are_full(self):
+        for flying in (10, 27):
+            items, sw = self.check(flying, 4)
+            self.assertEqual(items, (), flying)
+            self.assertTrue(any("lanes are in flight" in line for line in sw.lines), sw.lines)
+
+    def test_a_free_lane_and_a_short_queue_is_still_low(self):
+        items, _ = self.check(9, 4)
+        self.assertEqual([it.kind for it in items], ["QUEUE-LOW"])
+        self.assertEqual(self.check(9, 8)[0], ())   # enough unstarted
+
+
 if __name__ == "__main__":
     unittest.main()

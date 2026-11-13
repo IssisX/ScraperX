@@ -12,6 +12,7 @@ No network, no clock, no files: GitHub and the time are given.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import pathlib
 import sys
@@ -117,7 +118,7 @@ class Classes(unittest.TestCase):
             self.assertEqual(switch.inbox_class(self.item(kind)), "now", kind)
         for kind in ("FYI", "STARTED", "ACK", "RERUN"):
             self.assertEqual(switch.inbox_class(self.item(kind)), "ride", kind)
-        for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "ride"),
+        for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "hold"),
                            ("reviewer", "ride")):
             self.assertEqual(switch.inbox_class(self.item("PLAN", owner)), cls, owner)
         own = ("FIX", "CONFLICT", "RED", "STALLED")   # 11-13: Claude's own PR stuck on the integrator: at once
@@ -334,7 +335,7 @@ class Hold(unittest.TestCase):
     def test_other_owners_late_jobs_ride_and_the_integrators_hold(self):
         gh = ti.FakeGH()
         sw = at(gh, 0)
-        sw.plan_items = (switch.InboxItem("PLAN", "J-059", "k1", "PLAN J-059: belongs to switchboard", "switchboard"),
+        sw.plan_items = (switch.InboxItem("PLAN", "J-059", "k1", "PLAN J-059: belongs to reviewer", "reviewer"),
                          switch.InboxItem("PLAN", "J-043", "k2", "PLAN J-043: belongs to muse", "muse"))
         self.assertEqual(sw.inbox([]), 0, "nobody's step but the integrator's wakes it")
         self.assertEqual(len(sw.digest_held), 2)
@@ -344,7 +345,28 @@ class Hold(unittest.TestCase):
         self.assertEqual(sw2.inbox([]), 3)
         body = gh.posts[0][1]
         self.assertIn("- PLAN J-125: belongs to integrator", body)
-        self.assertIn("- digest, nothing to decide: PLAN J-059: belongs to switchboard; PLAN J-043: belongs to muse", body)
+        self.assertIn("- digest, nothing to decide: PLAN J-059: belongs to reviewer; PLAN J-043: belongs to muse", body)
+
+    def test_a_late_step_the_switchboard_owes_wakes_once_per_job_and_step(self):
+        # 11-13 (6856712417, 6858117862): J-084's "switchboard, open the PR" rode the digest alone, 44 h late
+        import machine
+        def row(nxt):
+            return machine.Step("J-084", "claude", "proven", owes="switchboard", next=nxt)
+        a = row("prove #501 merged with trunk, then merge it: trunk is 157 commit(s) ahead with 43 file(s)")
+        b = row("prove #501 merged with trunk, then merge it: trunk is 158 commit(s) ahead with 44 file(s)")
+        self.assertEqual(switch.plan_item_head(a), switch.plan_item_head(b))   # trunk moving is not a new step
+        self.assertNotEqual(switch.plan_item_head(a), switch.plan_item_head(row("open the PR for claude/integrate-j084")))
+        mine = row("open the PR")
+        self.assertEqual(switch.plan_item_head(dataclasses.replace(mine, owes="muse")),
+                         dataclasses.replace(mine, owes="muse").key())   # every other owner's key as before
+        gh = ti.FakeGH()
+        for minute, r in ((0, a), (40, b), (80, a)):
+            sw = at(gh, minute)
+            sw.plan_items = (switch.InboxItem("PLAN", r.job, switch.plan_item_head(r), f"PLAN J-084 {r.next}",
+                                              r.owes),)
+            sw.inbox([])
+        self.assertEqual(len(gh.posts), 1)
+        self.assertIn("- PLAN J-084 prove #501", gh.posts[0][1])
 
 
 class Keys(unittest.TestCase):
