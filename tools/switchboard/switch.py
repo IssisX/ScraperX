@@ -107,6 +107,11 @@ MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047
 # The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
 # helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
 AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
+# 11-13: 77 claude/integrate-* branches from before (landed straight to trunk, or abandoned) never had a PR. Only a
+# head committed in the last AUTO_PR_MAX_AGE is opened there, and an older one costs no PR listing: the first full
+# pass after #498 read all of them and the token's hour ran out (run 43440567620: 0 of 5000 left).
+AUTO_PR_RECENT_ONLY = ("claude/integrate-",)
+AUTO_PR_MAX_AGE = dt.timedelta(days=3)
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -1539,12 +1544,20 @@ class Switch:
             if branch in open_refs:
                 continue
             try:
-                if self.prior_pr(branch):
+                known = self.gh.state.get("prior_pr") or [] if isinstance(getattr(self.gh, "state", None), dict) else []
+                if branch in known:   # a branch that had a PR: no read at all (prior_pr's own memo)
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
-                message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
+                commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]   # immutable: a free 304 later
+                message = commit["message"]
                 job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
                 if not job:
+                    continue
+                at = parse_time(((commit.get("committer") or {}).get("date")) or "")
+                if branch.startswith(AUTO_PR_RECENT_ONLY) and (at is None or self.now - at > AUTO_PR_MAX_AGE):
+                    continue   # 11-13: 77 old claude/integrate-* branches never had a PR; none is opened, none is read
+                if self.prior_pr(branch):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
                 proof, url, _, _ = self.proof(sha)
                 if proof != "green":
