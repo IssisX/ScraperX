@@ -484,6 +484,81 @@ class TheCacheBoundary(unittest.TestCase):
         self.assertEqual(sorted(set(k.split("${{")[0] for k in keys)), ["switchboard-etags-ask-", "switchboard-etags-steer-"])
 
 
+class TheReviewsRunApart(unittest.TestCase):
+    """11-13 (SYSTEM_PLAN 6, from #503): the sweep's run held the shared concurrency group until ask's serial reviews
+    ended (744 s for one security review), so merges, auto-open and the inbox waited and queued sweeps were replaced.
+    The reviews now run in their own run (part=ask) and group, which steer starts (switch.py wake_reviews; no
+    wake-ask job); each run restores and saves only its own part's file."""
+
+    flow = TheCacheBoundary.flow
+
+    def test_an_ask_run_has_its_own_group_and_name_and_a_sweep_never_runs_ask(self):
+        flow = self.flow()
+        group = flow["concurrency"]["group"]
+        self.assertIn("inputs.part == 'ask' && 'switchboard-ask' ||", group)
+        self.assertLess(group.index("'switchboard-ask'"), group.index("'switchboard-provision'"))
+        name = flow["run-name"]
+        self.assertIn("inputs.part == 'ask' && (inputs.dry_run &&", name)
+        self.assertLess(name.index("'Switchboard reviews'"), name.index("'Switchboard sweep'"))   # never a sweep
+        self.assertIn(f"'{switch.REVIEWS_RUN}'", name)   # the title wake_reviews looks for
+        jobs = flow["jobs"]
+        self.assertIn("inputs.part == 'ask'", jobs["ask"]["if"])
+        self.assertIn("github.event_name == 'workflow_dispatch'", jobs["ask"]["if"])
+        self.assertEqual(jobs["steer"]["needs"], "cache-in")   # a merge never waits behind a review
+        self.assertIn("inputs.part != 'ask'", jobs["steer"]["if"])
+        self.assertIn("needs.cache-in.result != 'cancelled'", jobs["steer"]["if"])
+        self.assertNotIn("needs.ask", str(flow))
+        self.assertEqual(flow[True]["workflow_dispatch"]["inputs"]["part"]["type"], "string")
+        # a needs:orchestrator label starts no job now, so its run is idle and never replaces a pending sweep
+        self.assertNotIn("needs:orchestrator", jobs["cache-in"]["if"])
+        self.assertNotIn("needs:orchestrator", group)
+
+    def test_each_run_restores_saves_and_prunes_only_its_own_part(self):
+        jobs = self.flow()["jobs"]
+        for step in jobs["cache-in"]["steps"]:
+            part = "ask" if "ask part" in step["name"] else "steer"
+            self.assertEqual(step["if"], "inputs.part == 'ask'" if part == "ask" else "inputs.part != 'ask'", step["name"])
+        (prune,) = [s for s in jobs["cache-out"]["steps"] if "run" in s]
+        self.assertEqual(prune["env"]["PART"], "${{ inputs.part == 'ask' && 'ask' || 'steer' }}")
+        self.assertIn('for part in "$PART"; do', prune["run"])
+        self.assertEqual(jobs["cache-out"]["needs"], ["cache-in", "ask", "steer"])
+
+    def test_steer_starts_the_reviews_run_and_no_job_does_it_after_every_sweep(self):
+        flow = self.flow()
+        self.assertNotIn("ask", flow["jobs"]["steer"]["needs"])   # steer runs first and starts the reviews itself
+        self.assertNotIn("wake-ask", flow["jobs"])   # SYSTEM_PLAN 6: four more jobs every ten minutes, not taken
+        self.assertNotIn("gh workflow run", str(flow))
+        self.assertEqual(flow["jobs"]["steer"]["permissions"]["actions"], "write")   # wake_reviews' dispatch
+
+    def run_script(self, script: str, env: dict) -> tuple[int, list[str]]:
+        import shutil
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_ = pathlib.Path(tmp)
+            log = bin_ / "log"
+            (bin_ / ".venv/bin").mkdir(parents=True)
+            fake = bin_ / ".venv/bin/python"
+            fake.write_text(f'#!/bin/bash\necho "python $*" >> "{log}"\n', encoding="utf-8")
+            fake.chmod(0o755)
+            full = {**os.environ, **env, "PATH": f"{bin_}:{os.environ['PATH']}", "TRUNK": rules.TRUNK, "REPO": "o/r"}
+            got = subprocess.run([shutil.which("bash") or "bash", "-c", script], cwd=tmp, env=full,
+                                 capture_output=True, text=True)
+            calls = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+            return got.returncode, calls
+
+    def test_ask_runs_one_whole_ask_pass_and_keeps_the_dry_flag(self):
+        (step,) = [s for s in self.flow()["jobs"]["ask"]["steps"] if s["name"] == "Run the switch"]
+        self.assertNotIn("${{", step["run"])   # event values only through env
+        for k in ("EVENT", "SCHEDULE", "ISSUE_NUMBER", "LABEL", "DISPATCH_DIGEST"):
+            self.assertNotIn(k, step["env"])   # ask reads no event text any more
+        for dry, tail in (("false", "--part ask --repo o/r --root src"), ("true", "--root src --dry-run")):
+            code, calls = self.run_script(step["run"], {"PART": "ask", "DISPATCH_DRY": dry})
+            self.assertEqual(code, 0, dry)
+            (call,) = calls
+            self.assertTrue(call.startswith("python src/tools/switchboard/switch.py --part ask"), call)
+            self.assertTrue(call.endswith(tail), (dry, call))
+
+
 class TheSecurityPass(unittest.TestCase):
     def ask(self, f):
         sw = make(RecordingGH())
