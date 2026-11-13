@@ -11,7 +11,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-12T17:00:00Z",
- "head": "b9c87902764ec9024402106a2ee2b859b98839e5",
+ "head": "b239caf8e48e77efec4c2a736a515f1e7cf4f017",
  "issue": 241,
  "job": "J-043",
  "landed": {
@@ -348,6 +348,56 @@
    "version": "6842528002",
    "via": "session",
    "what": "ask from Muse on #241"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-13T03:47:50Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-13T04:24:31Z",
+   "dead": "2026-11-13T16:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-13T14:17:00Z",
+   "id": "O-9fb9734b",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-13T04:24:31Z",
+   "missing": 0,
+   "ref": "ASK|ask on #241",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 241,
+   "to": "claude",
+   "unseen": null,
+   "version": "6843217178",
+   "via": "session",
+   "what": "ask from Muse on #241"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-13T03:57:50Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-13T04:24:31Z",
+   "dead": "2026-11-13T16:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-13T14:17:00Z",
+   "id": "O-9b662d3b",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-13T04:24:31Z",
+   "missing": 0,
+   "ref": "ASK|ask on #241",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 241,
+   "to": "claude",
+   "unseen": null,
+   "version": "6843393331",
+   "via": "session",
+   "what": "ask from Muse on #241"
   }
  ],
  "outcome": null,
@@ -358,7 +408,7 @@
  "prs": [
   496
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-13T03:14:07Z"
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-13T04:24:31Z"
 }

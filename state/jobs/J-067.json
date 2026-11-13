@@ -32,7 +32,7 @@
   "fb-bot/integrate-j067-back-hair-fixes": [
    "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
    "",
-   "2026-11-10T04:48:57Z"
+   "2026-11-13T04:24:31Z"
   ],
   "fb-bot/integrate-j067-checkopt": [
    "df0a80949d0d4b2ecf2c73907f4df0162628794c",
@@ -261,5 +261,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-12T21:45:56Z"
+ "updated": "2026-11-13T04:24:31Z"
 }
