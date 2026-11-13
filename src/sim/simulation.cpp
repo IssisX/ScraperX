@@ -286,7 +286,6 @@ std::uint32_t Simulation::loose_stock_upper_begin() const noexcept {
 std::uint32_t Simulation::loose_stock_hightower_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().hightower_begin());
 }
-}
 
 Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) const noexcept {
     const std::vector<LooseStock::Placement> &placed = physics_world_->loose_stock().placed();
