@@ -191,10 +191,23 @@ class MergeRule(unittest.TestCase):
     def test_eyes_need_the_bots_eye_land_on_the_head(self):
         need = frozenset({"eyes"})
         self.assertEqual(rules.merge_decision(facts(needs=need), "xai").action, "WAIT")
-        spoofed = v("**Claude eye (look of #9 @ 1a2b3c4d): LAND**", T1, "IssisX")
-        self.assertEqual(rules.merge_decision(facts(needs=need, verdicts=(land("ChatGPT"), spoofed)), "xai").action, "WAIT")
+        spoofed = rules.parse_verdict("**Claude eye (look of #9 @ 1a2b3c4d): LAND**", T1, "outsider", TEAM)
+        self.assertIsNone(spoofed)   # only a team login's eye line is a verdict; an outsider's never is
         eye = v("**Claude eye (look of #9 @ 1a2b3c4d): LAND**", T1, rules.BOT_LOGIN)
         self.assertEqual(rules.merge_decision(facts(needs=need, verdicts=(land("ChatGPT"), eye)), "xai").action, "MERGE")
+
+    def test_a_hand_look_counts_as_the_eye(self):
+        # SYSTEM_PLAN item 8: needs:eyes, no bot eye, a team-login eye LAND on the head merges; on an older head waits.
+        need = frozenset({"eyes"})
+        hand = v(f"**Claude eye (look of #9 @ {HEAD[:8]}): LAND**\n\nlooked at the climb", T1, "IssisX")
+        self.assertEqual((hand.kind, hand.verdict, hand.sha, hand.author_login), ("eye", "LAND", HEAD[:8], "IssisX"))
+        d = rules.merge_decision(facts(needs=need, verdicts=(land("ChatGPT"), hand)), "xai")
+        self.assertEqual(d.action, "MERGE", d.reasons)
+        old = v(f"**Claude eye (look of #9 @ {OLD[:8]}): LAND**", T1, "IssisX")
+        d = rules.merge_decision(facts(needs=need, verdicts=(land("ChatGPT"), old)), "xai")
+        self.assertEqual(d.action, "WAIT")
+        self.assertIn("needs:eyes and no eye LAND on this head", d.reasons)
+        self.assertTrue(rules.needs_eye(facts(needs=need, verdicts=(land("ChatGPT"), hand))))  # the API eye still runs
 
     def test_eye_fix_blocks(self):
         eye_fix = v("**Claude eye (look of #9 @ 1a2b3c4d): FIX**" + REPRO, T1, rules.BOT_LOGIN)
