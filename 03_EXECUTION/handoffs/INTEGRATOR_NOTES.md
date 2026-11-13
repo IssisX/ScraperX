@@ -9,10 +9,10 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
+- GOAL ONLY (Cory 11-13): no work sits unowned. SCOPE FROZEN: new holes go on a later list unless they break that one job.
 - EXIT (done = all true): landed #510, #515, #503+review split, #506, #507, #511, failure-modes branch, candidate-scope, and
   the 3 CUTs (auto-open every sweep, carry LAND on same patch-id, RED-BRANCH hold 0); then all 14 checks in system-test.md PASS
-  incl. a Muse git round trip; then advisor, phone push, banner. Order = that list. One landing at a time; after each read one
-  full pass; new breakage: suspect that landing, revert, never patch on top. Hand merges refused: land via the switchboard.
+  incl. a Muse git round trip; then advisor, phone push, banner. One landing at a time; new breakage: revert, never patch on top.
 - Now: #515 frozen @851da1c4 (on #510); candidate-scope 1ccc2b94 and the CUTs wait for #515; #494 ruled LAND. Muse paste on #504
   after #507. Fable 2x 11-13. Evidence: system-test.md on claude/integrate-system-test. J-044c ownership at game time.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest, alert Cory first.
