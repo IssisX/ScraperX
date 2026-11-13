@@ -371,37 +371,12 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // the throwables, so nothing already laid is renumbered and saves
     // made before it still load (loose_stock.hpp).
     loose_stock_->append_reserved();
-    {
-        std::vector<Matron::Throwable> throwables;
-        for (int i = loose_stock_->matron_throwables_begin();
-             i < loose_stock_->matron_throwables_begin() + LooseStock::kMatronThrowables; ++i) {
-            const kit::BodyIndex body = loose_stock_->body(i);
-            throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
-                                  LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
-        }
-        // And the stock already laid on the decks she hunts (J-016): a toolbox
-        // she can take, a drum or a crate she can shove, on her home deck
-        // first, then 143, the ring and 132, to her 32. No piece is laid for
-        // it: the kit's bodies, saves and stock counts are as they were.
-        for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
-            for (int i = 0; i < loose_stock_->matron_throwables_begin() && throwables.size() < 32; ++i) {
-                const LooseStock::Placement &p = loose_stock_->placed()[static_cast<std::size_t>(i)];
-                const bool kind = p.kind == LooseStock::Kind::Toolbox || p.kind == LooseStock::Kind::Drum ||
-                                  p.kind == LooseStock::Kind::Crate;
-                if (!kind || std::abs(p.y - deck) > 0.3F) {
-                    continue;
-                }
-                const kit::BodyIndex body = loose_stock_->body(i);
-                // A piece with no body yet is not hers to take or shove
-                // yet; skipping it keeps her list the pre-world-b one.
-                if (!body.valid()) {
-                    continue;
-                }
-                throwables.push_back({kit_->body_id(body), kit_->body_entity(body), LooseStock::carry_handle(p.kind)});
-            }
-        }
-        matron_->set_throwables(std::move(throwables));
-    }
+    // The bands' rings above 396.25 m and the top decks dress_tower
+    // recorded: last in the table, after the east/west stock, so nothing
+    // already laid is renumbered and saves made before them still load.
+    loose_stock_->append_upper();
+    // Her throwables are given at the end of the build (give_matron_stock),
+    // once every piece has its body.
     // The bay on the 154 m deck (bay.hpp): its kit bodies after every other's,
     // so older saves' lists line up.
     bay_ = std::make_unique<Bay>(physics_system_, *kit_);
@@ -473,7 +448,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     machine(bay_->leaf_body(), kS, false);
 
     summit_->build_ending();
-    // The east/west spots dress_tower reserved: their bodies come last in
+    // The east/west spots dress_tower reserved: their bodies come next in
     // the kit's build order, after the bay, the twin tower and the summit,
     // so every pre-existing body keeps its place. They are heard like any
     // other stock once built.
@@ -481,14 +456,38 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
 
-    // The forklift on her deck, 154 (J-041): its two kit bodies after every
-    // other's (the east/west pieces too), so older saves' lists line up; its hits heard like the rest.
+    // The forklift on her deck, 154 (J-041): its two kit bodies after the
+    // east/west pieces, so older saves' lists line up; its hits heard like the rest.
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity,
                                                     Forklift::kDeck154ParkX, Forklift::kDeck154ParkZ, 0.0F,
                                                     Forklift::kDeck154ParkY));
     track(forklifts_.back()->chassis_body(), ImpactSound::Machine);
     track(forklifts_.back()->carriage_body(), ImpactSound::Machine);
+
+    // The upper stock (J-014): its bodies after the deck-154 forklift, so
+    // the forklift keeps its place right after the east/west pieces and
+    // the magnet's pinned append order still holds. Heard like the rest.
+    for (const int i : loose_stock_->realize_upper()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+
+    // J-042: two more kinds by her deck's north band (loose_stock.hpp), their
+    // bodies after every other's (the upper stock's too); heard like the rest.
+    loose_stock_->lay_matron_kinds();
+    for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+    // J-092 (#410): the slab trap's service cell on her deck (slab_cell.hpp):
+    // its slab the table's last piece, then its trigger and the cord's
+    // handle, after every other body, so older saves line up.
+    loose_stock_->lay_hung_slab();
+    {
+        const kit::BodyIndex slab = loose_stock_->body(loose_stock_->hung_slab_begin());
+        track(slab, ImpactSound::HeavySteel);
+        slab_cell_.build(*kit_, slab);
+    }
+    give_matron_stock();
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
@@ -499,6 +498,43 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     commit_machine_checkpoint();
 
     read_state();
+}
+
+// What the Matron takes and throws as a pest, or shoves (matron.hpp, her
+// mischief): the pieces laid for her first (two toolboxes and a drum, their
+// bits as ever), then every loose piece on the decks she hunts, whatever its
+// kind, that his hands can carry (a load: what is his to her) and hers can
+// move: one she can lift (to Matron::kTakeMaxKg) she takes and throws, a
+// heavier one (to kStockShoveMaxKg) she shoves (J-042, Cory 11-05: every
+// movable object the same way). Stock too big to carry (a skid crate) is no
+// one's: in her way, it is the deck's. Her home deck first, then 143, the
+// ring and 132 (Matron::kMaxThrowables).
+void Simulation::PhysicsWorld::give_matron_stock() {
+    std::vector<Matron::Throwable> throwables;
+    const int first = loose_stock_->matron_throwables_begin();
+    const auto give = [&](const int i) {
+        const kit::BodyIndex body = loose_stock_->body(i);
+        throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
+                              LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
+    };
+    for (int i = first; i < first + LooseStock::kMatronThrowables; ++i) {
+        give(i);
+    }
+    for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
+        for (int i = 0; i < loose_stock_->count() && throwables.size() < Matron::kMaxThrowables; ++i) {
+            if (i >= first && i < first + LooseStock::kMatronThrowables) {
+                continue;
+            }
+            const kit::BodyIndex body = loose_stock_->body(i);
+            if (!body.valid() || std::abs(loose_stock_->placed()[static_cast<std::size_t>(i)].y - deck) > 0.3F ||
+                kit_->carry_kind(kit_->body_entity(body)) != kit::CarryKind::Load ||
+                kit_->body_mass(body) > Matron::kStockShoveMaxKg) {
+                continue;
+            }
+            give(i);
+        }
+    }
+    matron_->set_throwables(std::move(throwables));
 }
 
 Simulation::PhysicsWorld::~PhysicsWorld() {
@@ -779,6 +815,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
     // step's hits, hardest first, then the yard crane's drives while they run.
+    // Her own throw stays silent to her only until another touches it.
+    matron_->end_thrown_claim();
     // A machine part she is on or against (a leaf, a platform, a cage she
     // steps onto) is struck by her own weight: her own sound, as her body's
     // within kOwnSoundM is, though its center lies farther off. Read from the
@@ -834,6 +872,28 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // room's own sound is not).
     bay_->pre_step(delta_seconds);
     matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
+    // The world's hoists as the kit holds them (matron.hpp set_hoists): every
+    // body on a vertical guide a catch holds, and what frees each catch.
+    {
+        std::vector<Matron::HoistFeed> hoists;
+        for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
+            Matron::HoistFeed f;
+            f.car = kit_->body_id(h.car);
+            f.axis_y = h.axis.GetY();
+            f.min_travel = h.min_travel;
+            f.max_travel = h.max_travel;
+            f.travel = h.travel;
+            f.held = h.held;
+            for (const kit::Kit::HoistPin &p : h.pins) {
+                f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
+            }
+            for (const kit::BodyIndex w : h.weights) {
+                f.weights.push_back(kit_->body_id(w));
+            }
+            hoists.push_back(std::move(f));
+        }
+        matron_->set_hoists(std::move(hoists));
+    }
     // Out of her locker, she looks the tower over once (her climbs are what
     // she finds).
     if (matron_->wants_routes()) {
@@ -885,12 +945,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
-    // His own run is no blow (J-048): up to the flow's speed over his frame,
-    // while his own drive moves him (own_drive_) and nothing has taken him
-    // since the last step.
+    // His own run is no blow (J-048): up to the flow's speed of his own
+    // drive, while his own drive moves him (own_drive_) and nothing has
+    // taken him since the last step. The self-driven velocity (J-061) is
+    // his legs', arms' and hook's speed only — a gust's push is not in it,
+    // so it stays a blow.
     const bool own_drive = own_drive_ && traversal_state_ == TraversalState::None && !sling_controlling &&
                            !zip_riding_ && grip_ == nullptr && !hook_hauls(commands.hook_reel);
-    contact_listener_.set_own_drive(airborne_inherited_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
+    contact_listener_.set_own_drive(self_drive_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
     {
         const auto started = std::chrono::steady_clock::now();
         effort_before_update();   // J-046 measurement only: reads, writes nothing
@@ -1025,20 +1087,25 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // Her hands on the player (matron.hpp, her hands): at every stage, she
     // takes hold.
-    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_),
-                                        traversal_state_ == TraversalState::Climbing)) {
+    if (!died_this_tick && matron_->caught(traversal_state_ == TraversalState::Climbing)) {
         // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
         // what follows is physics. A ladder offers no immunity: her hand has
         // to reach the ankle and overcome the same finite grip as any load.
         if (matron_->grab_ready()) {
             matron_->count_catch();
-            matron_->begin_grab(bodies.GetPosition(player_id_));
+            matron_->begin_grab();
         } else if (matron_->shoves() && matron_->shove_ready()) {
             // While her hands cannot take hold (a grab's cooldown),
             // short of fully changed: a pest's shove away from her,
-            // a dangerous one's at the rim. Not a catch.
-            matron_->count_shove();
-            shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
+            // a dangerous one's at the rim. Not a catch. A shove is a
+            // physical hit: it lands only when he is within reach NOW.
+            // caught() measures reach to the sensed position, which can
+            // be a memory up to 0.5 s old; a player who has moved out of
+            // reach since must not be shoved (Codex P1 on #367).
+            if (matron_->shove_reach_now(traversal_state_ == TraversalState::Climbing)) {
+                matron_->count_shove();
+                shove_player(bodies, matron_->shove_direction());
+            }
         }
     }
     // A blow (the listener's hit_closing: his own run taken off) hard enough
@@ -1587,7 +1654,10 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
     if (max_nodes < 0) {
         // A probe: 0 no floor within a step, 1 floor but her capsule does not fit, 2 she stands there.
         const traversal::Limits limits{};
-        const traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
+        // The hook avoids him exactly as her real walk does (the same
+        // walk_ignore rule), so the tests exercise the real path (J-049,
+        // Claude's 14:19 FIX on #383): the sensed place, only while fresh.
+        const traversal::Ignore ignore = matron_->walk_ignore();
         JPH::RayCastResult hit;
         const JPH::RVec3 top(from.GetX(), from.GetY() + limits.step_max_m + 0.05F, from.GetZ());
         const float depth = 2.0F * limits.step_max_m + 0.1F;
@@ -1600,7 +1670,8 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
         (void)to;
         return p.empty() ? 1 : 2;
     }
-    return traversal::grid_walk(physics_system_, traversal::Ignore{matron_->body(), player_id_, matron_->moving_layer()}, traversal::Limits{}, from,
+    traversal::Ignore ignore = matron_->walk_ignore();
+    return traversal::grid_walk(physics_system_, ignore, traversal::Limits{}, from,
                                 to, margin, 0.4F, max_nodes)
         .size();
 }

@@ -4,6 +4,7 @@
 
 #include "sim/bay.hpp"
 #include "sim/forklift.hpp"
+#include "sim/slab_cell.hpp"
 #include "sim/summit.hpp"
 #include "sim/twin_tower.hpp"
 
@@ -222,15 +223,49 @@ void run_wet_e_guard(const bool expect) {
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
     constexpr std::uint32_t kNewEastWest = 137;
+    // J-014 (#121): 78 new upper pieces on the rings above 396.25 m and
+    // the top decks, their table places taken after the east/west pieces
+    // and their bodies built last, after the deck-154 forklift, so the
+    // forklift keeps its place right after the east/west pieces and the
+    // bay, twin and summit bodies still follow the original 595 in
+    // order; only the total grows by 78. Re-pinned for the magnet fix:
+    // the upper bodies were built before the forklift, so the forklift
+    // sat 78 places later and the magnet's pinned append order failed.
+    // Before forklift_at 822, now 744; the total is still 824.
+    constexpr std::uint32_t kNewUpper = 78;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
-    const std::uint32_t forklift_at = kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
-    bool since_after = world.kit_body_count() == forklift_at + std::size(kForklift);
+    // J-042: then exactly two pieces of stock laid for the Matron by her band
+    // (the extinguisher and the pallet), the kit's last two bodies, after the
+    // upper pieces.
+    constexpr std::uint32_t kMatronKinds = 2;
+    // J-092 (#410): then the slab trap's cell on her deck (slab_cell.hpp):
+    // its slab, the table's last piece, then its static frame, its trigger
+    // and the cord's handle, the kit's last four bodies.
+    constexpr std::uint32_t kHungSlabs = 1;
+    const std::uint64_t kSlabCell[] = {scraperx::sim::SlabCell::kFrameEntity, scraperx::sim::SlabCell::kTriggerEntity,
+                                       scraperx::sim::SlabCell::kHandleEntity};
+    const std::uint32_t forklift_at =
+        kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
+    const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
+    const std::uint32_t cell_at = kinds_at + kMatronKinds + kHungSlabs;
+    bool since_after = world.kit_body_count() == cell_at + static_cast<std::uint32_t>(std::size(kSlabCell));
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
     for (std::uint32_t i = kBodiesBeforeE; since_after && i < kBodiesBeforeE + std::size(kSince); ++i) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
+    }
+    // The 78 upper pieces follow the forklift, in table order, then the
+    // Matron's two and the cell's slab, the table's last three pieces; then
+    // the cell's trigger and handle.
+    const std::uint32_t upper_first = world.loose_stock_count() - kHungSlabs - kMatronKinds - kNewUpper;
+    for (std::uint32_t i = 0; since_after && i < kNewUpper + kMatronKinds + kHungSlabs; ++i) {
+        since_after = world.kit_body_entity(forklift_at + std::size(kForklift) + i) ==
+                      Simulation::kLooseStockFirstEntity + upper_first + i;
+    }
+    for (std::uint32_t i = 0; since_after && i < std::size(kSlabCell); ++i) {
+        since_after = world.kit_body_entity(cell_at + i) == kSlabCell[i];
     }
     Fnv lines;
     bool lines_clear = true;
@@ -257,7 +292,13 @@ void run_wet_e_guard(const bool expect) {
             }
         }
     }
+    // The pieces built before J-042 (540), hashed alone, then those before
+    // J-092's slab (542), then every piece.
+    constexpr std::uint32_t kStockBeforeKinds = 540;
+    constexpr std::uint32_t kStockBeforeCell = 542;
     Fnv stock;
+    Fnv stock_before;
+    Fnv stock_before_cell;
     bool stock_clear = true;
     for (std::uint32_t i = 0; i < world.loose_stock_count(); ++i) {
         const std::uint32_t body = world.kit_body_index(Simulation::kLooseStockFirstEntity + i);
@@ -266,6 +307,18 @@ void run_wet_e_guard(const bool expect) {
         stock.add_mm(at.x);
         stock.add_mm(at.y);
         stock.add_mm(at.z);
+        if (i < kStockBeforeKinds) {
+            stock_before.add(world.loose_stock_piece(i).kind);
+            stock_before.add_mm(at.x);
+            stock_before.add_mm(at.y);
+            stock_before.add_mm(at.z);
+        }
+        if (i < kStockBeforeCell) {
+            stock_before_cell.add(world.loose_stock_piece(i).kind);
+            stock_before_cell.add_mm(at.x);
+            stock_before_cell.add_mm(at.y);
+            stock_before_cell.add_mm(at.z);
+        }
         // Its parts' reach about where it was built, as a ball round each part.
         for (std::uint32_t p = 0; p < world.kit_body_part_count(body); ++p) {
             const auto part = world.kit_body_part(body, p);
@@ -282,6 +335,7 @@ void run_wet_e_guard(const bool expect) {
               << " since_after=" << since_after
               << " lines=" << world.zipline_count() << " line_hash=" << lines.hash
               << " stock=" << world.loose_stock_count() << " stock_hash=" << stock.hash
+              << " stock_before_hash=" << stock_before.hash << " stock_before_cell_hash=" << stock_before_cell.hash
               << " lines_clear=" << lines_clear << " stock_clear=" << stock_clear << '\n';
     if (!expect) {
         return;
@@ -297,7 +351,7 @@ void run_wet_e_guard(const bool expect) {
     // 4824050261233220131, now 3514033760028014323.
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, and the slab cell's are the last");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is
@@ -318,7 +372,25 @@ void run_wet_e_guard(const bool expect) {
     // over all pieces changes again; every piece stands where it was.
     // Before 9809091706962277184, now 664305694603610712; the count (462)
     // is as before.
-    require(world.loose_stock_count() == 462 && stock.hash == 664305694603610712ULL,
+    // Re-pinned for J-014 (#121): 78 new upper pieces on the rings above
+    // 396.25 m and the top decks, after the east/west pieces in the
+    // table, so the count is 462 + 78 and the hash over all pieces
+    // changes; every pre-existing piece stands where it was.
+    // Before 664305694603610712, then 16882536141644003327 (540 pieces).
+    // J-042 (#240): two pieces laid for the Matron by her band (the
+    // extinguisher and the pallet) take the end of the table. The first 540
+    // still hash to 16882536141644003327, so every earlier piece stands where
+    // it was; the count is 540 + 2 and the hash over all pieces is new: now
+    // 10019901410837365716 (west of the drum, clear of it).
+    // J-092 (#410): the cell's slab, hung 20 m over her deck, takes the end
+    // of the table. The first 542 still hash to 10019901410837365716, so
+    // every earlier piece stands where it was; the count is 542 + 1 and the
+    // hash over all pieces is new: now 2030619953479605832 (the slab at
+    // z -126.4, off the walkway; 3739843295225240046 when first hung at
+    // -127.9).
+    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs &&
+                stock_before.hash == 16882536141644003327ULL &&
+                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 2030619953479605832ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
@@ -407,6 +479,8 @@ void run_wet_isolation() {
     std::cout << "PASS scraperx_sim AS-007 F: rider_y=" << f_top.player_position.y
               << " gain_J=" << f_gain << " released_J=" << f_released << '\n';
 }
+SCRAPERX_GROUP("wet_isolation", 150, run_wet_isolation);
+SCRAPERX_SELECT("AS-007", run_wet_isolation, run_wet_e, run_wet_handling, run_wet_band, run_wet_route);
 
 // The band in one run on player inputs, from the 220 ring to standing on
 // TP-340, then the header's dump re-arms it.
@@ -477,6 +551,8 @@ void run_wet_band() {
               << " plate_y=" << on_plate.player_position.y << " tank_kg=" << w.d_tank_kg
               << " header_kg=" << w.header_kg << " bucket_kg=" << w.e_bucket_kg << '\n';
 }
+SCRAPERX_GROUP("wet_band", 180, run_wet_band);
+SCRAPERX_SELECT("AS-007-band", run_wet_band);
 
 // AS-007's climbing route: at (x, z) facing (fx, fz), take the hold in front
 // (jumping for it when `jump`) and climb, stick toward it, until standing
@@ -569,6 +645,8 @@ void run_wet_route() {
     std::cout << "PASS scraperx_sim AS-007 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
+SCRAPERX_GROUP("wet_route", 190, run_wet_route);
+SCRAPERX_SELECT("AS-007-route", run_wet_route);
 
 // The hands' handling rules, each falsified on the machine that showed it
 // through the game's input: a taken handle is drawn in to the hands at
@@ -648,6 +726,8 @@ void run_wet_handling() {
     std::cout << "PASS scraperx_sim handling: handle_tick_m=" << worst_handle_tick
               << " spool_peak_mps=" << spool_peak_speed << "\n";
 }
+SCRAPERX_GROUP("wet_handling", 170, run_wet_handling);
+SCRAPERX_SELECT("handling", run_wet_handling);
 
 // ---- AS-007 E, the chiller drop (03_EXECUTION/CLIMB_REDESIGN/chiller_drop_spec.md) ----
 
@@ -1113,3 +1193,5 @@ void run_wet_e() {
               << " still_s=" << up.still_t - up.land_t << " rest_deck=" << up.rest_deck << " rest_60=" << rest_60
               << " empty_rest=" << empty_rest << " gain_J=" << gain << " released_J=" << released << '\n';
 }
+SCRAPERX_GROUP("wet_e", 160, run_wet_e);
+SCRAPERX_SELECT("AS-007-E", run_wet_e);

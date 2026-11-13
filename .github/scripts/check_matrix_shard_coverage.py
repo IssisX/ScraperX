@@ -64,9 +64,9 @@ MATRIX_GATE = re.compile(r"matrix\.shard\s*==\s*['\"]([^'\"]+)['\"]")
 # (godot-touch) already read the proof of; this guard pins the legs
 # that decide whether that proof runs.
 EXPECTED = {
-    "native-tests": ["athletic-traversal", "matron-slices-1",
-                     "matron-slices-2", "matron-slices-3"],
-    "godot-touch": ["touch-1", "touch-2"],
+    "native-tests": ["athletic-traversal-1", "athletic-traversal-2",
+                     "matron-slices-1", "matron-slices-2", "matron-slices-3"],
+    "godot-touch": ["touch-1", "touch-2", "touch-3"],
 }
 
 
@@ -204,15 +204,18 @@ def _self_test():
 
     good = ("name: test\njobs:\n"
             + job("native-tests",
-                  ["athletic-traversal", "matron-slices-1",
-                   "matron-slices-2", "matron-slices-3"],
-                  [("Run athletic_traversal", "athletic-traversal"),
+                  ["athletic-traversal-1", "athletic-traversal-2",
+                   "matron-slices-1", "matron-slices-2", "matron-slices-3"],
+                  [("Run athletic-traversal-1", "athletic-traversal-1"),
+                   ("Run athletic-traversal-2", "athletic-traversal-2"),
                    ("Run CTest Matron slice group 1", "matron-slices-1"),
                    ("Run CTest Matron slice group 2", "matron-slices-2"),
                    ("Run CTest Matron slice group 3", "matron-slices-3")])
-            + job("godot-touch", ["touch-1", "touch-2"],
+            + job("godot-touch", ["touch-1", "touch-2", "touch-3"],
                   [("Drive control paths (shard 1)", "touch-1"),
-                   ("Drive control paths (shard 2)", "touch-2")]))
+                   ("Drive control paths (shard 2)", "touch-2"),
+                   ("Drive control paths (shard 3)", "touch-3"),
+                   ("Her drawn body", "touch-3")]))
     cases = []
 
     def case(name, text, want_substring):
@@ -230,12 +233,15 @@ def _self_test():
          good.replace("          - matron-slices-3\n", "", 1),
          "missing-matrix-shard")
     case("extra-shard",
-         good.replace("          - touch-2\n",
-                      "          - touch-2\n          - touch-3\n", 1),
+         good.replace("          - touch-3\n",
+                      "          - touch-3\n          - touch-4\n", 1),
          "unexpected-matrix-shard")
+    case("dropped-touch-3",
+         good.replace("          - touch-3\n", "", 1),
+         "missing-matrix-shard: godot-touch matrix has no 'touch-3'")
     case("duplicate-shard",
-         good.replace("          - touch-2\n",
-                      "          - touch-2\n          - touch-2\n", 1),
+         good.replace("          - touch-3\n",
+                      "          - touch-3\n          - touch-3\n", 1),
          "duplicate-matrix")
     case("phantom-gate",
          good.replace("matrix.shard == 'matron-slices-3'",
@@ -248,6 +254,9 @@ def _self_test():
     case("shard-runs-nothing",
          good.replace("        if: matrix.shard == 'touch-1'\n", "", 1),
          "shard-runs-nothing")
+    case("touch-3-runs-nothing",
+         good.replace("matrix.shard == 'touch-3'", "matrix.shard == 'touch-2'"),
+         "shard-runs-nothing: godot-touch matrix shard 'touch-3'")
     case("not-a-run-step",
          good.replace("        if: matrix.shard == 'touch-1'\n        run: |\n          echo ok\n",
                       "        if: matrix.shard == 'touch-1'\n        uses: actions/upload-artifact@v4\n", 1),

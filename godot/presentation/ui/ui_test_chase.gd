@@ -837,6 +837,99 @@ func _stock_touch(device: int) -> bool:
 	return true
 
 
+# touch_slab_trap (J-092, src/sim/slab_cell.hpp): her deck's slab trap. Woken
+# by a sprint beside her locker, he goes to the trip cord's handle under the
+# band and GRABs it. Watching her, she freezes; looked away from, she creeps
+# in to her stalk's band, which from the handle is under the slab; looked
+# back at, she freezes. A step back with the handle opens the hook, and the
+# 2 t slab comes down on her: heard, and she is dead. The native test
+# (matron-slab-trap) holds the numbers; this drives it through the touch
+# controls.
+const SLAB_HANDLE := 2671
+const SLAB_HANDLE_AT := Vector2(4.0, -125.5)   # SlabCell::kHandleX, kHandleZ
+const SLAB_WATCH := Vector2(1.0, 0.0)    # east, along the band to the cell and her locker
+const SLAB_AWAY := Vector2(0.0, 1.0)
+
+func _slab_trap_touch(device: int) -> bool:
+	var stock: PackedInt32Array = _native().get_loose_stock()
+	if stock.size() < 3 or stock[stock.size() - 2] != 10:
+		return _fail("the loose stock's last piece is not the cell's plate slab")
+	var slab := int(stock[stock.size() - 3])
+	var hung: Vector3 = _native().get_kit_body_transform(slab).origin
+	if not await _wake_matron(device):
+		return false
+	# Round the bay's cut along the band's north side, then to the handle,
+	# 0.7 m west of it as the native test stands.
+	for target in [Vector2(2.0, -129.6), Vector2(SLAB_HANDLE_AT.x - 0.7, SLAB_HANDLE_AT.y)]:
+		if not await _go(device, target, 0.12, 30.0):
+			return _fail("the walk to the trip cord stalled at %s" % str(_position()))
+	await _face(SLAB_WATCH)
+	if not await _offered(&"pick_up", "GRAB", "TRIP CORD"):
+		return _fail("Action read '%s %s' at the trip cord, not GRAB TRIP CORD" % [_action_label(),
+			String(_ctx()["action"]["detail"])])
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == SLAB_HANDLE, 0.5):
+		return _fail("GRAB did not take the trip cord's handle")
+	# A look up at the slab on its sling, for the still, and back down.
+	await _tilt(1.0)
+	await _pose("slab_trap_hanging")
+	await _tilt(0.0)
+	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 40.0):
+		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
+	# She stands still: under his gaze, or at her band once he looked away.
+	# Twice he turns (away, then back), and then he steps back.
+	var looks := 2
+	var still := 0.0
+	var waited := 0.0
+	while waited < 40.0:
+		var m := _matron_state()
+		var standing := int(m["state"]) == MATRON_STATE_HUNTING and float(m["speed"]) < 0.05
+		still = still + get_process_delta_time() if standing else 0.0
+		if still >= 0.5:
+			if looks == 0:
+				break
+			looks -= 1
+			still = 0.0
+			await _face(SLAB_AWAY if looks == 1 else SLAB_WATCH)
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	if looks > 0 or still < 0.5:
+		return _fail("she never stood still for the lure (state %d at %s)" % [int(_matron_state()["state"]),
+			str(_matron_state()["position"])])
+	var her: Vector3 = _matron_state()["position"]
+	print("SCRAPERX_UITEST slab_trap: she stands at %s, the slab hangs at %s" % [str(her), str(hung)])
+	var heavy_before := int(_main._audio.impacts_heard.get(2, 0))
+	_move(device, -0.35)
+	var opened: bool = await _wait_until(func() -> bool:
+		return _native().get_kit_body_transform(slab).origin.y < hung.y - 0.05, 4.0)
+	_move(device, 0.0)
+	if not opened:
+		return _fail("stepping back with the trip cord never opened the hook")
+	if int(_native().get_carrying_entity_id()) != SLAB_HANDLE:
+		return _fail("the handle left his hands before the hook opened")
+	await _tilt(0.4)   # a little up, at it coming down; she still in his gaze
+	await _wait_until(func() -> bool: return _native().get_kit_body_transform(slab).origin.y < 158.0, 3.0)
+	await _pose("slab_trap_falling")
+	var landed: bool = await _wait_until(func() -> bool:
+		return _native().get_kit_body_transform(slab).origin.y < 156.0 and \
+			int(_matron_state()["state"]) == MATRON_STATE_DEAD, 4.0)
+	await _seconds(1.0)
+	var m := _matron_state()
+	var at: Vector3 = _native().get_kit_body_transform(slab).origin
+	var heavy := int(_main._audio.impacts_heard.get(2, 0)) - heavy_before
+	print("SCRAPERX_UITEST slab_trap: slab at %s, she is state %d, %.0f N s, %d heavy hits heard" % [
+		str(at), int(m["state"]), float(m["damage_ns"]), heavy])
+	if not landed or int(m["state"]) != MATRON_STATE_DEAD:
+		return _fail("the slab did not kill her (state %d, slab at %s)" % [int(m["state"]), str(at)])
+	if heavy < 1:
+		return _fail("the slab's fall was not heard")
+	await _let_go_if_held(device)
+	await _look_at_point(m["position"])
+	await _pose("slab_trap_landed")
+	_detail = "damage_ns=%.0f heavy_hits=%d" % [float(m["damage_ns"]), heavy]
+	return true
+
+
 func _look_stock_yard() -> bool:
 	_main._sky_cycle.set_hour(14.0)
 	var device := InputRouter.Device.TOUCH
@@ -1130,14 +1223,19 @@ func _deck154_truck() -> Transform3D:
 
 
 # The stick's right that steers the truck at `at`: the stick right steers it
-# right of its nose, whatever the view.
+# right of its nose, whatever the view. J-045: gain 3.5 (was 2.0) — the
+# 1-tick first advance shifts her start ~10 cm, so the ram is a knife-edge
+# and the truck under-turns at 2.0 (nose ~15 deg west of the ~34 deg
+# bearing to her, glancing clip, blow 0.00). Measured: gain 3.0 passes
+# thin (blow 0.29), gain 3.5 squares it up (rammed 3.00 m/s, blow 1.05,
+# state 11), gain 4.0 over-turns and she pulls away (blow 0.00).
 func _steer_at(at: Vector3) -> float:
 	var t := _deck154_truck()
 	var nose := t.basis.z
 	var to := at - t.origin
 	var ahead := to.x * nose.x + to.z * nose.z
 	var right := -to.x * nose.z + to.z * nose.x
-	return clampf(2.0 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
+	return clampf(3.5 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
 
 
 func _forklift_ram_touch(device: int) -> bool:
@@ -1583,8 +1681,12 @@ func _crane_spreader(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
 		return _fail("spreader: CRANE did not take the crane")
 	# The hook by the frame's east side, let down until its shackle lies on
-	# the ground there.
-	if not await _crane_hook_over(device, Vector2(frame.x + 1.7, frame.z), 0.3, 120.0):
+	# the ground there. 1.0 m off the frame, not 1.7: the sling is 3.2 m and
+	# the hook swings +-0.7 m on the hoist rope, so at 1.7 m the throat-to-lug
+	# span runs 3.43-3.58 m against the 3.23 m the rope reaches, and HOOK is
+	# offered only while the swing happens to be west; at 1.0 m the span
+	# stays under 3.0 m at every swing phase. (J-045.)
+	if not await _crane_hook_over(device, Vector2(frame.x + 1.0, frame.z), 0.3, 120.0):
 		return _fail("spreader: the hook was not sent by the spreader")
 	if not await _crane_hoist_until(device, -1,
 			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.4, 60.0):

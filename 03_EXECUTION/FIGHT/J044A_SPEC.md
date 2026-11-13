@@ -48,13 +48,14 @@ Two cervical links together offer at most ~100° sagittal excursion, 70° latera
 
 Jolt [S7–S8] provides `SwingTwistConstraint` angle limits, target orientation/velocity, motor torque limits and solver impulse readback. The hit goes to the contacted head or limb body, so joints transmit reaction back to torso/root; motors oppose according to finite shared budget, and the previous strike's residual angular velocity participates in the next impact.
 
-## D. Hit-location map: 12 regions; same authoritative contact
+## D. Hit-location map: 14 regions; same authoritative contact
 
 Proposed stable enum / export schema **for review, not an already-landed API**:
 
 | Region keys | Native body | Classification from actual contact |
 |---|---|---|
 | `face_l`, `face_r` | head | frontal/lateral skin zones, split by *head-local* sagittal plane, never world X |
+| `eye_l`, `eye_r` | head | a fist contact on the front of the head within 0.035 m of an eye socket's centre; split by the *head-local* sagittal plane, never world X |
 | `jaw` | head | subface mandibular zone, front/underside |
 | `skull` | head | crown/occipital/back-of-head contact |
 | `neck` | neck | neck collider, excluding lower jaw |
@@ -66,6 +67,8 @@ Proposed stable enum / export schema **for review, not an already-landed API**:
 
 Every **accepted** impulse generates one `HitContact` carrying body/entity id, local hit point and normal, `impulse_Ns`, origin/ownership, surface-feature geometry, tick and resolved region. Preserve `damage_ns` as THE authoritative total. Per-region credited increments must satisfy `sum(region_new_impulses) + unclassified_new_impulse == damage_ns_delta` **in each tick**. Unknown legacy or composite contact goes into an explicit `unclassified` reconciliation bucket and creates **no fabricated facial injury** until source geometry disambiguates it. Multiple simultaneous contacts apportion only the already-judged impulse, never a second addition. Keep `player_damage_ns` attribution unchanged. A glancing hit and guard contact cannot be mapped to the cheek solely because a cast ray crosses it. The fist must actually meet the appropriate body shape first.
 
+Eye socket centres are the eye bones' rest offsets in head-local space (±0.0315 m lateral; J-059 measured). Note the rig's eye bone names sit on the opposite sides from this convention (the bone called `eye_l` is at head-local −X) — the map follows anatomy, not the bone names, and the `eye_sides` check in `injury_shots_test.gd` guards the signs.
+
 ## E. Progressive injury: game-calibrated thresholds, not fake forensic certainty
 
 There is **no credible universal N·s-to-bruise threshold**. Controlled bruising research [S9] explicitly found impact force was not reliably inferable from bruise appearance. Consequently, claiming '50 N·s medically causes a cut' would be false. The following is a **predeclared testable game calibration** anchored to the existing engine's validated nominal punch reference `J_ref = 1500 N × (3 / 90 s) = 50 N·s` [R2]; stage boundaries and death remain entirely unchanged. No new free-floating health bar.
@@ -74,6 +77,7 @@ For each region, track accepted `J_region` and last local impact `J_event`; each
 - **Localized red mark**: `J_event ≥ 0.5 J_ref = 25 N·s` for actual skin contact. A light tap below it may have motion/audio but no lasting mark.
 - **Bruise seed**: `J_region ≥ 2 J_ref = 100 N·s`; cumulative overlapping impacts matter. A physically bigger impact can exceed it immediately. Color and coverage grow with further *local* dose, never with a generic global stage.
 - **Swelling seed**: `J_region ≥ 4 J_ref = 200 N·s`, with increase under continued trauma. Treat the proposed transition rate as an authored, deterministic presentation parameter to tune in the **actual Godot fight**, not as a physiological clock. No sudden discrete face replacement.
+- **Eye (J-059, #307)**: the skin around the eye is thin, so it bruises sooner than the cheek. The first visible eye injury is the black-eye ring at `J_region ≥ 1.5 J_ref = 75 N·s`; it darkens over about 15 s after the hit (blood pooling), then holds. The lid swells at `J_region ≥ 150 N·s` and the eye narrows to a slit at `≥ 250 N·s`. No red-mark stage renders on the eye below 75 N·s (issue #307 tests: below 75, nothing on the eye).
 - **Abrasion/laceration**: require recorded *surface feature* + relative motion/shear or a highly concentrated collision on a physically susceptible location (e.g., brow ridge). An edge is not automatically 'sharp' because its object is metal: read the actual contact shape/feature. Calibration candidate: concentrated edge contact `J_event ≥ 1 J_ref = 50 N·s`; repeated blunt brow/jaw trauma `J_region ≥ 6 J_ref = 300 N·s` may open a wound only with real local contacts. These are two explicit engineering hypotheses, NOT empirically validated skin-tear loads; test and revise them openly rather than encoding a source-dependent automatic cut.
 - **Blood**: originates only at a registered open wound/contact, not from a global damage-stage switch. Pool/drip/smear transforms follow the character's physical location and mesh orientation; do not invent blood from a hit to an uninjured distant region.
 

@@ -372,6 +372,7 @@ void run_matron_collision() {
     require(m.knockdowns == 0 && m.staggers == 0, "matron collision: the player's own body is no blow to her balance");
     std::cout << "PASS scraperx_sim matron collision: closing_mps=" << closing_peak << " shoves=" << m.shoves << "\n";
 }
+SCRAPERX_SELECT("matron-collision", run_matron_collision);
 
 // Her balance (the owner, 2026-10-19: a hard enough blow puts her down for a
 // few seconds, never dead). With the player out of her way on 143 below, she
@@ -614,6 +615,7 @@ void run_matron_balance() {
         std::cout << "PASS scraperx_sim matron heave: blow_mps=" << m.blow_mps << "\n";
     }
 }
+SCRAPERX_SELECT("matron-balance", run_matron_balance);
 
 // The shaft's corner pipe (the owner, 2026-10-19: she comes down the shaft
 // after you; one shaft pipe is hers; you hear her at least 4 s before she
@@ -736,6 +738,48 @@ void run_matron_pipe() {
         std::cout << "  matron pipe: a pest with the climber heard below: took the pipe " << r.took << "\n";
         require(!r.took && r.alive, "matron pipe: frail, she does not take hold of the pipe");
     }
+    // Frail, she climbs it up after him (Cory, 11-11: she climbs as a pest
+    // too; J-085): in the game's world, a pest out of her locker on deck 1
+    // climbs the story to him on deck 2 by her own hands, slow, gravity on.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(1.0).accepted, "matron pipe pest up: settle");
+        s.debug_launch_player(scraperx::sim::Vector3{1.0, 12.2, -126.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        bool out = false, took = false, arrived = false, alive = true;
+        double peak_force = 0.0, peak_power = 0.0, worst_gravity = 1.0, climb_s = 0.0;
+        int moved = -1;
+        for (int i = 0; i < 150 * hz && !arrived && alive; ++i) {
+            s.debug_set_matron_stage(0);   // held frail the whole way
+            (void)s.set_room_loudness(i % (4 * hz) < hz / 2 ? 1.0 : 0.0);
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m = s.matron_state();
+            alive = m.alive;
+            worst_gravity = std::min(worst_gravity, s.debug_matron_gravity_factor());
+            peak_force = std::max(peak_force, m.pipe_peak_force_n);
+            peak_power = std::max(peak_power, m.pipe_peak_power_w);
+            took = took || m.on_pipe;
+            if (!out && m.released) {
+                out = true;
+                moved = i;
+                s.debug_launch_player(scraperx::sim::Vector3{10.0, 23.2, -128.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            }
+            arrived = out && took && !m.on_pipe &&
+                      std::abs(m.position.y - static_cast<double>(Matron::kStandCentre) - 22.0) < 0.4;
+            if (arrived) {
+                climb_s = static_cast<double>(i - moved) / hz;
+            }
+        }
+        std::cout << "  matron pipe: a pest up from deck 1 to him on deck 2: out " << out << ", took the pipe " << took
+                  << ", on deck 2 " << arrived << " " << climb_s << " s after she came out, grip peak " << peak_force
+                  << " N, " << peak_power << " W, gravity " << worst_gravity << "\n";
+        require(out && took && arrived && alive, "matron pipe: a pest, she takes hold of the pipe and climbs the story to him");
+        require(worst_gravity == 1.0 && peak_force > 1000.0 && peak_force <= law::kForceN + 0.5 &&
+                    peak_power <= law::kPowerW + 0.5,
+                "matron pipe: a pest climbing it, gravity on her, her grip within the shared force and power budget");
+        std::cout << "PASS scraperx_sim matron pipe pest up: climb_s=" << climb_s << "\n";
+    }
     // Dangerous: down it after the climber, heard all the way.
     {
         const PipeRun r = pipe_run(1, 0.0, 60.0);
@@ -781,6 +825,7 @@ void run_matron_pipe() {
         std::cout << "PASS scraperx_sim matron pipe toolbox\n";
     }
 }
+SCRAPERX_SELECT("matron-pipe", run_matron_pipe);
 
 // A pest's mischief: the player's toolbox taken and thrown, or carried off.
 void run_matron_mischief() {
@@ -868,6 +913,19 @@ void run_matron_mischief() {
         require(m.throws >= 1 && (nearest < 1.2 || s.snapshot().hit_count > before.hit_count),
                 "matron mischief: and throws it at the player");
         require(s.snapshot().death_count == 0 && m.stage == 0, "matron mischief: a pest's throw is no death");
+        // A throw that strikes him drops the toolbox at his feet, in her way
+        // (#240: aimed from where it leaves her hands, it reaches him; before,
+        // it went high and lay clear). A player steps off it, along the band.
+        for (int i = 0; i < static_cast<int>(0.6 * Simulation::kTickRateHz); ++i) {
+            const auto b = s.kit_body_position(box_body);
+            const auto p = s.snapshot().player_position;
+            if (std::hypot(b.x - p.x, b.z - p.z) > 1.2) {
+                break;
+            }
+            (void)s.set_move_input(0.0, 1.0);
+            tick(s);
+        }
+        (void)s.set_move_input(0.0, 0.0);
         // Then at the player: her hands take hold of them (Cory, 2026-10-27:
         // at any rage, every catch is a grab).
         bool taken = false;
@@ -926,6 +984,7 @@ void run_matron_mischief() {
         std::cout << "PASS scraperx_sim matron hoard: from_post_m=" << from_post << "\n";
     }
 }
+SCRAPERX_SELECT("matron-mischief", run_matron_mischief);
 
 // ---- her wrecking (J-016): the drum the player set by the bay's rungs,
 //      too heavy for her hands, she shoves off the lip into the bay through
@@ -1136,6 +1195,7 @@ void run_matron_wreck() {
     std::cout << "PASS scraperx_sim matron wreck: shove_tick=" << a.shove_tick << " peak_push_n=" << a.peak_push_n
               << " peak_feet_n=" << a.peak_force_n << " peak_power_w=" << a.peak_power_w << "\n";
 }
+SCRAPERX_SELECT("matron-wreck", run_matron_wreck);
 
 void run_matron_crash() {
     // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
@@ -1293,6 +1353,7 @@ void run_matron_crash() {
                   << "\n";
     }
 }
+SCRAPERX_SLICE("matron-crash", run_matron_crash);
 
 void run_matron() {
     // ---- asleep: quiet or alone, she stays sealed ------------------------------
@@ -1440,7 +1501,8 @@ void run_matron() {
                 "matron: following the climber over the rotten catwalk is the end of her");
         require(crossed.end.planks_fallen >= 1, "matron: a plate she stood on is down");
         require(crossed.deaths == 0, "matron: the climber crossed alive");
-        // She stays dead until something is restored (run_matron_restore: a player's death brings her back).
+        // She stays dead until something is restored (run_matron_restore: a player's death restores the checkpoint
+        // as saved, dead stays dead).
         stand_still(s, 5.0);
         require(s.matron_state().state == kStateDead, "matron: dead, she stays dead");
     }
@@ -2125,11 +2187,12 @@ void run_matron() {
     }
     run_matron_remaining();
 }
+SCRAPERX_GROUP("matron", 870, run_matron);
+SCRAPERX_SELECT("matron", run_matron);
 
-// ---- a restore brings her back: a long fall ends her, and the world put back has her in it ----
-// Her death is the fall's (kLethalLandingMps); the checkpoint is where she burst out. A death of the player
-// restores that checkpoint, and the restore must not skip her for being dead: she comes back alive, out of
-// her locker as she was at the checkpoint, and hunts again.
+// ---- a restore puts the world back as saved: a long fall ends her, and the world put back has her in it, dead ----
+// Her death is the fall's (kLethalLandingMps); the checkpoint renews while she lies dead (her death lifts the
+// freeze), so a death of the player restores that checkpoint as saved: she stays dead, in the world as saved.
 void run_matron_restore() {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
@@ -2158,21 +2221,13 @@ void run_matron_restore() {
     }
     require(s.snapshot().death_count > deaths_before, "matron restore: the player's fall into the shaft is a death");
     const auto back = s.matron_state();
-    require(back.alive && (back.state == kStateEmerging || back.state == kStateHunting),
-            "matron restore: the restore brings her back alive, out of her locker as she was at the checkpoint");
-    // She acts again: she hunts, and walks away from her locker.
-    bool hunting = false;
-    double walked_m = 0.0;
-    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !(hunting && walked_m > 3.0); ++i) {
-        tick(s);
-        const auto m = s.matron_state();
-        require(m.alive, "matron restore: she stays alive once back");
-        hunting = hunting || m.state == kStateHunting;
-        walked_m = std::hypot(m.position.x - back.position.x, m.position.z - back.position.z);
-    }
-    require(hunting && walked_m > 3.0, "matron restore: restored, she hunts again and walks");
-    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, brought back by the restore, hunts again, walked "
-              << walked_m << " m\n";
+    require(!back.alive && back.state == kStateDead,
+            "matron restore: the restore puts the world back as saved, dead stays dead");
+    // She stays dead: the checkpoint the restore put back is the one committed while she lay dead.
+    stand_still(s, 3.0);
+    require(s.matron_state().state == kStateDead && !s.matron_state().alive,
+            "matron restore: dead after the restore, and nothing has brought her back");
+    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, restored dead as saved\n";
 }
 
 void run_matron_remaining() {
@@ -2890,6 +2945,7 @@ void run_matron_remaining() {
                 "matron: two identical chases end identically, bit for bit");
     }
 }
+SCRAPERX_SLICE("matron-remaining", run_matron_remaining);
 
 // Her hearing takes the player's real room (03_EXECUTION/UNCANNY/HER_CHART.md; the owner,
 // 2026-10-20: "if my dog barks, her head turns, that would be amazing"). The microphone's
@@ -2970,6 +3026,7 @@ void run_matron_room() {
     std::cout << "PASS scraperx_sim matron room: off_m=" << off_m << " heard=" << loudest << " came_m="
               << at_bark_m - after_m << "\n";
 }
+SCRAPERX_SELECT("matron-room", run_matron_room);
 
 void run_matron_ladder() {
     // ---- climbs: frail, she stands at the ladder's foot looking up; in the Turn she takes
@@ -3067,3 +3124,4 @@ void run_matron_ladder() {
                   << " peak_mps=" << peak_rate << " force=" << max_force << " reach=" << max_reach << "\n";
     }
 }
+SCRAPERX_SLICE("matron-ladder", run_matron_ladder);

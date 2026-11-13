@@ -138,3 +138,5 @@ void run_body_order() {
               << " high_words=" << high.front().bits.size() << " truck_x=" << grade.front().truck.x
               << " truck_z=" << grade.front().truck.z << '\n';
 }
+SCRAPERX_GROUP("body_order", 1000, run_body_order);
+SCRAPERX_SELECT("body-order", run_body_order);

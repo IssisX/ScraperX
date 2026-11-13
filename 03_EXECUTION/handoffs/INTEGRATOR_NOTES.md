@@ -1,29 +1,30 @@
 # Integrator notes
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
-calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
-At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
+calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794107831 (2026-11-08 03:17:11Z, 9:17 PM Central)
+Read through: 1794460539 (2026-11-11 last quiet run)
 
-## Meter
-83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM; est. 86.9% 5:18 PM ($578.80); 87% 8:16 PM ($581.11, Cory; fit holds). Burn 5:18-8:16 PM $2.3 (quiet); predicts about 87.5% at 11 PM, under 89%: first run under (throttle loosens after two). Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
-merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM, integrator at xhigh); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
+## Now (11-11)
+State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
+- J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
+  plus a kicking touch check: xhigh helper.
+- J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
+  whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
+- J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
+  Helpers: J-092 #434 red-proof fix a50537520df752690 (body order vs magnet guard). J-108 bait lift: Cory said move it (11-12); new helper resumed it. J-001: Fable helper (11-12). J-043 cause found (beam), Muse builds. J-107 #426 taken from Muse (helper, high): the proof of the new split. Next free helper slot: count Muse's failed tries by job type over two weeks, then write the routing checklist every new job is scored against (Cory 11-12). After it: switchboard hole, a clean Codex receipt (codex-review-receipt, 'Reviewed commit') with no fresh state comment is not counted as LAND (#343 sat 24 h; rules.py parse_codex_state).
+  J-092 landed #434; its CI follow-up #447 (touch_slab_trap in touch-2 + rule_check tests) has green proof, Codex clean, API LAND. Next workflow PR: `persist-credentials: false` on the scope checkout (API note on #447; token is contents:read, low risk).
+- J-085 #403 DONE (#435, #437). J-126 #449 DONE (#450); follow-up J-127 #451 mailed to Muse. J-126 helper worktree build (~3 GB) left: its deletes were refused, not mine to do.
+  (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
+- Argon (Gemini): only via Cory pasting a prompt; hardest physics. Grok or ChatGPT run an idea workflow on request from a copyable prompt in chat (11-11). 367 archived branches: deleting waits on Cory.
 
-## Waiting on me
-- From Muse (ruled 7:19 PM, one mail): #291 start out of reach + not-in-Grab check; #298 test-side budget, cap waived;
-  J-049 fix timing (ChatGPT asked on #278); J-001 reserved feet share then hold release; J-021 split; J-059 side-rim + flip push;
-  J-044d pushed (red host-build); J-043 inventory; hair; button real-tap check. 9:20 PM: #298 gains separate PR + attribute 4 grab peaks; J-015 S2 stall 1 m short (Muse eye-checking); J-011 panels parked (ChatGPT asked #118); J-007 #315 cap waived. #316 (J-021 job 4) touches a workflow: waits on the Codex review (opened 11:49 PM); check at 9:17 AM. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
-- Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
-- 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
+- 11-12 in flight: J-108 (re-pin + proofs; then I open its 2 PRs); J-001 grip-charge helper (second hand to her budget; may also clear J-044c's hand2-arm and grab-arm leaks); J-128 helper (taken by job-routing.md). J-107 DONE in about 45 min (cause: J-054 inserts stock mid-table; Muse builds; PR #454 comments). Next free slot: J-044c gains tune after Muse's split. Fable audit running in Cory's session (branch fable/finish-audit): on his OK, only its finish list is queued. #343 waits on Codex.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
-- Gmail is Cory's own main inbox (read-only connector): search only the agent subjects; never read or touch his other mail (11-07).
+- Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
-- Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf`
-  are refused.
+- Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused.
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.
 - sweep.py shows only the latest verdict and misses an earlier unfixed P1 from another vendor.
-- The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to
-  Cory this weekend (promised 7:13 AM).
+- The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.

@@ -292,6 +292,8 @@ void run_service_c4() {
               << " deck684_y=" << top.player_position.y << " shimmied_m=" << notes.shimmied
               << " worst_step_m=" << g_path_watch.worst << '\n';
 }
+SCRAPERX_GROUP("service_c4", 310, run_service_c4);
+SCRAPERX_SELECT("AS-010-c4", run_service_c4);
 
 // ---- AS-010 stage N, the granular discharge hoist (684 -> 706 m) -------------
 
@@ -487,6 +489,8 @@ void run_service_n() {
               << " empty_apex_m=" << alone.apex << " empty_peak_mps=" << alone.peak_speed
               << " worst_step_m=" << g_path_watch.worst << '\n';
 }
+SCRAPERX_GROUP("service_n", 320, run_service_n);
+SCRAPERX_SELECT("AS-010-n", run_service_n);
 
 // ---- AS-010 C5, the cooling plant (706 -> 728 m) --------------------------------
 
@@ -748,3 +752,5 @@ void run_service_c5() {
               << " deck728_y=" << top.player_position.y << " gap_speed_mps=" << notes.gap_speed
               << " walk_jump_landed_y=" << short_of.player_position.y << " worst_step_m=" << g_path_watch.worst << '\n';
 }
+SCRAPERX_GROUP("service_c5", 330, run_service_c5);
+SCRAPERX_SELECT("AS-010-c5", run_service_c5);

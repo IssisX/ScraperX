@@ -202,6 +202,8 @@ void run_facade_crane() {
     std::cout << "PASS scraperx_sim AS-009 L: rider_y=" << l_top.player_position.y << " gain_J=" << l_gain
               << " released_J=" << l_released << '\n';
 }
+SCRAPERX_GROUP("facade_crane", 250, run_facade_crane);
+SCRAPERX_SELECT("AS-009", run_facade_crane);
 
 // AS-009's band from wherever on the 484 ring's west or north band: round to
 // J's joint and traveler, the ride to 528; round the 528 ring and over the
@@ -276,6 +278,8 @@ void run_crane_band() {
     std::cout << "PASS scraperx_sim AS-009 band: to_640_s=" << top.simulation_time_seconds - start
               << " plate_y=" << top.player_position.y << '\n';
 }
+SCRAPERX_GROUP("crane_band", 260, run_crane_band);
+SCRAPERX_SELECT("AS-009-band", run_crane_band);
 
 // Up a pole from (x, z) facing (fx, fz), the way C4's standpipe is climbed.
 static bool crane_pole(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
@@ -714,6 +718,8 @@ void run_crane_route() {
     std::cout << "PASS scraperx_sim AS-009 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
+SCRAPERX_GROUP("crane_route", 270, run_crane_route);
+SCRAPERX_SELECT("AS-009-route", run_crane_route);
 
 // AS-009's one-shot wreckage, on player inputs: each spent machine reached and
 // climbed.
@@ -778,6 +784,8 @@ void run_crane_wreckage() {
     std::cout << "PASS scraperx_sim AS-009 wreckage L: cart_travel=" << l.crane_state().l_cart_travel
               << " deck_y=" << l.snapshot().player_position.y << '\n';
 }
+SCRAPERX_GROUP("crane_wreckage", 290, run_crane_wreckage);
+SCRAPERX_SELECT("AS-009-wreck", run_crane_wreckage);
 
 // ---- AS-010, Midstack Service (640 -> 780 m): stage M ---------------------------
 
@@ -914,3 +922,5 @@ void run_midstack_service() {
     require(std::abs(m_ride.service_state().m_cage_travel - held.m_cage_travel) < 0.01,
             "empty, M's cage must stay where its dogs hold it");
 }
+SCRAPERX_GROUP("midstack_service", 300, run_midstack_service);
+SCRAPERX_SELECT("AS-010", run_midstack_service);

@@ -6,6 +6,7 @@ No network, no clock: GitHub, the rule check, the token and the time are given.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import datetime as dt
 import os
@@ -86,8 +87,10 @@ def decide(f: rules.PrFacts, token: bool = True, key: bool = True) -> rules.Merg
 
 
 def ctx(comments=()):
+    # fresh: these facts stand for GitHub's own uncached answers, so steer_pr merges on them without the re-read
+    # (J-072; test_cache_trust.FreshMerge tests the re-read itself)
     return {"job": "J-056", "issue": None, "proof_url": "https://x/runs/7", "run_id": 7, "proof_done_at": T1,
-            "comments": list(comments), "title": "t", "body": "", "files": [], "updated_at": T2}
+            "comments": list(comments), "title": "t", "body": "", "files": [], "updated_at": T2, "fresh": True}
 
 
 class RecordingGH:
@@ -97,6 +100,10 @@ class RecordingGH:
 
     def __init__(self, fail: str = ""):
         self.fail, self.writes, self.posted = fail, [], []
+
+    @contextlib.contextmanager
+    def fresh(self):   # ghapi.GitHub.fresh: this stub has no cache, so every read is already GitHub's own
+        yield self
 
     def write(self, method, path, body=None, what="", token=""):
         self.writes.append((method, path, token, what))
@@ -352,6 +359,101 @@ class TheToken(unittest.TestCase):
         self.assertIn('--branch "$TRUNK" --single-branch', clone)   # src is trunk, never the PR's head
 
 
+class TheCacheBoundary(unittest.TestCase):
+    """J-072, the security pass on #360 (P1): actions/cache/restore unpacks a whole archive that any job on trunk can
+    save, so it may never run in a job that holds a secret. cache-in restores it with no secret, no token scope and no
+    code of its own, and hands on the one file as this run's artifact; ask and steer download only that artifact,
+    into $RUNNER_TEMP, and hand the new file back the same way; cache-out, with no secret either, saves it."""
+
+    RUNNER_TEMP = "${{ runner.temp }}/etags"
+
+    def flow(self) -> dict:
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        return yaml.safe_load((HERE.parents[1] / ".github/workflows/switchboard.yml").read_text(encoding="utf-8"))
+
+    @staticmethod
+    def holds_secret(job: dict) -> bool:
+        return bool(job.get("environment")) or "secrets." in str(job.get("env")) or \
+            any("secrets." in str(s.get("env")) or "secrets." in str(s.get("with")) for s in job["steps"])
+
+    def test_no_job_that_holds_a_secret_touches_the_actions_cache(self):
+        flow = self.flow()
+        self.assertNotIn("secrets.", str(flow.get("env")))
+        secret_jobs = [n for n, j in flow["jobs"].items() if self.holds_secret(j)]
+        self.assertEqual(sorted(secret_jobs), ["ask", "provision", "steer"])
+        for name in secret_jobs:
+            for step in flow["jobs"][name]["steps"]:
+                uses = step.get("uses") or ""
+                self.assertFalse(uses.startswith("actions/cache"), (name, step["name"]))
+                self.assertNotIn("actions/caches", str(step.get("run")), (name, step["name"]))   # nor the cache API
+                # the only actions in a secret job: this run's one named artifact in, the new file out
+                self.assertIn(uses.split("@")[0], ("", "actions/download-artifact", "actions/upload-artifact"),
+                              (name, step["name"]))
+
+    def test_the_secret_jobs_download_only_the_named_artifact_into_runner_temp(self):
+        flow = self.flow()
+        for name in ("ask", "steer"):
+            job = flow["jobs"][name]
+            downloads = [s for s in job["steps"] if str(s.get("uses")).startswith("actions/download-artifact@")]
+            (down,) = downloads
+            self.assertEqual(down["with"], {"name": f"switchboard-etags-{name}", "path": self.RUNNER_TEMP}, name)
+            self.assertNotIn("run-id", str(down["with"]))   # this run's artifact, never another run's
+            self.assertIn("cache-in", job["needs"])
+            uploads = [s for s in job["steps"] if str(s.get("uses")).startswith("actions/upload-artifact@")]
+            (up,) = uploads
+            self.assertEqual((up["with"]["name"], up["with"]["path"]),
+                             (f"switchboard-etags-{name}-out", self.RUNNER_TEMP + "/etags.json"), name)
+            self.assertIn("inputs.dry_run != true", up["if"])   # a dry run hands nothing on
+            (switch_step,) = [s for s in job["steps"] if s["name"] == "Run the switch"]
+            self.assertEqual(switch_step["env"][switch.ETAG_CACHE_ENV], self.RUNNER_TEMP + "/etags.json", name)
+            # the download comes after every step that sets up code (the clone, the venv) and before the switch
+            names = [s["name"] for s in job["steps"]]
+            self.assertLess(names.index("Install the hash-pinned dependencies (wheels only)"), names.index(down["name"]))
+            self.assertLess(names.index(down["name"]), names.index("Run the switch"))
+        self.assertNotIn(switch.ETAG_CACHE_ENV, str(flow.get("env")))   # never a path in the workspace
+
+    def test_the_cache_jobs_hold_no_secret_and_run_no_code_of_ours(self):
+        flow = self.flow()
+        jobs = {n: j for n, j in flow["jobs"].items()
+                if any(str(s.get("uses")).startswith("actions/cache") for s in j["steps"])}
+        self.assertEqual(sorted(jobs), ["cache-in", "cache-out"])
+        self.assertEqual(jobs["cache-in"]["permissions"], {})
+        self.assertEqual(jobs["cache-out"]["permissions"], {"actions": "write"})
+        for name, job in jobs.items():
+            self.assertFalse(self.holds_secret(job), name)
+            self.assertNotIn("environment", job, name)
+            for step in job["steps"]:
+                self.assertIn(str(step.get("uses", "")).split("@")[0],
+                              ("", "actions/cache/restore", "actions/cache/save", "actions/upload-artifact",
+                               "actions/download-artifact"), (name, step.get("name")))
+                run = str(step.get("run", ""))
+                for code in ("python", ".venv", "src/", "git ", "node ", "bash ", "./"):
+                    self.assertNotIn(code, run, (name, step.get("name")))
+        self.assertFalse(any("run" in s for s in jobs["cache-in"]["steps"]))
+        # cache-in hands on exactly the two files, nothing else from the archive
+        ups = [s["with"] for s in jobs["cache-in"]["steps"] if str(s.get("uses")).startswith("actions/upload-artifact@")]
+        self.assertEqual([(u["name"], u["path"]) for u in ups],
+                         [("switchboard-etags-ask", "ask/etags.json"), ("switchboard-etags-steer", "steer/etags.json")])
+
+    def test_one_cache_scope_so_two_states_never_both_fire_a_timer(self):
+        # Caches are scoped by ref. The default branch is trunk, so every event but a pull_request runs there; a run
+        # on another ref (a dispatch) skips the cache, the provision run (its own concurrency group) skips it, and
+        # the sweeps share one concurrency group that never runs two at once.
+        flow = self.flow()
+        cin, cout = flow["jobs"]["cache-in"], flow["jobs"]["cache-out"]
+        self.assertTrue(cin["if"].startswith("github.ref == 'refs/heads/ScraperX-Claude' && "
+                                             "github.event_name != 'pull_request' && !inputs.provision && "))
+        self.assertIn("needs.cache-in.result == 'success'", cout["if"])
+        self.assertIn("inputs.dry_run != true", cout["if"])
+        self.assertFalse(flow["concurrency"]["cancel-in-progress"])
+        self.assertIn("|| 'switchboard'))", flow["concurrency"]["group"])
+        keys = [s["with"]["key"] for j in (cin, cout) for s in j["steps"] if "key" in s.get("with", {})]
+        self.assertEqual(sorted(set(k.split("${{")[0] for k in keys)), ["switchboard-etags-ask-", "switchboard-etags-steer-"])
+
+
 class TheSecurityPass(unittest.TestCase):
     def ask(self, f):
         sw = make(RecordingGH())
@@ -440,6 +542,24 @@ class TheSecurityFindings(unittest.TestCase):
         self.assertEqual((got.sha, rules.api_review_on([got], HEAD)), (HEAD, got))
         self.assertIsNone(rules.api_review_on([got], COLLIDE))
 
+    def test_every_blocking_finding_is_posted_apart_from_the_notes(self):
+        # 11-09: the security pass found one hole per round on #360; every blocking finding goes in one review.
+        gh = DiffGH({})
+        sw = make(gh)
+        sw.root = HERE.parents[1]
+        repro = {k: k + " x" for k in ("command", "input", "expected", "observed")}
+        notes = ["Also blocking: the cache restore runs in a job that holds the merge token.", "A typo in a comment."]
+        sw.paid = lambda *a: claude_calls.Result({"verdict": "FIX", "summary": "s", "repro": repro, "notes": notes},
+                                                 "end_turn", "m", 1, 1)
+        sw.review(facts(), ctx(), "meta", security=True)
+        ((_, body),) = gh.posted
+        also, rest = body.index("Also blocking (fix with the one above"), body.index("Notes (never blocking):")
+        self.assertLess(also, rest)
+        self.assertLess(body.index("the merge token"), rest)
+        self.assertGreater(body.index("A typo"), rest)
+        for system in (claude_calls.REVIEW_SYSTEM, claude_calls.SECURITY_REVIEW_SYSTEM):
+            self.assertIn("never only the first", system)
+
     def test_2_the_review_reads_the_diff_of_the_sha_it_labels(self):
         repo = RecordingGH.repo
         pinned = f"repos/{repo}/compare/{rules.TRUNK}...{HEAD}"
@@ -507,6 +627,24 @@ class TheSecurityFindings(unittest.TestCase):
         self.assertEqual(decide(facts(head_ref="chatgpt/integrate-j056", verdicts=(api(), codex()))).action, "HUMAN-MERGE")
         # Off .github/workflows a typed LAND counts as before.
         self.assertEqual(decide(facts(touches_workflows=False, verdicts=(typed,))).action, "MERGE")
+
+    def test_3b_muse_stands_in_for_codex_only_while_codex_cannot_review(self):
+        # Cory, 11-10 ("muse"): Codex out of quota on #386 left a workflow PR with no reviewer that counts
+        muse = v(f"**Muse (review of #9 @ {HEAD}): LAND**")
+        short = v(f"**Muse (review of #9 @ {HEAD[:8]}): LAND**")
+        d = decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), muse), codex_failed=True))
+        self.assertEqual((d.action, d.land_by), ("MERGE", "Muse"))
+        # not while Codex can review; not on a prefix of the head; not without the security pass; not on Muse's own work
+        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), muse))).action, "HUMAN-MERGE")
+        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), short), codex_failed=True)).action,
+                         "HUMAN-MERGE")
+        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(muse,), codex_failed=True)).action,
+                         "HUMAN-MERGE")
+        self.assertEqual(decide(facts(head_ref="muse/integrate-j056", verdicts=(api(), muse), codex_failed=True)).action,
+                         "HUMAN-MERGE")
+        # the inbox line says what lands it
+        d = decide(facts(head_ref="claude/integrate-j075", verdicts=(api(),), codex_failed=True))
+        self.assertIn(f"review of #9 @ {HEAD}: LAND", d.reasons[0])
 
 
 class ThreadGH(RecordingGH):

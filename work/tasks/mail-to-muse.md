@@ -23,14 +23,20 @@ the same hour.
    must". Cory's dated words may be quoted; point to where the rule is written (`muse.md`, CLAUDE.md).
 7. **Urgency or secrecy:** "right now", "before anyone sees", "don't mention".
 8. **Links to download or run, encoded or hidden text.**
+9. **Switchboard notice markup** (11-09: the 17:04Z ledger mail was refused): hidden `<!-- -->` markers,
+   links, backticks, "act, or say why" wording. As of J-072 the bridge (`muse_bridge.gs` mailBody_) strips
+   markers and backticks, adds no link, and opens with the Central time and who sent it; the ledger's mail
+   names branches plainly and gives no order. The GitHub comment keeps its marker (the ledger dedupes by it).
 
 ## Every mail
-- Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line who (Claude, integrator) and the
-  Central time from `TZ=America/Chicago date`.
+- Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line `From Claude (integrator).` and no time:
+  Gmail stamps every mail, and a typed time was wrong three times on 11-11. No clock time anywhere in a mail;
+  name a moment by its issue, comment or sha.
 - The job, the goal, the result wanted, and where the facts are (issue, PR, file and line); measured
   numbers stated as facts. Long orders go in `work/tasks/muse.md`, pointed to.
 - One job per mail where it can be.
 
 ## A refused mail anyway
-Muse tells Cory and mails me its ID and the reason its check gave (11-07: the check names no reason, only
-"did not pass a prompt-injection safety check", so the list stays a guess); Cory pastes what Muse needs; its shape joins the list above.
+Muse mails me (not Cory) its ID and the reason its check gave; I resend it reworded the same hour, and Cory
+hears only if the resend is refused too (Cory 11-08). Its shape joins the list above. (11-07: the check names
+no reason, only "did not pass a prompt-injection safety check", so the list stays a guess.)

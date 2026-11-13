@@ -218,6 +218,8 @@ void run_matron_exam_routecraft() {
     }
     std::cout << '\n';
 }
+SCRAPERX_GROUP("matron_exam_routecraft", 830, run_matron_exam_routecraft);
+SCRAPERX_SELECT("matron-exam-routecraft", run_matron_exam_routecraft);
 
 // The move library (src/sim/matron_traversal.*) through the same exam:
 // its scanner reads the exam world, its planner chains moves region to
@@ -441,3 +443,5 @@ void run_matron_exam_climber() {
     }
     std::cout << '\n';
 }
+SCRAPERX_GROUP("matron_exam_climber", 840, run_matron_exam_climber);
+SCRAPERX_SELECT("matron-exam-climber", run_matron_exam_climber);

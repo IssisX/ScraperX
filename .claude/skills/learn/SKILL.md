@@ -17,7 +17,7 @@ session works, and leave the rest.
 **It always says that it ran.** The report opens with this line, filled in from what was
 gathered, and nothing comes before it:
 
-> 🧠 **/learn ran:** studied N of your messages (first to last, Central) and M commits.
+> 🧠 **/learn ran:** studied N of your messages (first to last, by date only: replies carry no clock time, 11-11) and M commits.
 
 (Where no session record can be read: "could not read this session's record; studied only your
 words still in the conversation".) It ends with one line:
@@ -67,6 +67,9 @@ Then:
   session.
 - **Quote** the owner's exact words for each owner lesson (italics), never a paraphrase passed
   off as a quote.
+- **Not every offer is a rule:** a tool or way of working he offers to use at will gets a home (the
+  integrator notes or a task file), never a rule line (11-07: *"Stop making everything I say fucking
+  rules"*); dropping it with no home loses it after a compact.
 - **Classify** each as a **rule** (a guardrail or constraint) or a **skill** (a reusable procedure
   of several steps).
 - **No target count.** The list is as long as the material makes it: never aim for, round to or

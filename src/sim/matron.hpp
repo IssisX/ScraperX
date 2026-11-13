@@ -305,6 +305,7 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    static constexpr float kCatchMemoryS = 0.5F;   // a catch sense stays fresh this long
     static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
 
@@ -678,9 +679,27 @@ public:
     static constexpr float kSeekStockM = 5.0F;
     static constexpr float kTakeM = 0.85F;
     static constexpr float kHandsUpM = 0.25F;
+    // Rearing back to throw (J-042: the player reads it), her hands draw the
+    // piece up over her right shoulder (this far over her centre, to her
+    // right and out, at kHandsPullMps), clear of her eyes' line to him, and
+    // the throw leaves from there.
+    static constexpr float kWindupHandsUpM = 0.70F;
+    static constexpr float kWindupHandsSideM = 0.45F;
+    static constexpr float kWindupHandsOutM = 0.25F;
+    // A piece too wide to clear her eyes beside her head that way (a pallet)
+    // is reared back over it instead, its underside this far over her eyes:
+    // whatever its kind, what she throws never blinds her to him.
+    static constexpr float kWindupEyeClearM = 0.10F;
+    // Rearing back, him out of her sight this long (a wide piece raised
+    // through her eyes' line on its way over them) and her windup is given
+    // up; shorter, she holds it, and throws only once she sees him again.
+    static constexpr float kWindupBlindSeconds = 0.15F;
     // Light stock only: a toolbox (18 kg) she carries off; a drum (55 kg)
     // she shoves instead (below).
     static constexpr float kTakeMaxKg = 25.0F;
+    // The most loose pieces she knows (a bit each in her masks): J-042 gives
+    // her every piece light enough on the decks she hunts, 58 today.
+    static constexpr std::size_t kMaxThrowables = 64;
     // Her wrecking (J-016): a piece of the player's too heavy for her hands
     // (over kTakeMaxKg, up to kStockShoveMaxKg) on her floor she shoves off
     // the nearest open lip within kStockShoveReachM of it: a drop with no
@@ -703,6 +722,12 @@ public:
     static constexpr float kHandsOutM = 0.55F;
     static constexpr float kHandsPullMps = 3.0F;
     static constexpr float kHandsSlipM = 1.0F;
+    // The hold is a spring-damper to its anchor (J-042): the spring per
+    // second squared, the damping per second (near critical), both on the
+    // piece's mass, its weight borne. The anchor moves at kHandsPullMps; the
+    // grant caps the drive at her one budget, hands first.
+    static constexpr float kHoldSpring = 150.0F;
+    static constexpr float kHoldDamp = 25.0F;
     static constexpr float kThrowMps = 7.5F;
     static constexpr float kThrowMinM = 2.5F;
     static constexpr float kThrowMaxM = 6.0F;
@@ -809,7 +834,32 @@ public:
     static constexpr float kPipeRailTopM = 1.09F;  // the north rail's top over its deck
     static constexpr float kPipeSqueezeN = 4500.0F;
     static constexpr float kPipeFriction = 0.7F;
-    static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
+    // The riser runs from the grade to her old deck, a flange under each
+    // deck and the shaft's rail and edge beam at each (world_solids.inc):
+    // every story from deck 1 (her home, 11 m) to 154 is the same climb.
+    static constexpr float kPipeLowestFloor = kStackPitch;   // the stack's deck 1
+    static constexpr int kPipeDecks = static_cast<int>((kDeckTop - kPipeLowestFloor) / kStackPitch + 0.5F) + 1;
+    // A lead the pipe goes toward: on another deck than hers, or on a top
+    // within this much of one (machinery standing on it, a perch just under
+    // it). A top deeper inside a story (the C1 duct 5.3 m over deck 2) is
+    // for her scan's own ways, not a story on the pipe and back (J-085).
+    static constexpr float kPipeLeadM = 3.0F;
+    // MEASURED: a story on the pipe takes this much past its travel at her
+    // pace (her get-on over the rail, her holds, her step off). Dangerous:
+    // up 55 to 66, 22 s on it for 11 m at 0.7 m/s; down 154 to 143, 13.28 s
+    // of holds for 11 m at 2.6 m/s (matron pipe).
+    static constexpr float kPipeUpExtraS = 6.3F;
+    static constexpr float kPipeDownExtraS = 9.0F;
+    // Her journey's own scan reaches this far around her and the lead's place
+    // (start_journey_to): a way of her map past it is not one she plans.
+    static constexpr float kJourneyScanMarginM = 12.0F;
+    // The deck a story up or down the pipe toward her lead from her deck at
+    // `floor_y`, or `floor_y` itself when the lead is not the pipe's.
+    [[nodiscard]] static float pipe_next_toward(float floor_y, float lead_y) noexcept;
+    // Whether her lead is a place her map reaches from the pipe's deck `next`
+    // (on it, or a way of hers from it): a lead out on steel no way of hers
+    // reaches from there (a plate over the shaft) is not the pipe's either.
+    [[nodiscard]] bool pipe_serves(float next);
     // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
     // her shins, this far over her soles, level toward its axis, within her
     // legs' reach (her line is 0.6 m off the riser's west face).
@@ -924,6 +974,7 @@ public:
     static constexpr float kShoulderUpM = 1.80F;      // over her feet
     static constexpr float kArmReachM = 1.4F;
     static constexpr float kStoopReachM = 2.1F;
+    static constexpr float kWorkMarginM = 0.15F;      // she works from in reach less this
     static constexpr float kArmRetractMps = 0.9F;
     static constexpr float kHandMassKg = 6.0F;
     static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
@@ -1142,6 +1193,11 @@ public:
         JPH::Vec3 handle = JPH::Vec3::sZero();   // where a hand takes it, in its own frame
         float mass_kg = 0.0F;   // read from its body by set_throwables (infinite: not a moving body)
         JPH::Vec3 laid = JPH::Vec3::sZero();   // where it lay when given (set_throwables): her deck as she knows it
+        // Its size as her hands hold it (set_throwables, from its shape): how
+        // far it reaches out flat from its middle, and how far it hangs under
+        // its handle.
+        float reach_m = 0.0F;
+        float below_handle_m = 0.0F;
     };
 
     struct PlankView {
@@ -1288,8 +1344,10 @@ public:
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
-        std::uint32_t stock_handled = 0;  // her throwables she counts his, a bit each
+        std::uint64_t stock_handled = 0;  // her throwables she counts his, a bit each
         float stock_push_force_n = 0.0F; // her hands' push on a piece this tick (a shove, a throw)
+        float throw_windup = 0.0F;       // rearing back to throw: 0 not, up to 1 as the throw leaves
+        std::uint64_t stock_thrown = 0;  // her throw whose landing is no sound to her (thrown_entity), 0 none
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
@@ -1386,15 +1444,19 @@ public:
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
-    // puts her back at her locker at that stage). A dead Matron is kept as hunting,
-    // so a restore brings her back whole.
+    // puts her back at her locker at that stage). A dead Matron is kept as
+    // dead, with the damage she died with, so a restore brings her back as
+    // saved (J-069: her injuries persist through checkpoints, dead included).
     struct Saved {
         State state = State::Dormant;
         float strain_s = 0.0F;
         float rage = 0.0F;
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
-        std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
+        std::uint64_t handled = 0;   // the throwables the player has handled, a bit each
+        float damage_ns = 0.0F;         // judged physical impulse, all sources
+        float player_damage_ns = 0.0F;  // the player's share only
+        bool dead = false;              // she lies dead as saved
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1424,8 +1486,6 @@ public:
     // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
     float foot_force_n() const noexcept { return foot_force_n_; }
     float foot_power_w() const noexcept { return foot_power_w_; }
-    // J-046 measurement only: her hands' hold on a piece, if any (its lambda is read, never written).
-    const JPH::PointConstraint *stock_hold() const noexcept { return hold_.GetPtr(); }
     // What her last take_blow read (sense_near's pick; read only, for tests):
     // how many, and each one's body, motion and middle before the step, and
     // hers as her own drive would leave it.
@@ -1457,7 +1517,7 @@ public:
     void set_rigged(const bool a_rigged, const bool b_rigged) noexcept { rigged_ = {a_rigged, b_rigged}; }
     // The lines (and whether the player rides one): given once they are built.
     void set_zipline(Zipline *zipline) noexcept { zipline_ = zipline; }
-    // The stock she may take and throw (at most 32 pieces): given once it is laid.
+    // The stock she may take and throw (at most kMaxThrowables pieces): given once it is laid.
     void set_throwables(std::vector<Throwable> throwables);
     // The entity in the player's hands this tick, 0 for none: given before
     // pre_step. Hers only as she sees it (Evidence::seen_holding: a throwable
@@ -1478,6 +1538,12 @@ public:
     [[nodiscard]] std::uint64_t thrown_entity() const noexcept {
         return thrown_ >= 0 && thrown_s_ > 0.0F ? throwables_[static_cast<std::size_t>(thrown_)].entity : 0;
     }
+    // Her claim on that throw ends the moment another touches it (J-042): in
+    // the player's hands, against his body, or met by any other moving body.
+    // From then on its hits are sounds to her like any other's. Its own
+    // landing on the steel stays hers. Called before the last step's hits
+    // are heard.
+    void end_thrown_claim();
     // Reports (once) the way up whose rope she has just taken off its eye
     // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
     [[nodiscard]] int take_unrig() noexcept {
@@ -1504,7 +1570,10 @@ public:
     void post_step(float dt);
 
     // True once her hands are on the player.
-    [[nodiscard]] bool caught(JPH::RVec3 player, bool on_ladder = false) const noexcept;
+    [[nodiscard]] bool caught(bool on_ladder = false) const noexcept;
+    [[nodiscard]] Sense catch_sense(JPH::RVec3 &at) const noexcept;
+    // Her walk's ignore: her body and his, for the probes — and the place she saw or felt him, while fresh (J-049).
+    [[nodiscard]] traversal::Ignore walk_ignore() const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
     // alive and the player is on her deck, up a climb from it, or on a deck
     // her corner pipe is taking her to or (no longer frail) joins to hers. A
@@ -1535,7 +1604,11 @@ public:
         ++shoves_;
         shove_cooldown_s_ = kShoveCooldownSeconds;
     }
-    [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] JPH::Vec3 shove_direction() const noexcept;
+    // Current physical reach for a shove: the same bars as caught(), but
+    // against his live body, not the sensed position (which can be a memory
+    // up to kCatchMemoryS old).
+    [[nodiscard]] bool shove_reach_now(bool on_ladder = false) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
     // the tests that meet the Turn and the vault at one speed, as written.
@@ -1560,6 +1633,36 @@ public:
     bool travel_to(int region);
     // The same, with edges her plan leaves out (a ladder with him on it).
     bool travel_to(int region, const std::vector<int> &avoid);
+    // The world's hoists (matron_hoist.cpp), given before pre_step: each a
+    // body on a vertical guide a catch holds, its travel, and what frees the
+    // catch (a pin on its own guide, or a trip line's hanging handle). Her
+    // journeys take one when no way of her map joins two floors: she boards
+    // it, frees it from inside with her hands (a pin shoved clear, a handle
+    // weighed down), rides it and steps off. Read from the kit, never named.
+    struct HoistFeed {
+        struct Pin {
+            JPH::BodyID body;
+            JPH::Vec3 axis = JPH::Vec3::sAxisZ();
+            float travel = 0.0F, clear = 0.0F;
+        };
+        JPH::BodyID car;
+        float axis_y = 1.0F;
+        float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
+        bool held = false;
+        std::vector<Pin> pins;
+        std::vector<JPH::BodyID> weights;
+    };
+    void set_hoists(std::vector<HoistFeed> hoists) { hoists_ = std::move(hoists); }
+    struct HoistView {
+        int phase = 0;              // 0 none, 1 to its stop, 2 boarding, 3 freeing it, 4 riding, 5 stepping off
+        int hoist = -1;
+        std::uint32_t rides = 0;    // rides she finished, this life
+        float hand_n = 0.0F;        // her hands' push on what frees it, this tick
+        float hand_power_w = 0.0F;  // that push's power against what it moves, this tick
+    };
+    [[nodiscard]] HoistView hoist_view() const noexcept {
+        return {hoist_.phase, hoist_.hoist, hoist_rides_, hoist_hand_n_, hoist_hand_power_w_};
+    }
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
         bool active = false;
@@ -1615,7 +1718,7 @@ public:
 
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
-    void begin_grab(JPH::RVec3 player);
+    void begin_grab();
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
     // Knocked off her feet: her body's capsule stands over where she lies.
@@ -1813,11 +1916,12 @@ public:
     // end, a death's restore too): a touch is her shove, not a catch.
     void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
-        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Nor is
-        // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
-        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
-                              state_ == State::Dead;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Her
+        // death is saved as dead: a checkpoint taken while she lies dead has her dead, as a restore
+        // brings her back as saved (J-069).
+        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down;
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
+                damage_ns_, player_damage_ns_, dead_};
     }
     void restore(const Saved &saved);
 
@@ -1991,7 +2095,8 @@ private:
     // to a level between): to its foot, and in the Turn onto it. False when no
     // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
-    // The corner pipe's way from one deck to the other (0..3; -1 for none),
+    // The corner pipe's way from one deck to the next one up or down
+    // (0 .. 2 * (kPipeDecks - 1) - 1; -1 for none),
     // and whether it may be tried now (pipe_ways_).
     [[nodiscard]] static int pipe_way(float from_floor, float to_floor) noexcept;
     [[nodiscard]] bool pipe_way_open(int way) const noexcept;
@@ -2030,6 +2135,9 @@ private:
     // (src/sim/matron_traversal.*), its moves done by its Climber out of one
     // capped budget; while it runs it has her body.
     bool start_journey(JPH::RVec3 at);
+    // The same, to the floor under a place of her own choosing (feet height
+    // `goal_y` at x, z): a raised corner of her pipe's (follow_pipe).
+    bool start_journey_to(JPH::RVec3 at, float goal_x, float goal_y, float goal_z);
     void step_journey(float dt);
     void end_journey(bool failed);
     [[nodiscard]] bool journeying() const noexcept { return journey_active_; }
@@ -2043,6 +2151,16 @@ private:
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);
+    // A way of her own map from the floor she stands on to her lead's (the
+    // scan's ladders, poles and mantles, or a hoist) that has her to him
+    // sooner than the pipe would (`pipe_s`, pipe_time_s): hers over the
+    // pipe, at every height (J-085).
+    [[nodiscard]] bool own_way_sooner(JPH::RVec3 at, float pipe_s);
+    // Her pace on the riser at her stage, up or down it (ride_pipe's).
+    [[nodiscard]] float pipe_pace(bool down) const noexcept;
+    // Seconds to him by the pipe: her walk to its corner, each story on it,
+    // and her walk from its corner to where she heard him.
+    [[nodiscard]] float pipe_time_s(JPH::RVec3 at, float floor_y, float stand_z) const noexcept;
     [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
     // Her hands on the rail of the deck she is leaving: false (and nothing
     // started) when there is no rail top in her reach.
@@ -2197,6 +2315,11 @@ private:
     // it ends below her within a catch's fall: its height. False where the
     // riser goes on past her (the ray starts in its steel) or nothing is met.
     bool pipe_riser_top_under(JPH::RVec3 at, float &top_y) const;
+    // Whether what she stands on at the rail's corner over `deck` is a top
+    // level with the rail (machinery standing on the deck there, as on deck
+    // 6): she gets on and off the pipe from it as from the rail she perches
+    // on, her feet on it, and steps down off it like any other top.
+    [[nodiscard]] bool pipe_corner_raised(float deck) const;
 
     // A point within her real arm's reach of a shoulder, her middle at `at`
     // and facing her yaw (kPipeShoulder*, kPipeHandReachM).
@@ -2408,6 +2531,8 @@ private:
     float travel_wp_best_ = 1.0e9F;
     float travel_wp_stall_s_ = 0.0F;
     bool travel_rerouted_ = false;
+    bool travel_walk_is_patch_ = false;   // this walk came from the map's patch links, not her feet's floor search
+    bool travel_fell_off_path_ = false;   // she left her walk by falling: the next landing on another floor plans again
     int travel_stuck_ = 0;   // fresh searches of her way in a row with no waypoint passed
     JPH::Vec3 travel_still_at_ = JPH::Vec3::sZero();   // where she last moved from on a walk
     float travel_still_s_ = 0.0F;
@@ -2421,6 +2546,30 @@ private:
     static constexpr float kYieldMemoryS = 0.5F;
     static constexpr float kYieldClearM = 1.6F;
     void step_travel(float dt);
+    // matron_hoist.cpp
+    struct HoistLeg {
+        int phase = 0;
+        int hoist = -1;
+        int board = -1, exit = -1, goal = -1;   // regions: its stop's landing, the other's, the journey's end
+        JPH::Vec3 board_at = JPH::Vec3::sZero(), exit_at = JPH::Vec3::sZero();   // the landings' nearest points
+        float from_travel = 0.0F, to_travel = 0.0F;
+        float t = 0.0F, still_s = 0.0F;
+        float lean_n = 0.0F;   // her hands' push past a shove, into a pin that stands
+    };
+    [[nodiscard]] bool hoist_footprint(const HoistFeed &h, JPH::AABox &box, float &floor_top) const;
+    [[nodiscard]] int hoist_landing(const JPH::AABox &car, float floor_top, JPH::Vec3 &point) const;
+    // The hoist that joins them (as plan_hoist takes it), without taking it.
+    [[nodiscard]] bool find_hoist(int from, int goal, HoistLeg &leg) const;
+    bool plan_hoist(int from, int goal);
+    void step_hoist(float dt);
+    std::vector<HoistFeed> hoists_;
+    HoistLeg hoist_;
+    std::uint32_t hoist_rides_ = 0;
+    std::vector<JPH::Vec3> hoist_path_;
+    std::size_t hoist_path_i_ = 0;
+    float hoist_hand_n_ = 0.0F;
+    float hoist_hand_power_w_ = 0.0F;   // that push's power against what it moves, this tick
+    bool hoist_inner_ = false;   // travel_to from the hoist leg itself
     [[nodiscard]] int region_under() const;
     std::vector<traversal::Edge> journey_;
     std::vector<JPH::Vec3> journey_legs_;
@@ -2584,17 +2733,19 @@ private:
     float shove_cooldown_s_ = 0.0F;
     std::uint32_t shoves_ = 0;
     std::vector<Throwable> throwables_;
-    std::uint32_t handled_ = 0;
+    std::uint64_t handled_ = 0;
     std::uint64_t push_load_ = 0;   // the load in his hands: a contact filter only (sense_near)
     int fetch_ = -1;
     float fetch_best_m_ = 0.0F;        // the nearest she has come to it on this fetch
     float fetch_stall_s_ = 0.0F;       // since she last came nearer
-    std::uint32_t fetch_refused_ = 0;  // the pieces she gave up on, a bit each
+    std::uint64_t fetch_refused_ = 0;  // the pieces she gave up on, a bit each
     float fetch_refused_s_ = 0.0F;     // till she tries them again
     int held_ = -1;
-    JPH::Ref<JPH::PointConstraint> hold_;
     JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in
     float throw_windup_s_ = -1.0F;                 // < 0: not rearing back
+    // How long, rearing back, her own raised piece has hidden him from her
+    // (kWindupBlindSeconds).
+    float windup_blind_s_ = 0.0F;
     float throw_cooldown_s_ = 0.0F;
     float throw_stroke_s_ = -1.0F;                 // < 0: no throw leaving her hands
     JPH::Vec3 throw_v_ = JPH::Vec3::sZero();       // the speed it leaves them at
@@ -2867,7 +3018,7 @@ private:
     PipePhase pipe_phase_ = PipePhase::Off;
     float pipe_from_ = 0.0F;   // the floor she got on from, and the one she is going to
     float pipe_to_ = 0.0F;
-    // Her pipe's four ways (pipe_way): one that failed under her is left alone
+    // Her pipe's ways, a story up or down (pipe_way): one that failed under her is left alone
     // kPipeWayBlockS; failed more than kPipeWayRetries times, until a restore;
     // ruled out (a test), for good.
     struct PipeWayMemory {
@@ -2877,8 +3028,21 @@ private:
     };
     static constexpr float kPipeWayBlockS = 30.0F;
     static constexpr std::uint8_t kPipeWayRetries = 2;
-    std::array<PipeWayMemory, 4> pipe_ways_{};
+    std::array<PipeWayMemory, 2 * (kPipeDecks - 1)> pipe_ways_{};
     int pipe_waypoint_ = 0;
+    int pipe_serves_from_ = -1, pipe_serves_to_ = -1;   // pipe_serves' last regions, and its answer
+    bool pipe_serves_ok_ = true;
+    // own_way_sooner's last plan, by its two regions: the moves off the
+    // floor of her map's way (where each begins and ends, and its cost in
+    // seconds), or a hoist's leg where no way of the map joins them.
+    struct OwnMove {
+        JPH::Vec3 start = JPH::Vec3::sZero(), goal = JPH::Vec3::sZero(), line = JPH::Vec3::sZero();
+        float cost = 0.0F;
+    };
+    int own_way_from_ = -1, own_way_to_ = -1;
+    std::vector<OwnMove> own_way_moves_;
+    bool own_way_hoist_ = false;
+    HoistLeg own_way_leg_{};
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
     float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
     float pipe_slide_mps_ = 0.0F;

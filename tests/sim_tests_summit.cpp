@@ -151,6 +151,8 @@ void run_summit() {
         require(!s.summit_state().lit, "summit falsifier: a step down from block one must not light the lamp");
     }
 }
+SCRAPERX_GROUP("summit", 780, run_summit);
+SCRAPERX_SELECT("summit", run_summit, run_summit_arm);
 
 void run_summit_arm() {
     // ---- run off the arm: the parachute is the way down; without it, no -----------
@@ -189,6 +191,7 @@ void run_summit_arm() {
         }
     }
 }
+SCRAPERX_GROUP("summit_arm", 790, run_summit_arm);
 
 
 // The crew's last beam: no test repositioning, gravity retained, and every
@@ -317,3 +320,5 @@ void run_summit_ending() {
     }
     std::cout << "PASS scraperx_sim summit-ending: physical beam, slack unrig, canopy, home, restore\n";
 }
+SCRAPERX_GROUP("summit_ending", 800, run_summit_ending);
+SCRAPERX_SELECT("summit-ending", run_summit_ending);

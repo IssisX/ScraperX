@@ -1991,6 +1991,7 @@ void run_matron_narrow() {
     test_stand_on_board();
     test_knocked_onto_board();
 }
+SCRAPERX_SELECT("matron-narrow", run_matron_narrow);
 
 void run_matron_climb() {
     test_power_budget();
@@ -2015,6 +2016,8 @@ void run_matron_climb() {
     test_rung_down_bottom_gap();
     run_matron_narrow();
 }
+SCRAPERX_GROUP("matron_climb", 940, run_matron_climb);
+SCRAPERX_SLICE("matron-climb", run_matron_climb, run_matron_climb_board, run_matron_climb_scan);
 
 namespace {
 // The scan of the real tower, written out for the inventory comparison
@@ -2228,6 +2231,7 @@ void run_matron_chain() {
     }
     std::cout << "PASS scraperx_sim matron chained exam (ladder, pole, gap, board, ledge, knock-off, replan): " << done << " of 2\n";
 }
+SCRAPERX_SLICE("matron-chain", run_matron_chain);
 
 // Ten unseen towers (seeded measures: deck heights, the pole's place, the
 // gap under the panel, the board's width, the ledge), each climbed from the
@@ -2255,6 +2259,7 @@ void run_matron_towers() {
     }
     std::cout << "PASS scraperx_sim matron unseen towers up and down without a reset: " << done << " of 10\n";
 }
+SCRAPERX_SLICE("matron-towers", run_matron_towers);
 
 // The player's own climbing is untouched by her: the same ladder climb,
 // alone and with her climbing down the stack beside him, takes the
@@ -2346,6 +2351,7 @@ void test_travel_walk_round_player() {
 }
 
 void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
+SCRAPERX_SELECT("matron-climb-board", run_matron_climb_board);
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across
@@ -2388,6 +2394,7 @@ void run_matron_climb_scan() {
     test_tower_scan();
     test_tower_journeys();
 }
+SCRAPERX_SELECT("matron-climb-scan", run_matron_climb_scan);
 
 // The whole tower, as her own scan reads it: every deck (a region of 6 m2 or
 // more, the largest at its height) and every pair of them her scan joins
@@ -2466,6 +2473,7 @@ void run_ladder_bar_sort() {
             "ladder-bar sort: identical bars are equivalent");
     std::cout << "PASS scraperx_sim ladder-bar sort: the bar order is a strict total order\n";
 }
+SCRAPERX_SLICE("ladder-bar-sort", run_ladder_bar_sort);
 
 void run_matron_tower_proof() {
     Simulation s(InitialSpawn::Deck154);
@@ -2623,6 +2631,7 @@ void run_matron_tower_proof() {
     std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
               << " deck pairs, " << clean << " clean\n";
 }
+SCRAPERX_SLICE("matron-tower", run_matron_tower_proof);
 
 // Every ladder in the tower, as her own scan reads it: for each one her scan
 // gives a climb up (on the rungs, or a jump for the bottom rung), she goes up
@@ -2735,3 +2744,4 @@ void run_matron_ladders() {
     require(unexpected.empty(), "matron ladders: her scan refuses no ladder beyond the six refused for the world's steel");
     std::cout << "PASS scraperx_sim matron ladders: " << passed << "/" << tried << ", refused " << refused << "\n";
 }
+SCRAPERX_SLICE("matron-ladders", run_matron_ladders);

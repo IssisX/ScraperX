@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that the drawn-body CI gate cannot silently lose a scenario.
 
-The godot-touch touch-2 job's "Her drawn body" step records probe
+The godot-touch touch-3 job's "Her drawn body" step records probe
 frames for a hand-written `for scenario in ...` list and then runs
 tools/matron_probe/check.py over those recordings. check.py is strict
 both ways for the scenarios it is given, but it never sees a scenario
@@ -17,6 +17,9 @@ Rules, all read from the repo as written:
   - the "Her drawn body" step must exist, must run check.py, and must
     grep for the MATRON_DRAWN PASS line, or the step is not a gate
     at all and the guard fails;
+  - the step must be gated `if: matrix.shard == 'touch-3'`, so it runs
+    on exactly one godot-touch leg: ungated it runs on every leg, and a
+    different shard is a move the change must make here too;
   - the step's scenario list must not contain a duplicate;
   - every scenario named in check.py's EXPECTED must be in the step's
     list, or its expected failures are never measured (FAIL);
@@ -45,6 +48,8 @@ from pathlib import Path
 STEP_MARKER = "Her drawn body"
 CHECK_SCRIPT = "tools/matron_probe/check.py"
 PASS_MARKER = "MATRON_DRAWN PASS"
+DRAWN_SHARD = "touch-3"
+SHARD_GATE_RE = re.compile(r"^\s*if:\s*matrix\.shard\s*==\s*'([^']+)'\s*$")
 LOOP_RE = re.compile(r"for scenario in ([^;]+);")
 STEP_RE = re.compile(r"^(\s*)- name: ")
 
@@ -124,6 +129,12 @@ def check_drawn_body(workflow_text, expected):
         failures.append("drawn-body step does not run tools/matron_probe/check.py")
     if PASS_MARKER not in block_text:
         failures.append("drawn-body step does not grep for the MATRON_DRAWN PASS line")
+    gates = [m.group(1) for m in map(SHARD_GATE_RE.match, block) if m]
+    if gates != [DRAWN_SHARD]:
+        failures.append(
+            f"drawn-body step is not gated on matrix.shard == '{DRAWN_SHARD}' "
+            f"(found {gates or 'no shard gate'})"
+        )
     scenarios = loop_scenarios(block)
     if not scenarios:
         failures.append("drawn-body step has no `for scenario in` loop")
@@ -147,6 +158,7 @@ def _self_test():
             "  godot-touch:\n"
             "    steps:\n"
             "      - name: Her drawn body (bones, grips, plants, hair and skirt)\n"
+            "        if: matrix.shard == 'touch-3'\n"
             "        shell: bash\n"
             "        run: |\n"
             "          set -euo pipefail\n"
@@ -189,6 +201,12 @@ def _self_test():
              "          grep -E \"^MATRON_DRAWN PASS\" artifacts/godot-uitest-matron-drawn.log\n",
              "", 1),
          expected, "does not grep for the MATRON_DRAWN PASS line")
+    case("ungated",
+         good.replace("        if: matrix.shard == 'touch-3'\n", "", 1),
+         expected, "not gated on matrix.shard == 'touch-3' (found no shard gate)")
+    case("wrong-shard",
+         good.replace("matrix.shard == 'touch-3'", "matrix.shard == 'touch-2'", 1),
+         expected, "not gated on matrix.shard == 'touch-3' (found ['touch-2'])")
     case("no-loop",
          good.replace("          for scenario in alpha beta; do\n", "", 1),
          expected, "has no `for scenario in` loop")

@@ -69,10 +69,11 @@ inline const char *path_name(const Path p) noexcept {
 }
 
 // Her own actuators, summed into the tick's total. Not summed: HandsPush (the
-// feet's charged force, carried on through her hands), PlayerGrip (the load
-// that reaches him through the grab spring and arm), Blow (his, not hers).
+// feet's charged force, carried on through her hands), StockHold (the same
+// newtons as the Budget take above, carried on through her hands), PlayerGrip
+// (the load that reaches him through the grab spring and arm), Blow (his, not hers).
 inline bool summed(const Path p) noexcept {
-    return p != Path::HandsPush && p != Path::PlayerGrip && p != Path::Blow;
+    return p != Path::HandsPush && p != Path::StockHold && p != Path::PlayerGrip && p != Path::Blow;
 }
 
 struct Sample {

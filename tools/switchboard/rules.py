@@ -22,10 +22,13 @@ VERDICT_HEAD = re.compile(
 SHA_IN_HEAD = re.compile(r"@\s*`?(?P<sha>[0-9a-f]{7,40})\b")
 REPRO_FIELDS = ("command", "input", "expected", "observed")
 REPRO_LINE = re.compile(r"^[\s>*_`-]*(command|input|expected|observed)[*_`]*\s*:", re.IGNORECASE | re.MULTILINE)
-JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>J-\d{3,})\b", re.MULTILINE)
+# A job is J-NNN, or J-NNN plus one letter for a sub-job (J-044b): "J-\d{3,}\b" alone never matched J-044b,
+# so a lettered job's green branch got no auto-PR and its issue was missing from jobs() (11-09).
+JOB_ID = r"J-\d{3,}[a-z]?"
+JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>" + JOB_ID + r")\b", re.MULTILINE)
 # "Supersedes #43", "supersedes #43 and #44", "Supersedes #43, #44": the PRs a PR body says it replaces.
 SUPERSEDES = re.compile(r"\bsupersedes\s+(?P<list>#\d+(?:\s*(?:,|and|&)\s*#\d+)*)", re.IGNORECASE)
-JOB_TITLE = re.compile(r"^(?P<job>J-\d{3,})\b")
+JOB_TITLE = re.compile(r"^(?P<job>" + JOB_ID + r")\b")
 BUDGET_LINE = re.compile(r"^\s*budget\s+(?P<usd>\d{1,4}(?:\.\d{1,2})?)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
@@ -59,6 +62,8 @@ class Team:
     other_authored_asks: Sequence[str] = ()  # agent keys asked, in order, to review work not by Claude
     pool: Sequence[str] = ()               # review.pool: who shares the reviews, one per PR (API_REVIEWER for the API)
     api_reviews_claude: bool = False       # the automatic review also takes Claude's PRs, and its LAND counts there
+    manual: frozenset[str] = frozenset()   # agents with `wake: manual` (they run only when Cory starts them): never asked
+    agent_of_name: Mapping[str, str] = dataclasses.field(default_factory=dict)   # lowercased name -> agent key
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -76,6 +81,7 @@ def team_from_config(cfg: Mapping) -> Team:
     if not isinstance(agents, Mapping) or not agents:
         raise ValueError("agents.yml: `agents` must be a non-empty mapping")
     names: dict[str, str] = {}
+    keys: dict[str, str] = {}
     prefixes: list[tuple[str, str]] = []
     owners: dict[str, str] = {}
     agent_vendor: dict[str, str] = {}
@@ -86,17 +92,22 @@ def team_from_config(cfg: Mapping) -> Team:
         agent_vendor[key] = vendor
         for n in a.get("names", []):
             names[str(n).lower()] = vendor
+            keys[str(n).lower()] = key
         for p in a.get("branch_prefixes", []):
             prefixes.append((str(p), vendor))
         for o in a.get("owner_labels", []):
             owners[str(o)] = vendor
     review = cfg.get("review", {})
+    # J-072: an agent with `wake: manual` runs only when Cory starts it, so no review is ever routed to it: it is
+    # dropped from every ask list, the pool and the fallback order, and a review waits on Codex, the API or Grok.
+    manual = frozenset(k for k, a in agents.items() if isinstance(a, Mapping) and a.get("wake") == "manual")
     humans = list(review.get("claude_authored_asks", []))
     for h in humans + [review.get("matron_reviewer", "")]:
         if h and h not in agents:
             raise ValueError(f"agents.yml: review names unknown agent {h!r}")
+    humans = [h for h in humans if h not in manual]
     if not humans:
-        raise ValueError("agents.yml: review.claude_authored_asks must name at least one agent")
+        raise ValueError("agents.yml: review.claude_authored_asks must name at least one agent that is not `wake: manual`")
     logins = cfg.get("verdict_logins")
     if not isinstance(logins, Sequence) or isinstance(logins, str) or not logins:
         raise ValueError("agents.yml: `verdict_logins` must list the GitHub logins whose verdicts count")
@@ -107,6 +118,7 @@ def team_from_config(cfg: Mapping) -> Team:
         if agent_vendor[o] == "anthropic":
             raise ValueError(f"agents.yml: review.other_authored_asks names {o!r}, a Claude agent: the paid "
                              "Claude review is the fallback when no one listed here can take it")
+    others = [o for o in others if o not in manual]
     pool = list(review.get("pool", []))
     api_claude = review.get("api_reviews_claude", False)
     if not isinstance(api_claude, bool):
@@ -118,12 +130,14 @@ def team_from_config(cfg: Mapping) -> Team:
             raise ValueError(f"agents.yml: review.pool names {p!r}, a Claude agent: the Claude API reviews as {API_REVIEWER!r}")
     if len(set(pool)) != len(pool):
         raise ValueError("agents.yml: review.pool names an agent twice")
+    pool = [p for p in pool if p not in manual]
     fallback = list(review.get("fallback_order", []))
     for f in fallback:
         if f not in agents:
             raise ValueError(f"agents.yml: review.fallback_order names unknown agent {f!r}")
         if agent_vendor[f] == "anthropic":
             raise ValueError(f"agents.yml: review.fallback_order names {f!r}, a Claude agent: Claude's work is never reviewed by Claude")
+    fallback = [f for f in fallback if f not in manual]
     try:
         hours = float(review.get("fallback_after_hours", 3))
     except (TypeError, ValueError):
@@ -134,7 +148,7 @@ def team_from_config(cfg: Mapping) -> Team:
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
                 frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others),
-                tuple(pool), api_claude)
+                tuple(pool), api_claude, manual, keys)
 
 
 def _has_repro(body: str) -> bool:
@@ -142,7 +156,8 @@ def _has_repro(body: str) -> bool:
     return all(f in found for f in REPRO_FIELDS)
 
 
-CODEX_LOGIN = "chatgpt-codex-connector[bot]"   # the Codex GitHub app: reviews every PR on open, and on "@codex review"
+CONFLICT = "merge conflict with the base"   # the reason merge_decision gives; the switch and the reconciler match it
+CODEX_LOGIN = "chatgpt-codex-connector[bot]"   # the Codex GitHub app: reviews a PR a person opens, and on a person's "@codex review"
 _CODEX_STATE = re.compile(r"codex-review-state:v1\s+(\{.*?\})\s*-->", re.DOTALL)
 
 
@@ -192,8 +207,8 @@ def codex_in_flight(comments: Iterable[Mapping], reactions: Iterable[Mapping], h
         sha = str((r or {}).get("commit_sha") or "")
         if r is None or not sha or not head_sha.startswith(sha):
             continue
-        if r.get("status") == "completed":
-            done = True
+        if r.get("status") in ("completed", "failed"):
+            done = True   # a failed review (its usage limit, 11-10 #343) is over, not running
         elif r.get("status"):
             return True
     eyes = any(x.get("content") == "eyes" and (x.get("user") or {}).get("login", "").lower() == CODEX_LOGIN
@@ -201,9 +216,40 @@ def codex_in_flight(comments: Iterable[Mapping], reactions: Iterable[Mapping], h
     return eyes and not done
 
 
+def codex_failed(comments: Iterable[Mapping], head_sha: str) -> bool:
+    """Codex's newest state for this head says its review failed ("We couldn't complete this review"; 11-10 #343:
+    its usage limit). Its turn on the head is over: the review goes on as if Codex were not there."""
+    last = None
+    for c in comments:
+        r = codex_review_state(c.get("body") or "", (c.get("user") or {}).get("login", ""))
+        sha = str((r or {}).get("commit_sha") or "")
+        if r is not None and sha and head_sha.startswith(sha) and r.get("status"):
+            last = r.get("status")
+    return last == "failed"
+
+
 def codex_wait_over(proof_done_at: str, now_iso: str, minutes: float = CODEX_WAIT_MINUTES) -> bool:
     """The wait for a running Codex review is over: `minutes` since the proof went green, or no time to count from."""
     return not proof_done_at or ask_is_overdue(proof_done_at, now_iso, minutes / 60)
+
+
+CODEX_START_MINUTES = 10   # how long Codex has to start on a head (its 👀) once the head is green and it is asked
+
+
+def codex_turn(since: Iterable[str], in_flight: bool, expected: bool, now_iso: str) -> bool:
+    """Is it still Codex's turn on a green head, so that no one else is asked and the paid review waits (one
+    review per head; Cory, 11-04: Codex first, the API only for a head Codex has not reviewed)?
+
+    `since`: when the head's proof went green, when its PR opened and when Codex was asked on it (ISO 8601 UTC,
+    "" for none); the clock runs from the latest. While Codex is `expected` (its review can count here, so the
+    switch asks it once per head), it has CODEX_START_MINUTES to start. A review that is running (`in_flight`)
+    is waited for until CODEX_WAIT_MINUTES. Past that the review goes on as if Codex were not there."""
+    start = max((t for t in since if t), default="")
+    if not start:
+        return False
+    if expected and not ask_is_overdue(start, now_iso, CODEX_START_MINUTES / 60):
+        return True
+    return in_flight and not ask_is_overdue(start, now_iso, CODEX_WAIT_MINUTES / 60)
 
 
 def parse_verdict(body: str, created_at: str, author_login: str, team: Team) -> Verdict | None:
@@ -255,6 +301,7 @@ class PrFacts:
     rule_check_block: bool | None   # None when the rule check could not run
     touches_workflows: bool
     never_edit: bool = False        # the rule check BLOCKs a never-edited file (protected-file): nothing lifts it
+    codex_failed: bool = False      # the Codex app's newest state for this head is "failed" (its usage limit)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -366,7 +413,7 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
     elif pr.rule_check_block and "/integrate-protected-" not in pr.head_ref:
         waits.append("rule_check BLOCK on a branch not named <agent>/integrate-protected-<job>")
     if pr.mergeable is False:
-        waits.append("merge conflict with the base")
+        waits.append(CONFLICT)
     elif pr.mergeable is None:
         waits.append("GitHub is still computing mergeability")
     if waits:
@@ -392,11 +439,20 @@ def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], me
     api = api_review_on(pr.verdicts, pr.head_sha)
     codex = codex_review_on(pr.verdicts, pr.head_sha)
     cross = codex is not None and codex.verdict == "LAND" and codex.vendor not in ("unknown", author_vendor)
+    # Cory, 11-10 ("muse"): while Codex cannot review this head (its usage limit), Muse's LAND naming the whole
+    # head stands in for it, beside the security pass. Muse is another vendor; its identity is name-only.
+    muse = None if cross or not pr.codex_failed or author_vendor == "meta" else max(
+        (v for v in pr.verdicts if v.kind == "review" and v.vendor == "meta" and names_whole_head(v, pr.head_sha)),
+        key=lambda v: v.created_at, default=None)
+    if muse is not None and muse.verdict == "LAND":
+        codex, cross = muse, True
     why = ("no automatic Claude review on this head (the security pass)" if api is None else
            f"the automatic Claude review on this head is {api.verdict if not api.downgraded else 'FIX or BLOCK'}, "
            f"not LAND (the security pass)" if api.verdict != "LAND" or api.downgraded else
            f"no LAND from a vendor other than {author_vendor} by a login no agent shares: the Codex app's clean review "
-           f"of the whole head (a LAND typed by name, or the API's own, does not count here)" if not cross else "")
+           f"of the whole head (a LAND typed by name, or the API's own, does not count here)" +
+           (f"; Codex could not review it, so Muse's LAND by mail (review of #{pr.number} @ {pr.head_sha}: LAND) "
+            f"stands in" if pr.codex_failed and author_vendor != "meta" else "") if not cross else "")
     if why:
         return MergeDecision("HUMAN-MERGE", (f"ready, but it changes .github/workflows: {why}",), land_by)
     return MergeDecision("MERGE", (f"proof green, LAND by {codex.who} and a clean automatic Claude review ({api.verdict}) "
@@ -415,8 +471,9 @@ def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> Revi
     A PR by another vendor is asked of the first agent in review.other_authored_asks whose vendor is
     not the author's (Cory, 11-03: Muse is always on and free, so it goes first). Only when none
     fits, or the author is unknown, does it get the paid automatic Claude review through the API. A
-    Claude-authored PR is asked of ChatGPT or Muse on the job issue: Muse first when the job needs
-    matron (its specialty), else the first agent in review.claude_authored_asks.
+    Claude-authored PR is asked on the job issue: the matron reviewer first when the job needs matron
+    (its specialty), else the first agent in review.claude_authored_asks. A `wake: manual` agent is never
+    in those lists (team_from_config drops it).
     """
     if author_vendor != "anthropic":
         if author_vendor != "unknown":
@@ -435,8 +492,24 @@ def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> Revi
 API_REVIEWER = "claude-api"   # the automatic Claude review through the API, as a member of review.pool
 
 
+def reviewers_done(verdicts: Iterable[Verdict], head_sha: str, team: Team) -> frozenset[str]:
+    """The reviewers whose turn on this head is over: each has a review verdict naming it. A NOTE decides
+    nothing (needs_review), so the next reviewer in line is asked: never the one who gave it, a second time."""
+    done: set[str] = set()
+    for v in verdicts:
+        if v.kind != "review" or not names_head(v, head_sha):
+            continue
+        if is_api_review(v):
+            done.add(API_REVIEWER)
+        elif is_codex_app(v):
+            done.add("codex")
+        elif v.who.lower() in team.agent_of_name:
+            done.add(team.agent_of_name[v.who.lower()])
+    return frozenset(done)
+
+
 def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team: Team,
-                    api_ok: bool = True) -> list[str]:
+                    api_ok: bool = True, done: frozenset[str] = frozenset()) -> list[str]:
     """Who may review PR `number`, one of them per PR (Cory, 11-03: "get the ones that are available and
     ready to do the reviews ... if we spread the work out, the merrier ... I'm not asking for two agents
     to review the same shit"); choose_reviewer picks the free one.
@@ -444,16 +517,21 @@ def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team
     The pool members whose vendor is not the author's, the Claude API only for work not by Claude
     (reviews stay cross-model) and only while the budget allows a call (`api_ok`). The start rotates
     with the PR number, so consecutive PRs go to different reviewers; a job that needs matron starts
-    at review.matron_reviewer, its specialty. An unknown author gets the API alone, as before."""
+    at review.matron_reviewer, its specialty. An unknown author gets the API alone, as before.
+
+    `done` (reviewers_done): whoever already gave a verdict on this head is out of its rotation. The API being
+    in it (its NOTE landed nothing) reads like the API being unable to review: the fallback order follows."""
+    api_ok = api_ok and API_REVIEWER not in done
     if author_vendor == "unknown":
         return [API_REVIEWER] if api_ok else []
     fits = [p for p in team.pool
-            if (p == API_REVIEWER and api_ok and (author_vendor != "anthropic" or team.api_reviews_claude))
-            or (p != API_REVIEWER and team.agent_vendor.get(p) not in (None, "anthropic", author_vendor))]
-    # The last resort (Cory, 11-04): when the API is in the pool but cannot review this head (a cap is hit, or
-    # it failed or gave no verdict here), the agents of review.fallback_order follow, by their own scheduled runs.
+            if p not in done and (
+                (p == API_REVIEWER and api_ok and (author_vendor != "anthropic" or team.api_reviews_claude))
+                or (p != API_REVIEWER and team.agent_vendor.get(p) not in (None, "anthropic", author_vendor)))]
+    # The last resort (Cory, 11-04): when the API is in the pool but cannot review this head (a cap is hit, it
+    # failed, or its verdict here was a NOTE), the agents of review.fallback_order follow, by their own scheduled runs.
     last = [f for f in team.fallback_order
-            if not api_ok and API_REVIEWER in team.pool and f not in fits
+            if not api_ok and API_REVIEWER in team.pool and f not in fits and f not in done
             and team.agent_vendor.get(f) not in (None, "anthropic", author_vendor)]
     if not fits:
         return last
@@ -498,14 +576,42 @@ def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
 
 
 def needs_review(pr: PrFacts, author_vendor: str = "", team: Team | None = None) -> bool:
-    """Proof green and no LAND, FIX or NOTE yet on this head from a review that can count: a verdict by the
-    author's own vendor (say the Codex app's unasked review of a ChatGPT PR) never answers the ask, since
-    merge_decision would not count its LAND. Its FIX still holds the merge back there."""
+    """Proof green and no LAND or FIX yet on this head from a review that can count. A NOTE decides nothing:
+    merge_decision merges only on a LAND, so a head whose only verdict is a NOTE still needs a review (#376
+    sat on the API's NOTE with no one asked; reviewers_done keeps the one who gave it from being asked again).
+    A verdict by the author's own vendor (say the Codex app's unasked review of a ChatGPT PR) never answers the
+    ask either, since merge_decision would not count its LAND. Its FIX still holds the merge back there."""
     if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
-    return not any(v.kind == "review" and names_head(v, pr.head_sha)
+    return not any(v.kind == "review" and v.verdict in ("LAND", "FIX") and names_head(v, pr.head_sha)
                    and not (author_vendor and v.vendor == author_vendor and not land_counts(v, author_vendor, team))
                    for v in pr.verdicts)
+
+
+def known_defect_jobs(spec: Mapping) -> tuple[str, ...]:
+    """The open jobs a look set names as owning its known defect (`known_defect: J-063`, or a list)."""
+    kd = spec.get("known_defect") or ()
+    return (kd,) if isinstance(kd, str) else tuple(kd)
+
+
+def eye_overall(judged: Sequence[Mapping], spec_sets: Mapping[str, Mapping], pr_job: str,
+                open_jobs: Iterable[str]) -> tuple[str, dict[str, tuple[str, ...]]]:
+    """The eye's overall verdict, and the sets whose FIX does not count on this PR (J-068).
+
+    A set whose `known_defect` names a job still open (its issue labeled `job`, open) is waived on every PR
+    but that job's own: a FIX there is shown, marked as that job's defect, and does not make the verdict FIX.
+    On the owner job's PR, and once every named job's issue is closed, the set counts like any other.
+    A set without the field always counts. Every set must still be judged."""
+    open_now = set(open_jobs)
+    waived: dict[str, tuple[str, ...]] = {}
+    for name, spec in spec_sets.items():
+        owners = known_defect_jobs(spec)
+        still_open = tuple(j for j in owners if j in open_now)
+        if still_open and pr_job not in owners:
+            waived[name] = still_open
+    ok = {s["set"] for s in judged} == set(spec_sets) and \
+        all(s["verdict"] == "LAND" or s["set"] in waived for s in judged)
+    return ("LAND" if ok else "FIX"), waived
 
 
 def needs_eye(pr: PrFacts) -> bool:

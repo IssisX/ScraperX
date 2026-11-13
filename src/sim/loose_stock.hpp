@@ -78,8 +78,10 @@ public:
         BottleCage = 21,      // a crane's lifting cage of nine gas bottles on runners, 690 kg
         // A machine's weight (lay_machine_weights):
         Pig = 22,             // a pig of iron with a lifting lug, 50 kg: carried
+        // J-042 (Cory, 11-05: everything loose she can lift is hers to throw):
+        Extinguisher = 23,    // a fire extinguisher stood on end, 9 kg: carried
     };
-    static constexpr int kKinds = 23;
+    static constexpr int kKinds = 24;
     // Heavier than the hands carry (the carry's grip holds about 70 kg): a
     // forklift's or a crane's to move, set where one of them could have put it.
     [[nodiscard]] static bool heavy(Kind kind) noexcept;
@@ -113,7 +115,10 @@ public:
     // pre-existing body keeps its build order. Their bodies are built by
     // realize_reserved once the bay, the twin tower and the summit stand.
     // Until append_reserved() runs the east/west pieces have no table
-    // place, so east_west_begin() is count().
+    // place, so east_west_begin() is count(). The bands' rings above
+    // 396.25 m and the top decks are recorded the same way, and their
+    // table places are taken by append_upper() after the east/west
+    // pieces; until it runs, upper_begin() is count().
     void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
     // Takes the east/west places dress_tower recorded, at the end of the
     // table (after the Matron's throwables), so the crane steel, the
@@ -121,9 +126,22 @@ public:
     // the east/west stock existed and saves made before it still load.
     // Their bodies stay unbuilt (invalid BodyIndex) until realize_reserved.
     void append_reserved();
-    // Builds the bodies dress_tower reserved, last in the kit's build
-    // order, and returns their places in the table.
+    // Builds the bodies dress_tower reserved for the east/west pieces,
+    // next in the kit's build order, and returns their places in the
+    // table. The upper pieces are built separately (realize_upper),
+    // after the deck-154 forklift, so the forklift keeps its place right
+    // after the east/west pieces.
     [[nodiscard]] std::vector<int> realize_reserved();
+    // Builds the bodies dress_tower reserved for the upper pieces, after
+    // the deck-154 forklift, and returns their places in the table.
+    [[nodiscard]] std::vector<int> realize_upper();
+    // Takes the upper places dress_tower recorded, at the end of the
+    // table (after the east/west pieces), so the crane steel, the
+    // machine weights, the throwables and the east/west pieces keep the
+    // entities they had before the upper stock existed and saves made
+    // before it still load. Their bodies stay unbuilt (invalid
+    // BodyIndex) until realize_upper.
+    void append_upper();
     // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
     // hook's reach after the tower's stock, so saves made before it line up:
     // two slabs of plate one on the other, and two beams side by side, the
@@ -144,6 +162,21 @@ public:
     // matron_throwables_begin().
     void lay_matron_throwables();
     static constexpr int kMatronThrowables = 3;
+    // J-042: two more kinds by her deck's north band, west of the drum,
+    // so what she takes and throws is no one kind: a 9 kg extinguisher and
+    // a 22 kg pallet. Laid last of all (after the deck's forklift and the
+    // upper stock), so
+    // every earlier piece and body keeps its place. The kMatronKinds pieces
+    // starting at matron_kinds_begin().
+    void lay_matron_kinds();
+    static constexpr int kMatronKinds = 2;
+    // J-092 (#410): the slab the 154 m deck's service cell hangs over her
+    // lane (slab_cell.hpp): one PlateSlab, laid where the cell's sling holds
+    // it, 20 m over the deck. Laid after her kinds, last of all, so every
+    // earlier piece and body keeps its place. The kHungSlabs pieces starting
+    // at hung_slab_begin().
+    void lay_hung_slab();
+    static constexpr int kHungSlabs = 1;
     // Where a hand takes a carried piece of this kind, in its own frame.
     [[nodiscard]] static JPH::Vec3 carry_handle(Kind kind) noexcept;
 
@@ -155,13 +188,17 @@ public:
     }
     // Where each group begins in the table: static, then the tower's
     // spots, then the crane steel, the machine weights, the Matron's
-    // throwables, and last the east/west stock, so saves made before a
-    // group line up. Until append_reserved() runs, the east/west begin
-    // is count().
+    // throwables, then the east/west stock, and last the upper stock, so
+    // saves made before a group line up. Until append_reserved() runs,
+    // the east/west begin is count(); until append_upper() runs, the
+    // upper begin is count().
     [[nodiscard]] int crane_steel_begin() const noexcept { return crane_steel_begin_; }
     [[nodiscard]] int machine_weights_begin() const noexcept { return machine_weights_begin_; }
     [[nodiscard]] int matron_throwables_begin() const noexcept { return matron_throwables_begin_; }
     [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
+    [[nodiscard]] int upper_begin() const noexcept { return upper_begin_; }
+    [[nodiscard]] int matron_kinds_begin() const noexcept { return matron_kinds_begin_; }
+    [[nodiscard]] int hung_slab_begin() const noexcept { return hung_slab_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
     [[nodiscard]] static const std::vector<Placement> &placements();
@@ -180,15 +217,25 @@ private:
     // The east/west places dress_tower recorded, waiting for
     // append_reserved() to take their table places at the end.
     std::vector<Placement> pending_east_west_;
+    // The bands' rings above 396.25 m and the top decks dress_tower
+    // recorded, waiting for append_upper() to take their table places
+    // after the east/west pieces.
+    std::vector<Placement> pending_upper_;
     // Where each group begins in the table (see the accessors above).
     int crane_steel_begin_ = 0;
     int machine_weights_begin_ = 0;
     int matron_throwables_begin_ = 0;
     int east_west_begin_ = 0;
+    int upper_begin_ = 0;
+    int matron_kinds_begin_ = 0;
+    int hung_slab_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
     // Builds one piece's body for an entity already chosen, as placed.
     [[nodiscard]] kit::BodyIndex create_body(const Placement &placement, std::uint64_t entity);
+    // Builds the bodies of the table places in [begin, end) that have
+    // none yet, in table order, and returns their places.
+    [[nodiscard]] std::vector<int> realize_range(int begin, int end);
 };
 
 } // namespace scraperx::sim

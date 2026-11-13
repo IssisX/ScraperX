@@ -147,3 +147,5 @@ void run_zipline() {
               << " stopped_m=" << at_stop.zipline_along_m << " flat_out_mps=" << flat_out << " post_hit_mps="
               << after.death_speed_mps << "\n";
 }
+SCRAPERX_GROUP("zipline", 710, run_zipline);
+SCRAPERX_SELECT("zipline", run_zipline);
