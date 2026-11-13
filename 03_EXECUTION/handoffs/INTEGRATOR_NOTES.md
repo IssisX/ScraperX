@@ -3,7 +3,6 @@
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794584485 (2026-11-13 full check)
-
 ## Now (11-13)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
   take the HARD game jobs. Until then Claude's game jobs are held in the plan (J-001 J-015 J-084 J-090 J-093 J-096 J-109 J-137,
@@ -19,6 +18,7 @@ Read through: 1794584485 (2026-11-13 full check)
   some GitHub; via one copyable prompt to Cory; Fable only for the very hardest, alert Cory first (it draws on this limit; he holds 2 refunds). Fable designs, Opus builds.
 - Visuals for his art AI: flat, white, each item pinned WHERE it lives in the flow, numbered badges = legend, ~110 words.
 - This session is the integrator (overview, both checks, PAT reminder); the old session's copies are paused, never deleted.
+  "/compact" from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
