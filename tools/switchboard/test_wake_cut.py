@@ -3,8 +3,8 @@ comment is a full wake of the integrator, so only what needs it wakes it at once
 
 (1) A Muse mail is read by its content, never by its "To Claude:" greeting: a report rides the digest, anything that
 asks, or that the classifier is unsure of, wakes at once. (2) Each item has a class: an ask posts at once, never
-delayed; the integrator's own work posts at most once per INBOX_HOLD; reports ride the next post or post alone on the
-digest's clock. (3) Nothing is dropped: what waits is held in the sweep state, and posted later. (4) The keys left the
+delayed; the integrator's own work posts at most once per INBOX_HOLD; reports ride the next post that wakes, and never
+post alone (every #282 comment wakes the integrator: the digest-only post 6854673147 woke it for nothing). (3) Nothing is dropped: what waits is held in the sweep state, and posted later. (4) The keys left the
 comment for the sweep state, so no comment passes the relay's cut.
 Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'
 No network, no clock, no files: GitHub and the time are given.
@@ -210,29 +210,40 @@ class Hold(unittest.TestCase):
         self.assertEqual(sw.inbox([]), 1)
         self.assertEqual(gh.state["inbox"]["held"], [])
 
-    def test_the_digest_rides_the_next_post_or_posts_alone_on_its_clock(self):
+    def test_a_digest_alone_never_posts_and_rides_the_next_wake(self):
+        # 11-13, 6854673147: a digest-only post on #282 ("Nothing to decide") woke the integrator for nothing
         gh = ti.FakeGH(comments=[bridge(801, "J-021 pushed", "CI dispatched.", hours=0.1)], open_issues=[292])
         sw = at(gh, 0)
         self.assertEqual(sw.inbox([]), 0)
         (held,) = sw.digest_held
         self.assertEqual((held.kind, held.since), ("FYI", switch.iso_z(NOW)))
-        for minute in (60, 120, 179):   # the old hourly full pass posted it at 60
+        for minute in (60, 179, 180, 600, 24 * 60):   # the old clock posted it alone at 180
             later = at(gh, minute)
             later.digest_held = sw.digest_held
             self.assertFalse(later.inbox_clock(), minute)
             self.assertEqual(later.inbox([]), 0, minute)
+            self.assertEqual(later.inbox([], flush=True), 0, minute)
             sw = later
-        last = at(gh, 180)
-        last.digest_held = sw.digest_held
-        self.assertTrue(last.inbox_clock())
-        self.assertEqual(last.inbox([]), 1)
-        self.assertTrue(gh.posts[0][1].split("\n")[2].startswith("Nothing to decide at "))
-        self.assertIn("- digest, nothing to decide: FYI #292 Muse: J-021 pushed", gh.posts[0][1])
+        self.assertEqual(gh.posts, [])
+        self.assertEqual(len(sw.digest_held), 1)
+        woke = at(gh, 24 * 60 + 1)
+        woke.digest_held = sw.digest_held
+        self.assertEqual(woke.inbox([ti.human_merge()]), 2)
+        (_, body), = gh.posts
+        self.assertTrue(body.split("\n")[2].startswith("1 new for the integrator at "))
+        self.assertIn("- digest, nothing to decide: FYI #292 Muse: J-021 pushed", body)
+        self.assertEqual(woke.digest_held, ())
 
-    def test_a_full_posts_worth_of_digest_posts_without_waiting(self):
+    def test_a_full_posts_worth_of_digest_still_waits_for_a_wake(self):
         gh = ti.FakeGH(comments=[bridge(900 + n, f"J-{n:03d} pushed", "CI dispatched.", hours=0.1)
-                                 for n in range(switch.MAX_DIGEST_ITEMS)], open_issues=[292])
-        self.assertEqual(at(gh, 0).inbox([]), switch.MAX_DIGEST_ITEMS)
+                                 for n in range(switch.MAX_DIGEST_ITEMS + 2)], open_issues=[292])
+        sw = at(gh, 0)
+        self.assertEqual(sw.inbox([]), 0)
+        self.assertEqual((gh.posts, len(sw.digest_held)), ([], switch.MAX_DIGEST_ITEMS + 2))
+        woke = at(gh, 1)
+        woke.digest_held = sw.digest_held
+        self.assertEqual(woke.inbox([ti.human_merge()]), 1 + switch.MAX_DIGEST_ITEMS)
+        self.assertIn(" (and 2 more next time)", gh.posts[0][1])
 
     def test_other_owners_late_jobs_ride_and_the_integrators_hold(self):
         gh = ti.FakeGH()
@@ -295,10 +306,20 @@ class QuietSweep(unittest.TestCase):
         gh = tsc.CountingGH(self.prs, dry_run=False)
         status, read, sw = tsc.sweep(gh, whole={"steer": tsc.last_state(self.prs), "inbox": self.held(31)})
         self.assertEqual((status, read), (0, []))
-        self.assertIn("RIPE        inbox: held items are due (an ask, the hold's end, or the digest's clock)", sw.lines)
+        self.assertIn("RIPE        inbox: held items are due (an ask or the hold's end)", sw.lines)
         self.assertEqual(gh.calls.count(f"POST issues/{switch.INBOX_PR}/comments"), 1)
         self.assertIn("- MERGE-BY-HAND [#361] green, LAND by Codex", gh.posts[0][1])
         self.assertEqual(gh.state["inbox"]["held"], [])
+
+    def test_a_quiet_sweep_with_only_the_digest_held_posts_nothing(self):
+        gh = tsc.CountingGH(self.prs, dry_run=False)
+        fyi = switch.InboxItem("FYI", "#292", "801", "FYI #292 Muse: J-021 pushed", since=switch.iso_z(NOW - 600 * M))
+        steer = tsc.last_state(self.prs)
+        steer["timers"] = {**(steer.get("timers") or {}), "digest": [switch.digest_record(fyi)]}
+        tsc.sweep(gh, whole={"steer": steer, "inbox": {"keys": [], "at": switch.iso_z(NOW - 600 * M), "held": []}})
+        self.assertEqual(len(gh.calls), tsc.IDLE, gh.calls)
+        self.assertNotIn(f"POST issues/{switch.INBOX_PR}/comments", gh.calls)
+        self.assertEqual(gh.posts, [])
 
     def test_a_quiet_sweep_inside_the_hold_costs_nothing_more(self):
         gh = tsc.CountingGH(self.prs, dry_run=False)

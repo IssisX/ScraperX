@@ -193,10 +193,28 @@ class AutoOpen(unittest.TestCase):
         self.assertEqual(make(gh).auto_open_prs(), 1)
         self.assertEqual(gh.writes[0][2]["head"], "fb-bot/integrate-protected-j048-no-run-hurt")
 
-    def test_claude_branch_never_opens(self):
-        gh, head = green_setup(name="claude/integrate-protected-j042-ammo", job="J-042")
+    def test_claude_branch_opens_so_no_helper_opens_one_by_hand(self):
+        # 11-13: a helper's hand-opened PR subscribed the integrator session to it (#497, #498); the switch opens it
+        for name in ("claude/integrate-protected-j042-ammo", "claude/integrate-j042-ammo"):
+            gh, head = green_setup(name=name, job="J-042")
+            self.assertEqual(make(gh).auto_open_prs(), 1, name)
+            (method, path, body), = [w[:3] for w in gh.writes]
+            self.assertEqual((method, body["head"], body["base"]), ("POST", name, rules.TRUNK))
+            self.assertTrue(body["body"].startswith("Job: J-042\n"), body["body"])
+
+    def test_claude_branch_with_no_job_line_or_a_prior_pr_never_opens(self):
+        gh, head = green_setup(name="claude/integrate-j042-ammo", job="J-042")
+        gh.commits[head] = "Work with no job line"
+        self.assertEqual(make(gh).auto_open_prs(), 0)
+        gh, head = green_setup(name="claude/integrate-j042-ammo", job="J-042")
+        gh.prior = {"claude/integrate-j042-ammo": [{"number": 497, "state": "closed", "merged_at": "2026-11-13T13:00:00Z"}]}
         self.assertEqual(make(gh).auto_open_prs(), 0)
         self.assertEqual(gh.writes, [])
+
+    def test_the_integrators_own_branches_never_open(self):
+        for name in ("claude/integrator-inbox", "claude/j042-ammo", "claude/wip-j042"):
+            gh, head = green_setup(name=name, job="J-042")
+            self.assertEqual(make(gh).auto_open_prs(), 0, name)
 
     def test_other_prefixes_never_open(self):
         gh, head = green_setup(name="fb-bot/j001-pastrail", job="J-001")

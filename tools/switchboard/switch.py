@@ -9,7 +9,7 @@ Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
   steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
-         issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
+         issue, opening PRs for finished fb-bot/ and claude/ integrate-* branches, the 7:00 AM Central digest, and
          after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051; QUEUE-LOW when
          work/tasks/muse.md holds under 8 really-unstarted jobs, J-097; a Muse "J-NNN started" or bare ack, and the
          one re-run of a proof red only in setup, ride as a digest line on the next comment that wakes, J-103),
@@ -87,7 +87,9 @@ MAX_ARTIFACT_BYTES = 60_000_000
 MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
 MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
-AUTO_PR_PREFIX = "fb-bot/integrate-"   # fb-bot/integrate-protected-* matches too; claude/* never does
+# The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
+# helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
+AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -112,10 +114,9 @@ MAX_INBOX_LINES = 30                           # items in one inbox comment; the
 MAX_INBOX_KEYS = 600                           # keys kept in the sweep state's inbox ring (gh.state["inbox"])
 # 11-13 (Cory's "A", #282 measure): every inbox comment is a full wake of the integrator, priced by its context, not
 # by the message. So asks wake at once, the integrator's own work lines post at most once per INBOX_HOLD, and
-# reports ride the next post (or post alone once the oldest has waited DIGEST_FLUSH_AFTER). The keys left the comment
+# reports ride the next post that wakes, never a post alone (6854673147). The keys left the comment
 # for the sweep state: the relay to the session cuts a comment near 4,000 characters, and the keys were most of it.
 INBOX_HOLD = dt.timedelta(minutes=30)
-DIGEST_FLUSH_AFTER = dt.timedelta(hours=3)
 INBOX_MAX_CHARS = 3500                         # a comment's whole text, under the relay's cut with room to spare
 PLAN_WAKES = frozenset({"claude", "integrator"})   # a late job's next step owed by these reaches the integrator
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
@@ -127,13 +128,14 @@ MAX_PLAN_LABELS = 20                           # issues whose labels a live pass
 PLAN_SHADOW_EVERY_H = 6
 INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
-# comment that does wake, or post alone once the oldest has waited DIGEST_FLUSH_AFTER (11-13: it was every hourly full
-# pass), so nothing is lost; held between sweeps in the state. FYI is a Muse mail that only reports (muse_report).
+# comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
+# post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
+# only reports (muse_report).
 # Beside these, inbox_class rides the late-job (PLAN) lines whose next step another owner holds.
 DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
-MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); a full post's
-                                               # worth posts at once, so this is reached only while posts keep failing
+MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
+                                               # are dropped and named in the run's log (keep_held)
 MAX_INBOX_HELD = 200                           # wake items held between sweeps (gh.state["inbox"]["held"]), likewise
 MAX_RERUN_HEADS = 200                          # heads re-run, kept between sweeps (timers["rerun"]): one re-run per head
 # A Muse bridge title that is only "J-NNN started" (J-040 take_blow started: one name may sit between), or a bare ack.
@@ -1452,7 +1454,7 @@ class Switch:
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
-        """Open PRs for finished fb-bot/integrate-* branches with no PR yet (J-047).
+        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* branches with no PR yet (J-047).
 
         A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
         that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
@@ -1524,17 +1526,18 @@ class Switch:
 
     def inbox_due(self, held: list[InboxItem], digest: list[InboxItem], last: dt.datetime | None) -> bool:
         """11-13: does a comment go now? An ask: at once. Else only INBOX_HOLD after the last post, and only for the
-        integrator's own work held, or a digest that is a full post's worth or whose oldest entry has waited
-        DIGEST_FLUSH_AFTER."""
+        integrator's own work held. The digest never makes a post: every #282 comment wakes the subscribed
+        integrator, so a digest-only post ("Nothing to decide", 6854673147) woke it for nothing. Its entries ride
+        the next post that carries a wake item, as many as fit, the rest the one after (`digest` is kept in the
+        signature for the callers)."""
         if any(inbox_class(it) == "now" for it in held):
             return True
         if last is not None and self.now - last < INBOX_HOLD:
             return False
-        oldest = min((parse_time(it.since) or self.now for it in digest), default=self.now)
-        return bool(held) or len(digest) >= MAX_DIGEST_ITEMS or (bool(digest) and self.now - oldest >= DIGEST_FLUSH_AFTER)
+        return bool(held)
 
     def inbox_clock(self) -> bool:
-        """11-13: a quiet sweep's question: is a held item or the digest due by its clock alone? Reads no GitHub."""
+        """11-13: a quiet sweep's question: is a held wake item due by its clock alone (the digest never is)? Reads no GitHub."""
         box = self.inbox_box()
         return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"}))), list(self.digest_held),
                               parse_time(str(box.get("at") or "")))
@@ -1544,9 +1547,9 @@ class Switch:
         before. An item's key (kind, PR or branch, head sha) is listed once; a new head is a new key. 11-13: the keys
         live in the sweep state's ring (inbox_box), no longer in the comment (inbox_reported still reads the old
         markers). Each item has a class (inbox_class): an ask posts at once; the integrator's own work posts at most
-        once per INBOX_HOLD, riding any ask sooner; a report (J-103's digest) never posts alone until the digest is
-        due (inbox_due). What waits is held in the state, never dropped: a comment carries what fits under
-        INBOX_MAX_CHARS (fit_inbox) and the rest waits for the next. `flush` posts whatever is held now. Returns how
+        once per INBOX_HOLD, riding any ask sooner; a report (J-103's digest) never posts alone, not even with
+        `flush`: it rides the next post that carries a wake item (inbox_due). What waits is held in the state, never
+        dropped: a comment carries what fits under INBOX_MAX_CHARS (fit_inbox) and the rest waits for the next. `flush` posts the wake items held now. Returns how
         many items were posted (or printed, in a dry run), digest entries included."""
         box = self.inbox_box()
         reported = self.inbox_reported()
@@ -1585,7 +1588,7 @@ class Switch:
         self.digest_held = self.keep_held(digest, MAX_DIGEST_HELD, "digest")
         if not getattr(self.gh, "dry_run", False):   # kept until a comment carries it, even if the post fails
             box["held"] = [digest_record(it) for it in self.keep_held(wake, MAX_INBOX_HELD, "wake")]
-        if not (wake or digest) or not (flush or self.inbox_due(wake, digest, last)):
+        if not wake or not (flush or self.inbox_due(wake, digest, last)):   # a digest alone never posts
             self.out("INBOX       nothing new" + (f"; {len(wake)} held for the next post (the hold)" if wake else "")
                      + (f"; {len(digest)} held for the digest (J-103)" if digest else ""))
             return 0
@@ -3245,7 +3248,7 @@ class SweepDelta:
     prs: set[int]                 # the open PRs to read this sweep
     comments: int                 # comments posted since the last sweep
     finished: set[str]            # branches whose proof run finished since the last sweep
-    finished_auto: set[str]       # of those, the auto-open's (fb-bot/integrate-*)
+    finished_auto: set[str]       # of those, the auto-open's (AUTO_PR_PREFIX)
     threads: set[int] = dataclasses.field(default_factory=set)    # every issue or PR something touched (the ledger's)
     active: set[str] = dataclasses.field(default_factory=set)     # branches with a proof run started or finished
     pipe: bool = False            # a CLAUDE_TO_MUSE ask or a bridge post: pipe health reads again
@@ -3484,7 +3487,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.rerun_heads = frozenset(reran_before)
     if steer and not targeted and not quiet:   # the inbox reads a whole sweep, so a run for one PR posts none
         inbox_ran = True
-        # 11-13: no hourly flush any more: the digest posts on its own clock (inbox_due), so a full pass wakes no one
+        # 11-13: no hourly flush any more, and the digest never posts alone (inbox_due), so a full pass wakes no one
         part("inbox", lambda: sw.inbox(steered))
         part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
         if not not_done & {"inbox", "muse"}:   # a failed read found no red run: the old ones are kept
@@ -3495,7 +3498,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         if queue_due:
             sw.out("RIPE        QUEUE-LOW: the queue changed and its item is not in the inbox yet")
         if not red_ripe and not queue_due:
-            sw.out("RIPE        inbox: held items are due (an ask, the hold's end, or the digest's clock)")
+            sw.out("RIPE        inbox: held items are due (an ask or the hold's end)")
         sw.ripe_runs = red_ripe
         inbox_ran = True
         part("inbox", lambda: sw.inbox(steered))
