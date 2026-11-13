@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-13 | *"We have continue to stop exceeding limits of things when we don't have to"*: the switchboard ran out of GitHub calls after a batch of PR opens and re-runs; stay under every limit, checking the meter before a batch. | CLAUDE.md, Fundamentals |
 | 11-13 | *"Do the read-only-what-changed fix now - Bro, this is like the fourth or fifth time I've had to tell you to do this"*: the switchboard ran out of GitHub calls re-reading everything each sweep; reading, like building and testing, covers only what changed. | CLAUDE.md, Fundamentals |
 | 11-13 | *"I never said tests are never deleted. That's another thing you said, and I just went along with. YES"*: his rule is never weaken, skip or delete a test **to get green**; a switchboard test that only checks a gate he approved removing goes with that gate, listed in the PR. Ends AGENTS.md's "never deleted" with no exception. | AGENTS.md, Tests |
 | 11-13 | *"I am realizing I don't want to have to name every single time like this"*: Claude picks a helper's effort and tells him in one line; he changes it if he wants. Ends the same day's "ask him the effort before any helper". | CLAUDE.md, Settled |
