@@ -43,7 +43,7 @@ it to match, never ask him again.
 - SIMPLE, every message: a few short plain lines, no jargon, no file names, shas or tech detail unless asked (11-10). Answer first; what happened, why and the fix in everyday words; progress is what is left (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
-- **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
+- **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
   is or her story, how the game plays: a new stage, ride, move or way she hunts is his plan to OK before any build; never redesign what exists, 11-11). Small is mine: fit, size, tuning, timing in his bars (11-10). No answer in 10 minutes: the pick stands. **Push back**, always (he
   loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
