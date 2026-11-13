@@ -187,6 +187,28 @@ class OwnPrStalled(unittest.TestCase):
         self.assertEqual(sw.inbox_items([muse], seen), [])   # Muse's own: the mail and FIX-STUCK, as before
 
 
+class ReviewWait(unittest.TestCase):
+    """11-13: a green head still unreviewed an hour after its proof (a review put off, refused, unanswered) is one item
+    for the integrator, once per head."""
+
+    def test_an_hour_green_with_no_review_is_one_item_once(self):
+        s = ti.steered(number=480, proof_done_at=ti.ago(1.2))
+        gh = ti.FakeGH()
+        self.assertEqual([it.kind for it in at(gh, 0).inbox_items([s], frozenset())], ["REVIEW-WAIT"])
+        self.assertEqual(at(gh, 0).inbox([s]), 1)
+        self.assertIn("- REVIEW-WAIT [#480]", gh.posts[-1][1])
+        self.assertEqual(at(gh, 40).inbox([s]), 0, "once per head")
+
+    def test_not_before_the_hour_nor_once_reviewed_nor_on_an_open_fix(self):
+        gh = ti.FakeGH()
+        for s in (ti.steered(number=480, proof_done_at=ti.ago(0.5)),
+                  ti.steered(number=480, proof_done_at=ti.ago(2), verdicts=[ti.land()]),
+                  ti.steered(number=480, proof_done_at=ti.ago(2), proof="running")):
+            self.assertNotIn("REVIEW-WAIT", [it.kind for it in at(gh, 0).inbox_items([s], frozenset())])
+        fixed = ti.steered(ref="claude/integrate-j048", proof_done_at=ti.ago(2), verdicts=[ti.fix()])
+        self.assertNotIn("REVIEW-WAIT", [it.kind for it in at(gh, 0).inbox_items([fixed], frozenset())])
+
+
 class Hold(unittest.TestCase):
     def test_an_ask_is_never_delayed(self):
         gh = ti.FakeGH(open_issues=[292])

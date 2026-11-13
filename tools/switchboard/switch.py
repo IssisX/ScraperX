@@ -137,6 +137,7 @@ INBOX_KEYS = re.compile(r"^<!-- switchboard:inbox keys=([0-9a-f,]*) -->$", re.MU
 INBOX_BRANCH_PREFIXES = ("fb-bot/integrate-", "claude/integrate-")
 INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a LAND this long was so at the sweep before
 INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
+INBOX_REVIEW_WAIT = dt.timedelta(hours=1)     # a green head with no review this long after its proof (REVIEW-WAIT)
 INBOX_FIX_STUCK = dt.timedelta(hours=6)        # FIX with no new head this long, past the reconciler's send and re-send
                                                # (11-12: #389 and #396 each sat a day on a Codex FIX)
 MERGEABLE_READS = 3                            # reads of a PR whose mergeability GitHub is still computing, after the first
@@ -187,7 +188,7 @@ COMPARE_FILES_CAP = 300   # GitHub's compare lists at most this many files: a li
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
-INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "STALLED", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "REVIEW-WAIT", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "STALLED", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
@@ -408,6 +409,10 @@ def board_body(old: dict, count: int) -> tuple[str, str]:
     new_title = f"{name} ({n + 1})"
     body = BOARD_FROM.sub("", BOARD_CONTINUES.sub("", body))
     body = body.replace(f"{name} ({n + 1})", f"{name} ({n + 2})")   # "At 100 comments this board moves to ..."
+    body = re.sub(r'At (\d+) comments this board moves to "([^"]+)": open a new issue labeled `board`, copy this body, '
+                  r'close the old one;',   # the hand roll this replaces
+                  r'At \1 comments the switchboard moves this board to "\2" by itself (a new issue labeled `board`, '
+                  r'this body copied, the old one closed with a link both ways);', body)
 
     def records(rm: re.Match) -> str:
         names = [x for x in re.split(r",\s*|\s+and\s+", rm.group(1)) if x] + [f"#{number}"]
@@ -1280,7 +1285,16 @@ class Switch:
             self._claude = claude_calls.client()
         return self._claude
 
-    def paid_deferred(self, key: str) -> bool:
+    def paid_waits(self) -> dict:
+        """The heads whose model call a sweep put off (paid_deferred), by PR: {"head", "since"}, in the ask part's sweep
+        state; run_sweep takes them first, the longest waiting first, so a newer PR never starves one put off."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else self.__dict__.setdefault("_ps", {})
+        waits = state.get("paid_wait")
+        if not isinstance(waits, dict):
+            waits = state["paid_wait"] = {}
+        return waits
+
+    def paid_deferred(self, key: str, facts: rules.PrFacts | None = None) -> bool:
         """11-13: one sweep's model calls run one after another inside the run that holds the shared `switchboard`
         concurrency group, and steer waits for them, so every later sweep waited too (run 43459528814: five reviews,
         1570 s; 43465457221: one security pass, 744 s; queued sweeps replaced and cancelled meanwhile). An untargeted
@@ -1288,8 +1302,13 @@ class Switch:
         call is put off to the next sweep with no mark, so its PR is read again then (pr_record keeps it warm). A run
         for one PR (a verdict comment) is never cut. True when put off."""
         start = self.__dict__.get("paid_clock")
+        waits = self.paid_waits()
         if start is None or not self.__dict__.get("paid_runs") or time.monotonic() - start < PAID_WALL.total_seconds():
+            if facts is not None and (waits.get(str(facts.number)) or {}).get("head") == facts.head_sha:
+                waits.pop(str(facts.number), None)   # its turn came
             return False
+        if facts is not None and (waits.get(str(facts.number)) or {}).get("head") != facts.head_sha:
+            waits[str(facts.number)] = {"head": facts.head_sha, "since": iso_z(self.now)}   # its place in the line
         self.out(f"DEFER       {key}: this run has run {int(time.monotonic() - start) // 60} min (the bound is "
                  f"{int(PAID_WALL.total_seconds()) // 60}) after {self.paid_runs} model call(s); the next sweep makes it")
         return True
@@ -2921,6 +2940,16 @@ class Switch:
             # hour rather than the head waiting on ChatGPT's and Grok's scheduled runs
             out.append(item("NOTE-REVIEW", f"the automatic Claude review answered NOTE; read it and post "
                                            f"**Claude (review of #{f.number} @ {f.head_sha}): LAND** or FIX"))
+        if (rules.needs_review(f, author, self.team) or rules.needs_security_pass(f)) and \
+                d.action not in ("FIX", "HUMAN-MERGE"):   # a HUMAN-MERGE has its own item (MERGE-BY-HAND)
+            # 11-13: a sweep may put a review off (paid_deferred), the budget may refuse it, a reviewer may not answer:
+            # whatever the cause, a green head still unreviewed INBOX_REVIEW_WAIT after its proof is the integrator's
+            done = parse_time(ctx.get("proof_done_at") or "") or parse_time(f.head_committed_at)
+            if done:
+                self.ripen(f.number, done + INBOX_REVIEW_WAIT)
+            if done and now - done >= INBOX_REVIEW_WAIT:
+                out.append(item("REVIEW-WAIT", f"green {hours(now - done)} and no review on this head yet; review it "
+                                               f"or find what holds it"))
         if rules.CONFLICT in d.reasons and owner and not any(it.kind == "NOT-MERGED" for it in out):
             # 11-10 #343: a conflict was told to its owner only by the reconciler's hourly pass; this sweep tells it now
             out.append(item("CONFLICT", f"{rules.CONFLICT}: merge {rules.TRUNK} into {plain(f.head_ref)} and push",
@@ -3371,7 +3400,7 @@ class Switch:
         was put off to the next sweep (paid_deferred), else None."""
         import claude_calls
         key = f"review#{facts.number}@{facts.head_sha[:8]}"
-        if self.paid_deferred(key):
+        if self.paid_deferred(key, facts):
             return False
         self.out(f"REVIEW      #{facts.number} author={author}: automatic Claude review")
         # The diff of the head this review is labeled with, never the PR's head of the moment (J-056): a push between
@@ -3451,7 +3480,7 @@ class Switch:
     def eye(self, facts: rules.PrFacts, ctx: dict) -> None:
         import claude_calls
         key = f"eye#{facts.number}@{facts.head_sha[:8]}"
-        if self.paid_deferred(key):
+        if self.paid_deferred(key, facts):
             return
         self.out(f"EYE         #{facts.number}: Claude vision on the {self.looks['artifact_prefix']}* screenshots")
         if self.gh.dry_run:
@@ -4269,6 +4298,15 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     item_errors: list[str] = []
     deferred: list[str] = []
     prs = sw.target_prs(args.pr, args.sha)
+    if ask and not targeted:   # 11-13: the heads a sweep put off (paid_deferred) first, the longest waiting first
+        waits = sw.paid_waits()
+        heads = {str(p["number"]): (p.get("head") or {}).get("sha") for p in prs}
+        for n in [n for n in waits if n not in heads]:
+            waits.pop(n, None)   # closed or merged
+        def turn(p: dict) -> tuple:
+            w = waits.get(str(p["number"])) or {}
+            return (0, str(w.get("since") or "")) if w.get("head") == heads[str(p["number"])] else (1, "")
+        prs = sorted(prs, key=turn)
     delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state)
     if delta is not None and steer and not targeted:
         import ledger as board_ledger   # a ripe ledger deadline on an item that changed: the ledger reads it all

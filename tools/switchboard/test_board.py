@@ -262,7 +262,8 @@ def board(number=384, comments=206, title="Board: live jobs (4)", body=None, cre
     return {"number": number, "comments": comments, "title": title, "created_at": created,
             "body": body if body is not None else (
                 "# Board: live jobs (4)\n\n<!-- ledger:start -->\nledger\n<!-- ledger:end -->\n\n**This body is the "
-                "board.** At 100 comments this board moves to \"Board: live jobs (5)\": open a new issue. (#3, #87, "
+                "board.** At 100 comments this board moves to \"Board: live jobs (5)\": open a new issue labeled `board`, "
+                "copy this body, close the old one; the bridge finds it. (#3, #87, "
                 "#107 and #340 are closed records.)\n\n<!-- plan:start -->\njobs\n<!-- plan:end -->\n")}
 
 
@@ -279,7 +280,8 @@ class Roll(unittest.TestCase):
         body = made["body"]
         self.assertTrue(body.startswith("# Board: live jobs (5)\n\n_Continues #384, closed at 206 comments"), body)
         self.assertIn(switch.BOARD_FROM_MARK.format(old=384), body)   # the link from the new board to the old
-        self.assertIn('moves to "Board: live jobs (6)"', body)
+        self.assertIn('the switchboard moves this board to "Board: live jobs (6)" by itself', body)
+        self.assertNotIn("open a new issue", body)   # the hand roll the old body told agents to do
         self.assertIn("(#3, #87, #107, #340 and #384 are closed records.)", body)
         for kept in ("<!-- ledger:start -->", "<!-- ledger:end -->", "<!-- plan:start -->", "<!-- plan:end -->"):
             self.assertIn(kept, body)

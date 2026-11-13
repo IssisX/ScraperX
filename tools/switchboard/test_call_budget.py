@@ -290,5 +290,47 @@ class PaidWall(unittest.TestCase):
         self.assertFalse(rec["cold"])   # read again by the next sweep, which makes the review
 
 
+class PaidWaitOrder(unittest.TestCase):
+    """11-13: a review put off (paid_deferred) holds its place: the next sweep takes the put-off heads first, the
+    longest waiting first, and newer PRs (the listing is newest first) never starve it."""
+
+    def test_a_put_off_head_is_recorded_once_and_cleared_when_its_turn_comes(self):
+        import time
+        sw = ti.make(ti.FakeGH())
+        facts = ti.steered(number=480).facts
+        sw.paid_clock, sw.paid_runs = time.monotonic() - switch.PAID_WALL.total_seconds() - 1, 1
+        self.assertTrue(sw.paid_deferred("review#480", facts))
+        first = dict(sw.paid_waits()["480"])
+        sw.now = NOW + dt.timedelta(minutes=10)
+        self.assertTrue(sw.paid_deferred("review#480", facts))
+        self.assertEqual(sw.paid_waits()["480"], first)   # its place is not lost by waiting again
+        nxt = ti.make(sw.gh)
+        nxt.paid_clock = time.monotonic()
+        self.assertFalse(nxt.paid_deferred("review#480", facts))
+        self.assertEqual(nxt.paid_waits(), {})
+
+    def test_the_sweep_takes_put_off_heads_first_oldest_first_and_drops_closed_ones(self):
+        prs = [tsc.pr(n) for n in (490, 485, 481, 480)]   # newest first, as GitHub lists them
+        gh = tsc.CountingGH(prs, dry_run=False)
+        gh.state = {"paid_wait": {"480": {"head": f"{480:040x}", "since": "2026-11-06T18:00:00Z"},
+                                  "485": {"head": f"{485:040x}", "since": "2026-11-06T17:00:00Z"},
+                                  "481": {"head": "0" * 40, "since": "2026-11-06T16:00:00Z"},   # a new head since
+                                  "300": {"head": "1" * 40, "since": "2026-11-06T10:00:00Z"}}}  # closed
+        sw = ti.make(gh)
+        sw.root, sw.merge_token, sw.review_key = HERE.parents[1], "", ""
+        sw.plan_mode = lambda: "off"
+        sw._jobs = sw._board = None
+        gh.remaining = gh.limit = gh.reset = None
+        order = []
+        sw.ask_pr = lambda facts, ctx: order.append(facts.number)
+        sw.watch_sessions = lambda: 0
+        args = argparse.Namespace(part="ask", pr=0, sha="", issue=0, label="", digest=False, force_digest=False,
+                                  dry_run=False)
+        switch.run_sweep(sw, args, NOW)
+        self.assertEqual(order[:2], [485, 480])
+        self.assertEqual(order[2:], [490, 481])
+        self.assertNotIn("300", gh.state["paid_wait"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -79,7 +79,7 @@ def steered(number=256, ref="fb-bot/integrate-j042-windup", head=HEAD, proof="gr
     """One PR as steer_pr leaves it: the facts, the context and the switch's own decision on them."""
     facts = rules.PrFacts(number, head, ref, rules.TRUNK, draft, mergeable, committed or ago(5), proof,
                           tuple(verdicts), frozenset(), block, workflows, never)
-    ctx = {"job": job, "proof_url": RUN_URL, "run_id": run_id, "proof_done_at": proof_done_at or ago(1),
+    ctx = {"job": job, "proof_url": RUN_URL, "run_id": run_id, "proof_done_at": proof_done_at or ago(0.5),
            "updated_at": updated_at or ago(0.1), "comments": list(comments)}
     return switch.Steered(facts, ctx, rules.merge_decision(facts, TEAM.vendor_of_branch(ref), TEAM), merge_note)
 
