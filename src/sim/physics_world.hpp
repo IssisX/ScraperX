@@ -629,6 +629,9 @@ private:
     // A wall face right behind this hold (a rung or pipe on a wall).
     [[nodiscard]] bool grip_backed_by_wall(const Grip &grip) const noexcept;
 
+    // A sibling hold a rung-spacing above or below this hold (a ladder rung).
+    [[nodiscard]] bool grip_has_rung_neighbor(const Grip &grip, JPH::RVec3 origin) const noexcept;
+
     [[nodiscard]] JPH::RVec3 hand_aim(const JPH::RVec3 centre, const float height,
                                       const float across) const noexcept;
 

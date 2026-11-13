@@ -20,6 +20,22 @@ bool Simulation::PhysicsWorld::grip_backed_by_wall(const Grip &grip) const noexc
         JPH::RRayCast(grip.point, facing_ * kGripWallBehindM), hit, {}, {}, filter);
 }
 
+// A rung of a ladder: another hold a rung-spacing directly above or below
+// it. Every ladder in the world spaces its rungs kLadderRungSpacing apart;
+// the bars the hang is for (the hang rail, the gallery pipes at 1.0 m) stand
+// alone. The sibling must sit a real rung-spacing away, not the same hold
+// re-found: a stile's foot ends 0.10 m under the bottom rung, inside the
+// probe's box, and must not count.
+bool Simulation::PhysicsWorld::grip_has_rung_neighbor(const Grip &grip, const JPH::RVec3 origin) const noexcept {
+    for (const float dy : {kLadderRungSpacing, -kLadderRungSpacing}) {
+        const Grip next = find_grip(origin, grip.point + JPH::Vec3(0.0F, dy, 0.0F), facing_);
+        if (next.valid && std::abs(next.point.GetY() - grip.point.GetY()) > 0.5F * kLadderRungSpacing) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
     if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0 || dyno_active_ ||
         dyno_no_catch_) {
@@ -60,11 +76,17 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
         // precedence for it, so the climb must not take it while the fall
         // still carries the centre down to the swing window below. A hold
         // with a wall face behind it (a rung or pipe on a wall) keeps the
-        // climb first, and so does a member that is not level.
+        // climb first, and so does a member that is not level. So does a
+        // rung of a hanging ladder: its siblings stand a rung-spacing above
+        // and below it, and the swing window never opens for it -- the
+        // davit's bottom rung sits 0.68 m over the monorail at most, under
+        // the swing's 0.75 m hand rise, so refusing the climb strands the
+        // leap (C1, touch_stack_upper).
         const Grip grip = find_grip(
             origin, origin + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach,
             facing_);
-        const bool swing_target = grip.valid && grip.level && !grip_backed_by_wall(grip);
+        const bool swing_target =
+            grip.valid && grip.level && !grip_backed_by_wall(grip) && !grip_has_rung_neighbor(grip, origin);
         if (grip.valid && !swing_target) {
             if (rising <= kHangApexSpeed ||
                 climb_move_clear(origin, origin + JPH::Vec3(0.0F, kClimbMoveAim, 0.0F))) {

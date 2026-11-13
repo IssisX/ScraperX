@@ -680,6 +680,12 @@ constexpr float kBarLevelSlope = 0.05F;
 // pipe on a wall): the climb keeps it. Further than this, the hold is a bar or
 // rail in open air, a swing target, not a climb.
 constexpr float kGripWallBehindM = 0.5F;
+// A ladder's rungs are this far apart: every ladder in the world spaces its
+// rungs 0.30 m apart. A level hold with a sibling hold a rung-spacing above or
+// below it is a rung, not a bar: the climb keeps it (J-043 red-fix). The bars
+// the hang is for stand alone -- the hang rail, and the pipe gallery's pipes
+// at 1.0 m apart.
+constexpr float kLadderRungSpacing = 0.30F;
 // Where a hand looks for a hold: a box this big (across, up, along the
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
