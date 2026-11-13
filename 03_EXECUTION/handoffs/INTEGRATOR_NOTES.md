@@ -9,7 +9,7 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- 11-13 RETHINK: #502 and #505 (this morning) stopped Muse landing; reverted on trunk (afff9d5f). Trunk = the working system
+- 11-13 RETHINK (Fable design pass running, Cory OK; no system change before its ranked list): #502 and #505 (this morning) stopped Muse landing; reverted on trunk (afff9d5f). Trunk = the working system
   of 11-12. Proof first: Muse's ready PRs merge (check trig_01WKR5tVQFRnuYnArbynyooB). Then fix slowness one small change at a
   time, each judged by landings; landings drop: undo. #510 closed (moot); #503 #506 #507 #511 #512 #515 parked as drafts, none
   lands unless it fixes a measured break. Muse paste on #504 only if #507 ever lands. J-044c ownership at game time.
