@@ -19,7 +19,7 @@ sys.path.insert(0, str(HERE))
 import ghapi  # noqa: E402
 import reconciler as R  # noqa: E402
 import switch  # noqa: E402
-from test_inbox import FakeGH, HEAD, make, run, steered  # noqa: E402
+from test_inbox import FakeGH, HEAD, later, make, run, steered  # noqa: E402
 
 NATIVE_LOG = """\
 2026-11-11T12:04:10.0000000Z ##[group]Run ctest --output-on-failure -L matron-slices-3
@@ -213,17 +213,17 @@ class RedTests(unittest.TestCase):
         self.assertEqual(make(gh).inbox([]), 1)
         self.assertEqual(make(gh).inbox([]), 0)
         gh.logs = {501: NATIVE_LOG}
-        self.assertEqual(make(gh).inbox([]), 1)
+        self.assertEqual(later(gh).inbox([]), 1)   # a later sweep: past the hold on the integrator's own work (11-13)
         reads = len(gh.log_reads)
-        self.assertEqual(make(gh).inbox([]), 0)
+        self.assertEqual(later(gh, 62).inbox([]), 0)
         self.assertEqual(len(gh.log_reads), reads, "listed with its tests: its log is not read again")
         (_, first), (_, second) = gh.posts
         self.assertIn("`native-tests (matron-slices-3): log unread`", first)
         self.assertIn(switch.READ_NOW, second)
         self.assertIn("`native-tests (matron-slices-3): FAIL: ammo hands", second)
-        keys = switch.INBOX_KEYS.findall(second)[0].split(",")
-        self.assertEqual(keys, [switch.inbox_key("RED-BRANCH" + switch.UNREAD_KEY, mine, HEAD),
-                                switch.inbox_key("RED-BRANCH", mine, HEAD)])
+        self.assertEqual(switch.INBOX_KEYS.findall(second), [])   # 11-13: the keys are the sweep state's ring
+        self.assertEqual(gh.state["inbox"]["keys"], [switch.inbox_key("RED-BRANCH" + switch.UNREAD_KEY, mine, HEAD),
+                                                     switch.inbox_key("RED-BRANCH", mine, HEAD)])
 
     def test_a_pr_red_notice_is_posted_again_once_when_its_logs_read(self):
         s = steered(ref=NAME, proof="red: native-tests (matron-slices-3)", committed="2026-11-06T19:30:00Z",

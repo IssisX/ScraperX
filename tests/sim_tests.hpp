@@ -912,6 +912,7 @@ bool climb_c3(scraperx::sim::Simulation &simulation);
 void run_stack();
 void run_wet_handling();
 void run_brachiation();
+void run_hang_rail();
 void run_pipe_gallery();
 void run_slide();
 void run_speed_vault();
