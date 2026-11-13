@@ -2583,10 +2583,11 @@
    "commands": [
     "6771165879:299",
     "6773022511:72",
-    "6788124672:51"
+    "6788124672:51",
+    "6855077345:27"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-12T17:17:00Z",
+   "deadline": null,
    "head": "1a5f74af252641c06a0f25120964b39a25662997",
    "issue": 122,
    "job": "J-015",
@@ -3286,7 +3287,12 @@
      "what": "`fb-bot/integrate-protected-j015-magnet-grips` @ a949f76f: closed #389 without merging at this head: reopen it, or delete the branch"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T15:23:06Z",
      "attempts": 1,
@@ -3380,7 +3386,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-12T21:45:56Z"
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-016": {
    "attempt": 0,
@@ -7808,10 +7814,11 @@
    "ci": "",
    "commands": [
     "6799551646:36",
-    "6804094873:60"
+    "6804094873:60",
+    "6855077345:43"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-12T17:17:00Z",
+   "deadline": null,
    "head": "0ceb010e3daee42a5cd918bd60b62a8577ca28c0",
    "issue": 293,
    "job": "J-054",
@@ -7946,7 +7953,12 @@
      "what": "`fb-bot/integrate-protected-j054` proof red: native-tests (matron-slices-3), native-tests (matron-slices-1), native-tests (athletic-traversal-2), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T15:17:56Z",
      "attempts": 1,
@@ -7979,7 +7991,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-12T15:45:44Z"
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-055": {
    "attempt": 0,
@@ -7987,9 +7999,13 @@
    "branches": {},
    "cancelled": null,
    "ci": "",
-   "commands": [],
+   "commands": [
+    "6855077345:59",
+    "6855077345:75",
+    "6855077345:91"
+   ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-12T16:17:00Z",
+   "deadline": null,
    "head": "",
    "issue": 294,
    "job": "J-055",
@@ -8053,7 +8069,12 @@
      "what": "ask from Muse on #294"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T14:38:08Z",
      "attempts": 1,
@@ -8078,7 +8099,12 @@
      "what": "ask from Muse on #294"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T14:38:12Z",
      "attempts": 1,
@@ -8103,7 +8129,12 @@
      "what": "ask from Muse on #294"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T14:53:08Z",
      "attempts": 1,
@@ -8136,7 +8167,7 @@
    "prs": [],
    "review": "",
    "state": "accepted",
-   "updated": "2026-11-12T21:45:56Z"
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-058": {
    "attempt": 0,
@@ -12003,7 +12034,7 @@
     "6823494496:36"
    ],
    "created": "2026-11-10T22:50:55Z",
-   "deadline": "2026-11-12T21:17:00Z",
+   "deadline": null,
    "head": "4a81dbcbf2287c7641ed1196bfeeda6efd3f179e",
    "issue": 392,
    "job": "J-077",
@@ -12130,7 +12161,11 @@
      "what": "ask from Muse on #392"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:09:43Z",
+      "by": "claude",
+      "how": "reply on its thread"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T18:22:52Z",
      "attempts": 1,
@@ -12155,7 +12190,11 @@
      "what": "ask from Muse on #392"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:09:43Z",
+      "by": "claude",
+      "how": "reply on its thread"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-13T03:47:48Z",
      "attempts": 1,
@@ -12188,7 +12227,7 @@
    "prs": [],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-13T04:24:31Z"
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-078": {
    "attempt": 2,
@@ -13697,9 +13736,12 @@
    "branches": {},
    "cancelled": null,
    "ci": "",
-   "commands": [],
+   "commands": [
+    "6855077345:107",
+    "6855077345:123"
+   ],
    "created": "2026-11-11T14:01:59Z",
-   "deadline": "2026-11-12T16:17:00Z",
+   "deadline": null,
    "head": "",
    "issue": 409,
    "job": "J-091",
@@ -13734,7 +13776,12 @@
      "what": "ask from Muse on #409"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T14:38:10Z",
      "attempts": 1,
@@ -13759,7 +13806,12 @@
      "what": "ask from Muse on #409"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:05Z",
+      "by": "Claude",
+      "comment": "6855077345",
+      "how": "/ack"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-12T14:42:48Z",
      "attempts": 1,
@@ -13792,7 +13844,7 @@
    "prs": [],
    "review": "",
    "state": "accepted",
-   "updated": "2026-11-12T15:45:44Z"
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-092": {
    "attempt": 1,
@@ -14727,16 +14779,23 @@
    "branches": {},
    "cancelled": null,
    "ci": "",
-   "commands": [],
+   "commands": [
+    "6855086954:91"
+   ],
    "created": "2026-11-11T17:16:05Z",
-   "deadline": "2026-11-12T16:17:00Z",
+   "deadline": null,
    "head": "",
    "issue": 419,
    "job": "J-101",
    "landed": {},
    "obligations": [
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T13:59:29Z",
+      "by": "Claude",
+      "comment": "6855086954",
+      "how": "/ack"
+     },
      "ack_rule": "work|reply|ack",
      "asked": null,
      "attempts": 2,
@@ -14761,15 +14820,15 @@
      "what": "start J-101"
     }
    ],
-   "outcome": null,
-   "outcome_reason": "",
+   "outcome": "merged",
+   "outcome_reason": "issue closed (completed)",
    "owner": "claude",
    "pr": 0,
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "blocked",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "merged",
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-102": {
    "attempt": 0,
@@ -14836,6 +14895,7 @@
    "attempt": 0,
    "blocked": null,
    "branches": {
+    "claude/integrate-digest-alone": "5251bbcbb6c1b6836586cf2a6fd646cbb1649239",
     "claude/integrate-j103": "620e4b4a3c830a7782b11af0f2e7531ee885e865"
    },
    "cancelled": null,
@@ -14844,9 +14904,14 @@
    "created": "2026-11-11T17:16:05Z",
    "deadline": null,
    "head": "",
-   "issue": 422,
+   "issue": 0,
    "job": "J-103",
    "landed": {
+    "claude/integrate-digest-alone": [
+     "5251bbcbb6c1b6836586cf2a6fd646cbb1649239",
+     "merged #498",
+     "2026-11-13T14:33:47Z"
+    ],
     "claude/integrate-j103": [
      "620e4b4a3c830a7782b11af0f2e7531ee885e865",
      "in trunk",
@@ -14855,14 +14920,23 @@
    },
    "obligations": [],
    "outcome": "merged",
-   "outcome_reason": "claude/integrate-j103: in trunk",
+   "outcome_reason": "claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk",
    "owner": "claude",
+   "past": [
+    {
+     "at": "2026-11-11T18:18:52Z",
+     "issue": 422,
+     "outcome": "merged",
+     "prs": [],
+     "why": "claude/integrate-j103: in trunk"
+    }
+   ],
    "pr": 0,
    "pr_done": "",
    "prs": [],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-11T18:18:52Z"
+   "updated": "2026-11-13T14:33:47Z"
   },
   "J-104": {
    "attempt": 0,
@@ -16888,8 +16962,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "working",
+   "updated": "2026-11-13T14:33:47Z"
   }
  }
 }

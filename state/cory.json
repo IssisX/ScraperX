@@ -241,9 +241,18 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (5), from the switchboard at 11-12 11:33 PM Central.\n\n- Needs you: J-014 ask on #121: ask from Muse on #121. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-e7eb5cd4\n- Needs you: J-040 ask on #228: ask from Muse on #228. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-d0f4c694\n- Needs you: J-059 ask on #307: ask from Muse on #307. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-b8f61f52\n- Needs you: J-078 ask on #393: ask from Muse on #393. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-ca42650d\n- Needs you: J-080 ask on #398: ask from Muse on #398. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-e45394be\n\nStill standing from earlier batches: 19 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-13T14:33:47Z",
+   "keys": [
+    "claude-asks:2026-11-13",
+    "gap:2026-11-13T12:53:47Z"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (2), from the switchboard at 11-13 8:33 AM Central.\n\n- Needs you: 32 ask(s) to Claude from before today have no reply on their threads (answered by mail?): O-0f17ee95 O-7042d24d O-e7eb5cd4 O-d0f4c694 O-b8f61f52 O-ca42650d O-e45394be O-2b93245e O-66ffcec8 O-bfc814c0 O-335b9b32 O-4873e509 O-8e163134 O-b3b69b1c O-a2ebf6e7 O-dbf18e09 O-89dce027 O-42a54029 O-0fcf0b49 O-7dfe0855 (+12 more). The integrator posts each answer on its thread or /acks it; none of these is nagged one by one.\n- Needs you: PIPE: no switchboard pass from 11-13 6:53 AM to 11-13 8:33 AM Central (100 min; the full pass runs hourly). The switchboard's full pass is not running; since 11-13 6:53 AM Central.\n\nStill standing from earlier batches: 8 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-13T05:33:57Z",
+ "last_batch": "2026-11-13T14:33:47Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
@@ -327,7 +336,9 @@
   "claude-asks:2026-11-09": "2026-11-09T20:56:16Z",
   "claude-asks:2026-11-10": "2026-11-10T15:09:20Z",
   "claude-asks:2026-11-11": "2026-11-11T15:02:17Z",
+  "claude-asks:2026-11-13": "2026-11-13T14:33:47Z",
   "gap:2026-11-09T21:19:08Z": "2026-11-09T22:19:23Z",
-  "gap:2026-11-11T19:28:50Z": "2026-11-11T21:07:56Z"
+  "gap:2026-11-11T19:28:50Z": "2026-11-11T21:07:56Z",
+  "gap:2026-11-13T12:53:47Z": "2026-11-13T14:33:47Z"
  }
 }

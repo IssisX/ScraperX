@@ -14,10 +14,11 @@
  "commands": [
   "6771165879:299",
   "6773022511:72",
-  "6788124672:51"
+  "6788124672:51",
+  "6855077345:27"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-12T17:17:00Z",
+ "deadline": null,
  "head": "1a5f74af252641c06a0f25120964b39a25662997",
  "issue": 122,
  "job": "J-015",
@@ -717,7 +718,12 @@
    "what": "`fb-bot/integrate-protected-j015-magnet-grips` @ a949f76f: closed #389 without merging at this head: reopen it, or delete the branch"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T13:59:05Z",
+    "by": "Claude",
+    "comment": "6855077345",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T15:23:06Z",
    "attempts": 1,
@@ -811,5 +817,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-12T21:45:56Z"
+ "updated": "2026-11-13T14:33:47Z"
 }

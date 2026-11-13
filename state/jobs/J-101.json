@@ -9,16 +9,23 @@
  "branches": {},
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6855086954:91"
+ ],
  "created": "2026-11-11T17:16:05Z",
- "deadline": "2026-11-12T16:17:00Z",
+ "deadline": null,
  "head": "",
  "issue": 419,
  "job": "J-101",
  "landed": {},
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T13:59:29Z",
+    "by": "Claude",
+    "comment": "6855086954",
+    "how": "/ack"
+   },
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -43,13 +50,13 @@
    "what": "start J-101"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "issue closed (completed)",
  "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "blocked",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "merged",
+ "updated": "2026-11-13T14:33:47Z"
 }

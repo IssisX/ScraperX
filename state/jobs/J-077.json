@@ -10,7 +10,7 @@
   "6823494496:36"
  ],
  "created": "2026-11-10T22:50:55Z",
- "deadline": "2026-11-12T21:17:00Z",
+ "deadline": null,
  "head": "4a81dbcbf2287c7641ed1196bfeeda6efd3f179e",
  "issue": 392,
  "job": "J-077",
@@ -137,7 +137,11 @@
    "what": "ask from Muse on #392"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T13:09:43Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T18:22:52Z",
    "attempts": 1,
@@ -162,7 +166,11 @@
    "what": "ask from Muse on #392"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T13:09:43Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T03:47:48Z",
    "attempts": 1,
@@ -195,5 +203,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-13T04:24:31Z"
+ "updated": "2026-11-13T14:33:47Z"
 }

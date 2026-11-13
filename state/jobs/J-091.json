@@ -4,9 +4,12 @@
  "branches": {},
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6855077345:107",
+  "6855077345:123"
+ ],
  "created": "2026-11-11T14:01:59Z",
- "deadline": "2026-11-12T16:17:00Z",
+ "deadline": null,
  "head": "",
  "issue": 409,
  "job": "J-091",
@@ -41,7 +44,12 @@
    "what": "ask from Muse on #409"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T13:59:05Z",
+    "by": "Claude",
+    "comment": "6855077345",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:38:10Z",
    "attempts": 1,
@@ -66,7 +74,12 @@
    "what": "ask from Muse on #409"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T13:59:05Z",
+    "by": "Claude",
+    "comment": "6855077345",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:42:48Z",
    "attempts": 1,
@@ -99,5 +112,5 @@
  "prs": [],
  "review": "",
  "state": "accepted",
- "updated": "2026-11-12T15:45:44Z"
+ "updated": "2026-11-13T14:33:47Z"
 }

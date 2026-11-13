@@ -2616,3 +2616,24 @@
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T10:44:41Z", "tries": 1}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T11:53:43Z", "tries": 1}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T12:53:47Z", "tries": 1}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-5f8a401c", "job": "J-015", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-113f7724", "job": "J-054", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-d27a4a0a", "job": "J-055", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-ebd5c0bd", "job": "J-055", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-c13609bc", "job": "J-055", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-f56a0784", "job": "J-091", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-cc58764e", "job": "J-091", "t": "2026-11-13T14:33:47Z"}
+{"by": "Claude", "ev": "acked", "how": "/ack", "id": "O-79a9997a", "job": "J-101", "t": "2026-11-13T14:33:47Z"}
+{"ev": "outcome", "job": "J-101", "outcome": "merged", "t": "2026-11-13T14:33:47Z", "why": "issue closed (completed)"}
+{"ev": "job_reopened", "job": "J-103", "t": "2026-11-13T14:33:47Z", "was": "merged", "why": "claude/integrate-j103: in trunk"}
+{"branch": "claude/integrate-digest-alone", "ev": "landed", "how": "merged #498", "job": "J-103", "sha": "5251bbcbb6c1b6836586cf2a6fd646cbb1649239", "t": "2026-11-13T14:33:47Z"}
+{"ev": "outcome", "job": "J-103", "outcome": "merged", "t": "2026-11-13T14:33:47Z", "why": "claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-bec95aec", "job": "J-077", "t": "2026-11-13T14:33:47Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-d92d8612", "job": "J-077", "t": "2026-11-13T14:33:47Z"}
+{"ev": "state", "frm": "blocked", "job": "J-101", "t": "2026-11-13T14:33:47Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-137", "t": "2026-11-13T14:33:47Z", "to": "working"}
+{"ev": "unmatched", "ident": "PR|#502", "job": "", "t": "2026-11-13T14:33:47Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#501", "job": "", "t": "2026-11-13T14:33:47Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#500", "job": "", "t": "2026-11-13T14:33:47Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "needs_you", "job": "", "keys": ["claude-asks:2026-11-13", "gap:2026-11-13T12:53:47Z"], "n": 2, "t": "2026-11-13T14:33:47Z"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T14:33:47Z", "tries": 1}
