@@ -9,9 +9,9 @@ Read through: 1794599051 (2026-11-13 mail+asks)
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
-  done = the real test passing. NOW: switchboard out of GitHub calls ~19:30Z; reads fix (xhigh helper, -switchboard-reads). Step 5 built
-  (3f005b57, no PR): open it alone after #527-9 merge; steps 7, 8 (on step1 branch), 10 building in parallel (helper-high); 9 after #527, 6 after 5. Steps 1-4 are PRs #526-#529 (#527 watch: empty-diff PR from a trunk-merge-only head); after #526
-  watch #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 proofs re-run).
+  done = the real test passing. NOW: 2-4 landed (19:47Z). #526 Codex LAND, merges next sweep; #530 (5) #531 (8) open, 7/9/10 auto-open; 6 after
+  #530+#526, cut from trunk, brief it with the reads fix's touches; reads fix (xhigh) running. REAL TEST = plan sec 5 table read
+  over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 proofs re-run).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
