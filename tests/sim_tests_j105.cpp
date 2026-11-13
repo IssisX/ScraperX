@@ -205,6 +205,6 @@ void run_j105_leg_spiral() {
               << "to top (" << gw << " points), he walks it in " << h_seconds << " s\n";
 }
 
-SCRAPERX_GROUP("j105_leg_spiral", 1090, run_j105_leg_spiral);
+SCRAPERX_GROUP("j105_leg_spiral", 1095, run_j105_leg_spiral);
 SCRAPERX_SELECT("J-105", run_j105_leg_spiral);
 SCRAPERX_SLICE("j105-leg-spiral", run_j105_leg_spiral);
