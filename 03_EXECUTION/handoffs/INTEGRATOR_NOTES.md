@@ -15,9 +15,8 @@ Read through: 1794492989 (2026-11-11 last quiet run)
   red (protected; agent-a169bc3f55f0e7fef; next fail -> "Argon?" prompt to Cory, then Fable), J-137 #474 fix on claude/integrate-j137
   (pin was a test freeze; Muse merges trunk into J-118 after it lands; agent-a1d4035b049d06e9f), J-044c gains tune.
 - Open with Muse: J-053 swing bar up <=0.2 m (else Cory's game call); J-077 gate fix; J-059 gap-89 (protected); J-078 #396 FIX nudged; J-044c held.
-- Session wiring: a session made by another session hits the depth limit (no scheduled tasks, no send_later). Old session's
-  overview + both checks PAUSED, not deleted; PAT reminder on; the last session left the #282 inbox, paused. Cory starts a fresh
-  integrator from the app after the reset; it recreates all four on itself and deletes the old ones.
+- Session wiring (11-13): this session (made from the app) is the integrator; it holds the overview, both checks and the PAT
+  reminder. The old session's copies are paused, not deleted (deleting a task can delete sessions it touched).
 - Fable low fixed named causes right first try (J-106, J-015). Fable designs, Opus builds from a finished design (Cory 11-12).
 
 ## Traps
