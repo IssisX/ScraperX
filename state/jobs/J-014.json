@@ -4,7 +4,7 @@
  "branches": {
   "fb-bot/integrate-j014-stock-above-396": "c5f783a88a72b8e9ab6a1f950e228b58468d531b",
   "fb-bot/integrate-protected-j014": "2cbb1481a508a3099caf94835fb92bf36c7eb4a6",
-  "fb-bot/integrate-protected-j014-eguard": "0268bdf0a50ec3ce15707612a03a8177054a5e7a",
+  "fb-bot/integrate-protected-j014-eguard": "5954c264413562d495d6d2e3cc779a0d3c24bb64",
   "fb-bot/integrate-protected-j014-stock-above-396": "b481cb51c73aac61d990e9db46b8cee0e7fa98aa"
  },
  "cancelled": null,
@@ -12,7 +12,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "5954c264413562d495d6d2e3cc779a0d3c24bb64",
+ "head": "a9c3143786ba994872cb8e8aa6c7b2b61e69885e",
  "issue": 121,
  "job": "J-014",
  "landed": {
@@ -27,9 +27,9 @@
    "2026-11-12T16:58:14Z"
   ],
   "fb-bot/integrate-protected-j014-eguard": [
-   "0268bdf0a50ec3ce15707612a03a8177054a5e7a",
-   "",
-   "2026-11-12T19:27:38Z"
+   "5954c264413562d495d6d2e3cc779a0d3c24bb64",
+   "closed #492",
+   "2026-11-13T16:59:50Z"
   ],
   "fb-bot/integrate-protected-j014-stock-above-396": [
    "b481cb51c73aac61d990e9db46b8cee0e7fa98aa",
@@ -389,7 +389,7 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 492,
+ "pr": 491,
  "pr_done": "",
  "prs": [
   492,
@@ -397,5 +397,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-13T15:53:29Z"
+ "updated": "2026-11-13T16:59:50Z"
 }
