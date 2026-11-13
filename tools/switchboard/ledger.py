@@ -56,6 +56,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "board"))
 
 import asks  # noqa: E402  tools/board/asks.py: what counts as an ask and as its answer
+import muse_git  # noqa: E402  Muse's git channel: its two branches are system branches, never lanes
 import rules  # noqa: E402
 
 LIVE = dt.timedelta(days=3)            # a branch pushed this recently is live; asks are read this far back
@@ -1033,6 +1034,7 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
     notice keys found in the switchboard's own recent comments. With the roster, the asks are judged as the
     reconciler judges them (ask_judge): by job thread, by agent, and by the reconciler's own id for each ask."""
     gh, repo = sw.gh, sw.gh.repo
+    system_branches = frozenset(system_branches) | muse_git.BRANCHES
     problems: list[str] = []
     since_live, since_touch = now - LIVE, now - TOUCH_WINDOW
 

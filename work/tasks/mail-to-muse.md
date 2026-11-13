@@ -28,6 +28,9 @@ the same hour.
    markers and backticks, adds no link, and opens with the Central time and who sent it; the ledger's mail
    names branches plainly and gives no order. The GitHub comment keeps its marker (the ledger dedupes by it).
 
+The git channel's inbox files (`muse-inbox`, trial 11-13) get the same shaping (`muse_git.py` shaped): no hidden
+marker, backtick or link, and who sent it first. A refused file is reported and rewritten the same way.
+
 ## Every mail
 - Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line `From Claude (integrator).` and no time:
   Gmail stamps every mail, and a typed time was wrong three times on 11-11. No clock time anywhere in a mail;

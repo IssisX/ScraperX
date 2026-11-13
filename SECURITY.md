@@ -74,6 +74,20 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   input at the level of `job` and `wake:muse`: whoever can label an issue can move where alarms, Muse's
   unaddressed mail and the board's verdicts are read and written.
 
+### Muse git channel (`.github/workflows/muse-git.yml`, `tools/switchboard/muse_git.py`)
+- `MUSE_POST_TOKEN` (a fine-grained token of the team login, this repository only, Issues: read and write only)
+  lives only in environment `switchboard-merge` and reaches only the `relay` step, which `muse_git.py` sends it from
+  only on its comment POST and one `GET /user`; it is taken out of the environment before any git process runs. Any
+  other job or step that reads it is P0.
+- Only trunk's file and code run (`workflow_run`, `schedule`, a dispatch on trunk), never `on: push` of a message
+  branch, whose own workflow copy would run. `fb-bot/mail` and `muse-inbox` are read with `git fetch` and
+  `cat-file` into a bare repo, never checked out or run.
+- A message file is posted as data: its first line is fixed (`**Muse (via email bridge): <subject>**`, as the mail
+  bridge's), mentions, `<!--` and Claude's footer are cut, it is size-bounded, and it cannot choose the repo or any
+  path beyond the one comments endpoint. Its other lines are Muse's words, as a mailed one's are: whoever can push
+  `fb-bot/mail` can say what the team login can. Message text that can carry a hidden marker or another first line
+  is P1. The `inbox` job holds only `github.token` (`contents: write`) and pushes `muse-inbox` alone.
+
 ### Downloaded code
 - Anything that downloads and runs code (toolchains, Godot, NDK, `pip install`, `npm`, scripts fetched
   with `curl`) pins a version and, where the source publishes one, a checksum or lock hash

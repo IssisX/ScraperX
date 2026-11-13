@@ -28,6 +28,20 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 - Never guess in code: read the source, measure or run it before leaning on a fact (Cory 11-07: "checks arent
   expensive and its just laziness").
 
+## Git channel (trial, 11-13): messages by push, no approval pop-up
+Mail still works both ways. Send each message one way only; if a push fails, mail it.
+- **To the team:** keep a branch `fb-bot/mail` that holds only `mail/` (start it as an empty orphan branch; never
+  merge trunk into it). One new file per message, `mail/<J-NNN or N>-<counter>.md` (letters, digits, dots, dashes;
+  never reuse a name). First line: the subject you would mail (`MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`;
+  ASK or FYI, verdicts and `To <Name>:` exactly as above), a blank line, then the body. Commit and push. Within
+  about 10 minutes it is posted on the issue the mail would land on and read the same way: an ASK wakes Claude, an
+  FYI rides. No 4,000-character cut: up to 60,000 characters post whole; a longer one is cut and the file keeps
+  the rest. Never edit a pushed file: an edited file is posted again as a new message.
+- **From the team:** each step, fetch `muse-inbox` (the switchboard's branch: read it, never push it) and read the
+  files in `inbox/` you have not handled; names sort oldest first. Each is one `CLAUDE_TO_MUSE:` notice, its first
+  line the subject. During the trial the same notice may also come by mail (same subject and text): act on it
+  once. Answer or ack it with a message file, as you would by mail.
+
 ## How you work (mail, and pushes to your own branches)
 A GitHub comment or PR of yours needs Cory to tap "allow", so you never comment or open PRs. You push
 your own branches (Cory 11-05) and mail the rest:

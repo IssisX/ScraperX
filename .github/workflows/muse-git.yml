@@ -1,0 +1,98 @@
+name: Muse git channel
+# Muse's messages through git, beside the mail bridge (trial, 11-13): tools/switchboard/muse_git.py says why and how.
+#   relay  Muse's new files on fb-bot/mail become comments, once each, under the team login (MUSE_POST_TOKEN).
+#   inbox  New CLAUDE_TO_MUSE notices become files on muse-inbox, the switchboard's branch that Muse fetches.
+# Not `on: push` of fb-bot/mail: a push runs the workflow file of the pushed commit, and that branch holds only
+# messages, so trunk's code would never run; and a branch's own copy of a workflow must never post as the team.
+# Both branches are read with git (a public fetch), never checked out: their files are data, never run.
+run-name: ${{ format('Muse git channel ({0})', github.event_name) }}
+
+on:
+  workflow_run:
+    # After each switchboard sweep: the bridge's clock dispatches one every 10 min, the clock GitHub's schedule is not.
+    # workflow_run runs this file and the code below from the default branch, trunk, whatever run woke it.
+    workflows: [Switchboard]
+    types: [completed]
+  schedule:
+    - cron: "6,26,46 * * * *"   # a second clock, for when the sweeps stop
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  TRUNK: ScraperX-Claude
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  relay:
+    # Only trunk's copy runs (a dispatch on another ref is skipped, and the environment refuses it the secret), and
+    # only after a full sweep: the switchboard also runs on every comment, several a minute.
+    if: >-
+      github.ref == 'refs/heads/ScraperX-Claude' && (github.event_name != 'workflow_run' ||
+      startsWith(github.event.workflow_run.display_title, 'Switchboard sweep'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # MUSE_POST_TOKEN lives only in this environment, which deploys only from ScraperX-Claude (SECURITY.md).
+    environment: switchboard-merge
+    # Job-level, so a skipped run never displaces a pending one; a newer pending run replaces an older (each run
+    # handles everything new, so nothing is lost).
+    concurrency:
+      group: muse-git-relay
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: read          # the target issue, its comments (the duplicate check), the job and board listings
+      pull-requests: read   # a PR named in a subject: its Job: line
+    outputs:
+      posted: ${{ steps.relay.outputs.posted }}
+    steps:
+      - name: Check out trunk's code
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone -q --depth=1 --branch "$TRUNK" --single-branch "https://github.com/${REPO}.git" src
+      - name: Post Muse's new messages
+        id: relay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # A fine-grained token of the team login, this repository only, Issues: read and write only (as the mail
+          # bridge's GITHUB_TOKEN). This step and no other; muse_git.py sends it only on its comment POST and one
+          # GET /user, and takes it out of the environment first, so no git child process inherits it.
+          MUSE_POST_TOKEN: ${{ secrets.MUSE_POST_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python3 src/tools/switchboard/muse_git.py relay --git-dir "$RUNNER_TEMP/data.git" --output "$GITHUB_OUTPUT"
+
+  inbox:
+    needs: relay
+    if: >-
+      always() && github.ref == 'refs/heads/ScraperX-Claude' && (github.event_name != 'workflow_run' ||
+      startsWith(github.event.workflow_run.display_title, 'Switchboard sweep'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: muse-git-inbox
+      cancel-in-progress: false
+    permissions:
+      contents: write       # push muse-inbox (only that branch: muse_git.py pushes nothing else)
+      issues: read          # the CLAUDE_TO_MUSE notices
+      pull-requests: read
+    steps:
+      - name: Check out trunk's code
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone -q --depth=1 --branch "$TRUNK" --single-branch "https://github.com/${REPO}.git" src
+      - name: Write the new notices and the posted keys to muse-inbox
+        env:
+          GH_TOKEN: ${{ github.token }}
+          POSTED: ${{ needs.relay.outputs.posted }}   # decimal keys muse_git.py wrote; it keeps digits only
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+          python3 src/tools/switchboard/muse_git.py inbox --git-dir "$RUNNER_TEMP/data.git" --posted "$POSTED"
