@@ -160,6 +160,9 @@ class MergeSkew(unittest.TestCase):
         import test_cache_trust as tc
         real = tc.github([tc.codex_clean()], "success")
         real[f"repos/{tc.REPO}/compare/{tc.HEAD}...{TRUNK}"] = compare
+        # the head's own change, as #483's: game code (a head that changes none has no skew: test_merge_candidate)
+        real[f"repos/{tc.REPO}/compare/{TRUNK}...{tc.HEAD}"] = dict(self.ahead("tests/sim_tests_ammo.cpp"),
+                                                                    status="diverged")
         steered, writes, _ = tc.sweep_one(real, {})
         s = steered[-1]
         return s.decision.action, any(path.endswith("/pulls/9/merge") for _, path in writes), s.decision.reasons
