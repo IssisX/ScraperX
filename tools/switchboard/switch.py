@@ -1406,29 +1406,33 @@ class Switch:
         return ""
 
     # ---------- auto-open (J-047) ----------
-    def prior_pr(self, branch: str) -> bool:
-        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch. A yes never turns
-        into a no, so it is kept in the sweep state (J-072: a PR listing answers 200 even with its ETag, so the warm
-        full pass spent 45 of its 72 counted calls asking again about branches that had a PR long ago)."""
+    def prior_pr(self, branch: str, sha: str) -> bool:
+        """Has this head of this branch ever been a PR's head (open, closed or merged)? The head filter names the
+        branch; a PR counts only at its own head, so a branch reused past a merged or closed PR gets a new one
+        (SYSTEM_PLAN item 2). A yes never turns into a no, so it is kept in the sweep state as "branch@sha" (J-072:
+        a PR listing answers 200 even with its ETag, so the warm full pass spent 45 of its 72 counted calls asking
+        again about branches that had a PR long ago)."""
         state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
         known = state.setdefault("prior_pr", [])
-        if branch in known:
+        key = f"{branch}@{sha}"
+        if key in known:
             return True
         owner = self.gh.repo.split("/")[0]
-        had = bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
+        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+        had = any((p.get("head") or {}).get("sha") == sha for p in prs or [])
         if had:
-            known.append(branch)
+            known.append(key)
         return had
 
-    def open_pr(self, branch: str, sha: str, job: str, message: str) -> str:
-        """Open the PR for a finished branch: title is the commit subject, body starts with the Job line.
-        Returns "" when opened (or in a dry run), else why not."""
+    def open_pr(self, branch: str, sha: str, job: str, message: str, title: str = "") -> str:
+        """Open the PR for a finished branch: title is `title`, else the commit subject; body starts with the Job
+        line. Returns "" when opened (or in a dry run), else why not."""
         subject, _, rest = message.partition("\n")
         body = f"Job: {job}\n\nOpened by the switchboard from {branch} @ {sha}"
         if rest.strip():
             body += f"\n\n{rest.strip()}"
         got = self.gh.write("POST", f"repos/{self.gh.repo}/pulls",
-                            {"title": subject, "head": branch, "base": rules.TRUNK, "body": body},
+                            {"title": title or subject, "head": branch, "base": rules.TRUNK, "body": body},
                             f"open PR for {branch} @{sha[:8]} (job {job})")
         if self.gh.dry_run:
             self.out(f"DRY  open PR for {branch} @{sha[:8]} (job {job})")
@@ -1454,13 +1458,16 @@ class Switch:
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
-        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* branches with no PR yet (J-047).
+        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* heads with no PR yet (J-047).
 
-        A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
-        that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
-        whose head already had a PR (open, closed or merged) is never opened again. Every failure on a
-        branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops this
-        sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
+        SYSTEM_PLAN item 2: the job is the head commit's `Job: J-NNN` line, else the branch name's
+        (plan.job_of_branch); a head whose subject starts "Merge" is titled "J-NNN: <the plan line's title>". A head
+        opens when the proof on it is green, the plan has a line for its job, the line has no `hold:`, the plan does
+        not list the head as `kept`, and no PR ever had this head (a branch past its merged or closed PR opens
+        again). A held job or a kept head opens nothing. A green head with no job, or a job the plan has no line
+        for, is one AUTO-PR-FAILED item per head. At most MAX_AUTO_PRS per sweep, in branch-name order. Every
+        failure on a branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops
+        this sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
         # 11-12: 647 branches, and paged() stops at 500 without saying so, so a finished branch past it never got
@@ -1468,12 +1475,20 @@ class Switch:
         # it always read: the rebuild changes nothing the live switch does while it is in shadow.
         path = f"repos/{self.gh.repo}/branches"
         listed = collab_plan.whole(self.gh, path) if self.plan_mode() == "live" else self.gh.paged(path)
-        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
-            alive = {b["name"] for b in listed}
-            self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget heads gone or moved
+            current = {f"{b['name']}@{b['commit']['sha']}" for b in listed}
+            state["prior_pr"] = [k for k in state.get("prior_pr") or [] if k in current]
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
+        model = self.read_plan()
+        lines = model.by_job()
+        kept = {(ref, ksha) for ln in model.lines for ref, ksha in ln.kept}
+        # a no-plan-job item is made once per head: until the inbox lists it (its ring, inbox_box), not just once made,
+        # so a sweep whose inbox never ran (a fast or quiet one) loses nothing
+        box = state.get("inbox") if isinstance(state.get("inbox"), dict) else {}
+        listed_keys = {k for k in box.get("keys") or [] if isinstance(k, str)}
         open_refs = {p["head"]["ref"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
         opened = 0
         for b in sorted(branches, key=lambda x: x["name"]):
@@ -1482,19 +1497,42 @@ class Switch:
             branch, sha, job = b["name"], b["commit"]["sha"], ""
             if branch in open_refs:
                 continue
+            key = f"{branch}@{sha}"
             try:
-                if self.prior_pr(branch):
+                if key in (state.get("prior_pr") or []):
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
+                if any(ref == branch and sha.startswith(ksha) for ref, ksha in kept):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: the plan keeps this head as a record")
+                    continue
                 message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
-                job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
-                if not job:
+                job = rules.job_of_pr(message) or collab_plan.job_of_branch(branch)   # the Job: line, else the name
+                line = lines.get(collab_plan.plan_job(job, lines)) if job else None
+                if line is None and inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                    continue
+                if line is not None and line.hold:
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): the plan holds {line.job}")
+                    continue
+                if self.prior_pr(branch, sha):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
                 proof, url, _, _ = self.proof(sha)
                 if proof != "green":
-                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): proof is {proof}")
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job or 'no job'}): proof is {proof}")
                     continue
-                why = self.open_pr(branch, sha, job, message)
+                if line is None:
+                    why = (f"{job} has no line in work/plan.md" if job else
+                           "its head commit has no `Job: J-NNN` line and its name no job")
+                    self.out(f"NOTE  {branch} @{sha[:8]} is green with no PR: {why}; nothing opened")
+                    where = f"{untrusted(branch)} head {sha[:8]}" + (f", {job}" if job else "")
+                    self.auto_pr_failed += (InboxItem(
+                        "AUTO-PR-FAILED", branch, sha,
+                        f"AUTO-PR-FAILED {where}: green with no PR, and {why}, so the switch opens none. The "
+                        f"integrator gives the job a plan line (the next sweep opens it) or opens the PR by hand."),)
+                    continue
+                subject = message.partition("\n")[0]
+                why = self.open_pr(branch, sha, job, message,
+                                   f"{job}: {line.title}" if subject.startswith("Merge") else "")
                 if why:
                     self.auto_pr_failure(branch, sha, job, why)
                     continue
