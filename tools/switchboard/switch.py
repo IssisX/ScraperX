@@ -99,7 +99,7 @@ MAX_DIFF_CHARS = 400_000
 MAX_ARTIFACT_BYTES = 60_000_000
 MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
-MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
+MAX_AUTO_PRS = 10                  # PRs the auto-open opens in one sweep (J-047): Muse's lane limit (SYSTEM_PLAN 9)
 # The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
 # helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
 AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")

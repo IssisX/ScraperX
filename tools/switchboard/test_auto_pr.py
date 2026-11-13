@@ -361,22 +361,22 @@ class AutoOpen(unittest.TestCase):
         self.assertEqual(make(gh).auto_open_prs(), 0)
         self.assertEqual(gh.writes, [])
 
-    def test_cap_of_3_holds_in_branch_name_order(self):
+    def test_eleven_finished_branches_open_ten_in_branch_name_order(self):
+        # SYSTEM_PLAN item 9: the cap is Muse's lane limit, so a backlog of 10 clears in one pass; the 11th waits
+        jobs = (1, 2, 3, 4, 5, 21, 42, 44, 47, 48, 51)   # each has its plan line
+        names = [f"fb-bot/integrate-j{job:03d}-work" for job in reversed(jobs)]   # listed out of name order
         branches, commits, runs = [], {}, {}
-        for n, name in enumerate(["fb-bot/integrate-j044c-wreck", "fb-bot/integrate-j042-windup",
-                                  "fb-bot/integrate-j048-no-run-hurt", "fb-bot/integrate-95-plant-fix",
-                                  "fb-bot/integrate-j044l"], start=1):
+        for n, (name, job) in enumerate(zip(names, reversed(jobs)), start=1):
             head = sha(n)
             branches.append(branch(name, n))
-            commits[head] = f"Work {n}\n\nJob: J-{n:03d}"
+            commits[head] = f"Work {n}\n\nJob: J-{job:03d}"
             runs[head] = [green_run(head)]
         gh = FakeGH(branches=branches, commits=commits, runs=runs, jobs={7: GREEN_JOBS})
         sw = make(gh)
-        self.assertEqual(sw.auto_open_prs(), 3)
-        self.assertEqual(len(gh.writes), 3)
-        self.assertEqual([w[2]["head"] for w in gh.writes],
-                         ["fb-bot/integrate-95-plant-fix", "fb-bot/integrate-j042-windup",
-                          "fb-bot/integrate-j044c-wreck"])
+        self.assertEqual(sw.auto_open_prs(), 10)
+        self.assertEqual(len(gh.writes), 10)
+        self.assertEqual([w[2]["head"] for w in gh.writes], sorted(names)[:10])
+        self.assertNotIn("fb-bot/integrate-j051-work", [w[2]["head"] for w in gh.writes])
 
     def test_commit_body_is_kept_verbatim_even_when_it_is_only_the_job_line(self):
         gh, head = green_setup()
