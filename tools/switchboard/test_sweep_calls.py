@@ -89,16 +89,9 @@ class CountingGH(test_inbox.FakeGH):
         return super().write(method, path, body, what)
 
 
-def no_ledger(*args, **kw):
-    """The ledger's own reading is tested in test_ledger; here it is a part that succeeds and keeps no timer."""
-    return type("Led", (), {"pending": []})()
-
-
-def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None, ledger_notifies=True, plan_mode="off"):
-    """One sweep. `ledger_notifies` is what work/switchboard.yml says (reconciler.ledger_notifies): True is the
-    ledger sending its own notices (no `notices: v2`), which the clock tests below are about. `plan_mode` likewise
-    (work/switchboard.yml `plan`): off, since the plan part has its own sweep tests (test_plan_sweep)."""
-    from unittest import mock
+def sweep(gh, state=None, now=NOW, whole=None, plan_mode="off"):
+    """One sweep. `plan_mode` is what work/switchboard.yml says (`plan`): off, since the plan part has its own sweep
+    tests (test_plan_sweep)."""
     sw = test_inbox.make(gh, now)
     sw.root = HERE.parents[1]
     sw.merge_token = sw.review_key = ""
@@ -112,9 +105,7 @@ def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None, ledger_notifies
     read = []
     real = sw.pr_facts
     sw.pr_facts = lambda p: (read.append(p["number"]), real(p))[1]
-    with mock.patch("ledger.sweep", side_effect=ledger), \
-            mock.patch("reconciler.ledger_notifies", return_value=ledger_notifies):
-        status = switch.run_sweep(sw, args, now)
+    status = switch.run_sweep(sw, args, now)
     return status, read, sw
 
 
@@ -289,52 +280,16 @@ class Clocks(unittest.TestCase):
                          NOW - dt.timedelta(hours=4, minutes=minutes_ago), dt.timedelta(hours=4), "v1", thread)
         return ledger, it, {"at": iso(NOW - dt.timedelta(minutes=minutes_ago)), "item": ledger.item_json(it)}
 
-    def test_a_ledger_deadline_is_sent_on_a_fast_sweep_with_no_read(self):
-        ledger, it, timer = self.ledger_timer()
-        state = last_state(self.prs)
-        state["timers"]["ledger"] = [timer]
-        gh = CountingGH(self.prs, dry_run=False)
-        sweep(gh, state)
-        (number, body), = gh.posts
-        self.assertEqual(number, 290)
-        self.assertTrue(body.startswith("To Builder:"), body)
-        self.assertIn(it.key(1), body)                                       # its marker: the full pass sees it sent
-        self.assertEqual(len(gh.calls), IDLE + 1, gh.calls)                 # the post, and no read
-        left, = gh.state["steer"]["timers"]["ledger"]                        # it waits for stage 2 now
-        self.assertEqual(left["at"], iso(it.clock + 2 * it.deadline))
-
-    def test_notices_v2_a_ripe_ledger_deadline_posts_nothing_and_its_clock_is_dropped(self):
-        # J-072: the reconciler owns notices (`notices: v2`): a ledger timer the cache still holds is not fired
+    def test_a_ripe_ledger_deadline_an_old_cache_holds_posts_nothing_and_its_clock_is_dropped(self):
+        # D2: the ledger left the sweep; a ledger timer the cache still holds is never fired, and it is dropped
         _, _, timer = self.ledger_timer()
         state = last_state(self.prs)
         state["timers"]["ledger"] = [timer]
         gh = CountingGH(self.prs, dry_run=False)
-        sweep(gh, state, ledger_notifies=False)
+        sweep(gh, state)
         self.assertEqual(gh.posts, [])
         self.assertEqual(len(gh.calls), IDLE, gh.calls)
-        self.assertEqual(gh.state["steer"]["timers"]["ledger"], [])
-
-    def test_notices_v2_the_full_pass_tells_the_ledger_not_to_notify(self):
-        from unittest import mock
-        for notifies in (True, False):
-            full = mock.Mock(side_effect=no_ledger)
-            sweep(CountingGH(self.prs), None, ledger=full, ledger_notifies=notifies)
-            full.assert_called_once()
-            self.assertIs(full.call_args.args[-1], notifies)   # ledger.sweep's last argument: notify
-
-    def test_a_ledger_deadline_on_a_changed_item_runs_the_ledger_in_full(self):
-        from unittest import mock
-        _, _, timer = self.ledger_timer(thread=364)
-        state = last_state(self.prs)
-        state["timers"]["ledger"] = [timer]
-        posted = iso(NOW - dt.timedelta(minutes=2))
-        gh = CountingGH(self.prs, comments=[{"id": 1, "body": "pushed a fix", "created_at": posted, "updated_at": posted,
-                                             "issue_url": f"https://api.github.com/repos/{REPO}/issues/364"}])
-        full = mock.Mock(side_effect=no_ledger)
-        _, read, _ = sweep(gh, state, ledger=full)
-        full.assert_called_once()   # in this same sweep, with every PR read (the ledger needs them all)
-        self.assertEqual(read, [p["number"] for p in self.prs])
-        self.assertEqual(gh.state["steer"]["full_at"], iso(NOW))
+        self.assertNotIn("ledger", gh.state["steer"]["timers"])
 
     def test_a_ledger_deadline_not_yet_due_costs_nothing(self):
         _, _, timer = self.ledger_timer(minutes_ago=-20)
@@ -540,34 +495,6 @@ class Retry(unittest.TestCase):
         self.assertTrue(back.state, "the signed file was read back")
         return back.state
 
-    def test_a_failed_full_pass_ledger_is_retried_at_the_next_sweep_and_sends_one_notice(self):
-        calls = []
-
-        def ledger_once(sw, *args):
-            calls.append(sw.now)
-            if len(calls) == 1:
-                raise switch.GitHubError("GET", f"repos/{REPO}/issues/events", "gh: (HTTP 403)", 403)
-            if len(calls) == 2:   # the notice that was due when the first read failed
-                sw.gh.comment(290, "To Builder: J-099 is past its deadline")
-            return no_ledger()
-
-        first = CountingGH(self.prs, dry_run=False)
-        status, _, _ = sweep(first, None, ledger=ledger_once)
-        self.assertEqual(status, 2, "the ledger part failed: the run exits non-zero")
-        retry_mark = first.state["steer"].get("retry")
-        state = self.carry(first)                                   # saved anyway: main() saves in `finally`
-
-        posts = []
-        for minutes in (10, 20, 30):                               # quiet sweeps: nothing changed
-            gh = CountingGH(self.prs, dry_run=False)
-            sweep(gh, now=NOW + dt.timedelta(minutes=minutes), ledger=ledger_once, whole=state)
-            posts += [(n, body) for n, body in gh.posts if n == 290]   # (each fake board starts empty: its pipe alarm)
-            state = self.carry(gh)
-        self.assertEqual(len(calls), 2, "retried once, at the very next sweep, then not again")
-        self.assertEqual(calls[1], NOW + dt.timedelta(minutes=10))
-        self.assertEqual(posts, [(290, "To Builder: J-099 is past its deadline")])   # exactly one notice
-        self.assertEqual((retry_mark, state["steer"].get("retry")), (["ledger"], []))
-
     def test_a_failed_inbox_read_is_retried_at_the_next_quiet_sweep(self):
         name = "claude/integrate-j099-thing"
         red = test_inbox.run(40, name, test_inbox.HEAD, hours=2)   # red two hours ago: an item now
@@ -593,18 +520,56 @@ class Retry(unittest.TestCase):
         self.assertIn(f"RED-BRANCH `{name}`", inbox_posts[0])
         self.assertIn("inbox", retry_mark)
 
-    def test_a_failed_part_keeps_its_old_timers(self):
-        import ledger
-        it = ledger.Item("JOB", "#290", "", "J-099", None, ledger.Person("Builder", "builder"), "s",
-                         NOW - dt.timedelta(hours=1), dt.timedelta(hours=4), "v", 290)
-        state = last_state(self.prs, minutes=61)                   # a full pass is due
-        state["timers"]["ledger"] = [{"at": iso(NOW + dt.timedelta(hours=3)), "item": ledger.item_json(it)}]
+    def test_a_failed_full_pass_part_makes_the_next_sweep_a_full_pass_once(self):
+        # was the ledger's retry test (D2): auto-open is a full-pass part, so its retry needs every PR read again
+        from unittest import mock
+        calls = []
 
-        def fails(*args):
-            raise switch.GitHubError("GET", "x", "gh: (HTTP 403)", 403)
-        gh = CountingGH(self.prs)
-        sweep(gh, state, ledger=fails)
-        self.assertEqual(gh.state["steer"]["timers"].get("ledger"), state["timers"]["ledger"])
+        def auto_open_once(only):
+            calls.append(only)
+            if len(calls) == 1:
+                raise switch.GitHubError("GET", f"repos/{REPO}/branches", "gh: (HTTP 403)", 403)
+            return 0
+
+        full_at = []
+        state = None
+        with mock.patch.object(switch.Switch, "auto_open_prs", side_effect=auto_open_once):
+            for minutes in (0, 10, 20):                              # the hour's full pass is not due again
+                gh = CountingGH(self.prs, dry_run=False)
+                status, _, _ = sweep(gh, now=NOW + dt.timedelta(minutes=minutes), whole=state)
+                if minutes == 0:
+                    self.assertEqual(status, 2, "the auto-open part failed: the run exits non-zero")
+                    self.assertEqual(gh.state["steer"]["retry"], ["auto-open"])
+                full_at.append(gh.state["steer"]["full_at"])
+                state = self.carry(gh)
+        retried = iso(NOW + dt.timedelta(minutes=10))
+        self.assertEqual(full_at, [iso(NOW), retried, retried], "a full pass at the very next sweep, then not again")
+        self.assertEqual(calls, [None, None], "auto-open ran again over every branch, once")
+        self.assertEqual(state["steer"]["retry"], [])
+
+    def test_a_failed_part_keeps_its_old_timers(self):
+        # was the ledger's (D2): a full pass whose auto-open or one PR read failed keeps every cached timer no good
+        # run replaced, here the heads already re-run (J-103), so nothing is lost before the retry
+        from unittest import mock
+        heads = ["a" * 40, "b" * 40]
+
+        def fails(only):
+            raise switch.GitHubError("GET", f"repos/{REPO}/branches", "gh: (HTTP 403)", 403)
+
+        for failing in ("auto-open", "prs"):
+            with self.subTest(failing=failing):
+                state = last_state(self.prs, minutes=61)                # a full pass is due
+                state["timers"]["rerun"] = list(heads)
+                gh = CountingGH(self.prs)
+                if failing == "prs":
+                    gh.fail_once = (f"repos/{REPO}/pulls/{self.prs[0]['number']}",)
+                    sweep(gh, state)
+                else:
+                    with mock.patch.object(switch.Switch, "auto_open_prs", side_effect=fails):
+                        sweep(gh, state)
+                saved = gh.state["steer"]
+                self.assertEqual(saved["retry"], [failing])
+                self.assertEqual(saved["timers"].get("rerun"), heads)
 
     def test_under_the_rate_floor_nothing_is_marked_done(self):
         class Low(CountingGH):

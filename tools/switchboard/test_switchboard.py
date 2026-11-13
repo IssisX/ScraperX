@@ -1709,62 +1709,6 @@ class SweepHeartbeat(unittest.TestCase):
         self.assertLess(main.index("if args.digest or args.force_digest:"), guard)   # a digest returns first
 
 
-SWEPT = dt.datetime(2026, 11, 6, 20, 0, tzinfo=dt.timezone.utc)   # test_inbox.NOW: the fake GitHub's clock
-
-
-class LiveReconcilerRetry(unittest.TestCase):
-    """J-072 (ChatGPT, comment 6752048443): the live reconciler is a part like the ledger. A pass that raised or gave
-    up fails the sweep (heartbeat /fail); one that backed off on the rate limit is left for the next sweep. Either
-    way it is due again at the very next sweep (a full pass), and once it commits it is not run again until due."""
-
-    def sweep(self, whole, now, rec):
-        from unittest import mock
-        import test_inbox
-        import test_sweep_calls as tsc
-        gh = tsc.CountingGH([tsc.pr(n) for n in range(361, 364)], dry_run=False)
-        sw = test_inbox.make(gh, now)
-        sw.root = HERE.parents[1]
-        sw.plan_mode = lambda: "off"   # the plan part has its own sweep tests (test_plan_sweep); not the live config
-        sw.merge_token = sw.review_key = ""
-        sw._jobs = sw._board = None
-        gh.state = json.loads(json.dumps(whole))
-        gh.remaining = gh.limit = gh.reset = None
-        args = types.SimpleNamespace(part="steer", pr=0, sha="", issue=0, label="", digest=False,
-                                     force_digest=False, dry_run=False)
-        beats: list[int] = []
-        with mock.patch("ledger.sweep", side_effect=tsc.no_ledger), \
-                mock.patch("reconciler.sweep", side_effect=rec), \
-                mock.patch.object(switch, "sweep_heartbeat", side_effect=lambda url, failed, out: beats.append(failed)):
-            status = switch.run_sweep(sw, args, now, "https://hc-ping.com/x")
-        return status, beats, gh.state, sw.lines
-
-    def test_a_failed_or_uncommitted_live_pass_is_due_at_the_next_sweep(self):
-        import reconciler
-        ok = reconciler.Result("committed", "h", {}, 1, 3)
-        for first, want_status, want_beat in (
-                (switch.GitHubError("GET", "x", "gh: (HTTP 502)", 502), 2, 1),
-                (reconciler.Result("gave-up", None, {}, 4, 0), 2, 1),
-                (reconciler.Result("backoff", "h", {}, 1, 2), 0, 0)):
-            with self.subTest(first=getattr(first, "status", type(first).__name__)):
-                calls: list = []
-
-                def rec(*a, first=first, calls=calls):
-                    calls.append(1)
-                    if len(calls) > 1:
-                        return ok
-                    if isinstance(first, Exception):
-                        raise first
-                    return first
-                status, beats, state, lines = self.sweep({}, SWEPT, rec)
-                self.assertEqual((status, beats), (want_status, [want_beat]), lines)
-                self.assertIn("the reconciler", state["steer"]["retry"])
-                status, beats, state, _ = self.sweep(state, SWEPT + dt.timedelta(minutes=10), rec)
-                self.assertEqual(len(calls), 2, "retried at the very next sweep")
-                self.assertEqual((status, beats, state["steer"]["retry"]), (0, [0], []))
-                self.sweep(state, SWEPT + dt.timedelta(minutes=20), rec)
-                self.assertEqual(len(calls), 2, "then not again before the next full pass")
-
-
 class DryRunVisible(unittest.TestCase):
     """J-072: a dry run names itself, in its job summary and its run-name; only a real sweep is "Switchboard sweep"."""
 
