@@ -432,21 +432,37 @@ jobs:
         # One entry a run per part (about 300 a day, each up to ~11 MB compressed) would fill the repo's 10 GB
         # Actions cache and evict other workflows' caches. Keep each part's 3 newest; delete the rest. The
         # artifacts only carry the file between this run's jobs (each is kept a day at most anyway).
+        # 11-13: best effort, never a failed run. A listing GitHub refuses (its rate limit: the repo's token ran out
+        # at 14:02) printed its error JSON into the loop, whose lines were read as ids, and pipefail failed the run,
+        # so every sweep mailed "Run failed". Now a refused listing is skipped with a warning (the next run prunes),
+        # and only an all-digit id is ever deleted.
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          exec 3>&1   # the step's own output: a warning from inside a $(...) still reaches the log
+          ids() {   # the listing's ids, or nothing and a warning: never the text of a refusal
+            local out
+            if out=$(gh api "$1" --jq "$2" 2>/dev/null); then printf '%s\n' "$out"
+            else echo "::warning::$3 not listed (GitHub refused the read); the next run prunes them" >&3; fi
+          }
+          drop() {
+            [[ "$2" =~ ^[0-9]+$ ]] || return 0
+            gh api -X DELETE "repos/$REPO/actions/$1/$2" > /dev/null 2>&1 || echo "::warning::$1 $2 not deleted"
+          }
           for part in ask steer; do
-            gh api "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
-              --jq '.actions_caches[3:][].id' | while read -r id; do
-                gh api -X DELETE "repos/$REPO/actions/caches/$id" > /dev/null || echo "::warning::cache $id not deleted"
-              done
-          done
-          gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
-            --jq '.artifacts[] | select(.name | startswith("switchboard-etags-")) | .id' | while read -r id; do
-              gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null || echo "::warning::artifact $id not deleted"
+            for id in $(ids "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
+                '.actions_caches[3:][].id' "the older $part caches" | grep -E '^[0-9]+$'); do
+              drop caches "$id"
             done
+          done
+          for id in $(ids "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
+              '.artifacts[] | select(.name | startswith("switchboard-etags-")) | .id' "this run's hand-over artifacts" \
+              | grep -E '^[0-9]+$'); do
+            drop artifacts "$id"
+          done
+          exit 0
 
