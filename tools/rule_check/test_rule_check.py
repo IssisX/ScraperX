@@ -380,5 +380,13 @@ class SettledCalls(unittest.TestCase):
         self.assertEqual(sum(1 for line in text.splitlines() if line.startswith(rc.SETTLED_HEADING)), 1)
 
 
+class SystemTestRedBranch(unittest.TestCase):
+    """SYSTEM TEST (J-072, 11-13), never to merge: this branch must go red so the switchboard's red-branch notice
+    is seen live. The branch is deleted after the check."""
+
+    def test_this_branch_is_red_on_purpose(self):
+        self.fail("system test: claude/integrate-systest-red is red on purpose (J-072)")
+
+
 if __name__ == "__main__":
     unittest.main()
