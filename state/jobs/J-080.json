@@ -12,7 +12,7 @@
  ],
  "created": "2026-11-11T12:58:47Z",
  "deadline": null,
- "head": "ba425084fe727b8f22d6eeb8eb6036a56992732a",
+ "head": "1b28977dc4937345df4a1a1294b14a3e6c889fcb",
  "issue": 398,
  "job": "J-080",
  "landed": {
@@ -151,6 +151,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "working",
+ "updated": "2026-11-13T01:03:52Z"
 }

@@ -2195,7 +2195,7 @@
    "updated": "2026-11-09T17:35:20Z"
   },
   "J-014": {
-   "attempt": 0,
+   "attempt": 2,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j014-stock-above-396": "c5f783a88a72b8e9ab6a1f950e228b58468d531b",
@@ -2204,11 +2204,11 @@
     "fb-bot/integrate-protected-j014-stock-above-396": "b481cb51c73aac61d990e9db46b8cee0e7fa98aa"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "red: host-build, android-build",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
    "deadline": null,
-   "head": "0268bdf0a50ec3ce15707612a03a8177054a5e7a",
+   "head": "8b69e3e96b7033f35206d50fa012178abb7f42cf",
    "issue": 121,
    "job": "J-014",
    "landed": {
@@ -2382,12 +2382,15 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 492,
    "pr_done": "",
-   "prs": [],
+   "prs": [
+    492,
+    491
+   ],
    "review": "",
-   "state": "merged",
-   "updated": "2026-11-12T23:54:27Z"
+   "state": "working",
+   "updated": "2026-11-13T01:03:52Z"
   },
   "J-015": {
    "attempt": 3,
@@ -7783,8 +7786,8 @@
     ],
     "fb-bot/integrate-protected-j059": [
      "a06d4778c1fcabba2157071e0db6e8d31a2c1204",
-     "",
-     "2026-11-12T19:27:38Z"
+     "merged #493",
+     "2026-11-13T01:03:52Z"
     ]
    },
    "obligations": [
@@ -8542,7 +8545,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-12T23:54:27Z"
+   "updated": "2026-11-13T01:03:52Z"
   },
   "J-060": {
    "attempt": 0,
@@ -11792,8 +11795,8 @@
     396
    ],
    "review": "FIX",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "working",
+   "updated": "2026-11-13T01:03:52Z"
   },
   "J-079": {
    "attempt": 1,
@@ -11929,7 +11932,7 @@
    ],
    "created": "2026-11-11T12:58:47Z",
    "deadline": null,
-   "head": "ba425084fe727b8f22d6eeb8eb6036a56992732a",
+   "head": "1b28977dc4937345df4a1a1294b14a3e6c889fcb",
    "issue": 398,
    "job": "J-080",
    "landed": {
@@ -12068,8 +12071,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "working",
+   "updated": "2026-11-13T01:03:52Z"
   },
   "J-081": {
    "attempt": 1,

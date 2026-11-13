@@ -1,5 +1,5 @@
 {
- "attempt": 0,
+ "attempt": 2,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j014-stock-above-396": "c5f783a88a72b8e9ab6a1f950e228b58468d531b",
@@ -8,11 +8,11 @@
   "fb-bot/integrate-protected-j014-stock-above-396": "b481cb51c73aac61d990e9db46b8cee0e7fa98aa"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "red: host-build, android-build",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "0268bdf0a50ec3ce15707612a03a8177054a5e7a",
+ "head": "8b69e3e96b7033f35206d50fa012178abb7f42cf",
  "issue": 121,
  "job": "J-014",
  "landed": {
@@ -186,10 +186,13 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 492,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  492,
+  491
+ ],
  "review": "",
- "state": "merged",
- "updated": "2026-11-12T23:54:27Z"
+ "state": "working",
+ "updated": "2026-11-13T01:03:52Z"
 }

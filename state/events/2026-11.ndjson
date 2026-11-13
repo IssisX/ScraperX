@@ -2498,3 +2498,13 @@
 {"ev": "dead_letter", "id": "O-bec95aec", "job": "J-077", "ref": "ASK|ask on #392", "t": "2026-11-12T23:54:27Z", "to": "claude"}
 {"ev": "needs_you", "job": "", "keys": ["O-8d6610ae", "O-2e80ac51", "O-071091f1", "O-b4fd7064", "O-940db07d", "O-bec95aec", "O-0f17ee95"], "n": 7, "t": "2026-11-12T23:54:27Z"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T23:54:27Z", "tries": 1}
+{"branch": "fb-bot/integrate-protected-j059", "ev": "landed", "how": "merged #493", "job": "J-059", "sha": "a06d4778c1fcabba2157071e0db6e8d31a2c1204", "t": "2026-11-13T01:03:52Z"}
+{"ev": "state", "frm": "merged", "job": "J-014", "t": "2026-11-13T01:03:52Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-078", "t": "2026-11-13T01:03:52Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-080", "t": "2026-11-13T01:03:52Z", "to": "working"}
+{"ev": "unmatched", "ident": "PR|#495", "job": "", "t": "2026-11-13T01:03:52Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#494", "job": "", "t": "2026-11-13T01:03:52Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "matched", "ident": "PR|#491", "job": "", "t": "2026-11-13T01:03:52Z"}
+{"ev": "matched", "ident": "PR|#492", "job": "", "t": "2026-11-13T01:03:52Z"}
+{"ev": "matched", "ident": "PR|#493", "job": "", "t": "2026-11-13T01:03:52Z"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T01:03:52Z", "tries": 1}
