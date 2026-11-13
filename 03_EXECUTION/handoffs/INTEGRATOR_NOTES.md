@@ -5,13 +5,13 @@ calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never 
 Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
 ## Now (11-13)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
-  take the HARD game jobs. Until then Claude's game jobs are held in the plan (J-001 J-015 J-084 J-090 J-093 J-096 J-109 J-137,
-  J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
+  take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max, 11-13). Run it in its section-5 order, one helper at a time
-  (ask Cory the effort first: just my informed pick, no option list), then the real test; done = that test passing (Cory 11-13), not the plan's 3 days. Today items done (#517 #518
-  drafts; #520-#525 opened). Paid reviewer's month spent ($98.24/$100) until 12-01. #502/#505 reverted (afff9d5f).
+- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Its section-5 order, one helper at a time (effort: my pick, Cory's call);
+  done = the real test passing (Cory), not 3 days. NOW: step 1 helper (Opus xhigh), branch claude/integrate-plan-step1: on its
+  report open the PR and that hour make CLAUDE.md 'Reviews, one per PR' + START_HERE rule 3 match (Cory yes); watch #488 #523.
+  Trunk red fixed 09f75528 (voice picks out of godot/): confirm green. Paid reviewer spent to 12-01. #502/#505 reverted.
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
