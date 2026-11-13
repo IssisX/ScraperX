@@ -14469,7 +14469,8 @@
    "attempt": 1,
    "blocked": null,
    "branches": {
-    "fb-bot/integrate-j100": "4c03c7633633f84fc95db446d2f222bc6760ce2d"
+    "fb-bot/integrate-j100": "4c03c7633633f84fc95db446d2f222bc6760ce2d",
+    "fb-bot/integrate-protected-j100": "453e502c952185efd2b890028e164cfbc496a58f"
    },
    "cancelled": null,
    "ci": "red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)",
@@ -14486,6 +14487,11 @@
      "4c03c7633633f84fc95db446d2f222bc6760ce2d",
      "",
      "2026-11-12T16:58:14Z"
+    ],
+    "fb-bot/integrate-protected-j100": [
+     "453e502c952185efd2b890028e164cfbc496a58f",
+     "",
+     "2026-11-13T07:43:42Z"
     ]
    },
    "obligations": [
@@ -14571,6 +14577,31 @@
      "version": "6845843259",
      "via": "session",
      "what": "ask from Muse on #418"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-13T07:22:47Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-13T07:43:42Z",
+     "dead": "2026-11-13T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-13T15:17:00Z",
+     "id": "O-775bf66b",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-13T07:43:42Z",
+     "missing": 0,
+     "ref": "ASK|ask on #418",
+     "sends": 1,
+     "sent_by": "inbox",
+     "thread": 418,
+     "to": "claude",
+     "unseen": null,
+     "version": "6846834464",
+     "via": "session",
+     "what": "ask from Muse on #418"
     }
    ],
    "outcome": null,
@@ -14583,7 +14614,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-13T06:34:10Z"
+   "updated": "2026-11-13T07:43:42Z"
   },
   "J-101": {
    "attempt": 0,
