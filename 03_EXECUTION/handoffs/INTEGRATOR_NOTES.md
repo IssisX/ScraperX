@@ -9,10 +9,12 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- Order: blocker first (#510 > rollover > review split > sweep holes > end-to-end test). After each landing, read one full pass; new breakage: suspect that landing first, revert, never patch on top.
-- Open: #503 cache-out (+ reviews into their own run, same PR), #506 clocks, #507 Muse git (729a0d92 security fixed; Muse paste
-  on #504 after merge), #510 rate-hourly, #511 rule_check, board-rollover 908d889f (rollover, no-Job-line, claude/* PR alerts,
-  paid_deferred) on #510. Helpers: #503/#506+review split; rollover+tools-only candidate skip; failure-mode sweep. Fable 1x 11-13. Evidence: system-test.md on claude/integrate-system-test. Open: J-044c has Muse fb-bot heads too (ownership, at game time).
+- EXIT (done = all true): landed #510, #515, #503+review split, #506, #507, #511, failure-modes branch, candidate-scope, and
+  the 3 CUTs (auto-open every sweep, carry LAND on same patch-id, RED-BRANCH hold 0); then all 14 checks in system-test.md PASS
+  incl. a Muse git round trip; then advisor, phone push, banner. Order = that list. One landing at a time; after each read one
+  full pass; new breakage: suspect that landing, revert, never patch on top. Hand merges refused: land via the switchboard.
+- Now: #515 frozen @851da1c4 (on #510); candidate-scope 1ccc2b94 and the CUTs wait for #515; #494 ruled LAND. Muse paste on #504
+  after #507. Fable 2x 11-13. Evidence: system-test.md on claude/integrate-system-test. J-044c ownership at game time.
 - Hard problems: Gemini Carbon (newer, smarter, 11-13) or Argon (every hard job so far done); each ~1.5 h free a day, repo +
   some GitHub; via one copyable prompt to Cory; Fable only for the very hardest, alert Cory first (it draws on this limit; he holds 2 refunds). Fable designs, Opus builds.
 - Visuals: flat, white, items pinned WHERE they live in the flow, numbered badges = legend, ~110 words. Fable advisor (11-13, trial):
