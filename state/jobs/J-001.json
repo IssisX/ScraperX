@@ -84,7 +84,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
-   "rechecked": "2026-11-13T02:13:35Z",
+   "rechecked": "2026-11-13T08:43:54Z",
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -963,5 +963,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-13T02:13:35Z"
+ "updated": "2026-11-13T08:43:54Z"
 }
