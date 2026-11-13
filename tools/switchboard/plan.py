@@ -19,6 +19,9 @@ HOLD = re.compile(r"\bhold:\s*(.+)$")
 # The integrator's ruling on another agent's unlanded head for this job: it is kept as a record, not a lane.
 # The sha pins the ruling: once that branch moves, it is unlanded work again.
 KEPT = re.compile(r"\bkept\s+([\w./-]+)@([0-9a-f]{7,40})\b")
+# 11-13: when the job was added or given to its owner (tools/board/plan.py writes it): its own clock. The plan file's
+# last commit was every job's clock, so any edit to any line restarted every unstarted job's start alarm.
+AT = re.compile(r"\bat\s+(\d{4}-\d\d-\d\dT\d\d:\d\dZ)(?!\S)")
 PR_JOB = re.compile(r"^\s*Job:\s*(J-\d{3,}[a-z]?)\b")
 BRANCH_JOB = re.compile(r"(?:^|/)integrate-(?:protected-)?(j\d{3,}[a-z]?)(?![\w])|(?:^|/)wip-(j\d{3,}[a-z]?)(?![\w])", re.I)
 
@@ -32,6 +35,10 @@ class Line:
     hold: str
     title: str
     kept: tuple[tuple[str, str], ...] = ()   # (branch, sha) heads ruled a record
+    at: str = ""                              # when it was added or given to this owner (AT), "" when not written
+
+    def assigned_at(self) -> dt.datetime | None:
+        return dt.datetime.strptime(self.at, "%Y-%m-%dT%H:%MZ").replace(tzinfo=dt.timezone.utc) if self.at else None
 
 
 @dataclass(frozen=True)
@@ -82,9 +89,17 @@ def parse(text: str) -> Plan:
         extras = options.replace(h.group(0), "") if h else options
         kept = tuple(dict.fromkeys(KEPT.findall(extras)))
         extras = KEPT.sub("", extras.replace(a.group(0), "") if a else extras)
+        stamp = AT.search(extras)
+        at = stamp.group(1) if stamp else ""
+        extras = AT.sub("", extras, count=1)
+        if at:
+            try:
+                dt.datetime.strptime(at, "%Y-%m-%dT%H:%MZ")
+            except ValueError:
+                errors.append(f"line {number}: invalid time {at} for {job}")
         if extras.strip() or job in deps:
             errors.append(f"line {number}: invalid options or self-dependency for {job}")
-        lines.append(Line(job, owner, int(issue), deps, hold, title, kept))
+        lines.append(Line(job, owner, int(issue), deps, hold, title, kept, at))
     for ln in lines:
         if ln.owner not in limits:
             errors.append(f"{ln.job}: owner {ln.owner} has no limit")
@@ -115,6 +130,7 @@ def render(plan: Plan) -> str:
     for line in plan.lines:
         suffix = (" after " + ", ".join(line.after) if line.after else "")
         suffix += "".join(f" kept {ref}@{sha}" for ref, sha in line.kept)
+        suffix += f" at {line.at}" if line.at else ""
         suffix += (" hold: " + line.hold if line.hold else "")
         result.append(f"{line.job} {line.owner} #{line.issue}{suffix} | {line.title}")
     return "\n".join(result) + "\n"
@@ -222,7 +238,7 @@ def merged_prs(gh, trunk: str) -> list:
 
 
 def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk: str = "ScraperX-Claude",
-            errors: tuple = (Exception,)) -> dict:
+            errors: tuple = (Exception,), only: frozenset[str] | None = None) -> dict:
     """What the plan is checked against, read through `gh` (switch and tools/board/job_status.py share it).
     `inactive`: proven landed heads, not work in flight: merged PR heads and heads already in trunk.
     A PR closed without merging is NOT evidence of landed work; its branch stays visible until explicitly
@@ -230,9 +246,12 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
     `Job: J-NNN` PR merged. `head_at`: sha -> its commit time, for the heads compared. `closed`: the jobs whose
     plan issue is not in the open listing and was read closed under the job's title (a missing listing entry
     alone proves nothing). A compare that fails or is not reached leaves the head live: unproven work is never
-    hidden."""
+    hidden.
+    `only` (11-13, tools/board/plan.py's give, hold and keep): the in-flight check of those jobs alone. Only their
+    heads are compared, and no issue, closed issue or plan commit is read: a hold took over a minute, every one of
+    up to 60 compares and 30 issue reads made again for each job edited."""
     repo = gh.repo
-    issues = whole(gh, f"repos/{repo}/issues?state=open")
+    issues = whole(gh, f"repos/{repo}/issues?state=open") if only is None else []
     branches = whole(gh, f"repos/{repo}/branches")
     prs = (listing or gh.paged)(f"repos/{repo}/pulls?state=open")
     closed = merged_prs(gh, trunk)   # only merged PRs are read below (inactive, merged_at)
@@ -248,6 +267,7 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
     # the plan's jobs first (a lettered split is its base's), then the heads of jobs the plan does not hold: such
     # a head is a row only once this compare proves it unlanded (machine.collect)
     todo = sorted((b for b in branches if job_of_branch(branch_name(b))
+                   and (only is None or job_of_branch(branch_name(b)) in only)
                    and (sha := branch_sha(b)) and sha not in inactive and sha not in open_heads),
                   key=lambda b: plan_job(job_of_branch(branch_name(b)), jobs) not in jobs)
     for b in todo[:COMPARES]:
@@ -273,7 +293,7 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
         out(f"NOTE        plan: {len(left) - planned} branch(es) of jobs the plan does not hold not compared this "
             "pass; not shown until a compare proves one unlanded")
     open_numbers = {i.get("number") for i in issues if i.get("pull_request") is None}
-    gone = [ln for ln in model.lines if ln.issue not in open_numbers]
+    gone = [ln for ln in model.lines if ln.issue not in open_numbers] if only is None else []
     done: set[str] = set()
     for ln in gone[:CLOSED_READS]:
         try:
@@ -288,9 +308,13 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
         out(f"NOTE        plan: {len(gone) - CLOSED_READS} line(s) with no open issue not read this pass; tidy the plan")
     planned_at = None
     try:   # when the order last changed on trunk: the clock of a job nobody has been told about or has started
+        if only is not None:
+            raise LookupError("not read for an edit's in-flight check")
         last = gh.get(f"repos/{repo}/commits?path={PLAN_FILE}&sha={trunk}&per_page=1") or [{}]
         stamp = (((last[0].get("commit") or {}).get("committer") or {}).get("date") or "") if last else ""
         planned_at = dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
+    except LookupError:
+        pass
     except errors as err:
         out(f"NOTE        plan: the plan file's last commit was not read ({err})")
     return {"issues": issues, "branches": branches, "prs": prs, "inactive": frozenset(inactive),

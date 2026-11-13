@@ -57,10 +57,18 @@ def in_flight(job: str, branches: list, prs: list[dict], inactive: set[str] | fr
                for pr in prs if pr.get("state") != "closed")
 
 
+def stamp(t: dt.datetime) -> str:
+    return t.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+
+
 def change(source: str, action: str, args: list[str], *, branches: list = (),
            prs: list[dict] = (), inactive: set[str] | frozenset[str] = frozenset(),
            stop_work: str = "", again: str = "", flipped: bool = False,
-           verified_closed: set[str] | frozenset[str] = frozenset()) -> str:
+           verified_closed: set[str] | frozenset[str] = frozenset(), now: dt.datetime | None = None,
+           history: dict[str, str] | None = None) -> str:
+    """One edit. `now` stamps a job added or given (its own clock, core.AT); `history` (job -> when its line got its
+    owner, read from the plan file's commits: assigned_times) is what `stamp` writes on the lines that have none."""
+    now = now or dt.datetime.now(dt.timezone.utc)
     p = core.parse(source)
     if p.errors:
         raise ValueError("plan invalid: " + "; ".join(p.errors))
@@ -77,7 +85,11 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
             raise ValueError(f"add {job}: invalid job ID or issue number")
         if owner not in limits or job in p.by_job():
             raise ValueError(f"add {job}: unknown owner or existing job")
-        ls.append(core.Line(job, owner, int(issue[1:]), (), "", " ".join(args[3:])))
+        ls.append(core.Line(job, owner, int(issue[1:]), (), "", " ".join(args[3:]), (), stamp(now)))
+    elif action == "stamp":   # 11-13, once: each line with no time gets the one its own history gives
+        if args:
+            raise ValueError("stamp takes no job IDs; it reads each line's history")
+        ls = [replace(ln, at=(history or {}).get(ln.job, "")) if not ln.at else ln for ln in ls]
     elif action in {"give", "hold", "release", "move", "drop", "tidy", "keep"}:
         if action == "tidy":
             if args:
@@ -101,7 +113,7 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
             if action == "give":
                 if len(args) != 2 or args[1] not in limits:
                     raise ValueError(f"give {job}: expected valid owner")
-                ls[found] = replace(old, owner=args[1])
+                ls[found] = replace(old, owner=args[1], at=stamp(now) if args[1] != old.owner else old.at)
             elif action == "hold":
                 if len(args) < 2:
                     raise ValueError(f"hold {job}: explicit reason required")
@@ -151,6 +163,38 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
     return normalized
 
 
+def assigned_times(path: Path) -> dict[str, str]:
+    """job -> when its line got its present owner, from the plan file's commits (oldest first): the commit after
+    which the job's owner never changed again. A job whose owner the history never shows is left out."""
+    try:
+        p = subprocess.run(["git", "-C", str(HERE), "log", "--reverse", "--format=COMMIT %cI", "-p", "--",
+                            str(path.relative_to(HERE))], text=True, capture_output=True, check=True)
+    except (OSError, subprocess.CalledProcessError, ValueError):
+        return {}
+    return owner_times(p.stdout)
+
+
+def owner_times(log: str) -> dict[str, str]:
+    """assigned_times from `git log --reverse --format='COMMIT %cI' -p` of the plan file."""
+    owner: dict[str, str] = {}
+    since: dict[str, str] = {}
+    at = ""
+    for raw in log.splitlines():
+        if raw.startswith("COMMIT "):
+            at = raw[7:].strip()
+            continue
+        m = core.ORDER.fullmatch(raw[1:].strip()) if raw.startswith("+") and not raw.startswith("+++") else None
+        if m and at:
+            job, who = m.group(1), m.group(2)
+            if owner.get(job) != who:
+                owner[job], since[job] = who, at
+    out = {}
+    for job, t in since.items():
+        when = dt.datetime.fromisoformat(t)
+        out[job] = stamp(when)
+    return out
+
+
 def write_atomic(path: Path, old: str, new: str) -> None:
     if path.read_text(encoding="utf-8") != old:
         raise RuntimeError(f"{path}: changed during editing; refusing overwrite")
@@ -174,8 +218,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--expect", help="required plan content fingerprint for mutations")
     ap.add_argument("--stop-work", default="", help="reason for stopping published in-flight work")
     ap.add_argument("--again", default="", help="reason for repeated reassignment or hold")
+    ap.add_argument("--reason", default="", help="hold: every argument is a job, all held for this reason "
+                                                 "(one remote read for them all)")
     ap.add_argument("action", choices=("status", "check", "add", "give", "hold", "release", "move", "limit", "drop",
-                                       "tidy", "keep"))
+                                       "tidy", "keep", "stamp"))
     ap.add_argument("args", nargs="*")
     ns = ap.parse_args(argv)
     try:
@@ -186,9 +232,14 @@ def main(argv: list[str] | None = None) -> int:
             return job_status.report(GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr)),
                                      content=src)
         needs_read = ns.action in {"give", "hold", "drop", "tidy", "keep"}
+        # 11-13: several jobs at once (hold --reason, release) share one read; give, hold and keep read only what the
+        # in-flight check of their own jobs needs (core.observe `only`)
+        batch = (ns.action == "hold" and bool(ns.reason)) or (ns.action == "release" and len(ns.args) > 1)
+        edits = [[j, *([ns.reason] if ns.action == "hold" else [])] for j in ns.args] if batch else [ns.args]
         gh = GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr)) if needs_read else None
+        only = frozenset(e[0] for e in edits if e) if ns.action in {"give", "hold", "keep"} else None
         observed = core.observe(gh, parsed, dt.datetime.now(dt.timezone.utc),
-                                lambda line: print(line, file=sys.stderr)) if needs_read else None
+                                lambda line: print(line, file=sys.stderr), only=only) if needs_read else None
         if not ns.expect or ns.expect != sha(src):
             raise ValueError(f"{ns.action}: --expect {sha(src)} required (stale plan must not overwrite)")
         job = ns.args[0] if ns.args else ""
@@ -204,12 +255,16 @@ def main(argv: list[str] | None = None) -> int:
                     issue.get("title", "").startswith(ln.job + " ") and
                     not issue.get("pull_request")):
                     verified_closed.add(ln.job)
-        result = change(src, ns.action, ns.args, verified_closed=verified_closed,
-                        branches=observed["branches"] if observed else (),
-                        prs=observed["prs"] if observed else (),
-                        inactive=observed["inactive"] if observed else frozenset(),
-                        stop_work=ns.stop_work, again=ns.again,
-                        flipped=recent_flip(ns.plan, job) if ns.action in {"give", "hold", "release", "move"} else False)
+        result = src
+        for args in edits:   # in turn, each on the last one's result: one refused leaves the file as it was
+            job = args[0] if args else ""
+            result = change(result, ns.action, args, verified_closed=verified_closed,
+                            branches=observed["branches"] if observed else (),
+                            prs=observed["prs"] if observed else (),
+                            inactive=observed["inactive"] if observed else frozenset(),
+                            stop_work=ns.stop_work, again=ns.again,
+                            flipped=recent_flip(ns.plan, job) if ns.action in {"give", "hold", "release", "move"} else False,
+                            history=assigned_times(ns.plan) if ns.action == "stamp" else None)
         write_atomic(ns.plan, src, result)
         print(f"PLAN EDIT {ns.action}: {sha(src)} -> {sha(result)}; review diff, commit through MCP")
         return 0

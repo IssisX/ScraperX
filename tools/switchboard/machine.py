@@ -185,7 +185,8 @@ class Evidence:
     closed: bool = False                       # the plan's issue was read closed
     waits: tuple[str, ...] = ()                # the jobs it comes `after` that are not closed
     version: str = ""                          # the owner's order version (order_version)
-    planned_at: dt.datetime | None = None      # when work/plan.md last changed on trunk (only a fallback clock)
+    planned_at: dt.datetime | None = None      # when the job was added or given (its line's `at`), else when
+                                               # work/plan.md last changed on trunk (the fallback clock)
     notice_at: dt.datetime | None = None       # this job's line, as it stands, was first told to its owner
     receipt_at: dt.datetime | None = None      # the owner first acknowledged that line (`plan <version>` came back)
     claimed_at: dt.datetime | None = None      # the owner mailed "started" after the job's newest notice or ruling
@@ -758,6 +759,13 @@ def told(mail: Mail, owner: str, job: str, h: str, ver: str) -> tuple[dt.datetim
     return first, min(acks, default=None)
 
 
+def job_clock(ln: P.Line | None, planned_at: dt.datetime | None) -> dt.datetime | None:
+    """A job's own start clock (11-13): when its line was added or given to its owner (the line's `at`, which
+    tools/board/plan.py writes), so an edit to any other line moves nothing. A line with no time falls back to the
+    plan file's last commit, as every line did before."""
+    return (ln.assigned_at() if ln is not None else None) or planned_at
+
+
 def mark_jobs(model: P.Plan, mail: Mail, owner: str, now: dt.datetime, planned_at: dt.datetime | None = None) -> str:
     """The `jobs=` of a new mark for `owner`: each of its lines with its hash and when it was first told and
     acknowledged, carried forward from the marks before it. A line told for the first time is told now (a mail
@@ -766,7 +774,7 @@ def mark_jobs(model: P.Plan, mail: Mail, owner: str, now: dt.datetime, planned_a
     for ln in model.owner_lines(owner):
         h = line_hash(ln)
         first, ack = told(mail, owner, ln.job, h, ver)
-        first = first or (now if owner not in SELF_TOLD else min(t for t in (planned_at, now) if t))
+        first = first or (now if owner not in SELF_TOLD else min(t for t in (job_clock(ln, planned_at), now) if t))
         out.append(f"{ln.job}:{h}@{stamp(first)}" + (f"!{stamp(ack)}" if ack else ""))
     return ",".join(out)
 
@@ -857,11 +865,11 @@ def mail_clashes(model: P.Plan, mail: Mail, planned_at: dt.datetime | None = Non
             out.setdefault(job, []).append(f"{mail.worker} mailed that it started; the plan holds it ({ln.hold[:60]})")
     newest: dict[str, Post] = {}   # the newest hand mail that orders something on the job: a later mail that
     for p in mail.posts:           # only mentions it changes nothing (J-109: the taking, then a rulings mail)
-        if planned_at and p.at < planned_at:
-            continue
         if p.hand and (TAKES.search(p.subject) or STOPS.search(p.subject) or GIVES.search(p.subject)):
             for job in dict.fromkeys(job_of(j) for j in JOB_ID.findall(p.subject)):
-                newest[job] = p
+                cut = job_clock(by_job.get(job), planned_at)   # the plan line was written after it: history
+                if not (cut and p.at < cut):
+                    newest[job] = p
     for job, p in newest.items():
         ln = by_job.get(job)
         if ln is None:
@@ -954,16 +962,17 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
                 ws.append(works.get(h.sha) or branch_work(h.ref, h.sha, at=h.at))
         ver, h = vers.get(ln.owner, ""), line_hash(ln)
         first, ack = told(mail, ln.owner, ln.job, h, ver) if ln.owner in NOTICE_OWNERS | SELF_TOLD else (None, None)
+        clock = job_clock(ln, planned_at)
         if ln.owner in SELF_TOLD:
-            first, ack = None, ack or planned_at
+            first, ack = None, ack or clock
         moved = handover(mail, ln, vers)
-        claim = (claim_after(starts.get(ln.job, []), _latest(first or planned_at, hands.get(ln.job)))
+        claim = (claim_after(starts.get(ln.job, []), _latest(first or clock, hands.get(ln.job)))
                  if ln.owner == mail.worker else None)
         out[ln.job] = Evidence(
             job=ln.job, line=ln, issues=tuple(sorted(int(i["number"]) for i in titled.get(ln.job, []))),
             closed=ln.job in closed,
             waits=tuple(j for j in ln.after if j not in closed and (j in by_job or j in titled)),
-            version=ver, planned_at=planned_at, notice_at=first, receipt_at=ack, claimed_at=claim,
+            version=ver, planned_at=clock, notice_at=first, receipt_at=ack, claimed_at=claim,
             **_unpushed(ln, mail, named.get(ln.job), mine),
             heads=tuple(heads.get(ln.job, [])), works=tuple(ws), merged_at=merged.get(ln.job),
             clashes=tuple(wrong.get(ln.job, [])),

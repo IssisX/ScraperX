@@ -15,8 +15,10 @@ SOURCE = "limit muse 2\nlimit claude 4\nJ-101 muse #101 | first\nJ-102 muse #102
 
 class Editor(unittest.TestCase):
     def test_add_and_round_trip(self):
-        got = editor.change(SOURCE, "add", ["J-103", "muse", "#103", "third", "job"])
-        self.assertIn("J-103 muse #103 | third job", got)
+        import datetime as dt   # 11-13: an added line carries when it was added (its own start clock)
+        now = dt.datetime(2026, 11, 13, 15, 4, tzinfo=dt.timezone.utc)
+        got = editor.change(SOURCE, "add", ["J-103", "muse", "#103", "third", "job"], now=now)
+        self.assertIn("J-103 muse #103 at 2026-11-13T15:04Z | third job", got)
 
     def test_give_requires_pushed_lane_handoff_reason(self):
         with self.assertRaisesRegex(ValueError, "remote work in flight"):
