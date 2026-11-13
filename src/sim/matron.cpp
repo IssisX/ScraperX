@@ -1728,18 +1728,53 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             // Nor under a hung load she has read the release of (J-100): where
             // she is headed, inside her stopping distance of a costed load's
             // footprint, she plants her feet. Inside it already, the dodge
-            // owns the step, not this brake.
+            // owns the step, not this brake. The brake guards ENTRY, not
+            // proximity: it fires only when her heading would carry her
+            // inside the footprint, so a route that only grazes the rim is
+            // not stopped (J-100 red-fix: the climb, whose route grazes the
+            // slab rim 1.99 m out). A stalk's close is not route choice, and
+            // the trap's lure is her walking under the load to her band
+            // (J-092), so the brake does not fire while stalking.
             for (const HungLoad &load : hung_loads_) {
-                if (!load.costed) {
+                if (!load.costed || stalking_) {
                     continue;
                 }
                 const Vec3 to_load(load.x - float(at.GetX()), 0.0F, load.z - float(at.GetZ()));
                 const float gap = to_load.Length() - load.footprint_r;
                 if (gap > 0.0F && gap <= check && way.Dot(to_load) > 0.0F) {
+                    const float along = way.Dot(to_load);
+                    const float closest2 = to_load.LengthSq() - along * along;
+                    const float enter_r = load.footprint_r - 0.01F;
+                    if (closest2 >= enter_r * enter_r) {
+                        continue;
+                    }
                     // The drive adds up to foot_accel * dt forward in this
                     // same tick (the Turn's lunge most of all): the brake
-                    // takes that too, or the lunge coasts through it.
-                    velocity -= way * std::min(going, cut_limit + foot_accel * dt);
+                    // takes that too, or the lunge coasts through it. Whether
+                    // her goal (her lead, the player) lies under the load
+                    // decides how much: under it (him at its release, J-100
+                    // scenario 1), that is all of her motion and she plants;
+                    // past it (the climb, whose foot is past the slab's rim),
+                    // only the part carrying her toward the load is taken,
+                    // and the tangential part carries her around its rim:
+                    // taking all of it pinned her at the rim forever.
+                    bool goal_under_load = false;
+                    for (const HungLoad &goal_load : hung_loads_) {
+                        if (goal_load.costed &&
+                            std::hypot(heard_x_ - goal_load.x, heard_z_ - goal_load.z) < goal_load.footprint_r) {
+                            goal_under_load = true;
+                            break;
+                        }
+                    }
+                    if (goal_under_load) {
+                        velocity -= way * std::min(going, cut_limit + foot_accel * dt);
+                    } else {
+                        const Vec3 radial = to_load / to_load.Length();
+                        const float inward = flat_new.Dot(radial);
+                        if (inward > 0.0F) {
+                            velocity -= radial * std::min(inward, cut_limit + foot_accel * dt);
+                        }
+                    }
                     break;
                 }
             }
@@ -2833,11 +2868,17 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
-        } else if (crash_heard || heard) {
-            // The louder sound at her ear: a crash, or the player.
+        } else if ((crash_heard || heard) && (turn_ == Turn::None || heard)) {
+            // The louder sound at her ear: a crash, or the player. In the
+            // Turn she is committed to the player she saw: a crash alone
+            // (a settling crate, a load's impact) is no lead, and a crash
+            // must not steal her lead mid-lunge - the crash's place would
+            // end the Turn at at_crash (J-100 red-fix: the vault, where the
+            // settling crate's crash cancelled the lunge 1.48 m from it).
             const bool crash_first =
-                crash_heard && (!heard || crash.loudness / std::max(picked_carry, 0.1F) >
-                                              loudness / std::max(ev.carry_m, 0.1F));
+                crash_heard && turn_ == Turn::None &&
+                (!heard || crash.loudness / std::max(picked_carry, 0.1F) >
+                               loudness / std::max(ev.carry_m, 0.1F));
             selected_player_sound = !crash_first;
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
