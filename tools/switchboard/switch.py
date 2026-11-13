@@ -59,6 +59,8 @@ import plan as collab_plan  # noqa: E402
 import machine  # noqa: E402
 import mail_reader  # noqa: E402
 import work_reader  # noqa: E402
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "ci"))
+import proof_scope  # noqa: E402  ci/proof_scope.py: which proof groups a changed file reaches (base_skew)
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -151,6 +153,7 @@ MAX_ASK_LATE = 10                              # ASK-LATE items per pass; the re
 # RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
 # a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
 TRUNK_RUN_READS = 6
+COMPARE_FILES_CAP = 300   # GitHub's compare lists at most this many files: a list that long may be cut (base_skew)
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
@@ -1199,7 +1202,8 @@ class Switch:
         if d.action in ("MERGE", "HUMAN-MERGE"):
             with self.gh.fresh():   # the rule check and the decision on it: no answer from the cache either
                 block, never = self.rule_check_block(facts.number, facts.head_sha)
-                facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
+                facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never,
+                                            trunk_skew=self.base_skew(facts))
                 d = rules.merge_decision(facts, author, self.team, token, key)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
@@ -1247,6 +1251,30 @@ class Switch:
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
+
+    def base_skew(self, facts: rules.PrFacts) -> str:
+        """Why this head's proof does not cover current trunk, or "": GitHub's compare of the head with trunk lists
+        trunk's commits the head lacks and the files they change, and ci/proof_scope.py says which of those files
+        any proof group reads. Notes, rules and switchboard commits reach none, so they never hold a merge; any game
+        file does, and so does a compare that cannot be read or is cut short (any doubt holds, as the proof's scope
+        does). The fix is the owner's: merge trunk in and push, so the proof runs on the combination."""
+        try:
+            cmp = self.gh.get(f"repos/{self.gh.repo}/compare/{facts.head_sha}...{rules.TRUNK}") or {}
+        except RateLimited:
+            raise
+        except GitHubError as err:
+            return f"trunk's commits since this head were not read ({err_text(err)})"
+        ahead = int(cmp.get("ahead_by") or 0)
+        if cmp.get("status") in ("identical", "behind") or not ahead:
+            return ""
+        files = [f.get("filename") or "" for f in cmp.get("files") or []]
+        if len(cmp.get("commits") or []) < ahead or len(files) >= COMPARE_FILES_CAP:
+            return f"trunk is {ahead} commit(s) ahead, too many to list"
+        reached = [f for f in files if proof_scope.groups_of(f)]
+        if not reached:
+            return ""
+        return (f"trunk is {ahead} commit(s) ahead with {len(reached)} file(s) its proof reads, "
+                f"e.g. {untrusted(reached[0], 80)}")
 
     def codex_counts(self, author: str, ctx: dict) -> bool:
         """Is Codex asked to review this PR: it is on the team, its review can land this author's work
@@ -2385,6 +2413,8 @@ class Switch:
         if ready and (d.action == "HUMAN-MERGE" or (d.action == "WAIT" and never)):
             out.append(item("MERGE-BY-HAND", f"green, LAND by {lands[-1].who}, but the switchboard will not merge it: "
                                              f"{plain('; '.join(d.reasons))}"))
+        elif ready and f.trunk_skew and d.reasons == (f"{rules.SKEW} ({f.trunk_skew})",):
+            pass   # 11-13: only trunk's newer game code holds it: its owner's CONFLICT item below, not the integrator's
         elif ready and (d.action == "WAIT" or s.merge_note):   # a MERGE that merged (or a dry run's) is no item
             times = [t for t in (parse_time(ctx.get("proof_done_at") or ""), parse_time(lands[0].created_at)) if t]
             if times:
@@ -2418,6 +2448,10 @@ class Switch:
             # 11-10 #343: a conflict was told to its owner only by the reconciler's hourly pass; this sweep tells it now
             out.append(item("CONFLICT", f"{rules.CONFLICT}: merge {rules.TRUNK} into {plain(f.head_ref)} and push",
                             owner))
+        elif f.trunk_skew and owner and not any(it.kind == "NOT-MERGED" for it in out):
+            # 11-13: green and landed, but trunk moved game code under it: the owner merges trunk in, the proof reruns
+            out.append(item("CONFLICT", f"green and landed, but {rules.SKEW} ({plain(f.trunk_skew)}): merge "
+                                        f"{rules.TRUNK} into {plain(f.head_ref)} and push", owner))
         codex_tag = MARK.format(kind="ask-codex", pr=f.number, head=f.head_sha)
         if any(codex_tag in (c.get("body") or "") and (c.get("user") or {}).get("login") == rules.BOT_LOGIN
                for c in ctx.get("comments") or []) and rules.needs_review(f, author, self.team):

@@ -152,6 +152,56 @@ class RedTrunk(unittest.TestCase):
         self.assertEqual(trunk(dict(red, state="green")), [])
 
 
+class MergeSkew(unittest.TestCase):
+    """The cause of the 11-12 red trunk: J-127 (#482) and J-129 (#483) each had a green proof alone, the switch merged
+    both, and only their combination held order key 1100 twice. A head is merged only when its proof covers trunk."""
+
+    def steer(self, compare) -> tuple[str, bool, tuple]:
+        import test_cache_trust as tc
+        real = tc.github([tc.codex_clean()], "success")
+        real[f"repos/{tc.REPO}/compare/{tc.HEAD}...{TRUNK}"] = compare
+        steered, writes, _ = tc.sweep_one(real, {})
+        s = steered[-1]
+        return s.decision.action, any(path.endswith("/pulls/9/merge") for _, path in writes), s.decision.reasons
+
+    def ahead(self, *files: str) -> dict:
+        return {"status": "ahead", "ahead_by": len(files), "commits": [{"sha": str(i)} for i in range(len(files))],
+                "files": [{"filename": f} for f in files]}
+
+    def test_a_head_behind_trunks_game_code_waits_for_trunk_to_be_merged_in(self):
+        # #483's case: trunk had #482's registry line (tests/) when #483's green head was merged
+        action, merged, reasons = self.steer(self.ahead("tests/test_registry.cmake", "work/plan.md"))
+        self.assertEqual((action, merged), ("WAIT", False))
+        self.assertIn(rules.SKEW, "; ".join(reasons))
+        self.assertIn("1 file(s) its proof reads, e.g. `tests/test_registry.cmake`", "; ".join(reasons))
+
+    def test_notes_and_switchboard_commits_on_trunk_never_hold_a_merge(self):
+        action, merged, _ = self.steer(self.ahead("work/plan.md", "03_EXECUTION/handoffs/INTEGRATOR_NOTES.md",
+                                                  "tools/switchboard/switch.py"))
+        self.assertEqual((action, merged), ("MERGE", True))
+        self.assertEqual(self.steer({"status": "behind", "ahead_by": 0, "commits": [], "files": []})[:2], ("MERGE", True))
+
+    def test_any_doubt_holds(self):
+        cut = self.ahead(*[f"work/n{i}.md" for i in range(switch.COMPARE_FILES_CAP)])
+        self.assertEqual(self.steer(cut)[:2], ("WAIT", False))
+        short = dict(self.ahead("work/plan.md"), ahead_by=400)   # more commits than the compare lists
+        self.assertEqual(self.steer(short)[:2], ("WAIT", False))
+
+    def test_the_owner_is_told_at_once(self):
+        f = rules.PrFacts(256, ti.HEAD, "fb-bot/integrate-j129", TRUNK, False, True, ti.ago(5), "green",
+                          (ti.land(),), frozenset(), False, False, trunk_skew="trunk is 1 commit(s) ahead")
+        d = rules.merge_decision(f, "meta", ti.TEAM)
+        self.assertEqual(d.action, "WAIT")
+        s = switch.Steered(f, {"job": "J-129", "proof_url": ti.RUN_URL, "run_id": 7, "proof_done_at": ti.ago(1),
+                               "updated_at": ti.ago(0.1), "comments": []}, d)
+        items = ti.make(ti.FakeGH()).muse_items([s], frozenset())
+        self.assertEqual([it.kind for it in items], ["CONFLICT"])
+        self.assertIn("merge ScraperX-Claude into fb-bot/integrate-j129 and push", items[0].line)
+        self.assertEqual(ti.make(ti.FakeGH()).inbox_items([s], frozenset()), [])   # the owner's step, no wake
+        w = M.work_of(f, d, ti.TEAM)
+        self.assertEqual((w.gate, w.why, w.land), ("skew", "trunk is 1 commit(s) ahead", True))
+
+
 class AskLate(unittest.TestCase):
     def ask(self, hours: float, target: str = "Claude", body: str = "To Claude: which head lands next?") -> dict:
         return {"a": "Muse", "target": target, "n": 307, "t": NOW - dt.timedelta(hours=hours), "id": "6850000001",

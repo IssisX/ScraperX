@@ -64,6 +64,8 @@ def github(comments: list, conclusion: str) -> dict:
         BOARD_COMMENTS: [],
         f"repos/{REPO}/pulls/9/files?per_page=100&page=1": [{"filename": "tools/x.py"}],
         f"repos/{REPO}/issues/9/reactions?per_page=100&page=1": [],   # read before Codex is asked (codex_first)
+        # the head holds all of trunk (base_skew, read before a merge): its proof covers the combination
+        f"repos/{REPO}/compare/{HEAD}...{rules.TRUNK}": {"status": "behind", "ahead_by": 0, "commits": [], "files": []},
     }
 
 
