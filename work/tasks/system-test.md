@@ -48,3 +48,28 @@ Sweep = a live "Switchboard sweep" run (ask, then steer). Inbox = #282. Board = 
   branch's first head had none, so this commit carries one (12 tests the auto-open on it).
 - Seen 16:15Z: runs queue long: sweep 43459528814 cache-in queued 7+ min, candidate-501 proof queued 25+ min,
   5 trunk proofs queued, with only 8 jobs running; stale queued runs 37642339310 (10-07), 43098147869 (11-11).
+
+## Re-run recipes for what is still PENDING (anyone can run these)
+Logs: `gh api repos/IssisX/ScraperX/actions/jobs/<steer or ask job id>/logs`, grep the tag named.
+- 1, 2, 5 (after #507 lands, within 30 min of its first muse-git run or later): on #509 post a team-login comment
+  opening `To Muse:` asking for one ASK and one FYI message naming #509. Expect one switchboard comment on #509
+  with `muse-git:relayed id=<that comment>` and no second one on later runs (5); then the ASK as one TO-CLAUDE
+  line on #282 at once (1) and the FYI only as a `digest` entry riding a later waking #282 post (2).
+- 3: steer of the first sweep after the red proof is 1 h old (43460678681 red 16:29Z, so after 17:29Z): grep
+  `RED-BRANCH` and `claude/integrate-systest-red`; expect one line on #282, none on later sweeps (same head).
+- 4: `CANDIDATE   #501` in each steer. Trunk moved notes only since 1956137b, so the candidate is kept (not
+  rebuilt); proof 43457224724 green -> `#501` merges; red -> a RED for the owner and no merge.
+- 6: bot comments on #384 starting `To Grok: plan 4e44e6ea416b` stay exactly one (6858074624).
+- 8, 10 (after the J-072 rate-hourly PR merges): a full sweep's `GITHUB` line names `N GraphQL` and stays under
+  `HOUR` pace; for 10, once the system-test PR merges, push one more commit with `Job: J-072` here: expect a NEW
+  PR for it and the log line `commit(s) past merged #N`.
+- 12: steer: `claude/integrate-system-test`, `-rate-hourly`, `-rule-check-protected` each get a PR (green, Job
+  line); `-systest-red` gets none (no Job line, red).
+- 13 (after #506): `PLAN-LATE` hours count from each job's own start; a J-NNNa line is its own row in PLAN-STATE.
+- 14 (after #503): cache-out green on a sweep whose listing is refused (the 403 on the cache listing).
+
+## Holes seen (not this test's pieces)
+- Board #384 holds 206 comments, past CLAUDE.md's 100 cap; nothing rolls it to a fresh board.
+- One check costs one sweep, about 35 min end to end (ask 14 min, steer 10, then cache-out), and runs queue
+  25+ min with 8 jobs running, so each path's reaction time is slower than the 10 min bridge clock implies.
+- Cleanup owed when done: branch `claude/integrate-systest-red` (a helper's delete is refused), issue #509.
