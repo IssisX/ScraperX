@@ -9,8 +9,8 @@ Read through: 1794600995 (2026-11-13 mail+asks)
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
-  done = the real test passing. NOW: 2-4 landed (19:47Z). #526 landed; #530 (5) #531 (8) open, 7/9/10 auto-open; 6 after
-  #530+#526, cut from trunk, brief it with the reads fix's touches; reads fix (xhigh) running. REAL TEST = plan sec 5 table read
+  done = the real test passing. NOW: all plan steps 1-10 built; 1-5, 8 landed; 6,7,9,10 + reads fix (-switchboard-reads) + selftest D8 (-switchboard-selftest)
+  auto-open and land. Then the real test. REAL TEST = plan sec 5 table read
   over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven (3 trunk reds 11-13: key 1090, voice picks, J-098 picks). Trunk red since #523 (Muse, mailed; send_later revert check).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
