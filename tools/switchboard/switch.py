@@ -1287,14 +1287,24 @@ class Switch:
 
     def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
         """It is still Codex's turn on this head (rules.codex_turn): wait for it rather than ask or pay for a
-        second review (J-031). Past the wait, the review goes on as if Codex were not there."""
+        second review (J-031). Past the wait, the review goes on as if Codex were not there.
+        J-072 (plan step 7): while Codex is expected and has not been asked on the head, it is still its turn, however
+        long ago the proof went green; once asked, its clock runs from the ask. A review Codex runs unasked (it is
+        never asked then) keeps the old clock, so a stuck running state cannot hold the head for ever."""
         if rules.codex_failed(ctx.get("comments") or [], facts.head_sha):
             return False   # Codex could not review this head (its usage limit): no wait
         now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
         expected = self.codex_counts(self.team.vendor_of_branch(facts.head_ref), ctx)
-        since = [ctx.get("proof_done_at") or "", self.codex_asked(facts, ctx)]
-        if expected:
-            since.append(ctx.get("created_at") or "")   # a PR the switch just opened was green long before
+        asked = self.codex_asked(facts, ctx)
+        if expected and asked:
+            since = [asked]   # the start clock runs from the ask, not from when the proof went green
+        elif expected and not rules.codex_in_flight(ctx.get("comments") or [], self.codex_reactions(facts, ctx),
+                                                    facts.head_sha):
+            return True   # not asked yet: the steer part asks it first; no paid review before that
+        else:
+            since = [ctx.get("proof_done_at") or "", asked]
+            if expected:
+                since.append(ctx.get("created_at") or "")   # a PR the switch just opened was green long before
         if not rules.codex_turn(since, True, expected, now):
             return False   # past every wait: no reaction read
         if rules.codex_turn(since, False, expected, now):
