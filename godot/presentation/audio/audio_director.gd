@@ -1185,7 +1185,7 @@ const HER_BODY_PLAYERS := 3
 const HER_VOICE_PLAYERS := 2
 const HER_RANK := {&"matron_shriek": 3, &"matron_wake": 3, &"matron_rip": 3, &"matron_effort": 3,
 	&"matron_hit": 2, &"matron_laugh": 2}
-const HER_VOICE_CLIPS := [&"matron_breath", &"matron_shriek", &"matron_croak", &"matron_cluck",
+const HER_VOICE_CLIPS := [&"matron_breath", &"matron_shriek",
 	&"matron_swallow", &"matron_sniff", &"matron_effort", &"matron_hit", &"matron_laugh"]
 const HER_PITCH := Vector2(0.85, 1.15)
 # Her one mouth: a line of hers (matron_say) is of HER_LINE_RANK, her last word (the apron wiped) of
@@ -1484,7 +1484,7 @@ func _her_free(first: int, count: int, rank: int) -> int:
 	return low if _her_shot_rank[low] <= rank else -1
 
 
-# Her waking dread (sound_bank _matron_wake) from `at`, `distance` metres from
+# Her waking dread (her bank's matron_wake, a recording) from `at`, `distance` metres from
 # the player. The ambience drops away first, so the world goes quiet around
 # it; nearer is louder and the duck is deeper; her own loops are held under
 # it. A fresh variant and pitch every time, so it never repeats identically.
