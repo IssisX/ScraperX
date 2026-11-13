@@ -312,6 +312,26 @@ class GhapiReads(unittest.TestCase):
         self.assertEqual(got.exception.detail, "exit 2, no stderr")
         self.assertEqual(len(calls), ghapi.GET_ATTEMPTS)
 
+    def test_a_log_read_passes_the_escape_flag_and_no_other_read_does(self):
+        # run 43489020325: every log read failed with gh's "the response contains terminal escape sequences;
+        # pass --allow-escape-sequences to output it anyway"
+        gh, calls = self.client(subprocess.CompletedProcess([], 0, b"FAIL: x\n", b""))
+        self.assertEqual(gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs"), b"FAIL: x\n")
+        self.assertIn("--allow-escape-sequences", calls[0])
+        gh.get_bytes("repos/IssisX/ScraperX/actions/artifacts/7/zip")
+        self.assertNotIn("--allow-escape-sequences", calls[1])
+
+    def test_a_gh_that_does_not_know_the_flag_is_asked_again_without_it(self):
+        old = subprocess.CompletedProcess([], 1, b"", b"unknown flag: --allow-escape-sequences\n\nUsage:  gh api "
+                                                       b"<endpoint> [flags]\n")   # gh 2.89.0's own answer
+        gh, calls = self.client(old, subprocess.CompletedProcess([], 0, b"FAIL: x\n", b""))
+        with mock.patch.object(ghapi.time, "sleep") as slept:
+            self.assertEqual(gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs"), b"FAIL: x\n")
+        self.assertEqual(len(calls), 2)
+        self.assertIn("--allow-escape-sequences", calls[0])
+        self.assertNotIn("--allow-escape-sequences", calls[1])
+        slept.assert_not_called()
+
 
 class ReconcilerRedNotice(unittest.TestCase):
     def send(self, tests):
