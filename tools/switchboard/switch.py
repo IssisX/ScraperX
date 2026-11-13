@@ -461,6 +461,9 @@ def http_status(detail: str) -> int:
     return int(m.group(1)) if m else 0
 
 
+TOKEN_REFUSED = "GitHub refused the merge token"   # MergeTokenRefused's first words: such a HUMAN-MERGE is never cold
+
+
 class MergeTokenRefused(RuntimeError):
     """GitHub refused the merge token on a workflow-file PR (J-056): the PR becomes merge-by-hand, with why."""
 
@@ -967,10 +970,8 @@ class Switch:
         full = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
         commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")
         proof, url, run_id, proof_done_at = self.proof(sha)
-        job = rules.job_of_pr(pr.get("body")) or \
-            rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(number, "")
+        job, issue = self.job_issue(pr)
         verdicts, comments = self.verdicts(number, job)
-        issue = self.jobs().get(job)
         # Muse's mailed verdicts land on the job issue or the board (the bridge cannot comment on a PR).
         off_pr = self.board_comments() + (self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
                                           if issue else [])
@@ -990,6 +991,12 @@ class Switch:
                # the head is a branch of this repo, not a fork's: only then is the team token ever used for it
                "own_head": (((pr.get("head") or {}).get("repo") or {}).get("full_name") or "") == self.gh.repo}
         return facts, ctx
+
+    def job_issue(self, pr: dict) -> tuple[str, dict | None]:
+        """A PR's job and its open job issue (None for none), as pr_facts reads them; sweep_delta compares the issue."""
+        job = rules.job_of_pr(pr.get("body")) or \
+            rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(pr["number"], "")
+        return job, self.jobs().get(job)
 
     def target_prs(self, only_pr: int, only_sha: str) -> list[dict]:
         """The open PRs the switch acts on: never the integrator's inbox PR (J-051)."""
@@ -1416,7 +1423,7 @@ class Switch:
         except GitHubError as err:
             code = http_status(err.detail)
             if workflows and code in MERGE_TOKEN_REFUSED:
-                raise MergeTokenRefused(f"GitHub refused the merge token (HTTP {code}): {MERGE_TOKEN_ENV} needs "
+                raise MergeTokenRefused(f"{TOKEN_REFUSED} (HTTP {code}): {MERGE_TOKEN_ENV} needs "
                                         f"{MERGE_TOKEN_NEEDS} on {self.gh.repo}") from None
             raise
         if not self.gh.dry_run and not (got or {}).get("merged"):
@@ -2196,9 +2203,28 @@ class Switch:
                 self._queue_text = ""
         return self._queue_text
 
-    def queue_started(self, delta: "SweepDelta", new_pr: bool) -> bool:
+    def queue_source(self) -> str:
+        """A digest of the queue's own text (work/plan.md when the plan is live, else muse.md): a change counts again."""
+        try:
+            text = (self.root / "work/plan.md").read_text(encoding="utf-8") if self.plan_mode() == "live" \
+                else self.queue_text()
+        except OSError:
+            text = ""
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+    def queue_started(self, delta: "SweepDelta", new_pr: bool, last: dict | None = None) -> bool:
         """J-097: could this fast sweep's changes have started a queued job? A bridged post (or any mail), a new PR, or
-        a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own."""
+        a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own.
+        J-072 (11-13): with the last count's unstarted jobs (`last`, run_sweep's queue timer) and the queue text
+        unchanged, only those jobs can lower the count: a proof run on a branch naming one, a bridged post naming one
+        (or naming no job), or a new PR. Counted on every Muse push and post, it was 225 of a fast sweep's 501 calls.
+        Not seen here: a push to a wip- branch (no proof run) with no mail; the full pass counts it, up to an hour late."""
+        waiting = (last or {}).get("waiting")
+        if isinstance(waiting, list) and (last or {}).get("source") == self.queue_source():
+            names = {str(j).lower().replace("-", "") for j in waiting}
+            mail = delta.mail or set()
+            return (new_pr or any(j in b.lower() for b in delta.active for j in names)
+                    or "*" in mail or bool(mail & set(waiting)))
         if delta.pipe or new_pr:
             return True
         if self.plan_mode() == "live":   # the queue is Muse's lines of work/plan.md, not muse.md's old block
@@ -2217,7 +2243,7 @@ class Switch:
         if text is None and self.plan_mode() == "live":
             model, _, _, rows = self.plan_table()
             waiting = [r.job for r in rows if r.owner == "muse" and r.state in ("planned", "told", "acknowledged")]
-            self.queue_items = ()
+            self.queue_items, self.queue_waiting = (), sorted(waiting)
             if len(waiting) < muse_queue.LOW_UNDER:
                 line = (f"QUEUE-LOW: {len(waiting)} unstarted Muse jobs in work/plan.md (under {muse_queue.LOW_UNDER}). "
                         f"Unstarted: {', '.join(waiting) or 'none'}")
@@ -2229,6 +2255,7 @@ class Switch:
         report = muse_queue.check(self.gh, text, self.now)
         ok = report.unstarted
         n = len(ok)
+        self.queue_waiting = sorted(v.line.job for v in ok)
         for note in report.notes:
             self.out(f"NOTE        queue check: {plain(note[:200])}")
         self.out(f"QUEUE       {n} of {len(report.verdicts)} queued job(s) unstarted (QUEUE-LOW under {muse_queue.LOW_UNDER})")
@@ -3366,7 +3393,14 @@ def rate_probe(sw: "Switch") -> None:
 FULL_EVERY = dt.timedelta(minutes=60)
 SWEEP_OVERLAP = dt.timedelta(minutes=3)   # each delta read starts this long before the last sweep's stamp
 PROOF_SPAN = dt.timedelta(hours=6)        # proof runs created this long before the stamp can finish after it
-COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")
+# J-072 (11-13): HUMAN-MERGE waits on a person or a new review, never a clock: a review, a Muse LAND by mail, a label
+# or a push all show in the delta (sweep_delta). Read every sweep it cost about 28 uncached calls a PR (fresh_facts).
+COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP", "HUMAN-MERGE")
+RUN_PAGES_CAP = ghapi.MAX_PAGES * 100     # a proof-run listing this long may have lost rows: read everything
+RUNNING = ("in_progress", "queued")       # a proof run not finished yet (running_runs); one listing each
+# What the switch loads from its trunk checkout and decides by (its code, agents, look sets, budget, switchboard.yml):
+# a change re-reads every PR once (trunk_inputs). Trunk's head itself moves 12 to 27 times an hour (notes commits).
+TRUNK_INPUTS = ("tools/switchboard/*.py", "tools/board/*.py", "work/*.yml", "work/looks/**/*")
 FULL_PARTS = frozenset({"prs", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
 
 
@@ -3398,43 +3432,112 @@ class SweepDelta:
     threads: set[int] = dataclasses.field(default_factory=set)    # every issue or PR something touched (the ledger's)
     active: set[str] = dataclasses.field(default_factory=set)     # branches with a proof run started or finished
     pipe: bool = False            # a CLAUDE_TO_MUSE ask or a bridge post: pipe health reads again
+    mail: set[str] | None = None  # the jobs (J-NNN) Muse's bridged posts name, "*" for one naming none (queue_started)
 
 
-def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
-    """What changed since the last sweep, in two reads (J-072): the proof runs and the comments since its stamp.
+def trunk_inputs(root: pathlib.Path) -> str:
+    """A digest of TRUNK_INPUTS in this checkout (J-072, 11-13): the code and config every decision is made by.
+    Tests are left out. Reads no GitHub."""
+    h = hashlib.sha256()
+    files = sorted({f for pattern in TRUNK_INPUTS for f in root.glob(pattern)
+                    if f.is_file() and not f.name.startswith("test_")})
+    for f in files:
+        h.update(str(f.relative_to(root)).encode("utf-8") + b"\0")
+        try:
+            h.update(f.read_bytes())
+        except OSError:
+            h.update(b"unreadable")
+        h.update(b"\0")
+    return h.hexdigest()[:16]
+
+
+def sweep_inputs(sw) -> str:
+    """trunk_inputs, and whether the merge token and the review key are set: a HUMAN-MERGE waits on those too."""
+    return f"{trunk_inputs(sw.root)}:{int(bool(getattr(sw, 'merge_token', '')))}{int(bool(getattr(sw, 'review_key', '')))}"
+
+
+def running_runs(sw) -> dict[str, str] | None:
+    """The proof runs not finished now, {run id: branch}, one listing per RUNNING status (J-072, 11-13). A re-run
+    keeps its first created_at (43109809366: created 11-11, re-run 11-13), so the delta's created listing never sees
+    it finish: the next sweep finds it gone from here. None when a listing failed or may have lost rows."""
+    out: dict[str, str] = {}
+    try:
+        for status in RUNNING:
+            got = sw.gh.paged(f"repos/{sw.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?status={status}",
+                              "workflow_runs")
+            if len(got) >= RUN_PAGES_CAP:
+                return None
+            out.update({str(r["id"]): r.get("head_branch") or "" for r in got
+                        if isinstance(r, dict) and r.get("status") in RUNNING and "id" in r})
+    except RateLimited:
+        raise
+    except GitHubError as err:
+        sw.out(f"NOTE        the running proof runs were not read ({err_text(err)}): every PR is read")
+        return None
+    return out
+
+
+def issue_needs(issue: dict | None) -> list[str]:
+    """The `needs:` labels of a job issue, the only ones pr_facts takes from it (wake:muse comes and goes)."""
+    return sorted(str(l.get("name")) for l in (issue or {}).get("labels") or []
+                  if isinstance(l, dict) and str(l.get("name") or "").startswith("needs:"))
+
+
+def sweep_delta(sw, prs: list[dict], state: dict, running: dict[str, str] | None = None) -> SweepDelta:
+    """What changed since the last sweep (J-072): the proof runs created in the span and those running now
+    (`running`, read by run_sweep before this), the comments since its stamp, and the open job issues.
     A PR is read when it is new, its head or updated_at moved (a push, label, review or PR comment), a proof run
-    on its branch finished, a comment landed on it, on its job issue or names it, or its last decision was not
-    COLD (a clock-driven wait: Codex, the review fallback, a merge). The PR listing is the sweep's own."""
+    on its branch finished (a re-run too: it was running at the last sweep and is not now), a comment landed on
+    it, on its job issue or names it (a bridged LAND on the job issue or the board), its job issue or that issue's
+    needs: labels changed, the open jobs changed while it holds the eye's FIX (rules.eye_relook), the switch's
+    trunk inputs or its tokens changed (sweep_inputs), or its last decision was not COLD (a clock-driven wait: Codex, the review
+    fallback, a merge). With no baseline, or a listing that may have lost rows, every PR is read."""
     since = parse_time(state["stamp"]) - SWEEP_OVERLAP
     now = sw.now
     repo = sw.gh.repo
-    got = sw.gh.get(f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{iso_z(since - PROOF_SPAN)}"
-                    "&per_page=100") or {}
-    runs = got.get("workflow_runs") or []
+    # paged (11-13): 145 proof runs in the span, so one page of 100 always hit the bail-out below and every fast
+    # sweep read every PR (24 of 24)
+    runs = sw.gh.paged(f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{iso_z(since - PROOF_SPAN)}",
+                       "workflow_runs")
     finished = {r.get("head_branch") or "" for r in runs if r.get("status") == "completed"
                 and (parse_time(r.get("updated_at") or "") or since) >= since}
+    was_running = state.get("running") if isinstance(state.get("running"), dict) else None
+    if running is not None and was_running is not None:
+        finished |= {str(b) for k, b in was_running.items() if k not in running}
     comments = sw.gh.get(f"repos/{repo}/issues/comments?since={iso_z(since)}&per_page=100") or []
     nums = {p["number"] for p in prs}
     recs = state.get("prs") or {}
     auto = {b for b in finished if b.startswith(AUTO_PR_PREFIX)}
     active = finished | {r.get("head_branch") or "" for r in runs if (parse_time(r.get("created_at") or "") or since) >= since}
     pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST)) for c in comments)
+    mail: set[str] = set()
+    for c in comments:
+        body = (c.get("body") or "").lstrip()
+        if body.startswith(BRIDGE_POST):
+            mail |= set(re.findall(r"\bJ-\d{3,}[a-z]?\b", body.split("\n", 1)[0])) or {"*"}   # J-044b too
     threads: set[int] = set()
     for c in comments:
         try:
             threads.add(int((c.get("issue_url") or "").rsplit("/", 1)[1]))
         except (ValueError, IndexError):
             continue
-    if len(runs) >= 100 or len(comments) >= 100:   # more than one page: read everything rather than guess
-        return SweepDelta(set(nums), len(comments), finished, auto, threads | set(nums), active, True)
+    if len(comments) >= 100:   # a page of comments or more: a mail may be in the rows not read, so the queue counts
+        mail.add("*")
+    if (len(runs) >= RUN_PAGES_CAP or len(comments) >= 100 or running is None or was_running is None
+            or state.get("inputs") != sweep_inputs(sw)):   # a listing may have lost rows, or no baseline
+        return SweepDelta(set(nums), len(comments), finished, auto, threads | set(nums), active, True, mail)
+    relook = sorted(sw.jobs()) != state.get("jobs")   # a job opened or closed: an eye FIX may read as a LAND now
     changed: set[int] = set()
     for p in prs:
         rec = recs.get(str(p["number"]))
         ripen = parse_time(str(rec.get("ripen") or "")) if isinstance(rec, dict) else None
+        _, issue = sw.job_issue(p)
         if (not isinstance(rec, dict) or rec.get("head") != (p.get("head") or {}).get("sha")
                 or rec.get("updated") != p.get("updated_at") or not rec.get("cold")
                 or (ripen is not None and ripen <= now)   # an inbox clock (NOT-MERGED, RED-STUCK, QUIET) ripened
-                or (p.get("head") or {}).get("ref") in finished):
+                or (p.get("head") or {}).get("ref") in finished
+                or rec.get("job_issue") != (issue or {}).get("number") or (rec.get("needs") or []) != issue_needs(issue)
+                or (relook and rec.get("eye_fix"))):
             changed.add(p["number"])
     by_issue: dict[int, set[int]] = {}
     for k, rec in recs.items():
@@ -3445,24 +3548,31 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
             thread = int((c.get("issue_url") or "").rsplit("/", 1)[1])
         except (ValueError, IndexError):
             continue
-        hit = {thread} | by_issue.get(thread, set()) | {int(r) for r in re.findall(r"#(\d{1,6})\b", (c.get("body") or "")[:600])}
+        hit = {thread}
+        # 11-13: the switch's own posts off a PR's thread (its merged notes on #350 re-read all six of that job's
+        # drafts) change no PR's facts; any other comment there still reads its PRs
+        if (c.get("user") or {}).get("login") != rules.BOT_LOGIN or (c.get("body") or "").lstrip().startswith(BRIDGE_POST):
+            hit |= by_issue.get(thread, set()) | {int(r) for r in re.findall(r"#(\d{1,6})\b", (c.get("body") or "")[:600])}
         changed |= hit & nums
-    return SweepDelta(changed, len(comments), finished, auto, threads | changed, active, pipe)
+    return SweepDelta(changed, len(comments), finished, auto, threads | changed, active, pipe, mail)
 
 
 def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
-    """What the next sweep compares (sweep_delta): the head, updated_at, the job issue, and whether only a new
-    head or comment can change this PR (cold)."""
-    cold = seen is None or seen.decision.action in COLD_ACTIONS
+    """What the next sweep compares (sweep_delta): the head, updated_at, the job issue and its needs: labels, whether
+    it holds the eye's FIX, and whether only a new head or comment can change this PR (cold)."""
+    cold = seen is None or (seen.decision.action in COLD_ACTIONS   # a refused merge token is tried again next sweep
+                            and not any(str(r).startswith(TOKEN_REFUSED) for r in seen.decision.reasons))
     if ask and not sw.stale(facts):   # the ask part is done with a head once its review and eye are posted
         author = sw.team.vendor_of_branch(facts.head_ref)
         comments = ctx.get("comments") or []
         review = rules.needs_review(facts, author, sw.team)
         cold = (cold and (not review or sw.marked(comments, "review", facts.number, facts.head_sha))
                 and (not rules.needs_eye(facts) or sw.marked(comments, "eye", facts.number, facts.head_sha)))
-    issue = (ctx.get("issue") or {}).get("number") if isinstance(ctx, dict) else None
-    return {"head": (pr.get("head") or {}).get("sha"), "updated": pr.get("updated_at"), "job_issue": issue,
-            "cold": bool(cold)}
+    issue = (ctx.get("issue") or {}) if isinstance(ctx, dict) else {}
+    eye_fix = any(v.kind == "eye" and v.verdict == "FIX" and v.author_login == rules.BOT_LOGIN
+                  for v in getattr(facts, "verdicts", ()))
+    return {"head": (pr.get("head") or {}).get("sha"), "updated": pr.get("updated_at"), "job_issue": issue.get("number"),
+            "needs": issue_needs(issue), "eye_fix": eye_fix, "cold": bool(cold)}
 
 
 def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | None = None) -> int:
@@ -3530,7 +3640,9 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     item_errors: list[str] = []
     deferred: list[str] = []
     prs = sw.target_prs(args.pr, args.sha)
-    delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state)
+    # J-072 (11-13): the proof runs not finished now, every sweep (the full pass too), so the next one sees a re-run end
+    running = None if targeted else running_runs(sw)
+    delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state, running)
     if steer and not targeted and not sw.merge_only and full:
         sw.sweep_owner_labels()
     if delta is not None:
@@ -3609,13 +3721,16 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     queue_key, inbox_ran = "", False
     if steer and not targeted:
         new_pr = delta is not None and any(str(p["number"]) not in (state.get("prs") or {}) for p in prs)
-        count_now = delta is None or sw.queue_started(delta, new_pr)
+        count_now = delta is None or sw.queue_started(delta, new_pr, queue_timer)
         if count_now:
+            sw.queue_waiting = None
             part("queue check", sw.queue_check)
         if "queue check" in not_done or not count_now:
             sw.queue_items = queue_item_of(queue_timer.get("item"))   # not counted now: the last count stands
-        else:
+        else:   # J-072 (11-13): the count's unstarted jobs and queue text, what the next fast sweep's trigger compares
             queue_timer = {"item": queue_item_record(sw.queue_items), "listed": queue_timer.get("listed") or ""}
+            if isinstance(getattr(sw, "queue_waiting", None), list):
+                queue_timer.update(waiting=sw.queue_waiting, source=sw.queue_source())
         queue_key = sw.queue_items[0].key if sw.queue_items else ""
     queue_due = bool(queue_key) and queue_key != queue_timer.get("listed")
     # J-103: the digest entries no inbox comment carried yet, and the heads already re-run, from the last sweep
@@ -3651,7 +3766,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.mark_reruns(steered)   # J-103
         if not queue_key or (inbox_ran and "inbox" not in not_done and queue_key in getattr(sw, "inbox_keys", set())):
             queue_timer["listed"] = queue_key
-        if queue_timer.get("item") or queue_timer.get("listed"):
+        if queue_timer.get("item") or queue_timer.get("listed") or "waiting" in queue_timer:
             timers["queue"] = queue_timer
         else:
             timers.pop("queue", None)
@@ -3705,7 +3820,12 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.gh.state[part_key] = {"stamp": iso_z(now), "full_at": iso_z(now) if delta is None else state["full_at"],
                                  "prs": {k: v for k, v in records.items() if k in open_now},
                                  "timers": timers, "retry": sorted(not_done),
-                                 "dirty": {} if delta is None else dirty}
+                                 "dirty": {} if delta is None else dirty,
+                                 # J-072 (11-13): the baselines sweep_delta compares; a failed read keeps the last one
+                                 "running": running if running is not None else (state or {}).get("running"),
+                                 "inputs": sweep_inputs(sw),
+                                 "jobs": sorted(sw._jobs) if isinstance(getattr(sw, "_jobs", None), dict)
+                                 else (state or {}).get("jobs")}
     write_summary(summary, "Item errors (the sweep finished; each is retried next sweep)",
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
