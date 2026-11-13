@@ -16,7 +16,7 @@ const HerTakes := preload("res://presentation/audio/her_takes.gd")
 const VoiceLines := preload("res://presentation/audio/voice_lines.gd")
 const MatronSpeech := preload("res://presentation/audio/matron_speech.gd")
 # Her voice is not picked yet (J-089): the owner picks it by ear from
-# godot/presentation/audio/matron_voice_picks/, and until then the gate stays closed and her lines are
+# 03_EXECUTION/VOICE_PICKS/ (out of the shipped tree), and until then the gate stays closed and her lines are
 # said silent (matron_speech.gd: the line, caption and mouth timing, no clip plays). Set true with the
 # pick, when the bank is regenerated in the picked voice.
 const MATRON_VOICE_APPROVED := false
