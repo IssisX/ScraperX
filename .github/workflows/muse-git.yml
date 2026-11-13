@@ -1,6 +1,6 @@
 name: Muse git channel
 # Muse's messages through git, beside the mail bridge (trial, 11-13): tools/switchboard/muse_git.py says why and how.
-#   relay  Muse's new files on fb-bot/mail become comments, once each, under the team login (MUSE_POST_TOKEN).
+#   relay  Muse's new files on fb-bot/mail become comments, once each, under the team login (AGENT_GITHUB_TOKEN).
 #   inbox  New CLAUDE_TO_MUSE notices become files on muse-inbox, the switchboard's branch that Muse fetches.
 # Not `on: push` of fb-bot/mail: a push runs the workflow file of the pushed commit, and that branch holds only
 # messages, so trunk's code would never run; and a branch's own copy of a workflow must never post as the team.
@@ -32,7 +32,7 @@ jobs:
       startsWith(github.event.workflow_run.display_title, 'Switchboard sweep'))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # MUSE_POST_TOKEN lives only in this environment, which deploys only from ScraperX-Claude (SECURITY.md).
+    # AGENT_GITHUB_TOKEN lives only in this environment, which deploys only from ScraperX-Claude (J-057, SECURITY.md).
     environment: switchboard-merge
     # Job-level, so a skipped run never displaces a pending one; a newer pending run replaces an older (each run
     # handles everything new, so nothing is lost).
@@ -56,10 +56,12 @@ jobs:
         id: relay
         env:
           GH_TOKEN: ${{ github.token }}
-          # A fine-grained token of the team login, this repository only, Issues: read and write only (as the mail
-          # bridge's GITHUB_TOKEN). This step and no other; muse_git.py sends it only on its comment POST and one
-          # GET /user, and takes it out of the environment first, so no git child process inherits it.
-          MUSE_POST_TOKEN: ${{ secrets.MUSE_POST_TOKEN }}
+          # J-138: the hosted agent's token of the team login (J-057), reused so no new secret is needed. Its third
+          # use, beside ask and provision: this step and no other job or step. The posts need Issues: read and write
+          # on this repo. muse_git.py checks GET /user first and posts nothing unless the login is IssisX (fail
+          # closed), sends it only on that call and the comment POST, and takes it out of the environment before any
+          # git process runs, so no child inherits it.
+          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: python3 src/tools/switchboard/muse_git.py relay --git-dir "$RUNNER_TEMP/data.git" --output "$GITHUB_OUTPUT"
 

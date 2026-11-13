@@ -349,6 +349,30 @@ class ForgedMarks(Channel):
         self.assertEqual([p["body"].split("\n")[0] for p in self.posts()], ["**Muse (via email bridge): J-002 FYI fine**"])
         self.assertTrue(any(line.startswith("SKIP   mail/l.md") for line in self.lines), self.lines)
 
+    def test_relay_fails_closed_at_start_without_the_team_logins_token(self):
+        def run(env, poster=G.TEAM_LOGIN, refuse=False):
+            self.gh.poster = poster
+            def call(_api, method, path, token, body=None):
+                if refuse and path == "user":
+                    raise G.ApiError(method, path, 403)
+                return self.gh.call(method, path, token, body)
+            fetched = []
+            with mock.patch.dict(os.environ, env, clear=False), \
+                    mock.patch.object(G.Api, "_call", call), \
+                    mock.patch.object(G.Git, "fetch", lambda g: fetched.append(1) or {}), \
+                    mock.patch("builtins.print", lambda *a, **k: self.lines.append(" ".join(map(str, a)))):
+                code = G.main(["relay", "--git-dir", self.data, "--repo", REPO])
+            return code, bool(fetched)
+        base = {"GH_TOKEN": READ}
+        os.environ.pop(G.POST_TOKEN_ENV, None)
+        self.assertEqual(run(base), (1, False))                                    # no token
+        self.assertEqual(run(dict(base, **{G.POST_TOKEN_ENV: POST}), "someone-else"), (1, False))
+        self.assertEqual(run(dict(base, **{G.POST_TOKEN_ENV: POST}), refuse=True), (1, False))
+        self.assertTrue(any("refused by GET /user (HTTP 403)" in line for line in self.lines), self.lines)
+        self.assertEqual(run(dict(base, **{G.POST_TOKEN_ENV: POST})), (0, True))   # the team login: on it goes
+        self.assertFalse(any(m == "POST" for m, _, _ in self.gh.calls))
+        self.assertNotIn(G.POST_TOKEN_ENV, os.environ)   # taken out before any git process
+
     def test_a_post_token_of_another_login_posts_nothing(self):
         self.push({"mail/d.md": "MUSE_TO_CLAUDE: J-002 FYI message D\n"})
         self.gh.poster = "someone-else"
@@ -414,7 +438,7 @@ class Wiring(unittest.TestCase):
         self.assertNotIn("environment", box)
         text = json.dumps(wf)
         self.assertEqual(text.count("secrets."), 1)
-        holders = [s for s in relay["steps"] if "MUSE_POST_TOKEN" in json.dumps(s)]
+        holders = [s for s in relay["steps"] if "AGENT_GITHUB_TOKEN" in json.dumps(s)]
         self.assertEqual(len(holders), 1)
         for job in wf["jobs"].values():   # no third-party action: plain git and python
             self.assertFalse([s for s in job["steps"] if "uses" in s])

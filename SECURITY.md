@@ -35,7 +35,8 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
-  the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
+  the `ask` and `provision` steps that call out (J-057), and `AGENT_GITHUB_TOKEN` also the Muse git channel's
+  `relay` step (J-138, below); the PR check of the switch stays read-only with no
   secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
   `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
   (J-072).
@@ -75,10 +76,10 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   unaddressed mail and the board's verdicts are read and written.
 
 ### Muse git channel (`.github/workflows/muse-git.yml`, `tools/switchboard/muse_git.py`)
-- `MUSE_POST_TOKEN` (a fine-grained token of the team login, this repository only, Issues: read and write only)
-  lives only in environment `switchboard-merge` and reaches only the `relay` step, which `muse_git.py` sends it from
-  only on its comment POST and one `GET /user`; it is taken out of the environment before any git process runs. Any
-  other job or step that reads it is P0.
+- The `relay` step posts with `AGENT_GITHUB_TOKEN` (the team login; the posts need Issues: read and write on this
+  repository). `muse_git.py` calls `GET /user` first and posts nothing unless the login is IssisX (fail closed),
+  sends the token only on that call and its comment POST, and takes it out of the environment before any git
+  process runs. Any other step of `muse-git.yml` that reads it is P0.
 - Only trunk's file and code run (`workflow_run`, `schedule`, a dispatch on trunk), never `on: push` of a message
   branch, whose own workflow copy would run. `fb-bot/mail` and `muse-inbox` are read with `git fetch` and
   `cat-file` into a bare repo, never checked out or run.

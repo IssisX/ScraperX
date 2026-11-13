@@ -7,7 +7,7 @@ channel carries the same messages through git. The mail bridge keeps running bes
 
   OUT of Muse (relay)  Muse commits one file per message to OUTBOX_BRANCH (fb-bot/mail), at mail/<name>.md: first
         line the subject it would mail today (`MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`), then the body.
-        Each new file is posted once, as one comment under the team login (MUSE_POST_TOKEN), on the issue the mail
+        Each new file is posted once, as one comment under the team login (POST_TOKEN_ENV), on the issue the mail
         bridge would pick for that subject (target), with the bridge's own first line, BRIDGE_POST. So every reader
         (the inbox's ASK and FYI, review verdicts, asks.py, the ledger, the reconciler, the pipe health) reads a git
         post exactly as a mailed one, with no change; only the footer (FOOTER) names the transport.
@@ -63,6 +63,9 @@ POSTED_FILE = "state/posted.txt"         # the keys posted, one a line, of the f
 SINCE_FILE = "state/notices-since.txt"   # the notice listing's mark: the newest comment update read
 OUTBOX_REF = "refs/muse-git/outbox"      # where the two branches are fetched, in a bare repo of data only
 INBOX_REF = "refs/muse-git/inbox"
+# The post token (11-13): the hosted agent's token of the team login, in environment switchboard-merge, reused so Cory
+# adds no secret. Its posts need Issues: read and write on this repo; it is sent on the comment POST and GET /user only.
+POST_TOKEN_ENV = "AGENT_GITHUB_TOKEN"
 BRIDGE_POST = "**Muse (via email bridge)"    # switch.BRIDGE_POST: the first line every reader knows (module doc)
 MUSE_MARKER = "MUSE_TO_CLAUDE:"
 NOTICE_MARKER = "CLAUDE_TO_MUSE:"
@@ -145,12 +148,12 @@ class Api:
     def poster(self) -> str:
         """The login the post token acts as (one read, with that token)."""
         if not self._post:
-            raise RuntimeError("MUSE_POST_TOKEN is not set")
+            raise RuntimeError(f"{POST_TOKEN_ENV} is not set")
         return str((self._call("GET", "user", self._post) or {}).get("login") or "")
 
     def comment(self, number: int, body: str) -> dict:
         if not self._post:
-            raise RuntimeError("MUSE_POST_TOKEN is not set")
+            raise RuntimeError(f"{POST_TOKEN_ENV} is not set")
         return self._call("POST", f"repos/{self.repo}/issues/{int(number)}/comments", self._post, {"body": body}) or {}
 
 
@@ -406,19 +409,32 @@ def read_posted(git: Git) -> set[str]:
     return {k for k in git.show(INBOX_REF, POSTED_FILE).split() if k.isdigit()}
 
 
-def relay(api: Api, git: Git, dry_run: bool = False, log: Callable[[str], None] = print) -> tuple[list[str], int]:
+def check_poster(api: Api) -> str:
+    """Fail closed (11-13): the post token must act as the team login, or nothing is posted. A token missing,
+    refused by GET /user, or of another login raises, naming the cause; posts under another login would be read by
+    no one (every reader trusts the team login only)."""
+    try:
+        who = api.poster()
+    except ApiError as e:
+        raise RuntimeError(f"{POST_TOKEN_ENV} was refused by GET /user (HTTP {e.status}): nothing is posted") from None
+    if who.lower() != TEAM_LOGIN.lower():
+        raise RuntimeError(f"{POST_TOKEN_ENV} acts as {plain(who)[:40] or 'no login'}, not {TEAM_LOGIN}: "
+                           "no reader would see its posts, so none is made")
+    return who
+
+
+def relay(api: Api, git: Git, dry_run: bool = False, log: Callable[[str], None] = print,
+          checked: bool = False) -> tuple[list[str], int]:
     """Posts each outbox message not posted yet, oldest first, at most MAX_POSTS. Returns the keys now posted
-    (found already posted included, so the state learns them) and the number that failed."""
+    (found already posted included, so the state learns them) and the number that failed. `checked`: main ran
+    check_poster at start already."""
     done = read_posted(git)
     fresh = [m for m in outbox(git, log) if m.key not in done]
     if not fresh:
         log("RELAY  nothing new on " + OUTBOX_BRANCH)
         return [], 0
-    if not dry_run:
-        who = api.poster()
-        if who.lower() != TEAM_LOGIN.lower():
-            raise RuntimeError(f"MUSE_POST_TOKEN acts as {plain(who)[:40] or 'no login'}, not {TEAM_LOGIN}: "
-                               "no reader would see its posts, so none is made")
+    if not dry_run and not checked:
+        check_poster(api)
     targets = Targets(api)
     keys, failed = [], 0
     for m in fresh[:MAX_POSTS]:
@@ -578,18 +594,20 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     # The tokens are taken out of the environment, so no git child process inherits them.
     read_token = os.environ.pop("GH_TOKEN", "")
-    post_token = os.environ.pop("MUSE_POST_TOKEN", "")
+    post_token = os.environ.pop(POST_TOKEN_ENV, "")
     api = Api(a.repo, read_token, post_token if a.part == "relay" else "")
+    if a.part == "relay" and not a.dry_run:
+        try:   # fail closed, first: no fetch, no read, no post unless the token is the team login's
+            print(f"RELAY  {POST_TOKEN_ENV} acts as {check_poster(api)}")
+        except RuntimeError as e:
+            print(f"RELAY  FAIL: {e}")
+            return 1
     git = Git(a.git_dir, a.remote or f"https://github.com/{a.repo}.git")
     heads = git.fetch()
     print(f"FETCH  {OUTBOX_BRANCH} {heads.get(OUTBOX_BRANCH, 'absent')[:12]}, "
           f"{INBOX_BRANCH} {heads.get(INBOX_BRANCH, 'absent')[:12]}")
     if a.part == "relay":
-        if not post_token and not a.dry_run:
-            fresh = [m for m in outbox(git) if m.key not in read_posted(git)]
-            print(f"RELAY  MUSE_POST_TOKEN is not set: {len(fresh)} message(s) wait (environment switchboard-merge)")
-            return 1 if fresh else 0
-        keys, failed = relay(api, git, a.dry_run)
+        keys, failed = relay(api, git, a.dry_run, checked=True)
         if a.output:
             with open(a.output, "a", encoding="utf-8") as f:
                 f.write(f"posted={','.join(keys)}\n")
