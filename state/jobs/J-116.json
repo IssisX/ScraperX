@@ -2,16 +2,17 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858"
+  "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
+  "fb-bot/integrate-protected-j116": "7a7edd5c69421294be39630748619f1adb58661b"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "red: host-build",
  "commands": [
   "6829010752:44"
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "95dad2f9339725a4821d943c2ae0bdbf031feb35",
+ "head": "4b79a7739a7973a325bb13f03c41667111ce7089",
  "issue": 438,
  "job": "J-116",
  "landed": {
@@ -19,6 +20,11 @@
    "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
    "",
    "2026-11-12T21:45:56Z"
+  ],
+  "fb-bot/integrate-protected-j116": [
+   "7a7edd5c69421294be39630748619f1adb58661b",
+   "",
+   "2026-11-13T03:14:07Z"
   ]
  },
  "obligations": [
@@ -89,7 +95,7 @@
  "prs": [
   487
  ],
- "review": "FIX",
+ "review": "",
  "state": "working",
- "updated": "2026-11-12T22:53:22Z"
+ "updated": "2026-11-13T03:14:07Z"
 }

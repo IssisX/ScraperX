@@ -221,9 +221,17 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (7), from the switchboard at 11-12 5:54 PM Central.\n\n- Needs you: J-001 ask on #108: ask from Claude on #108. Grok did not act (2 send(s) by issue, no ack); since 11-12 5:54 PM Central. Done: /ack O-8d6610ae\n- Needs you: J-001 ask on #108: ask from Claude on #108. Grok did not act (2 send(s) by issue, no ack); since 11-12 5:54 PM Central. Done: /ack O-2e80ac51\n- Needs you: J-043 ask on #241: ask from Claude on #241. Grok did not act (2 send(s) by issue, no ack); since 11-12 5:54 PM Central. Done: /ack O-071091f1\n- Needs you: J-043 ask on #241: ask from Claude on #241. Grok did not act (2 send(s) by issue, no ack); since 11-12 5:54 PM Central. Done: /ack O-b4fd7064\n- Needs you: J-053 ask on #82: ask from Claude on #82. Grok did not act (2 send(s) by issue, no ack); since 11-12 5:54 PM Central. Done: /ack O-940db07d\n- Needs you: J-077 ask on #392: ask from Muse on #392. Claude did not act (in its inbox, no ack); since 11-12 5:54 PM Central. Done: /ack O-bec95aec\n- Needs you: J-117 ask on #439: ask from Muse on #439. Claude did not act (in its inbox, no ack); since 11-12 3:45 PM Central. Done: /ack O-0f17ee95\n\nStill standing from earlier batches: 11 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-13T03:14:07Z",
+   "keys": [
+    "O-7042d24d"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (1), from the switchboard at 11-12 9:14 PM Central.\n\n- Needs you: J-053 ask on #82: ask from Muse on #82. Claude did not act (in its inbox, no ack); since 11-12 8:13 PM Central. Done: /ack O-7042d24d\n\nStill standing from earlier batches: 18 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-12T23:54:27Z",
+ "last_batch": "2026-11-13T03:14:07Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
@@ -256,6 +264,7 @@
   "O-6b556027": "2026-11-10T15:09:20Z",
   "O-6cedf3d0": "2026-11-12T00:23:47Z",
   "O-6f17cffa": "2026-11-11T21:07:56Z",
+  "O-7042d24d": "2026-11-13T03:14:07Z",
   "O-71c6c5fb": "2026-11-10T17:29:19Z",
   "O-75aff563": "2026-11-11T15:02:17Z",
   "O-79a9997a": "2026-11-12T19:27:38Z",

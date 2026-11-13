@@ -1,11 +1,11 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-protected-j043-rail-stand": "b9c87902764ec9024402106a2ee2b859b98839e5"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [
   "6825142896:57"
  ],
@@ -298,15 +298,67 @@
    "version": "red:137352db30319b8e37f9d4aaac72440a2e262492",
    "via": "email",
    "what": "`fb-bot/integrate-protected-j043-rail-stand` proof red: godot-touch (touch-1), native-tests (athletic-traversal-1), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-13T02:32:49Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-13T03:14:07Z",
+   "dead": "2026-11-13T14:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-13T04:17:00Z",
+   "id": "O-4873e509",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-13T03:14:07Z",
+   "missing": 0,
+   "ref": "ASK|ask on #241",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 241,
+   "to": "claude",
+   "unseen": null,
+   "version": "6842076321",
+   "via": "session",
+   "what": "ask from Muse on #241"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-13T03:02:51Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-13T03:14:07Z",
+   "dead": "2026-11-13T14:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-13T04:17:00Z",
+   "id": "O-8e163134",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-13T03:14:07Z",
+   "missing": 0,
+   "ref": "ASK|ask on #241",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 241,
+   "to": "claude",
+   "unseen": null,
+   "version": "6842528002",
+   "via": "session",
+   "what": "ask from Muse on #241"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 496,
  "pr_done": "",
- "prs": [],
- "review": "",
- "state": "proof",
- "updated": "2026-11-13T02:13:35Z"
+ "prs": [
+  496
+ ],
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-13T03:14:07Z"
 }
