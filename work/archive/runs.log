@@ -385,3 +385,4 @@
 {"job": "J-133", "kind": "review", "note": "review#488@12fc8380 month cap $100.00: spent $98.24, this call up to $2.59", "phase": "refused", "run": "bd081fb4f8d8", "ts": "2026-11-13T17:51:39Z", "usd": "0"}
 {"job": "J-118", "kind": "review", "note": "review#519@50e634c0 month cap $100.00: spent $98.24, this call up to $2.62", "phase": "refused", "run": "0df5e0ca250e", "ts": "2026-11-13T18:26:34Z", "usd": "0"}
 {"job": "J-098", "kind": "review", "note": "review#523@67caf6d3 month cap $100.00: spent $98.24, this call up to $2.68", "phase": "refused", "run": "694c57b6d675", "ts": "2026-11-13T18:52:23Z", "usd": "0"}
+{"job": "J-130", "kind": "review", "note": "review#484@f409406d month cap $100.00: spent $98.24, this call up to $2.60", "phase": "refused", "run": "a4d6f04d279f", "ts": "2026-11-13T19:07:52Z", "usd": "0"}
