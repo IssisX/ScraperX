@@ -420,8 +420,10 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
     if not lands:
         waits.append(f"no LAND on @{pr.head_sha[:8]} from a vendor other than {author_vendor}")
     if "eyes" in pr.needs:
+        # Any team login's eye LAND naming the head counts, a hand look included, not only the workflow bot's
+        # (SYSTEM_PLAN item 8); parse_verdict already drops a login outside verdict_logins.
         eye_lands = [v for v in pr.verdicts if v.kind == "eye" and v.verdict == "LAND"
-                     and names_head(v, pr.head_sha) and v.author_login == BOT_LOGIN]
+                     and names_head(v, pr.head_sha)]
         if not eye_lands:
             waits.append("needs:eyes and no eye LAND on this head")
     if pr.rule_check_block is None:
