@@ -13,7 +13,7 @@ run-name: >-
 # The wake switch and merger of design v3 step B (job J-031). No model decides here: see
 # tools/switchboard/switch.py and work/CONTEXT.md.
 #
-# Every event except pull_request runs this file from the DEFAULT branch, which is trunk (ScraperX-Claude; it
+# Every event except a push (the selftest) runs this file from the DEFAULT branch, which is trunk (ScraperX-Claude; it
 # was `main` until the default moved, J-072 checked 11-09). Each run checks out trunk for the code
 # and config. No third-party action is used: the checkout is plain git over the public URL, so no
 # credential is written to disk. The only actions are GitHub's own actions/cache, upload-artifact and
@@ -60,10 +60,12 @@ on:
         description: The live Muse bridge's version (set by the bridge's clock; leave empty)
         type: string
         default: ""
-  pull_request:
-    # ready_for_review: a draft skips the live dry run below, so it runs once when the PR is marked ready.
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches: [ScraperX-Claude]
+  # 11-13: a push to an integrate branch, not a pull_request event. The switchboard opens the claude/integrate-* PRs
+  # with the workflow token, and GitHub holds a pull_request run that github-actions[bot] triggers for someone's
+  # approval ("action_required" on #503 and #505, a pop-up for Cory), or fails it at the start (#500, #502). A push
+  # is the agent's own, so its run needs no approval, and it comes once per head, not again for every PR event.
+  push:
+    branches: ['*/integrate-*']
     paths:
       - "tools/switchboard/**"
       - "work/*.yml"
@@ -78,7 +80,7 @@ concurrency:
   # one pending run per group and cancels the older one, so idle comment runs, several a minute, were
   # displacing the proof-finished and scheduled runs that do the reviews, the eye and the sweep.
   group: >-
-    ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) ||
+    ${{ github.event_name == 'push' && format('switchboard-selftest-{0}', github.ref) ||
     (inputs.provision && 'switchboard-provision' ||
     (((github.event_name == 'issue_comment' && !(github.event.issue.pull_request &&
     (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
@@ -98,9 +100,9 @@ env:
   SWITCHBOARD_BRIDGE_VERSION: ${{ inputs.bridge_version }}
 
 jobs:
-  # A PR that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
+  # A push that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
   selftest:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -109,15 +111,15 @@ jobs:
       pull-requests: read
       actions: read
     steps:
-      - name: Check out the PR's merge commit
+      - name: Check out the pushed head
         env:
-          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           git clone -q --filter=blob:none --no-checkout "https://github.com/${REPO}.git" src
-          git -C src fetch -q --no-tags origin "+refs/pull/${PR}/merge:refs/remotes/pr/merge" "+refs/heads/${TRUNK}:refs/remotes/origin/${TRUNK}"
-          git -C src checkout -q --detach refs/remotes/pr/merge
+          git -C src fetch -q --no-tags origin "$SHA" "+refs/heads/${TRUNK}:refs/remotes/origin/${TRUNK}"
+          git -C src checkout -q --detach "$SHA"
       - name: Install the hash-pinned dependencies (wheels only)
         run: |
           set -euo pipefail
@@ -126,11 +128,10 @@ jobs:
             -r src/tools/switchboard/requirements.txt
       - name: Unit tests of the switch's decisions
         run: .venv/bin/python -m unittest discover -s src/tools/switchboard -p 'test_*.py' -v
-      # Cory 11-12, "only run what changed": the dry run costs 550 to 800 calls of the repo's shared hourly
-      # GitHub limit (it starved the live sweep on #476). A draft PR runs only the unit tests above; the dry
-      # run waits until the PR is ready, then runs on each push to it.
+      # Cory 11-12, "only run what changed": the dry run cost 550 to 1,368 calls of the repo's shared hourly
+      # GitHub limit (it starved the live sweep on #476). 11-13: a dry run's own budget is 300 calls
+      # (switch.py CALL_BUDGET), so both together cost at most 600.
       - name: Dry run against the live repo
-        if: ${{ !github.event.pull_request.draft }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -144,11 +145,11 @@ jobs:
   # restore unpacks the whole archive, absolute paths too. So it is restored here, in a job with no secret, no token
   # scope, no checkout and no step of its own code, and only the one file goes on, as an artifact of this run; ask
   # and steer read it in $RUNNER_TEMP once its MAC checks (ghapi.load_etags). One cache scope: every event but a
-  # pull_request runs on the default branch, trunk, a run on any other ref skips the cache, and the runs are
+  # push runs on the default branch, trunk, a run on any other ref skips the cache, and the runs are
   # serialized by the concurrency group, so two states never diverge and fire one cached ledger timer twice.
   cache-in:
     if: >-
-      github.ref == 'refs/heads/ScraperX-Claude' && github.event_name != 'pull_request' && !inputs.provision && (
+      github.ref == 'refs/heads/ScraperX-Claude' && github.event_name != 'push' && !inputs.provision && (
         github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:') ||
         github.event.label.name == 'needs:orchestrator'
       ) && (
@@ -309,10 +310,10 @@ jobs:
   steer:
     needs: [cache-in, ask]
     # J-056 security pass: SWITCHBOARD_MERGE_TOKEN lives only in this environment, which deploys only from
-    # ScraperX-Claude, so a branch's copy of this file (pull_request, or a dispatch on another ref) cannot read it.
+    # ScraperX-Claude, so a branch's copy of this file (a push, or a dispatch on another ref) cannot read it.
     environment: switchboard-merge
     if: >-
-      always() && github.event_name != 'pull_request' && needs.ask.result != 'cancelled' && (
+      always() && github.event_name != 'push' && needs.ask.result != 'cancelled' && (
         github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:')
       ) && (
         github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
