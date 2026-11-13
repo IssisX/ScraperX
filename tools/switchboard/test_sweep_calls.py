@@ -11,6 +11,8 @@ Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'
 from __future__ import annotations
 
 import argparse
+import contextlib
+import copy
 import datetime as dt
 import pathlib
 import re
@@ -26,7 +28,8 @@ import test_inbox  # noqa: E402
 NOW = test_inbox.NOW
 REPO = test_inbox.FakeGH.repo
 IDLE_MAX = 15        # the coordinator's bound for a sweep where nothing changed
-IDLE = 5             # what one makes now
+IDLE = 8             # what one makes now. 11-13 (J-072): was 5; +2 the running proof runs (a re-run keeps its old
+                     # created_at, so only these show it finish), +1 the open job issues (their needs: labels)
 TRUNK_BRIDGE = switch.bridge_version((HERE / "muse_bridge.gs").read_text(encoding="utf-8"))
 FIRST_PR_MAX = 16    # one changed PR: its eight reads, the shared job and board reads, the inbox's whole-sweep reads
 PER_PR_MAX = 8       # each further changed PR: pr_facts' own reads (the PR, its commit, proof run and jobs, comments,
@@ -43,6 +46,11 @@ def pr(n: int, updated: str = "2026-11-06T18:00:00Z") -> dict:
             "base": {"ref": "ScraperX-Claude"}, "user": {"login": "IssisX"}}
 
 
+def job_issue(n: int, job: str, labels=()) -> dict:
+    return {"number": n, "title": f"{job} work", "state": "open", "labels": [{"name": l} for l in labels],
+            "user": {"login": "IssisX"}}
+
+
 class CountingGH(test_inbox.FakeGH):
     """test_inbox's fake, plus the per-PR reads pr_facts makes, and every call counted (reads, writes, comments)."""
 
@@ -52,6 +60,7 @@ class CountingGH(test_inbox.FakeGH):
         self.wake = list(wake)   # the open issues labeled wake:muse
 
     fail_once: tuple = ()   # path prefixes whose first read fails (a transient 403)
+    job_issues: tuple = ()  # the open issues labeled `job`
 
     def route(self, path):
         self.calls.append(path)
@@ -71,7 +80,7 @@ class CountingGH(test_inbox.FakeGH):
         if base == "rate_limit":
             return {"resources": {"core": {"limit": 1000, "remaining": 900, "reset": 1794250000}}}
         if base == f"repos/{REPO}/issues" and "labels=job" in path:
-            return []
+            return list(self.job_issues)
         if base == f"repos/{REPO}/branches":
             return []
         if base == f"repos/{REPO}/issues" and "labels=wake" in path:
@@ -89,12 +98,12 @@ class CountingGH(test_inbox.FakeGH):
         return super().write(method, path, body, what)
 
 
-def sweep(gh, state=None, now=NOW, whole=None, plan_mode="off"):
+def sweep(gh, state=None, now=NOW, whole=None, plan_mode="off", merge_token=""):
     """One sweep. `plan_mode` is what work/switchboard.yml says (`plan`): off, since the plan part has its own sweep
     tests (test_plan_sweep)."""
     sw = test_inbox.make(gh, now)
     sw.root = HERE.parents[1]
-    sw.merge_token = sw.review_key = ""
+    sw.merge_token, sw.review_key = merge_token, ""
     sw._jobs = None
     sw._board = None
     sw.plan_mode = lambda: plan_mode
@@ -114,6 +123,8 @@ def last_state(prs, minutes=10, cold=True) -> dict:
     return {"stamp": stamp, "full_at": stamp,
             "prs": {str(p["number"]): {"head": p["head"]["sha"], "updated": p["updated_at"], "job_issue": None,
                                        "cold": cold} for p in prs},
+            # the baselines the last sweep saved (J-072, 11-13): no proof run running, these trunk inputs, no open job
+            "running": {}, "inputs": switch.trunk_inputs(HERE.parents[1]) + ":00", "jobs": [],   # no token, no key
             # the full pass found the pipe healthy: trunk's bridge seen, no wake:muse label on, no clock running
             "timers": {"pipe": {"next_at": None, "version_at": iso(NOW + dt.timedelta(minutes=20)), "live": TRUNK_BRIDGE,
                                 "wake": []}}}
@@ -165,6 +176,21 @@ class SweepCalls(unittest.TestCase):
             gh = CountingGH(self.prs, comments=[{"id": 1, "body": "To Muse: see this", "created_at": posted,
                                                  "updated_at": posted,
                                                  "issue_url": f"https://api.github.com/repos/{REPO}/issues/{thread}"}])
+            gh.job_issues = (job_issue(290, "J-365"),)   # the job issue the record names is open (11-13: it is compared)
+            _, read, _ = sweep(gh, state)
+            self.assertEqual(read, want)
+
+    def test_the_switchs_own_post_off_a_pr_reads_no_pr(self):
+        # 11-13: its merged notes on #350 re-read all six of that job's drafts on a dry pass of the live repo
+        state = last_state(self.prs)
+        state["prs"]["365"]["job_issue"] = 290
+        posted = iso(NOW - dt.timedelta(minutes=2))
+        for thread, want in ((290, []), (364, [364])):   # on the job issue (naming #365 too) / on the PR itself
+            gh = CountingGH(self.prs, comments=[{"id": 1, "body": "Switchboard: merged #365's sibling, see #365",
+                                                 "user": {"login": switch.rules.BOT_LOGIN}, "created_at": posted,
+                                                 "updated_at": posted,
+                                                 "issue_url": f"https://api.github.com/repos/{REPO}/issues/{thread}"}])
+            gh.job_issues = (job_issue(290, "J-365"),)
             _, read, _ = sweep(gh, state)
             self.assertEqual(read, want)
 
@@ -583,6 +609,241 @@ class Retry(unittest.TestCase):
         whole = {"steer": state}
         sweep(gh, whole=whole)
         self.assertIs(gh.state["steer"], state, "the merge path only: the state is left as it was, all of it due")
+
+
+# ---------- J-072 (11-13): read only what changed, on the live repo's numbers ----------
+T0 = NOW - dt.timedelta(minutes=30)        # the full pass
+H399, H399B = "9" * 40, "b" * 40
+REF399 = "claude/integrate-j399-thing"
+GREEN = [{"name": "host-build", "status": "completed", "conclusion": "success"}]
+RED = [{"name": "host-build", "status": "completed", "conclusion": "failure"}]
+FILLER = 145                               # proof runs in the 6-hour span on 11-13; one page held 100
+
+
+def at(t: dt.datetime) -> str:
+    return iso(t)
+
+
+def proof_run(rid: int, branch: str, head: str, created: dt.datetime, updated: dt.datetime,
+              conclusion: str = "success", status: str = "completed") -> dict:
+    return {"id": rid, "head_branch": branch, "head_sha": head, "status": status, "conclusion": conclusion,
+            "created_at": at(created), "updated_at": at(updated), "html_url": f"https://example.invalid/run/{rid}"}
+
+
+def muse_says(cid: int, verdict: str, head: str, when: dt.datetime, repro: bool = False) -> dict:
+    """Muse's mailed verdict as the bridge posts it on the job issue #499 (it cannot comment on a PR)."""
+    body = f"**Muse (via email bridge): J-399 review of #399 @ {head[:8]}: {verdict}**\n\nRead it.\n"
+    if repro:
+        body += "command: make test\ninput: the door\nexpected: it opens\nobserved: it sticks\n"
+    return {"id": cid, "issue_url": f"https://api.github.com/repos/{REPO}/issues/499", "body": body,
+            "user": {"login": "IssisX"}, "created_at": at(when), "updated_at": at(when)}
+
+
+class RunsGH(CountingGH):
+    """CountingGH whose proof-run listings filter as GitHub's do (head_sha, status, created), over FILLER other runs."""
+
+    workflow_prs: tuple = ()   # PRs that change .github/workflows
+    def __init__(self, prs, runs=(), **kw):
+        filler = [proof_run(5000 + i, f"claude/integrate-other-{i}", f"{i:040x}", T0 - dt.timedelta(hours=4),
+                            T0 - dt.timedelta(hours=3)) for i in range(FILLER)]
+        super().__init__(prs, runs=list(runs) + filler, **kw)
+        self.jobs.update({r["id"]: GREEN for r in filler})
+
+    def route(self, path):
+        base = path.split("?")[0]
+        m = re.fullmatch(rf"repos/{REPO}/pulls/(\d+)/files", base)
+        if m and int(m.group(1)) in self.workflow_prs:
+            self.calls.append(path)
+            return [{"filename": ".github/workflows/switchboard.yml"}]
+        m = re.fullmatch(rf"repos/{REPO}/pulls/(\d+)", base)
+        if m:   # the whole PR, as fresh_facts reads it before a merge
+            self.calls.append(path)
+            return next(dict(p, mergeable=True) for p in self.open_prs if p["number"] == int(m.group(1)))
+        if "/actions/workflows/" in base and base.endswith("/runs"):
+            self.calls.append(path)
+            got = list(self.runs)
+            m = re.search(r"head_sha=([0-9a-f]+)", path)
+            got = [r for r in got if r["head_sha"] == m.group(1)] if m else got
+            m = re.search(r"status=(\w+)", path)
+            got = [r for r in got if r["status"] == m.group(1)] if m else got
+            m = re.search(r"created=%3E%3D([0-9TZ:-]+)", path)
+            got = [r for r in got if r["created_at"] >= m.group(1)] if m else got
+            return {"workflow_runs": sorted(got, key=lambda r: r["created_at"], reverse=True)}
+        return super().route(path)
+
+    @contextlib.contextmanager
+    def fresh(self):
+        yield self
+
+    def write(self, method, path, body=None, what="", token=""):   # the merge token's write, as any other here
+        return super().write(method, path, body, what)
+
+
+class OnlyWhatChanged(unittest.TestCase):
+    """Cory 11-13: the switchboard reads only what changed. Live, 145 proof runs in the span made every fast sweep read
+    every PR (24 of 24, about 500 calls a sweep, the hour's 5,000 gone in run 43492647518). A skipped read never misses a
+    merge, a red proof or a new verdict, and the full pass still reads everything every hour."""
+
+    def setUp(self):
+        self.prs = [dict(pr(398), draft=True), dict(pr(399), head={"sha": H399, "ref": REF399})]
+        self.jobs_listed = (job_issue(499, "J-399"),)
+
+    def gh(self, runs, comments=(), prs=None, job_issues=None) -> RunsGH:
+        gh = RunsGH(prs or self.prs, runs=runs, comments=list(comments))
+        gh.job_issues = job_issues if job_issues is not None else self.jobs_listed
+        gh.jobs.setdefault(9001, RED)
+        gh.by_issue[499] = [c for c in comments if c["issue_url"].endswith("/499")]
+        return gh
+
+    def sweep(self, gh, now, whole=None, merge_token=""):
+        from unittest import mock
+        with mock.patch.object(switch.Switch, "run_rule_check", autospec=True, return_value=(0, "rule_check: 0 BLOCK")):
+            status, read, sw = sweep(gh, now=now, whole=copy.deepcopy(whole) if whole is not None else {},
+                                     merge_token=merge_token)
+        self.assertEqual(status, 0, sw.lines)
+        return read, sw
+
+    def full_pass(self, runs, comments=()):
+        gh = self.gh(runs, comments)
+        read, sw = self.sweep(gh, T0)
+        self.assertEqual(read, [398, 399], "the full pass reads every PR")
+        self.assertFalse(any(l.startswith(("MERGE ", "WAIT ")) for l in sw.lines), sw.lines)   # both cold
+        return gh.state
+
+    def merged(self, gh) -> bool:
+        return f"PUT repos/{REPO}/pulls/399/merge" in gh.calls
+
+    def assert_read_and_merged(self, gh, read, sw):
+        self.assertEqual(read, [399, 399], "only #399, read, then read again uncached before its merge (fresh_facts)")
+        self.assertTrue(self.merged(gh), sw.lines)
+
+    def red_run(self, status="completed"):
+        return proof_run(9001, REF399, H399, T0 - dt.timedelta(days=2), T0 - dt.timedelta(hours=1), "failure", status)
+
+    def test_an_unchanged_pr_is_not_read_again(self):
+        state = self.full_pass([self.red_run()])
+        gh = self.gh([self.red_run()])
+        read, _ = self.sweep(gh, T0 + dt.timedelta(minutes=10), state)
+        self.assertEqual(read, [], "nothing about either PR changed")
+        self.assertLessEqual(len(gh.calls), IDLE + 2, gh.calls)   # the created listing is two pages live
+
+    def test_a_proof_rerun_that_turns_green_is_read_and_merges(self):
+        # 43109809366: created 11-11, re-run 11-13, so a created>= listing never sees it finish
+        land = muse_says(1, "LAND", H399, T0 - dt.timedelta(hours=2))
+        gh0 = self.gh([self.red_run()], [land])
+        read, sw = self.sweep(gh0, T0)
+        self.assertIn("FIX-CI", " ".join(sw.lines))
+        rerun = dict(self.red_run(), status="in_progress", conclusion=None, updated_at=at(T0 + dt.timedelta(minutes=5)))
+        gh1 = self.gh([rerun], [land])
+        read, _ = self.sweep(gh1, T0 + dt.timedelta(minutes=10), gh0.state)
+        self.assertEqual(read, [], "running: nothing to decide yet")
+        done = dict(self.red_run(), conclusion="success", updated_at=at(T0 + dt.timedelta(minutes=25)))
+        gh2 = self.gh([done], [land])
+        gh2.jobs[9001] = GREEN
+        read, sw = self.sweep(gh2, T0 + dt.timedelta(minutes=30), gh1.state)
+        self.assert_read_and_merged(gh2, read, sw)
+
+    def test_a_new_head_is_read_and_merges(self):
+        gh0 = self.gh([self.red_run()])
+        self.sweep(gh0, T0)
+        prs = [self.prs[0], dict(self.prs[1], head={"sha": H399B, "ref": REF399}, updated_at=at(T0 + dt.timedelta(minutes=2)))]
+        green = proof_run(9002, REF399, H399B, T0 + dt.timedelta(minutes=2), T0 + dt.timedelta(minutes=20))
+        gh = self.gh([self.red_run(), green], [muse_says(1, "LAND", H399B, T0 + dt.timedelta(minutes=25))], prs=prs)
+        gh.jobs.update({9001: RED, 9002: GREEN})
+        read, sw = self.sweep(gh, T0 + dt.timedelta(minutes=30), gh0.state)
+        self.assert_read_and_merged(gh, read, sw)
+
+    def test_a_bridged_land_on_the_job_issue_merges_an_unchanged_pr(self):
+        # the coordinator, 11-13: Muse's LAND by mail lands on the job issue and moves nothing on the PR itself
+        green = proof_run(9001, REF399, H399, T0 - dt.timedelta(hours=2), T0 - dt.timedelta(hours=1))
+        fix = muse_says(1, "FIX", H399, T0 - dt.timedelta(hours=1), repro=True)
+        gh0 = self.gh([green], [fix])
+        gh0.jobs[9001] = GREEN
+        read, sw = self.sweep(gh0, T0)
+        self.assertIn("open FIX from Muse", " ".join(sw.lines))
+        land = muse_says(2, "LAND", H399, T0 + dt.timedelta(minutes=20))
+        gh = self.gh([green], [fix, land])
+        gh.jobs[9001] = GREEN
+        read, sw = self.sweep(gh, T0 + dt.timedelta(minutes=30), gh0.state)
+        self.assert_read_and_merged(gh, read, sw)
+
+    def test_a_needs_label_on_the_job_issue_reads_its_pr(self):
+        state = self.full_pass([self.red_run()])
+        gh = self.gh([self.red_run()], job_issues=(job_issue(499, "J-399", ["needs:eyes", "wake:muse"]),))
+        read, _ = self.sweep(gh, T0 + dt.timedelta(minutes=10), state)
+        self.assertEqual(read, [399])
+        gh = self.gh([self.red_run()], job_issues=(job_issue(499, "J-399", ["wake:muse"]),))
+        read, _ = self.sweep(gh, T0 + dt.timedelta(minutes=10), state)
+        self.assertEqual(read, [], "wake:muse comes and goes with every Muse notice; pr_facts takes only needs:")
+
+    def test_the_hourly_backstop_reads_every_pr(self):
+        state = self.full_pass([self.red_run()])
+        prs = [self.prs[0], dict(self.prs[1], updated_at=at(T0 + dt.timedelta(minutes=50)))]   # a label or a comment
+        gh = self.gh([self.red_run()], prs=prs)
+        read, _ = self.sweep(gh, T0 + dt.timedelta(minutes=59), state)
+        self.assertEqual(read, [399], "within the hour: only the changed PR")
+        state = gh.state
+        gh = self.gh([self.red_run()], prs=prs)
+        read, _ = self.sweep(gh, T0 + dt.timedelta(minutes=61), state)
+        self.assertEqual(read, [398, 399], "past the hour: every PR")
+        self.assertEqual(gh.state["steer"]["full_at"], at(T0 + dt.timedelta(minutes=61)))
+
+    def test_a_change_to_what_the_switch_loads_from_trunk_reads_every_pr(self):
+        from unittest import mock
+        state = self.full_pass([self.red_run()])
+        with mock.patch.object(switch, "trunk_inputs", return_value="0" * 16):
+            read, _ = self.sweep(self.gh([self.red_run()]), T0 + dt.timedelta(minutes=10), state)
+        self.assertEqual(read, [398, 399])
+
+    def test_with_no_running_runs_read_every_pr_is_read(self):
+        state = self.full_pass([self.red_run()])
+
+        class Down(RunsGH):
+            def route(self, path):
+                if "status=queued" in path:
+                    raise switch.GitHubError("GET", path, "gh: Server Error (HTTP 502)", 502)
+                return super().route(path)
+        gh = Down(self.prs, runs=[self.red_run()])
+        gh.job_issues = self.jobs_listed
+        read, _ = self.sweep(gh, T0 + dt.timedelta(minutes=10), state)
+        self.assertEqual(read, [398, 399])
+
+    def test_another_job_opening_reads_a_pr_holding_the_eyes_fix(self):
+        # rules.eye_relook: an eye FIX is a LAND once every set it failed is another open job's known defect
+        state = self.full_pass([self.red_run()])
+        state["steer"]["prs"]["399"]["eye_fix"] = True
+        more = self.jobs_listed + (job_issue(600, "J-600"),)
+        read, _ = self.sweep(self.gh([self.red_run()], job_issues=more), T0 + dt.timedelta(minutes=10), state)
+        self.assertEqual(read, [399])
+
+    def test_a_human_merge_waits_unread_until_something_it_waits_on_changes(self):
+        # read every sweep, a HUMAN-MERGE cost about 28 uncached calls (fresh_facts): it waits on a person, a review,
+        # a mail or a push, which the delta sees, or on the merge token being set, which sweep_inputs carries
+        green = proof_run(9001, REF399, H399, T0 - dt.timedelta(hours=2), T0 - dt.timedelta(hours=1))
+        land = muse_says(1, "LAND", H399, T0 - dt.timedelta(hours=1))
+
+        def world(comments=(land,)):
+            gh = self.gh([green], list(comments))
+            gh.jobs[9001], gh.workflow_prs = GREEN, (399,)
+            return gh
+        gh0 = world()
+        _, sw = self.sweep(gh0, T0)
+        self.assertTrue(any(l.startswith("HUMAN-MERGE #399") for l in sw.lines), sw.lines)
+        read, _ = self.sweep(world(), T0 + dt.timedelta(minutes=10), gh0.state)
+        self.assertEqual(read, [], "nothing it waits on changed")
+        read, _ = self.sweep(world(), T0 + dt.timedelta(minutes=10), gh0.state, merge_token="t")
+        self.assertEqual(sorted(set(read)), [398, 399], "the merge token was set")
+        again = muse_says(2, "LAND", H399, T0 + dt.timedelta(minutes=5))
+        read, _ = self.sweep(world((land, again)), T0 + dt.timedelta(minutes=10), gh0.state)
+        self.assertEqual(read, [399, 399], "a new verdict by mail: #399 only, read again uncached as a HUMAN-MERGE")
+
+    def test_a_refused_merge_token_is_tried_again_next_sweep(self):
+        seen = test_inbox.human_merge()
+        pr_ = {"head": {"sha": test_inbox.HEAD}, "updated_at": "2026-11-06T18:00:00Z"}
+        self.assertTrue(switch.pr_record(None, pr_, seen.facts, seen.ctx, seen, False)["cold"])
+        seen.decision = switch.rules.MergeDecision(
+            "HUMAN-MERGE", (f"{switch.TOKEN_REFUSED} (HTTP 403): SWITCHBOARD_MERGE_TOKEN needs more",), "Codex")
+        self.assertFalse(switch.pr_record(None, pr_, seen.facts, seen.ctx, seen, False)["cold"])
 
 
 

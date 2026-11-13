@@ -272,6 +272,44 @@ class Sweep(unittest.TestCase):
                 delta = switch.SweepDelta(set(), 0, set(), set(), active={name})
                 self.assertEqual(sw.queue_started(delta, False), want, name)
 
+    def test_live_after_a_count_only_a_change_to_a_waiting_job_counts_again(self):
+        # J-072, 11-13: counted on every Muse push and post, the queue check was 225 of a fast sweep's 501 calls
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "work").mkdir()
+            plan_md = root / "work/plan.md"
+            plan_md.write_text("limit muse 2\nlimit claude 1\nJ-501 muse #501 | waiting\nJ-502 muse #502 | building\n",
+                               encoding="utf-8")
+            sw = test_inbox.make(test_sweep_calls.CountingGH(self.prs))
+            sw.root, sw.plan_mode = root, lambda: "live"
+            last = {"waiting": ["J-501"], "source": sw.queue_source()}
+
+            def started(active=(), mail=None, new_pr=False, pipe=True):
+                return sw.queue_started(switch.SweepDelta(set(), 1, set(), set(), active=set(active), pipe=pipe,
+                                                          mail=mail), new_pr, last)
+            self.assertTrue(started(active={"fb-bot/integrate-j501-door"}))   # the waiting job pushed
+            self.assertFalse(started(active={"fb-bot/integrate-j502-wall"}))  # a job already started pushed again
+            self.assertFalse(started(mail={"J-502"}))                         # Muse mailed about a started job
+            self.assertTrue(started(mail={"J-501"}))
+            self.assertTrue(started(mail={"*"}))                              # a mail naming no job
+            self.assertTrue(started(new_pr=True))
+            self.assertFalse(started())                                        # our own CLAUDE_TO_MUSE notices
+            plan_md.write_text(plan_md.read_text(encoding="utf-8") + "J-503 muse #503 | new\n", encoding="utf-8")
+            self.assertTrue(started(), "the plan changed: counted as before (any post)")
+
+    def test_a_count_keeps_its_waiting_jobs_for_the_next_sweep(self):
+        gh = test_sweep_calls.CountingGH(self.prs)
+
+        def count(sw):
+            sw.queue_items, sw.queue_waiting = (), ["J-501", "J-502"]
+            return ()
+        with mock.patch.object(switch.Switch, "queue_check", autospec=True, side_effect=count):
+            status, _, sw = test_sweep_calls.sweep(gh, None)
+        self.assertEqual(status, 0, sw.lines)
+        timer = gh.state["steer"]["timers"]["queue"]
+        self.assertEqual(timer["waiting"], ["J-501", "J-502"])
+        self.assertEqual(timer["source"], sw.queue_source())
+
     def test_a_full_pass_counts(self):
         gh = test_sweep_calls.CountingGH(self.prs)
         with mock.patch.object(switch.Switch, "queue_check", autospec=True, return_value=()) as counted:

@@ -26,6 +26,6 @@ his effort, as it did the synthesized ones.
 | `breath_out_2.ogg` | https://freesound.org/people/craigsmith/sounds/482831/ | R17-51-Man Breathing.wav | craigsmith | CC0 1.0 | 15.95–16.37 |
 
 The other breath candidates Cory has not picked — two per state (rest,
-climbing, winded) — are in `godot/presentation/audio/breath_wake_picks/`
-with `PICKS.md`. Until he picks, the bank ships the set above (the rest
+climbing, winded) — are in `03_EXECUTION/VOICE_PICKS/`
+with `breath_wake_PICKS.md`. Until he picks, the bank ships the set above (the rest
 recording); per-state sets are the follow-up once he picks.
