@@ -9,8 +9,8 @@ Read through: 1794584485 (2026-11-13 full check)
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
 - On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - Open system work, all built, in review: #503 cache-out, #506 job clocks, #507 Muse git channel + "To Muse:" relay (Cory's
-  paste for Muse is on #504; give it after #507 merges), J-139 rule_check (#508), J-072 claude/integrate-rate-hourly (hourly
-  budget, GraphQL, new PR for commits past a merged PR). An xhigh test helper runs the real-world test as each lands; evidence
+  paste for Muse is on #504; give it after #507 merges), J-139 rule_check #511, J-072 rate-hourly #510 (hourly
+  budget, GraphQL, new PR past a merged PR); board rollover + no-Job-line + queue wait: helper. Test 1st pass done, runs the real-world test as each lands; evidence
   in work/tasks/system-test.md on claude/integrate-system-test. Open: J-044c has Muse fb-bot heads too (ownership, at game time).
 - Cory 11-13: remove failure modes, never relocate; never stop a helper past 10 min; check all he says, push back on waste.
 - Hard problems: Gemini Carbon (newer, smarter, 11-13) or Argon (every hard job so far done); each ~1.5 h free a day, repo +
