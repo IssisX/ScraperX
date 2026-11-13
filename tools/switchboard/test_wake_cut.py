@@ -43,10 +43,8 @@ def at(gh, minutes: float):
     return ti.make(gh, NOW + minutes * M)
 
 
-def ask(cid: int, text: str = "To Claude: which head next?", number: int = 292, minute: float = -6) -> dict:
-    """An ask posted `minute` minutes after NOW: one posted between two sweeps carries a time after the first
-    (11-13: the comment window is read incrementally, since the last read, as GitHub's own `since` is)."""
-    return ti.comment(cid, number, text, hours=-minute / 60)
+def ask(cid: int, text: str = "To Claude: which head next?", number: int = 292) -> dict:
+    return ti.comment(cid, number, text, hours=0.1)
 
 
 class MuseMail(unittest.TestCase):
@@ -130,7 +128,7 @@ class Hold(unittest.TestCase):
     def test_an_ask_is_never_delayed(self):
         gh = ti.FakeGH(open_issues=[292])
         self.assertEqual(at(gh, 0).inbox([ti.human_merge()]), 1)   # the integrator's own work, at 0
-        gh.comments = [ask(701, minute=0.5)]
+        gh.comments = [ask(701)]
         self.assertEqual(at(gh, 1).inbox([]), 1, "an ask a minute after a post posts at once")
         self.assertIn("- TO-CLAUDE #292 To Claude: which head next?", gh.posts[1][1])
 
@@ -146,7 +144,7 @@ class Hold(unittest.TestCase):
         self.assertIn("[#260]", gh.posts[1][1])
         # held work rides an ask at once
         at(gh, 40).inbox([ti.human_merge(number=270)])
-        gh.comments = [ask(702, minute=40.5)]
+        gh.comments = [ask(702)]
         self.assertEqual(at(gh, 41).inbox([]), 2)
         body = gh.posts[2][1]
         self.assertLess(body.index("- TO-CLAUDE #292"), body.index("- MERGE-BY-HAND [#270]"), "the ask goes first")
@@ -157,7 +155,7 @@ class Hold(unittest.TestCase):
         for minute in range(0, 120, 5):   # a sweep every 5 minutes; a new PR's item every 10
             seen = prs[:1 + minute // 10]
             if minute == 50:
-                gh.comments = [ask(703, minute=49.5)]
+                gh.comments = [ask(703)]
             at(gh, minute).inbox(seen)
         bodies = "".join(b for _, b in gh.posts)
         for s in prs:
