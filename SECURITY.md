@@ -47,7 +47,7 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   P1.
 - The reviews run apart from the sweep (11-13): `ask` runs only in a `workflow_dispatch` run with `part=ask`,
   which the `wake-ask` job starts on trunk. `wake-ask` holds no secret, deploys to no environment, checks out
-  nothing, and its token's only scope is `actions: write` for that dispatch. The event's PR or issue number
+  nothing, and its token's only scope is `actions: write` for that dispatch. The label event's issue number
   reaches `wake-ask` and `ask` only through env, and only as digits. A reviews run starts no other run.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that

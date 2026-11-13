@@ -534,7 +534,7 @@ class TheReviewsRunApart(unittest.TestCase):
         self.assertIn("inputs.part != 'ask'", jobs["steer"]["if"])
         self.assertIn("needs.cache-in.result != 'cancelled'", jobs["steer"]["if"])
         self.assertNotIn("needs.ask", str(flow))
-        for k in ("part", "pr", "issue"):
+        for k in ("part", "issue"):
             self.assertEqual(flow[True]["workflow_dispatch"]["inputs"][k]["type"], "string")
 
     def test_each_run_restores_saves_and_prunes_only_its_own_part(self):
@@ -556,6 +556,8 @@ class TheReviewsRunApart(unittest.TestCase):
         self.assertNotIn("needs", job)   # starts with the sweep, never after it
         self.assertTrue(job["if"].startswith("github.ref == 'refs/heads/ScraperX-Claude' && inputs.part != 'ask' && "))
         self.assertIn("!inputs.digest", job["if"])
+        # a verdict comment starts no reviews run: a burst would push the sweeps out of the newest dispatched runs
+        self.assertNotIn("issue_comment", job["if"])
         (step,) = job["steps"]
         self.assertNotIn("${{", step["run"])   # event values only through env
         self.assertIn('gh workflow run switchboard.yml --repo "$REPO" --ref "$TRUNK"', step["run"])
@@ -583,12 +585,12 @@ class TheReviewsRunApart(unittest.TestCase):
 
     def test_wake_ask_passes_on_only_a_digit_number_and_a_refused_dispatch_is_red(self):
         (step,) = self.flow()["jobs"]["wake-ask"]["steps"]
-        code, _, calls = self.run_script(step["run"], {"EVENT": "issue_comment", "NUMBER": "503", "DRY": "false"}, "exit 0")
-        self.assertEqual((code, calls), (0, [f"gh workflow run switchboard.yml --repo o/r --ref {rules.TRUNK} "
-                                             "-f part=ask -f dry_run=false -f pr=503"]))
         code, _, calls = self.run_script(step["run"], {"EVENT": "issues", "NUMBER": "12", "DRY": "true"}, "exit 0")
-        self.assertTrue(calls[0].endswith("-f part=ask -f dry_run=true -f issue=12"))
-        code, _, calls = self.run_script(step["run"], {"EVENT": "issue_comment", "NUMBER": "1;x", "DRY": "false"}, "exit 0")
+        self.assertEqual((code, calls), (0, [f"gh workflow run switchboard.yml --repo o/r --ref {rules.TRUNK} "
+                                             "-f part=ask -f dry_run=true -f issue=12"]))
+        code, _, calls = self.run_script(step["run"], {"EVENT": "issues", "NUMBER": "1;x", "DRY": "false"}, "exit 0")
+        self.assertTrue(calls[0].endswith("-f part=ask -f dry_run=false"))
+        code, _, calls = self.run_script(step["run"], {"EVENT": "schedule", "NUMBER": "", "DRY": "false"}, "exit 0")
         self.assertTrue(calls[0].endswith("-f part=ask -f dry_run=false"))
         code, out, calls = self.run_script(step["run"], {"EVENT": "schedule", "NUMBER": "", "DRY": "false"},
                                            "echo 'HTTP 403: Resource not accessible by integration' >&2; exit 1")
@@ -601,11 +603,10 @@ class TheReviewsRunApart(unittest.TestCase):
 
     def test_ask_takes_the_woken_number_as_digits_only(self):
         (step,) = [s for s in self.flow()["jobs"]["ask"]["steps"] if s["name"] == "Run the switch"]
-        base = {"PART": "ask", "DISPATCH_DRY": "false", "ASK_PR": "", "ASK_ISSUE": ""}
+        base = {"PART": "ask", "DISPATCH_DRY": "false", "ASK_ISSUE": ""}
         for extra, tail in (({}, "--part ask --repo o/r --root src"),
-                            ({"ASK_PR": "503"}, "--root src --pr 503"),
                             ({"ASK_ISSUE": "77"}, "--root src --issue 77 --label needs:orchestrator"),
-                            ({"ASK_PR": "5 --digest", "DISPATCH_DRY": "true"}, "--root src --dry-run")):
+                            ({"ASK_ISSUE": "5 --digest", "DISPATCH_DRY": "true"}, "--root src --dry-run")):
             code, _, calls = self.run_script(step["run"], {**base, **extra}, "exit 0")
             self.assertEqual(code, 0, extra)
             self.assertTrue(calls[-1].startswith("python src/tools/switchboard/switch.py --part ask"), calls)

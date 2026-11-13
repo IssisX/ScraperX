@@ -67,10 +67,6 @@ on:
         description: Leave empty for a sweep; "ask" runs only the reviews, the eye and the orchestrator (wake-ask sets it)
         type: string
         default: ""
-      pr:
-        description: With part=ask, the one PR whose comment woke it (digits; set by wake-ask)
-        type: string
-        default: ""
       issue:
         description: With part=ask, the job issue labeled needs:orchestrator (digits; set by wake-ask)
         type: string
@@ -258,10 +254,13 @@ jobs:
           retention-days: 1
           overwrite: true
 
-  # 11-13: the events that ran ask in this run now start the reviews' own run (part=ask) on trunk, which runs beside
-  # the sweep in its own concurrency group. Only this direction: a reviews run starts nothing, so they never loop. A
-  # review it posts is a new comment on the PR, so the next sweep reads that PR (sweep_delta) and merges it.
-  # No secret, no environment, no checkout; the token's one use is the dispatch. The event's PR or issue number
+  # 11-13: a sweep (a dispatch or the 15-minute schedule) and a needs:orchestrator label start the reviews' own run
+  # (part=ask) on trunk, which runs beside the sweep in its own concurrency group. Only this direction: a reviews run
+  # starts nothing, so they never loop. A review it posts is a new comment on the PR, so the next sweep reads that PR
+  # (sweep_delta) and merges it. A verdict comment no longer starts reviews (the next sweep's do, within 10 min): a
+  # burst of them would fill the newest dispatched runs with reviews runs, and the bridge's watchdog
+  # (muse_bridge.gs sweeps_, the newest 5) and switch.py bridge_version_health (the newest 20) read that list for
+  # sweeps. No secret, no environment, no checkout; the token's one use is the dispatch. The label's issue number
   # goes on only through env, digits only. A refused dispatch fails the run (the reviews would stop silently),
   # except GitHub's rate limit, which is a warning: the next sweep starts the reviews again.
   wake-ask:
@@ -269,11 +268,7 @@ jobs:
       github.ref == 'refs/heads/ScraperX-Claude' && inputs.part != 'ask' && !inputs.digest && (
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.event.schedule == '3,18,33,48 * * * *') ||
-      (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
-        (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
-         contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
-         contains(github.event.comment.body, 'codex-review-receipt'))))
+      (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator'))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -289,12 +284,7 @@ jobs:
         run: |
           set -uo pipefail
           args=(-f part=ask -f dry_run="$DRY")
-          if [[ "$NUMBER" =~ ^[0-9]+$ ]]; then
-            case "$EVENT" in
-              issue_comment) args+=(-f pr="$NUMBER") ;;
-              issues) args+=(-f issue="$NUMBER") ;;
-            esac
-          fi
+          if [ "$EVENT" = issues ] && [[ "$NUMBER" =~ ^[0-9]+$ ]]; then args+=(-f issue="$NUMBER"); fi
           for try in 1 2 3; do
             if err=$(gh workflow run switchboard.yml --repo "$REPO" --ref "$TRUNK" "${args[@]}" 2>&1 >/dev/null); then
               exit 0
@@ -357,13 +347,11 @@ jobs:
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           DISPATCH_DRY: ${{ inputs.dry_run }}
-          ASK_PR: ${{ inputs.pr }}
           ASK_ISSUE: ${{ inputs.issue }}
         run: |
           set -euo pipefail
-          # 11-13: always a dispatch from wake-ask; the PR or job issue that woke it, digits only, else a whole pass
+          # 11-13: always a dispatch from wake-ask; the job issue that woke it, digits only, else a whole pass
           args=(--part "$PART" --repo "$REPO" --root src)
-          if [[ "$ASK_PR" =~ ^[0-9]+$ ]]; then args+=(--pr "$ASK_PR"); fi
           if [[ "$ASK_ISSUE" =~ ^[0-9]+$ ]]; then args+=(--issue "$ASK_ISSUE" --label needs:orchestrator); fi
           if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
