@@ -156,4 +156,4 @@ ends, peak-normalized to -1.1 dBFS (0.88); mono Ogg Vorbis at 22,050 Hz.
 |  | gasp 4: 5.40–6.70 | groan: 5.10–8.20 |
 
 The other gasp and groan candidates Cory has not picked are in
-`godot/presentation/audio/breath_wake_picks/` with `PICKS.md`.
+`03_EXECUTION/VOICE_PICKS/` with `breath_wake_PICKS.md`.

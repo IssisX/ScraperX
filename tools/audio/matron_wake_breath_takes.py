@@ -36,7 +36,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 MATRON = ROOT / "godot/presentation/audio/matron"
 BREATH = ROOT / "godot/presentation/audio/breath"
-PICKS = ROOT / "godot/presentation/audio/breath_wake_picks"
+PICKS = ROOT / "03_EXECUTION/VOICE_PICKS"
 IMPORT = MATRON / "matron_breath_0.ogg.import"
 MIX_RATE = 22050
 PEAK = 0.88  # -1.1 dBFS, the recorded bank's ceiling

@@ -10,14 +10,14 @@ gate, never a recording of a real person.
 
 ## What ships now, until you pick
 
-- **Her wake:** `matron_wake_0..3.ogg` in `../matron/`. Nine gasps from
+- **Her wake:** `matron_wake_0..3.ogg` in `godot/presentation/audio/matron/`. Nine gasps from
   superEGsonic's "gasps_female" (784717) over hinchinbrook's iron-door
   "Metallic Groan" (496836), four takes, each its own gasp and its own
   window of the groan, a 28 Hz sub swell under both (rendered offline,
   not a human sound). Take 0 is the first gasp; the rest are the other
   gasps in the same file, so no two wakes are alike.
 - **His breath:** `breath_in_0..2.ogg` / `breath_out_0..2.ogg` in
-  `../breath/`, cut from craigsmith's "R17-51-Man Breathing" (482831), a
+  `godot/presentation/audio/breath/`, cut from craigsmith's "R17-51-Man Breathing" (482831), a
   regular breathing recording. The in is the bright, sharp, falling burst
   (air rushing in through the mouth); the out the dark, loud, rising burst
   (air pushed out). That reading is from the recording's shape (bright
