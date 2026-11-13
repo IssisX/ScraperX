@@ -9,7 +9,7 @@ This file is only the rules that change what an agent does. Add a rule here only
 - One goal: Claude and Muse build the game. Judge the system by what lands.
 - Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: a
   day went to patches around two switchboard changes).
-- Build and test only what changed. Blocker first, nothing lower while it is stuck. A delay is a failure, never "wait".
+- Build, test and read (API calls too) only what changed. Blocker first, nothing lower while it is stuck. A delay is a failure, never "wait".
 - Fix only what is measured broken, one small change at a time; no new machinery, no side projects.
 
 ## Settled: never reopen (Cory's calls)

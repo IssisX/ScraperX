@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-13 | *"Do the read-only-what-changed fix now - Bro, this is like the fourth or fifth time I've had to tell you to do this"*: the switchboard ran out of GitHub calls re-reading everything each sweep; reading, like building and testing, covers only what changed. | CLAUDE.md, Fundamentals |
 | 11-13 | *"I never said tests are never deleted. That's another thing you said, and I just went along with. YES"*: his rule is never weaken, skip or delete a test **to get green**; a switchboard test that only checks a gate he approved removing goes with that gate, listed in the PR. Ends AGENTS.md's "never deleted" with no exception. | AGENTS.md, Tests |
 | 11-13 | *"I am realizing I don't want to have to name every single time like this"*: Claude picks a helper's effort and tells him in one line; he changes it if he wants. Ends the same day's "ask him the effort before any helper". | CLAUDE.md, Settled |
 | 11-13 | *"you're doing these mindlessly, without the whole picture in play"*; *"when you would change one thing, you wouldn't realize that it would break a bunch more ... you would just chase your tail"*; *"you need to make sure that those notes don't get wiped ... these are super obvious fucking things and are fundamental to coding"*: whole picture first; a change that breaks something is undone, not patched; one behavior per change; blocker first; only measured breaks get fixed; the system is judged by what lands and its cost. Also at the top of `CLAUDE.md`. | Rule 13 |
