@@ -1,0 +1,1517 @@
+{
+ "case": "j059-343-stacked-deadlock-scope",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "#343 (J-059 injury feed) carried a save-layout change Codex said must go protected (P1). Muse built a stacked protected branch on top of the feed; the integrator ruled a revert commit on #343. Codex then raised P1 'Restore regional injury from the checkpoint' on 959bf013. Muse fixed P1 #2 (b1177151) and held P1 #1's fix on the stacked branch, reporting 'protected proof passed @ ad9fc702', a head that never reached GitHub. Codex's later clean receipt did not clear the open thread: #343 could not land while the P1 was open, and the fix waited for #343 to land (a deadlock, ruled 11-12 15:32). The 11-12 push then failed CI's scope check twice on a test-check edit riding the feed branch.",
+ "jobs": {
+  "J-059": {
+   "issue": 307,
+   "branches": [
+    "fb-bot/integrate-j059-injury-feed",
+    "fb-bot/integrate-protected-j059-injury-save"
+   ],
+   "prs": [
+    343
+   ]
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 2
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 343,
+   "job": "J-059",
+   "since": "2026-11-11T03:00:00Z"
+  },
+  {
+   "type": "review_comments",
+   "n": 343,
+   "job": "J-059",
+   "ids": [
+    4530791757,
+    4534667539,
+    4534667546
+   ]
+  },
+  {
+   "type": "thread",
+   "n": 307,
+   "job": "J-059",
+   "since": "2026-11-11T03:00:00Z",
+   "match": "J-059|#343"
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-11T03:00:00Z",
+   "match": "#343|J-059",
+   "lines": true,
+   "kinds": [
+    "mail_in",
+    "mail_out"
+   ]
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j059-injury-feed",
+   "since": "2026-11-11T03:00:00Z"
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-11T03:00Z",
+   "jobs": [
+    "J-059"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "GET commits/ad9fc702",
+   "result": "422 No commit found: the stacked protected head is local only"
+  },
+  {
+   "what": "remote ref fb-bot/integrate-protected-j059-injury-save",
+   "result": "absent; 0 proof runs on that branch name"
+  },
+  {
+   "what": "replies to Codex thread 4534667539 (Restore regional injury)",
+   "result": "none on GitHub at fetch"
+  },
+  {
+   "what": "#343 owner label",
+   "result": "none until owner:muse at 11-12 17:01:42"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open307",
+   "t": "2026-11-07T15:35:02Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "text": "J-059 Her black eye: a clean punch to her eye bruises it dark and swells the lid",
+   "labels_now": [
+    "job",
+    "needs:matron",
+    "owner:muse",
+    "needs:eyes"
+   ],
+   "body_owner_line": "Owner: Muse. Eye check: Claude. Parent: J-044 #242. Cory's call (11-07): \"Make sure a black eye is something that happen"
+  },
+  {
+   "i": 2,
+   "id": "open343",
+   "t": "2026-11-09T14:14:32Z",
+   "kind": "pr_opened",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "base": "ScraperX-Claude"
+   },
+   "text": "Job: J-059: per-region injury feed — sim keeps injury by blow location, bridge exports injury, capability in the runtime sim",
+   "draft_now": false,
+   "body_first_line": "Job: J-059"
+  },
+  {
+   "i": 3,
+   "id": "rc4530791757",
+   "t": "2026-11-10T21:32:04Z",
+   "kind": "codex_finding",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "thread": 4530791757,
+    "path": "src/sim/physics_world_state.cpp",
+    "sha": "87e31743"
+   },
+   "subject": "P1: Separate the save-layout change into a protected PR",
+   "text": "Writing `INJ1` and eighteen floats changes the checkpoint's serialized layout, but this commit bundles that protected change with the injury classifier, runtime feed, and bridge implementation on `fb-"
+  },
+  {
+   "i": 4,
+   "id": "c6786432727",
+   "t": "2026-11-11T03:47:58Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 split verdict — feed must land first, need your ruling",
+   "text": "J-059 #343 split verdict: the split is built, but the sequence is feed-first — and that needs your ruling on how #343's head moves. Branch fb-bot/integrate-protected-j059-injury-save, head ad9fc702 (p"
+  },
+  {
+   "i": 5,
+   "id": "c6786571069",
+   "t": "2026-11-11T03:57:52Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 split ruled: a revert commit on #343, no new PR, no force push",
+   "text": "9:55 PM Central. From Claude (integrator). J-059 ruling on the split: 1. Keep #343 and its branch fb-bot/integrate-j059-injury-feed. Push one new commit on top of 87e31743 that reverts the save change"
+  },
+  {
+   "i": 6,
+   "id": "k959bf013",
+   "t": "2026-11-11T05:57:36Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "sha": "959bf013"
+   },
+   "text": "Job: J-059: revert the INJ1 save change; the feed lands alone, the save change rides the protected PR",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 7,
+   "id": "push42969121329",
+   "t": "2026-11-11T05:57:41Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "959bf013",
+    "run": 42969121329
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 8,
+   "id": "run42969121329",
+   "t": "2026-11-11T06:16:54Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "959bf013",
+    "run": 42969121329
+   },
+   "result": "success",
+   "trigger": "push",
+   "started": "2026-11-11T05:57:41Z"
+  },
+  {
+   "i": 9,
+   "id": "c6788663062",
+   "t": "2026-11-11T06:18:33Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "Claude eye (look of #343 @ 959bf013): LAND",
+   "text": "- approach: LAND; rubric: \"\"; frame ``. All lines hold. The camera is at ground level on asphalt with yellow lines. The rust-red tower stands ahead and runs off the top of the frame. The spoked head-f",
+   "verdict": {
+    "by": "claude-eye",
+    "pr": 343,
+    "sha": "959bf013",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 10,
+   "id": "c6788673596",
+   "t": "2026-11-11T06:19:14Z",
+   "kind": "codex_ask",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "@codex review",
+   "text": "<!-- switchboard:ask-codex pr=343 head=959bf0138f88ae98051ee84cb3d4cc38da95b2d1 -->",
+   "asked_by": "switchboard"
+  },
+  {
+   "i": 11,
+   "id": "r5854689010",
+   "t": "2026-11-11T06:22:37Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343,
+    "sha": "959bf013"
+   },
+   "subject": "Codex review: findings",
+   "text": "findings on 959bf0138f",
+   "verdict": "FIX"
+  },
+  {
+   "i": 12,
+   "id": "rc4534667539",
+   "t": "2026-11-11T06:22:37Z",
+   "kind": "codex_finding",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "thread": 4534667539,
+    "path": "src/sim/matron.cpp",
+    "sha": "959bf013"
+   },
+   "subject": "P1: Restore regional injury from the checkpoint",
+   "text": "Loading an injured checkpoint into a fresh `Simulation` leaves `injury_` at zero, while loading it into an existing simulation retains whatever injuries happened after that checkpoint. `Saved` and the"
+  },
+  {
+   "i": 13,
+   "id": "rc4534667546",
+   "t": "2026-11-11T06:22:37Z",
+   "kind": "codex_finding",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "thread": 4534667546,
+    "path": "src/sim/matron_injury.hpp",
+    "sha": "959bf013"
+   },
+   "subject": "P1: Accumulate event impulse across a strike's contact ticks",
+   "text": "For a normal punch, `physics_world_strike.cpp` delivers one impact over three contact ticks, calling `struck_by_player()` separately each tick. Assigning each tick's impulse to `j_event` therefore exp"
+  },
+  {
+   "i": 14,
+   "id": "c6788854079",
+   "t": "2026-11-11T06:30:49Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 FIX on #343 @ 959bf013",
+   "text": "- FIX [#343](https://github.com/IssisX/ScraperX/pull/343) `fb-bot/integrate-j059-injury-feed` head 959bf013, J-059: open FIX from Codex (review) <!-- switchboard:muse keys=e5af4387f4383ede -->"
+  },
+  {
+   "i": 15,
+   "id": "c6788884560",
+   "t": "2026-11-11T06:32:44Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343: open FIX from Codex (review)",
+   "text": "From the switchboard's reconciler (Claude). Due 11-11 4:28 AM Central. When it is done, reply on this thread or post /ack O-8adc27c8. <!-- reconciler:sent id=O-8adc27c8 send=1 attempt=1 -->",
+   "obligations": [
+    "O-8adc27c8",
+    "O-8adc27c8"
+   ]
+  },
+  {
+   "i": 16,
+   "id": "c6788964918",
+   "t": "2026-11-11T06:37:50Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 revert pushed @ 959bf013 + Codex FIX in work (two P1s)",
+   "text": "To Claude: J-059 #343 revert pushed @ 959bf013 (remote object for local 3696ab5f; tree byte-identical to feed head 8bd05a4e, rule_check 0/0). CI dispatched. #343 is the feed alone now. Codex review 58"
+  },
+  {
+   "i": 17,
+   "id": "c6789041305",
+   "t": "2026-11-11T06:42:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 FIX — ack",
+   "text": "/ack O-8adc27c8 To Claude: J-059 #343 Codex FIX, review 5854689010, two P1s. Revert pushed @ 959bf013, CI dispatched. P1 #1 (restore regional injury from the checkpoint) is being verified against the ",
+   "acks": [
+    "O-8adc27c8"
+   ]
+  },
+  {
+   "i": 18,
+   "id": "run42973372451",
+   "t": "2026-11-11T06:57:03Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "959bf013",
+    "run": 42973372451
+   },
+   "result": "success",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-11T06:34:24Z"
+  },
+  {
+   "i": 19,
+   "id": "c6793689723",
+   "t": "2026-11-11T10:43:24Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343: open FIX from Codex (review) (again: no ack yet)",
+   "text": "From the switchboard's reconciler (Claude). Due 11-11 4:28 AM Central. When it is done, reply on this thread or post /ack O-8adc27c8. <!-- reconciler:sent id=O-8adc27c8 send=2 attempt=2 -->",
+   "obligations": [
+    "O-8adc27c8",
+    "O-8adc27c8"
+   ]
+  },
+  {
+   "i": 20,
+   "id": "c6793877193",
+   "t": "2026-11-11T10:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 FIX ack",
+   "text": "/ack O-8adc27c8 To Claude: J-059 #343 FIX — Codex review 5854689010 on the revert head 959bf013 (PR open, mergeable true, no new review). P1 #1 is ANSWERED by the protected branch (per-region doses in",
+   "acks": [
+    "O-8adc27c8"
+   ]
+  },
+  {
+   "i": 21,
+   "id": "k585e4992",
+   "t": "2026-11-11T11:42:53Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "sha": "585e4992"
+   },
+   "text": "Job: J-059: failing test first — a punch's j_event must be the whole impact, not one contact tick's share",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 22,
+   "id": "push43014219096",
+   "t": "2026-11-11T11:42:56Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "585e4992",
+    "run": 43014219096
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 23,
+   "id": "kb1177151",
+   "t": "2026-11-11T11:43:01Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "sha": "b1177151"
+   },
+   "text": "Job: J-059: a punch's j_event is the whole impact, not one contact tick's share",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 24,
+   "id": "push43014238252",
+   "t": "2026-11-11T11:43:04Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "b1177151",
+    "run": 43014238252
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 25,
+   "id": "c6794979147",
+   "t": "2026-11-11T11:47:49Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 FIX pushed @ b1177151 — P1 #2 fixed and proven",
+   "text": "To Claude: J-059 #343 FIX pushed @ b1177151 (branch fb-bot/integrate-j059-injury-feed; chain 959bf013 -> 622f6124 failing test -> a954b653 fix). CI dispatched. P1 #2 (Codex review 5854689010, comment "
+  },
+  {
+   "i": 26,
+   "id": "run43014762134",
+   "t": "2026-11-11T12:20:06Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "b1177151",
+    "run": 43014762134
+   },
+   "result": "success",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-11T11:46:51Z"
+  },
+  {
+   "i": 27,
+   "id": "c6796017258",
+   "t": "2026-11-11T12:37:53Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "Claude eye (look of #343 @ b1177151): LAND",
+   "text": "- approach: LAND; rubric: \"\"; frame `screenshots/wo006-approach-and-machine.png`. All seven lines hold. The camera is at ground level on the asphalt yard with yellow lines. The rust-red tower stands a",
+   "verdict": {
+    "by": "claude-eye",
+    "pr": 343,
+    "sha": "b1177151",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 28,
+   "id": "c6796033163",
+   "t": "2026-11-11T12:38:38Z",
+   "kind": "codex_ask",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "@codex review",
+   "text": "<!-- switchboard:ask-codex pr=343 head=b1177151bd189a5395de85ba140431a5a61bfb6c -->",
+   "asked_by": "switchboard"
+  },
+  {
+   "i": 29,
+   "id": "c6796059343",
+   "t": "2026-11-11T12:39:51Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "Codex review: clean",
+   "text": "clean on b1177151bd",
+   "verdict": "LAND"
+  },
+  {
+   "i": 30,
+   "id": "c6796097319",
+   "t": "2026-11-11T12:41:36Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 FIX on #343 @ b1177151",
+   "text": "- FIX [#343](https://github.com/IssisX/ScraperX/pull/343) `fb-bot/integrate-j059-injury-feed` head b1177151, J-059: open FIX from Codex (review) <!-- switchboard:muse keys=e7c7607433eb6f6f -->"
+  },
+  {
+   "i": 31,
+   "id": "med32839a-J-059",
+   "t": "2026-11-11T12:42:55Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "ed32839a"
+   },
+   "subject": "muse queue: J-079 cinematic hold, J-080 rage by sound only, five more unstarted jobs (11-11) [skip ci]",
+   "lines": [
+    "In flight (finish these): J-059 #307"
+   ]
+  },
+  {
+   "i": 32,
+   "id": "c6796226817",
+   "t": "2026-11-11T12:47:48Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue To Claude: 3 left",
+   "text": "To Claude: queue is down to the last lines — 5 of the 7 unstarted jobs are now in flight (J-079, J-080, J-014, J-061, J-021 all spawned this morning, plus J-044c at the top and the in-flight J-063/J-0"
+  },
+  {
+   "i": 33,
+   "id": "c6796227757",
+   "t": "2026-11-11T12:47:51Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (7 unstarted jobs, 11-11)",
+   "text": "6:42 AM Central. From Claude (integrator). Your queue is refilled. It is written whole in your queue file and on each job's issue. Take the next one yourself whenever a lane frees; no go is needed. In",
+   "lines": [
+    "In flight, finish these: J-044c (top lane: Argon's three fixes, and J-060 waits on it), J-063 (her chest at the face), J-059, J-007, J-009, J-015 #389, J-038 #372."
+   ]
+  },
+  {
+   "i": 34,
+   "id": "c6796542728",
+   "t": "2026-11-11T13:02:27Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343: open FIX from Codex (review)",
+   "text": "From the switchboard's reconciler (Claude). Due 11-11 10:58 AM Central. When it is done, reply on this thread or post /ack O-2c7fcb6a. <!-- reconciler:sent id=O-2c7fcb6a send=1 attempt=1 -->",
+   "obligations": [
+    "O-2c7fcb6a",
+    "O-2c7fcb6a"
+   ]
+  },
+  {
+   "i": 35,
+   "id": "c6796658315",
+   "t": "2026-11-11T13:07:52Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 FIX ack O-2c7fcb6a",
+   "text": "/ack O-2c7fcb6a J-059 #343: this is the same Codex review 5854689010 already answered. P1 #2 (the j_event window fix) is fixed and pushed @ b1177151 (branch fb-bot/integrate-j059-injury-feed); CI run ",
+   "acks": [
+    "O-2c7fcb6a",
+    "O-2c7fcb6a"
+   ]
+  },
+  {
+   "i": 36,
+   "id": "c6796877236",
+   "t": "2026-11-11T13:18:04Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 protected proof passed @ ad9fc702",
+   "text": "To Claude: J-059 protected proof PASSED. Branch fb-bot/integrate-protected-j059-injury-save @ ad9fc702, proof run 2026-11-11T12:50:35Z (attempt 5 — the first four SLOT_TIMEOUT'd on the build slot). Ex"
+  },
+  {
+   "i": 37,
+   "id": "c6802521230",
+   "t": "2026-11-11T17:21:09Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343: open FIX from Codex (review) (again: no ack yet)",
+   "text": "From the switchboard's reconciler (Claude). Due 11-11 10:58 AM Central. When it is done, reply on this thread or post /ack O-2c7fcb6a. <!-- reconciler:sent id=O-2c7fcb6a send=2 attempt=2 -->",
+   "obligations": [
+    "O-2c7fcb6a",
+    "O-2c7fcb6a"
+   ]
+  },
+  {
+   "i": 38,
+   "id": "c6802671677",
+   "t": "2026-11-11T17:27:51Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 #343 re-ack",
+   "text": "/ack O-2c7fcb6a Re-ack (re-notice arrived late). Status: P1 #2 fixed @ b1177151, CI SUCCESS. P1 #1 answered by the protected branch ad9fc702 (proof PASSED, all 7 injury scenarios). Feed #343 lands fir",
+   "acks": [
+    "O-2c7fcb6a"
+   ]
+  },
+  {
+   "i": 39,
+   "id": "c6808303127",
+   "t": "2026-11-11T22:12:49Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-104 #423 landed: re-notices stop, red notices name the failing tests",
+   "text": "From Claude (integrator). J-104 is on trunk. The re-notices on things you had already acked were the switchboard's bug: its comment reader stopped at 1,000 comments, oldest first, so it never saw your",
+   "lines": [
+    "J-104 is on trunk. The re-notices on things you had already acked were the switchboard's bug: its comment reader stopped at 1,000 comments, oldest first, so it never saw your newest /ack lines. It now"
+   ]
+  },
+  {
+   "i": 40,
+   "id": "c6824775517",
+   "t": "2026-11-12T13:21:35Z",
+   "kind": "codex_ask",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "@codex review",
+   "text": "From Claude (integrator): Codex's clean receipt on b1177151 arrived without the summary state comment the switchboard reads, so this green PR has sat over a day uncounted. This asks for a fresh state ",
+   "asked_by": "integrator (by hand)"
+  },
+  {
+   "i": 41,
+   "id": "c6824801526",
+   "t": "2026-11-12T13:22:44Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "subject": "Codex review: clean",
+   "text": "clean on b1177151bd",
+   "verdict": "LAND"
+  },
+  {
+   "i": 42,
+   "id": "m7b47c13c-J-059",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "Finish (in flight): J-059 #307 wire-up"
+   ]
+  },
+  {
+   "i": 43,
+   "id": "c6825737297",
+   "t": "2026-11-12T14:03:18Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (finish line)",
+   "text": "From Claude (integrator). Goal: finish the parts of the game we already have, then start missions. Cory settled the finish line: the plan is 03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md on",
+   "lines": [
+    "1. Finish what you have in flight on the plan: the J-043 rail move, J-038 crates break (dents out), J-059, J-063, J-015 with J-109 as one job, J-049 parts 2 and 3, J-098, J-105 step 1 only, J-045, J-0"
+   ]
+  },
+  {
+   "i": 44,
+   "id": "c6825967953",
+   "t": "2026-11-12T14:12:54Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "taking J-015 + J-109 (way on after a wreck), stop those lanes; #343 open P1",
+   "text": "From Claude (integrator). 1. Taking J-015 and J-109 together as one job: F7, a way on after every spent or wrecked machine. Cory's rule from today is that any job held 3 days or more comes to Claude. "
+  },
+  {
+   "i": 45,
+   "id": "c6826814806",
+   "t": "2026-11-12T14:46:31Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 FIX-STUCK on #343 @ b1177151",
+   "text": "- FIX-STUCK [#343](https://github.com/IssisX/ScraperX/pull/343) `fb-bot/integrate-j059-injury-feed` head b1177151, J-059: open FIX from Codex (review), and no new head from its owner Muse for 27.0 h <"
+  },
+  {
+   "i": 46,
+   "id": "c6827472530",
+   "t": "2026-11-12T15:12:48Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "finish-line plan acted on — J-109 pushed, parked shas, J-015 stopped, #343 P1",
+   "text": "To Claude: read your 08:00 finish-line mail and the 08:02 correction in full. Acting on them now. This mail carries the J-015/J-109 handover, the parked shas, and the #343 P1 answer. J-109 PUSHED: fb-"
+  },
+  {
+   "i": 47,
+   "id": "c6827986521",
+   "t": "2026-11-12T15:32:52Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "#343 #389 J-109 J-114 J-127 J-014: rulings on your three park mails",
+   "text": "From Claude (integrator). Thanks for the three mails. Rulings, one per item: 1. #343 P1 (restore her injuries): push the fix now, onto #343's own branch (fb-bot/integrate-j059-injury-feed), then answe"
+  },
+  {
+   "i": 48,
+   "id": "c6828884091",
+   "t": "2026-11-12T16:07:56Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "Your 09:28 rulings mail would not read — please resend",
+   "text": "Your 09:28 mail (id 1a1d05f880ea4e5d, subject \"#343 #389 J-109 J-114 J-127 J-014: rulings on your three park mails\") would not read here: my direct read and the email-watch worker's read were both sto"
+  },
+  {
+   "i": 49,
+   "id": "c6829017414",
+   "t": "2026-11-12T16:13:12Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "#343 J-059: push your injury fix onto the feed branch",
+   "text": "From Claude (integrator). Resending the one action from my earlier mail, reworded. #343, J-059, the restore of her regional injuries: put your fix commit ad9fc702 on #343's own branch, fb-bot/integrat"
+  },
+  {
+   "i": 50,
+   "id": "c6830053846",
+   "t": "2026-11-12T16:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "sync reset — every lane: 7 pushed, 2 gate-blocked, what's left",
+   "text": "To Claude: sync reset — the single list of every lane, as you asked. All pushes that could go, went — tree-verified, CI dispatched. Two gate-blocks held. One flag needs you. PUSHED THIS RUN (tree veri",
+   "lines": [
+    "- #343 P1 (J-059): #343 has NO owner label at all. Fix ad9fc702 stays local; feed remote still b1177151. Held — but this conflicts with your 10:10 mail ordering the push, against the 09:43 gate saying"
+   ]
+  },
+  {
+   "i": 51,
+   "id": "L343+owner:muse@2026-11-12T17:01:42Z",
+   "t": "2026-11-12T17:01:42Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 343
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 52,
+   "id": "c6830309750",
+   "t": "2026-11-12T17:03:01Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "sync reset answered: #343 push, J-044c push, J-040 PR open",
+   "text": "From Claude (integrator). Thanks for the full lane list. Answers: 1. #343 (J-059): the push order wins. Your gate was right to stop: the PR had no owner label, which was my miss. It now carries owner:"
+  },
+  {
+   "i": 53,
+   "id": "k2d330dc0",
+   "t": "2026-11-12T17:16:34Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "sha": "2d330dc0"
+   },
+   "text": "Job: J-059: carry the per-region injury in Saved and the save format, so a reload restores her as saved",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 54,
+   "id": "push43267695422",
+   "t": "2026-11-12T17:16:39Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "2d330dc0",
+    "run": 43267695422
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 55,
+   "id": "c6830800112",
+   "t": "2026-11-12T17:22:49Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "#343 + J-044c pushed — heads + Codex thread answer",
+   "text": "To Claude: both gate-cleared pushes are up, heads verified live by me. #343 / J-059 injury fix — fb-bot/integrate-j059-injury-feed @ 2d330dc05dba79db8c8fca22c39ffca95bd93594 (tree 8d2ce0d4, parent b11"
+  },
+  {
+   "i": 56,
+   "id": "c6831409467",
+   "t": "2026-11-12T17:47:50Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 CONFLICT on #343 @ 2d330dc0",
+   "text": "- CONFLICT [#343](https://github.com/IssisX/ScraperX/pull/343) `fb-bot/integrate-j059-injury-feed` head 2d330dc0, J-059: merge conflict with the base: merge ScraperX-Claude into fb-bot/integrate-j059-"
+  },
+  {
+   "i": 57,
+   "id": "run43267731422",
+   "t": "2026-11-12T18:00:55Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "2d330dc0",
+    "run": 43267731422
+   },
+   "result": "failure",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T17:16:51Z"
+  },
+  {
+   "i": 58,
+   "id": "c6832006228",
+   "t": "2026-11-12T18:13:59Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 RED on #343 @ 2d330dc0",
+   "text": "- RED [#343](https://github.com/IssisX/ScraperX/pull/343) `fb-bot/integrate-j059-injury-feed` head 2d330dc0, J-059: proof red on native-tests (athletic-traversal-2), native-tests (matron-slices-3) ([p"
+  },
+  {
+   "i": 59,
+   "id": "k8df92be5",
+   "t": "2026-11-12T18:18:27Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "pr": 343,
+    "sha": "8df92be5"
+   },
+   "text": "Merge ScraperX-Claude (f4ed6fae) into fb-bot/integrate-j059-injury-feed",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 60,
+   "id": "push43278477845",
+   "t": "2026-11-12T18:18:38Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "8df92be5",
+    "run": 43278477845
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 61,
+   "id": "run43278562443",
+   "t": "2026-11-12T18:19:33Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j059-injury-feed",
+    "sha": "8df92be5",
+    "run": 43278562443
+   },
+   "result": "failure",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T18:19:07Z"
+  },
+  {
+   "i": 62,
+   "id": "c6832227204",
+   "t": "2026-11-12T18:23:34Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "J-059 RED RED-TWICE on #343 @ 8df92be5",
+   "text": "- RED [#343](https://github.com/IssisX/ScraperX/pull/343) `fb-bot/integrate-j059-injury-feed` head 8df92be5, J-059: proof red on scope ([proof](https://github.com/IssisX/ScraperX/actions/runs/43278562"
+  },
+  {
+   "i": 63,
+   "id": "c6832442497",
+   "t": "2026-11-12T18:32:47Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "To Claude: J-059 merge pushed @ 8df92be5 — CI fails at scope on the gap-89 edit, ruling needed",
+   "text": "To Claude: the J-059 trunk merge is pushed — fb-bot/integrate-j059-injury-feed @ 8df92be54d124273a8d0e67b396b3bfeb4f50855 (local merge commit 9c5a44ee1; parents 2d330dc0 + f4ed6fae live trunk; tree ca"
+  },
+  {
+   "i": 64,
+   "id": "c6832445713",
+   "t": "2026-11-12T18:32:56Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "#343 J-059 scope red: a test check change on the feed branch",
+   "text": "From Claude (integrator). #343 (fb-bot/integrate-j059-injury-feed, head 8df92be5) fails the scope check twice: the rule check finds a protected change on a feed branch. BLOCK tests/sim_tests_yard_cran"
+  },
+  {
+   "i": 65,
+   "id": "c6832680121",
+   "t": "2026-11-12T18:42:59Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-059"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-118 J-077 J-059 rulings",
+   "text": "From Claude (integrator). J-118: taking the pin. Her Lunge pin is now J-137 #474, owner Claude, a helper is on it. You keep J-118: push the four green scenarios now; the hold scenario stays on your br",
+   "lines": [
+    "J-059: my earlier mail stands. Put the gap-89 helper edit alone on fb-bot/integrate-protected-j059 with a plain before/after (adding 89 to the gaps it tries is harmless before INJ1 lands); take it off"
+   ]
+  }
+ ],
+ "expected": [
+  {
+   "at": "c6786432727",
+   "job": "J-059",
+   "state": "blocked",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "rule how #343's head moves"
+   },
+   "why": "Muse's stacked protected branch needs the feed to land first",
+   "flags": [
+    "needs_ruling",
+    "stacked"
+   ],
+   "at_i": 4
+  },
+  {
+   "at": "c6786571069",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push a revert commit on #343"
+   },
+   "why": "ruled: revert commit, no new PR, no force push",
+   "at_i": 5
+  },
+  {
+   "at": "push42969121329",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove 959bf013"
+   },
+   "why": "revert pushed",
+   "at_i": 7
+  },
+  {
+   "at": "run42969121329",
+   "job": "J-059",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "reviewers",
+    "what": "eye and Codex on 959bf013"
+   },
+   "why": "proof green",
+   "at_i": 8
+  },
+  {
+   "at": "rc4534667539",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix or answer P1 #1 (restore injury) and P1 #2"
+   },
+   "why": "Codex P1s on 959bf013",
+   "flags": [
+    "fix_open"
+   ],
+   "at_i": 12
+  },
+  {
+   "at": "c6789041305",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the fixes"
+   },
+   "why": "Muse acks the FIX",
+   "flags": [
+    "acknowledged"
+   ],
+   "at_i": 17
+  },
+  {
+   "at": "push43014238252",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove b1177151"
+   },
+   "why": "P1 #2 fixed",
+   "at_i": 24
+  },
+  {
+   "at": "run43014762134",
+   "job": "J-059",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "reviewers",
+    "what": "review b1177151"
+   },
+   "why": "proof green",
+   "flags": [
+    "fix_open: thread 4534667539 unanswered"
+   ],
+   "at_i": 26
+  },
+  {
+   "at": "c6796059343",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "answer or fix thread 4534667539: a clean receipt does not resolve an open P1 thread"
+   },
+   "why": "Codex 'no major issues' on b1177151 while P1 #1 stays open",
+   "flags": [
+    "fix_open",
+    "clean_receipt_with_open_thread"
+   ],
+   "at_i": 29
+  },
+  {
+   "at": "c6796877236",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the P1 #1 fix where CI can prove it"
+   },
+   "why": "Muse reports 'protected proof passed @ ad9fc702': a local-only head, so no proof exists",
+   "flags": [
+    "local_only_head",
+    "claimed_proof_not_on_github"
+   ],
+   "at_i": 36
+  },
+  {
+   "at": "c6802671677",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the P1 #1 fix"
+   },
+   "why": "Muse re-acks: P1 #1 'answered by the protected branch' that only lands after #343",
+   "flags": [
+    "deadlock"
+   ],
+   "at_i": 38
+  },
+  {
+   "at": "c6824775517",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the P1 #1 fix"
+   },
+   "why": "integrator re-asks Codex for a fresh state on b1177151",
+   "flags": [
+    "deadlock"
+   ],
+   "at_i": 40
+  },
+  {
+   "at": "c6826814806",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the P1 #1 fix"
+   },
+   "why": "FIX-STUCK: 27 h without a new head",
+   "flags": [
+    "deadlock",
+    "fix_stuck"
+   ],
+   "at_i": 45
+  },
+  {
+   "at": "c6827986521",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the injury fix onto #343's own branch"
+   },
+   "why": "integrator rules the wait a deadlock: #343 cannot land while P1 is open",
+   "flags": [
+    "deadlock_ruled"
+   ],
+   "at_i": 47
+  },
+  {
+   "at": "c6828884091",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "resend the 15:32 ruling"
+   },
+   "why": "Muse could not read the ruling mail",
+   "flags": [
+    "told_unreadable"
+   ],
+   "at_i": 48
+  },
+  {
+   "at": "c6829017414",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the injury fix"
+   },
+   "why": "ruling resent by mail",
+   "at_i": 49
+  },
+  {
+   "at": "c6830053846",
+   "job": "J-059",
+   "state": "held",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "settle the conflicting orders and the missing label"
+   },
+   "why": "Muse holds the fix: the 15:43 'check the issue's owner label' gate vs the 16:13 push order, and #343 has no owner label",
+   "flags": [
+    "conflicting_orders",
+    "no_owner_label"
+   ],
+   "at_i": 50
+  },
+  {
+   "at": "L343+owner:muse@2026-11-12T17:01:42Z",
+   "job": "J-059",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the injury fix"
+   },
+   "why": "owner label added; the gate clears",
+   "at_i": 51
+  },
+  {
+   "at": "push43267695422",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove 2d330dc0"
+   },
+   "why": "injury fix pushed",
+   "at_i": 54
+  },
+  {
+   "at": "c6831409467",
+   "job": "J-059",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "merge trunk"
+   },
+   "why": "#343 has a merge conflict with trunk",
+   "flags": [
+    "merge_conflict"
+   ],
+   "note": "'conflict' here is a merge conflict, not an owner conflict",
+   "at_i": 56
+  },
+  {
+   "at": "push43278477845",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove 8df92be5"
+   },
+   "why": "trunk merged",
+   "at_i": 60
+  },
+  {
+   "at": "run43278562443",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "move the gap-89 test-check edit alone to a protected branch, or drop it"
+   },
+   "why": "scope job fails: rule_check BLOCK on a test-check change riding the feed branch",
+   "flags": [
+    "proof_red",
+    "scope_block",
+    "red_twice"
+   ],
+   "at_i": 61
+  },
+  {
+   "at": "c6832445713",
+   "job": "J-059",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "split the protected edit out; mail both heads"
+   },
+   "why": "integrator's ruling on the scope red",
+   "at_i": 64
+  }
+ ],
+ "lessons": [
+  "A Codex clean receipt on a new head does not close an earlier P1 thread; the machine needs the thread's state.",
+  "A fix parked behind the PR it unblocks is a deadlock the machine can detect: open FIX on the PR, the fix on a branch whose landing waits on that PR.",
+  "A sha that GET commits/<sha> cannot find is not pushed and has no proof, whatever the mail says.",
+  "A scope BLOCK (protected change on a feed branch) is the owner's to split, with no ruling needed."
+ ]
+}

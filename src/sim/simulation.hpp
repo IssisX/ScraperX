@@ -2055,6 +2055,12 @@ public:
     std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
+    // Tests only: called after every fixed step (also inside a batched
+    // advance), with the given context, for a measurement that must see
+    // every tick (a chase sampler). Null by default: the game never sets
+    // it, and the hook must only read state, never change it.
+    using DebugStepHook = void (*)(void *context) noexcept;
+    void debug_set_step_hook(DebugStepHook hook, void *context) noexcept;
     // Test setup: put her home (her locker, where she wakes) on the deck whose
     // top is deck_top, kept across a world rebuilt after she ends a run. The
     // game's home is the stack's deck 1 (11 m); tests written for her old
@@ -2069,6 +2075,10 @@ private:
     void step_fixed() noexcept;
 
     std::unique_ptr<PhysicsWorld> physics_world_;
+    // A measurement's per-tick hook (debug_set_step_hook): null unless a
+    // test sets it.
+    DebugStepHook step_hook_ = nullptr;
+    void *step_hook_context_ = nullptr;
     // To start again whole (a run the Matron ended): how the world was made.
     InitialSpawn initial_spawn_ = InitialSpawn{};
     float matron_home_ = -1.0F;   // place_matron_home's deck top; -1: the world's own
