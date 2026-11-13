@@ -2,7 +2,7 @@
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794492989 (2026-11-11 last quiet run)
+Read through: 1794584485 (2026-11-13 full check)
 
 ## Now (11-12 handover)
 - Cory 11-13: the collaboration system is ONE machine; finish it fast (no endless tweaking), then this session game-codes
