@@ -1,11 +1,11 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j133": "f1740626b23eb0b78c441e0a063bbad0cd64b262"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-12T14:29:46Z",
  "deadline": null,
@@ -79,10 +79,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 488,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  488
+ ],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T22:53:22Z"
+ "state": "landable",
+ "updated": "2026-11-12T23:54:27Z"
 }

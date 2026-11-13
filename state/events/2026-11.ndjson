@@ -2477,3 +2477,24 @@
 {"ev": "matched", "ident": "PR|#482", "job": "", "t": "2026-11-12T22:53:22Z"}
 {"ev": "matched", "ident": "PR|#483", "job": "", "t": "2026-11-12T22:53:22Z"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T22:53:22Z", "tries": 1}
+{"branch": "fb-bot/integrate-j134", "ev": "landed", "how": "merged #489", "job": "J-134", "sha": "01d4a38a99196e9ae643182e1b13f16c736ee1d9", "t": "2026-11-12T23:54:27Z"}
+{"branch": "fb-bot/integrate-j135", "ev": "landed", "how": "merged #490", "job": "J-135", "sha": "388bf9c91df149386090a924dd1e7de26dd4579f", "t": "2026-11-12T23:54:27Z"}
+{"ev": "state", "frm": "proof", "job": "J-014", "t": "2026-11-12T23:54:27Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-059", "t": "2026-11-12T23:54:27Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-133", "t": "2026-11-12T23:54:27Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-134", "t": "2026-11-12T23:54:27Z", "to": "merged"}
+{"ev": "state", "frm": "working", "job": "J-135", "t": "2026-11-12T23:54:27Z", "to": "merged"}
+{"ev": "unmatched", "ident": "PR|#493", "job": "", "t": "2026-11-12T23:54:27Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#492", "job": "", "t": "2026-11-12T23:54:27Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#491", "job": "", "t": "2026-11-12T23:54:27Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "matched", "ident": "PR|#488", "job": "", "t": "2026-11-12T23:54:27Z"}
+{"ev": "matched", "ident": "PR|#489", "job": "", "t": "2026-11-12T23:54:27Z"}
+{"ev": "matched", "ident": "PR|#490", "job": "", "t": "2026-11-12T23:54:27Z"}
+{"ev": "dead_letter", "id": "O-8d6610ae", "job": "J-001", "ref": "ASK|ask on #108", "t": "2026-11-12T23:54:27Z", "to": "grok"}
+{"ev": "dead_letter", "id": "O-2e80ac51", "job": "J-001", "ref": "ASK|ask on #108", "t": "2026-11-12T23:54:27Z", "to": "grok"}
+{"ev": "dead_letter", "id": "O-071091f1", "job": "J-043", "ref": "ASK|ask on #241", "t": "2026-11-12T23:54:27Z", "to": "grok"}
+{"ev": "dead_letter", "id": "O-b4fd7064", "job": "J-043", "ref": "ASK|ask on #241", "t": "2026-11-12T23:54:27Z", "to": "grok"}
+{"ev": "dead_letter", "id": "O-940db07d", "job": "J-053", "ref": "ASK|ask on #82", "t": "2026-11-12T23:54:27Z", "to": "grok"}
+{"ev": "dead_letter", "id": "O-bec95aec", "job": "J-077", "ref": "ASK|ask on #392", "t": "2026-11-12T23:54:27Z", "to": "claude"}
+{"ev": "needs_you", "job": "", "keys": ["O-8d6610ae", "O-2e80ac51", "O-071091f1", "O-b4fd7064", "O-940db07d", "O-bec95aec", "O-0f17ee95"], "n": 7, "t": "2026-11-12T23:54:27Z"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T23:54:27Z", "tries": 1}
