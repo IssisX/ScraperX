@@ -255,6 +255,7 @@ class Live(Sweeps):
         self.assertEqual(item.kind, "PLAN")
         self.assertIn("J-501", item.line)
         self.assertIn("belongs to muse", item.line)
+        self.assertEqual((item.dest, switch.inbox_class(item)), ("muse", "ride"))   # 11-13: Muse's step, no wake
         (again,) = hub.by(rules.BOT_LOGIN, M.NOTICE_AGAIN.format(owner="muse", ver=ver))
         self.assertIn("Sent again", again["body"])
         self.assertIn("- J-501 #501 told **LATE**", hub.issues[BOARD]["body"])
