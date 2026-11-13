@@ -609,6 +609,40 @@ float Matron::floor_of(const float y) const {
     return best;
 }
 
+// The scan patch top under a body centred at (x, y, z): the patch holding
+// the spot whose top is nearest the body's feet (y less 0.9 m), within the
+// body's standing height. False when her scan holds no such patch there.
+bool Matron::scan_floor(const float x, const float y, const float z, float &floor) const {
+    if (scanned_ == nullptr) return false;
+    float best = std::numeric_limits<float>::max();
+    bool found = false;
+    for (const traversal::Patch &p : scanned_->patches()) {
+        if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+            z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+            p.top > y + 0.15F || y - p.top > 2.2F) {
+            continue;
+        }
+        const float distance = std::abs(y - 0.9F - p.top);
+        if (distance < best) {
+            best = distance;
+            floor = p.top;
+            found = true;
+        }
+    }
+    return found;
+}
+
+// The floor under a heard or glimpsed body: her scan's patch top under its
+// feet, else floor_at. A body centre 0.9 m above its feet reads its real
+// floor off her scan instead of the levels table, which knows no floor
+// between the decks (J-127: a heard lead on the stepped beam read the deck
+// 2.8 m below him and walked her off the platform to it).
+float Matron::floor_under_body(const float x, const float y, const float z) const {
+    float floor = 0.0F;
+    if (scan_floor(x, y, z, floor)) return floor;
+    return floor_at(x, y, z);
+}
+
 // A sound or sighting belongs to the steel below its actual position, not
 // automatically to her own deck. The levels table does not include grade;
 // her collision scan does. Use the closest local top within the player's
@@ -617,25 +651,8 @@ float Matron::floor_at(const float x, const float y, const float z) const {
     float lowest = std::numeric_limits<float>::max();
     for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
     if (y < lowest - 0.5F) {
-        if (scanned_ != nullptr) {
-            float best = std::numeric_limits<float>::max();
-            float floor = 0.0F;
-            bool found = false;
-            for (const traversal::Patch &p : scanned_->patches()) {
-                if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
-                    z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
-                    p.top > y + 0.15F || y - p.top > 2.2F) {
-                    continue;
-                }
-                const float distance = std::abs(y - 0.9F - p.top);
-                if (distance < best) {
-                    best = distance;
-                    floor = p.top;
-                    found = true;
-                }
-            }
-            if (found) return floor;
-        }
+        float floor = 0.0F;
+        if (scan_floor(x, y, z, floor)) return floor;
         return y - 0.9F;
     }
     if (zipline_ != nullptr) {
@@ -910,6 +927,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     // her ears are not.
     lead_seen_ = sense == Sense::Sight || sense == Sense::Touch;
     lead_sense_ = sense;
+    lead_crash_ = false;  // a crash lead is marked by its caller
     lead_valid_ = true;
     chase_way_held_ = false;  // a fresh lead earns its own chase window
 }
@@ -2568,7 +2586,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
             take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
-                      floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())),
+                      floor_under_body(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()),
+                                       float(ev.heard_at.GetZ())),
                       ev.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -2653,8 +2672,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // middle 0.9 up (physics_world.cpp); a crouch drops the
             // middle 0.3 with the soles where they are, so this reads
             // at most 0.3 low for a crouched player, inside every
-            // floor tolerance here. A sound's lead keeps floor_of: a
-            // noise's height is not a floor she can see.
+            // floor tolerance here. A player's sound takes the same
+            // floor off her scan (floor_under_body); only a crash
+            // keeps floor_at, its impact point no body standing on a patch.
             take_lead(px, pz, float(ev.seen_at.GetY()) - 0.9F, heard ? loudness : 0.3F, Sense::Sight);
             wary_ = false;
             state_ = State::Hunting;
@@ -2664,7 +2684,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_x_ = px;
             look_z_ = pz;
             look_s_ = 1.0F;
-            take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
+            take_lead(px, pz, floor_under_body(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
@@ -2676,12 +2696,14 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
             const float sz = crash_first ? crash.z : float(ev.heard_at.GetZ());
-            const float sfloor = floor_at(sx, sy, sz);
+            const float sfloor =
+                crash_first ? floor_at(sx, sy, sz) : floor_under_body(sx, sy, sz);
             const float loud = crash_first ? crash.loudness : loudness;
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -2695,6 +2717,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // her level: another's she cannot see for its deck, she goes
                 // by the way there).
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
@@ -2844,12 +2867,32 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             if (scanned_ != nullptr) {
                 own_region = scanned_->region_at(Vec3(ax, feet_y, az));
                 if (own_region < 0) own_region = region_under();
+                // Mid step-up on a stair her middle rides past the tread she
+                // stands on and short of the next: the floor her feet feel
+                // (feel_floor, this tick) names it, while she is within a
+                // step of it.
+                if (own_region < 0 && std::abs(feet_y - feet_y_) <= kStepUpM + 0.2F) {
+                    own_region = scanned_->region_at(Vec3(ax, feet_y_, az));
+                }
                 if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
             }
-            const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
-            // A lead the corner pipe goes toward, no longer frail: chased longer.
-            const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
+            // A lead on the very region she stands in is not elsewhere, however
+            // far it is above or below that region's area-weighted top (a stair
+            // or ramp of the region rising off a big floor): one region is
+            // tops a step apart and touching, floor her feet walk, so the
+            // scan-walk below takes her to the spot itself. Height says
+            // elsewhere only for a lead off her region (J-126: a lead 3 m up
+            // the region's stair was sent to her ways, and a travel to her own
+            // region stood her still as already there).
+            const int lead_region =
+                (scanned_ != nullptr && own_region >= 0) ? scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_)) : -1;
+            const bool same_region = own_region >= 0 && lead_region == own_region;
+            const bool elsewhere = !same_region && std::abs(lead_floor_ - floor_y) > 1.0F;
+            // A lead the corner pipe goes toward (frail, only up it): chased longer.
+            const float toward = pipe_next_toward(floor_y, lead_floor_);
+            const bool by_pipe = elsewhere && toward != floor_y && (stage_ != Stage::Pest || toward > floor_y) &&
+                                 pipe_reaches(floor_y) &&
+                                 pipe_reaches(toward) && pipe_serves(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
@@ -2939,6 +2982,26 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                                          : (lead_seen_ ? lose_track
                                                                         : std::min(lose_track, kAcousticMemorySeconds));
             const float heard_limit = (by_way_held && !wary_) ? lose_track : kAcousticMemorySeconds;
+            // A crash's place reached (a load's impact she heard, not the
+            // player): she is there and nothing there is to chase, so she
+            // looks about at once instead of standing in the hunt until
+            // the pursuit clock runs out (J-038: the clock alone held her
+            // 7 s at a crate's break, on top of the look). Only on her own
+            // level and standing on its steel (not under a lead decks up,
+            // nor still climbing to it), never wary (that one peers from
+            // its vantage), and only after her mischief has had its turn
+            // (a piece at that place is still hers to take or shove).
+            const bool at_crash = lead_crash_ && !lead_seen_ && !elsewhere && !wary_ &&
+                                  distance_xz(ax, az, heard_x_, heard_z_) <= 1.5F &&
+                                  std::abs(feet_y - floor_y) <= 1.0F;
+            const auto look_about = [&]() {
+                turn_ = Turn::None;
+                turn_s_ = 0.0F;
+                state_ = State::Searching;
+                search_s_ = 0.0F;
+                search_budget_s_ = 1.0e9F;
+                search_trip_s_ = 0.0F;
+            };
             if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit)) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
@@ -2969,12 +3032,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     guess_line_ = -1;
                     guess_climb_ = -1;
                 }
-                turn_ = Turn::None;
-                turn_s_ = 0.0F;
-                state_ = State::Searching;
-                search_s_ = 0.0F;
-                search_budget_s_ = 1.0e9F;
-                search_trip_s_ = 0.0F;
+                look_about();
             } else if (wary_) {
                 // Wary: up to where she can see the place, then she looks.
                 if (distance_xz(ax, az, heard_x_, heard_z_) <= kVantageM &&
@@ -3008,6 +3066,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     break;
                 }
                 stock_shove_ = -1;
+                if (at_crash) {
+                    // At the place, as her look about it stands (Searching).
+                    look_about();
+                    walk_toward(dt, ax, az, 0.0F);
+                    break;
+                }
                 // In the Turn a gap is no bar: she leaps it. A lead on
                 // another level she has no way to: the place on her own lines
                 // over or under it.
@@ -3060,10 +3124,43 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     }
                     const bool off_graph = nearest_level > 1.0F || nearest_line > 1.0F;
                     if (off_graph) {
-                        const Vec3 feet(at.GetX(), float(at.GetY()) - kStandCentre, at.GetZ());
+                        Vec3 feet(at.GetX(), float(at.GetY()) - kStandCentre, at.GetZ());
+                        // Mid step-up, from the tread her feet feel (as her
+                        // region above).
+                        if (scanned_->patch_at(feet, 0.4F) < 0 && std::abs(feet_y - feet_y_) <= kStepUpM + 0.2F) {
+                            feet = Vec3(at.GetX(), feet_y_, at.GetZ());
+                        }
                         const Vec3 goal(heard_x_, lead_floor_, heard_z_);
                         const int foot_patch = scanned_->patch_at(feet, 0.4F);
                         const int goal_patch = scanned_->patch_at(goal, 0.4F);
+                        // Him on no floor of hers, at her floor's height (a
+                        // moving floor that is not hers, across a gap from
+                        // her own: J-108's bait lift): as near as she can
+                        // come is the spot of her own floor nearest him,
+                        // within 5 m, and that is where she goes.
+                        // Her lines would take her to their own projection
+                        // of him, on a level that may not be here at all.
+                        Vec3 aim = goal;
+                        int aim_patch = goal_patch;
+                        if (goal_patch < 0 && own_region >= 0 && std::abs(lead_floor_ - feet_y) <= kStepUpM) {
+                            constexpr float kNearestFloorM = 5.0F;
+                            float best = kNearestFloorM;
+                            for (const int i : scanned_->regions()[static_cast<std::size_t>(own_region)].patches) {
+                                const traversal::Patch &p = scanned_->patches()[static_cast<std::size_t>(i)];
+                                if (p.narrow || std::abs(p.top - feet_y) > kStepUpM) continue;
+                                const auto inside = [](const float v, const float lo, const float hi) {
+                                    return lo <= hi ? std::clamp(v, lo, hi) : 0.5F * (lo + hi);
+                                };
+                                const float px = inside(heard_x_, p.min_x + kRadius, p.max_x - kRadius);
+                                const float pz = inside(heard_z_, p.min_z + kRadius, p.max_z - kRadius);
+                                const float d = distance_xz(px, pz, heard_x_, heard_z_);
+                                if (d < best) {
+                                    best = d;
+                                    aim = Vec3(px, p.top, pz);
+                                    aim_patch = i;
+                                }
+                            }
+                        }
                         if (saw && std::abs(lead_floor_ - feet_y) <= kStepUpM && straight_to(ax, az, heard_x_, heard_z_)) {
                             // Him in sight, a step from her floor, and the
                             // steel straight to him clear and under her feet
@@ -3072,13 +3169,13 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                             wx = heard_x_;
                             wz = heard_z_;
                             scan_walk = true;
-                        } else if (foot_patch >= 0 && foot_patch == goal_patch) {
+                        } else if (foot_patch >= 0 && foot_patch == aim_patch) {
                             // The spot is on the very surface under her feet.
-                            wx = heard_x_;
-                            wz = heard_z_;
+                            wx = aim.GetX();
+                            wz = aim.GetZ();
                             scan_walk = true;
                         } else {
-                            const std::vector<Vec3> path = scanned_->walk_path(feet, goal);
+                            const std::vector<Vec3> path = scanned_->walk_path(feet, aim);
                             // Her patches are joined fewest-first, not
                             // shortest: a way round the shaft to a place a
                             // few metres off her own line is no way to it.
@@ -3090,7 +3187,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                 along += distance_xz(last.GetX(), last.GetZ(), p.GetX(), p.GetZ());
                                 last = p;
                             }
-                            const float straight = distance_xz(ax, az, heard_x_, heard_z_);
+                            // The straight line to the spot itself, its rise
+                            // too: a landing over a stair's foot is the
+                            // stair's height away, not nothing.
+                            const float straight = Vec3(Vec3(heard_x_, lead_floor_, heard_z_) - feet).Length();
                             if (path.size() > 1 && along <= 3.0F * straight + 10.0F) {
                                 // First point she is not already standing
                                 // on: 1.2 m, as route_toward uses, not
@@ -3106,6 +3206,47 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                         wz = p.GetZ();
                                         scan_walk = true;
                                         break;
+                                    }
+                                }
+                                // Where the line to it runs over a drop (a
+                                // narrow stair's turn: that point is round
+                                // the corner, and the line crosses the open
+                                // well inside the turn), her aim is 1.2 m
+                                // along the path instead, which keeps to the
+                                // treads (J-126, the leg spiral's landings).
+                                // Only a drop: floor no lower than a step
+                                // under hers all along (a stair going up, a
+                                // machine's floor she boards) keeps her aim.
+                                const IgnoreSingleBodyFilter self_only(body_);
+                                const auto over_drop = [&](const float tx, const float tz) {
+                                    const float length = distance_xz(ax, az, tx, tz);
+                                    const int n = std::max(1, static_cast<int>(length / 0.2F));
+                                    for (int i = 1; i <= n; ++i) {
+                                        const float t = float(i) / float(n);
+                                        RayCastResult down;
+                                        const RVec3 from(ax + (tx - ax) * t, feet_y_ + 0.6F, az + (tz - az) * t);
+                                        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.2F, 0.0F)),
+                                                                                    down, {}, {}, self_only) ||
+                                            float(from.GetY()) - 1.2F * down.mFraction < feet_y_ - kStepUpM) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                };
+                                if (scan_walk && over_drop(wx, wz)) {
+                                    float left = 1.2F;
+                                    float fx = ax;
+                                    float fz = az;
+                                    for (const Vec3 &p : path) {
+                                        const float span = distance_xz(fx, fz, p.GetX(), p.GetZ());
+                                        if (span >= left) {
+                                            wx = fx + (p.GetX() - fx) * (left / span);
+                                            wz = fz + (p.GetZ() - fz) * (left / span);
+                                            break;
+                                        }
+                                        left -= span;
+                                        fx = p.GetX();
+                                        fz = p.GetZ();
                                     }
                                 }
                 // Steel outside deck_steel_ (the board under a climb she
@@ -4352,6 +4493,7 @@ void Matron::restore(const Saved &saved) {
         wary_ = false;
         lead_seen_ = false;
         lead_sense_ = Sense::None;
+        lead_crash_ = false;
         glimpsed_ = false;
         end_encounter();
         lead_valid_ = false;

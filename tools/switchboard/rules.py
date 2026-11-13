@@ -43,6 +43,7 @@ class Verdict:
     author_login: str    # the GitHub login that posted it
     downgraded: bool     # a FIX or BLOCK without a deterministic repro
     signed: bool = False  # the switch found this automatic review's MAC under SWITCHBOARD_REVIEW_KEY (J-056)
+    receipt: bool = False  # the Codex app's clean receipt (parse_codex_receipt): a LAND only, never clears a FIX
 
 
 @dataclasses.dataclass(frozen=True)
@@ -176,6 +177,27 @@ def parse_codex_state(body: str, created_at: str, author_login: str) -> Verdict 
     if unresolved is None:
         return None
     return Verdict("openai", "Codex", "review", "FIX" if unresolved else "LAND", sha, created_at, author_login, False)
+
+
+_CODEX_RECEIPT = "<!-- codex-review-receipt:v1 -->"
+_CODEX_CLEAN = re.compile(r"^\s*Codex Review:\s*Didn['’]t find any major issues\b", re.MULTILINE)
+_CODEX_REVIEWED = re.compile(r"\*\*Reviewed commit:\*\*\s*`(?P<sha>[0-9a-f]{7,40})`")
+
+
+def parse_codex_receipt(body: str, created_at: str, author_login: str) -> Verdict | None:
+    """The Codex app's receipt comment ("Codex Review: Didn't find any major issues", "Reviewed commit: `<sha>`")
+    -> a LAND on the commit it names (11-12, #343 and #453: a clean pass can come only as a receipt, with no fresh
+    state comment for the head). Only that app's own login, only the clean wording, only one named commit; the
+    LAND counts only where that prefix starts the PR's head (names_head), so a receipt for an older head counts
+    for nothing. It names a 10-character prefix, so it never stands in for a workflow-file PR's whole-sha review
+    (codex_review_on). As a `receipt` it never clears a FIX (open_fixes): the state comment's unresolved findings
+    on the same head still hold the merge (#343 @ b1177151: a clean receipt beside an open P1 thread)."""
+    if author_login.strip().lower() != CODEX_LOGIN or _CODEX_RECEIPT not in body or not _CODEX_CLEAN.search(body):
+        return None
+    shas = {m.group("sha") for m in _CODEX_REVIEWED.finditer(body)}
+    if len(shas) != 1:
+        return None
+    return Verdict("openai", "Codex", "review", "LAND", shas.pop(), created_at, author_login, False, receipt=True)
 
 
 def codex_review_state(body: str, author_login: str) -> dict | None:
@@ -319,7 +341,7 @@ def open_fixes(verdicts: Iterable[Verdict], head_sha: str, head_time: str, kind:
     """
     newest: dict[str, Verdict] = {}
     for v in sorted(verdicts, key=lambda x: x.created_at):
-        if v.kind != kind:
+        if v.kind != kind or v.receipt:   # a clean receipt adds a LAND; only the state comment clears its FIX
             continue
         on_head = names_head(v, head_sha) or (not v.sha and v.created_at >= head_time)
         if on_head and v.verdict in ("LAND", "FIX"):
@@ -350,7 +372,7 @@ def is_codex_app(v: Verdict) -> bool:
 
 def codex_review_on(verdicts: Iterable[Verdict], head_sha: str) -> Verdict | None:
     """The Codex app's newest verdict naming this whole head, or None when it has none."""
-    on_head = [v for v in verdicts if is_codex_app(v) and names_whole_head(v, head_sha)]
+    on_head = [v for v in verdicts if is_codex_app(v) and not v.receipt and names_whole_head(v, head_sha)]
     return max(on_head, key=lambda v: v.created_at) if on_head else None
 
 
@@ -614,6 +636,36 @@ def eye_overall(judged: Sequence[Mapping], spec_sets: Mapping[str, Mapping], pr_
     return ("LAND" if ok else "FIX"), waived
 
 
+EYE_SET_LINE = re.compile(r"^- (?P<set>[A-Za-z0-9_-]+): (?P<verdict>LAND|FIX)\b", re.MULTILINE)
+
+
+def eye_sets(body: str) -> dict[str, str] | None:
+    """The per-set verdicts the eye's comment lists (switch.eye: "- <set>: LAND|FIX..."), the worst per set, so a
+    line its free text adds can never turn a FIX into a LAND. None when it lists a set as not judged, or none."""
+    if re.search(r"^- sets not judged:", body, re.MULTILINE):
+        return None
+    out: dict[str, str] = {}
+    for m in EYE_SET_LINE.finditer(body):
+        name, verdict = m.group("set"), m.group("verdict")
+        out[name] = "FIX" if "FIX" in (verdict, out.get(name)) else "LAND"
+    return out or None
+
+
+def eye_relook(v: Verdict, body: str, spec_sets: Mapping[str, Mapping], pr_job: str,
+               open_jobs: Iterable[str]) -> Verdict:
+    """The eye's FIX on a head, read again under today's look sets (11-12, #453): when every set it failed is now
+    a known defect of an open job other than this PR's (work/looks/sets.yml changed after the eye looked), it is
+    the eye's LAND, as a fresh look would post (eye_overall), with no paid call. Only the workflow bot's eye FIX
+    with its repro, and every set of today's sets.yml must be in it; anything else is returned as it is."""
+    if v.kind != "eye" or v.verdict != "FIX" or v.author_login != BOT_LOGIN or v.downgraded:
+        return v
+    sets = eye_sets(body)
+    if not sets:
+        return v
+    overall, _ = eye_overall([{"set": k, "verdict": x} for k, x in sets.items()], spec_sets, pr_job, open_jobs)
+    return dataclasses.replace(v, verdict="LAND") if overall == "LAND" else v
+
+
 def needs_eye(pr: PrFacts) -> bool:
     if "eyes" not in pr.needs or pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
@@ -651,6 +703,18 @@ def superseded_prs(body: str | None, own: int) -> list[int]:
             if int(n) != own and int(n) not in out:
                 out.append(int(n))
     return out
+
+
+OUTSIDE = frozenset({"NONE", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "MANNEQUIN"})
+
+
+def team_issue(issue: dict) -> bool:
+    """Is this issue the team's? The repo is public: anyone can open an issue titled J-NNN, and a stranger's is
+    not a job (it would be a second issue for a real job, or a job the plan never held). The team's is one a
+    login with write access opened (GitHub's author_association, on every issue it returns) or labeled `job`
+    (a label takes write access to set)."""
+    labels = {(lab.get("name") if isinstance(lab, dict) else lab) for lab in issue.get("labels") or []}
+    return "job" in labels or (issue.get("author_association") or "OWNER") not in OUTSIDE
 
 
 def job_of_title(title: str) -> str:

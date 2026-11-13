@@ -20,7 +20,7 @@ issue with no owner, a listing that was cut short) is an UNMATCHED item: never s
 
 Each item has an owner (the issue's `owner:` label, else the branch prefix in work/agents.yml), a holder (who
 acts next), an age and a deadline: 2 h for a red branch, an unanswered ask and a green PR with no review;
-24 h untouched for everything else (stale). Past twice its deadline an item is listed under ESCALATED.
+4 h untouched for everything else (stale; Cory 11-12: nothing sits a day unnoticed). Past twice its deadline an item is listed under ESCALATED.
 
 The ledger is the board's list, not a notifier (J-072: one owner of notices). The reconciler
 (tools/switchboard/reconciler.py) tells each holder, with an ack, one re-send and a dead-letter; with it live and
@@ -59,9 +59,9 @@ import asks  # noqa: E402  tools/board/asks.py: what counts as an ask and as its
 import rules  # noqa: E402
 
 LIVE = dt.timedelta(days=3)            # a branch pushed this recently is live; asks are read this far back
-TOUCH_WINDOW = dt.timedelta(days=2)    # how far back touches are read: past 2 x 24 h an item is escalated anyway
+TOUCH_WINDOW = dt.timedelta(days=2)    # how far back touches are read: past 2 x STALE an item is escalated anyway
 ACT = dt.timedelta(hours=2)            # red branch or PR, unanswered ask, green PR with no review
-STALE = dt.timedelta(hours=24)         # everything else: untouched this long
+STALE = dt.timedelta(hours=4)          # everything else: untouched this long (Cory 11-12, was 24 h)
 MAX_NOTICES = 10                       # notice comments per sweep; the rest come next sweep
 MAX_MAIL_ITEMS = 15                    # items in Muse's one mail per sweep
 MAX_SECTION = 6000                     # chars of the visible section before it collapses to per-holder counts
@@ -272,6 +272,9 @@ class Feed:
     # work ("" when it does not; absent when not read). Only a held one is SUPERSEDED (J-072: #315 was marked
     # superseded by #336 for sharing J-007 alone, while it was different, live work).
     overlap: dict[tuple[str, str], str] = dataclasses.field(default_factory=dict)
+    # PR number -> (when it merged or closed, its job id or ""), from the issue events read: a status ask to the
+    # integrator that names it or its job is closed by it (tools/board/asks.py read, `closed`)
+    closed: dict[int, tuple[dt.datetime, str]] = dataclasses.field(default_factory=dict)
 
 
 # ---------- items ----------
@@ -614,7 +617,7 @@ def section(led: Ledger, now: dt.datetime, when: str, sent: list[str], kept: lis
         f"Written by the switchboard at {when}, every sweep (`tools/switchboard/ledger.py`); text between the ledger "
         f"markers is replaced each sweep. **{len(items)} items** ({kinds}): **{len(esc)} escalated**, {past} past "
         f"deadline, {unmatched} unmatched, {stale} stale." + (f" Not listed: {folded}." if folded else ""),
-        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 24 h untouched. " + (
+        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 4 h untouched. " + (
             "Past it the holder is told once; past twice it, again, and it is listed here as ESCALATED."
             if notify else
             "Past twice it an item is listed here as ESCALATED. The ledger sends no notices: the reconciler "
@@ -951,6 +954,25 @@ def page_list(gh, path: str, stop: Callable[[dict], bool] | None = None) -> tupl
     return items, True
 
 
+def comment_window(gh, repo: str, since: dt.datetime, now: dt.datetime) -> tuple[list, bool]:
+    """Every comment updated since `since`, oldest first, and whether some were not read. The listing goes from a
+    6-hour floor (J-072: the URL then repeats, and its pages answer 304) and is filtered to `since`. GitHub lists it
+    oldest first and page_list stops at MAX_PAGES, so a full listing has lost its NEWEST comments, the ones a pass
+    acts on (J-104: about 1,470 in 3 days, and every /ack, reply and ask past the 1,000th went unread for a day, so
+    acked items were re-sent and dead-lettered). A full listing is read again newest first and merged by id, as the
+    switch's own inbox does (switch.Switch.comments_since). Cut only when both reads were full and never met."""
+    floor = since.astimezone(dt.timezone.utc)
+    floor = floor.replace(hour=floor.hour - floor.hour % 6, minute=0, second=0, microsecond=0)
+    got, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(floor)}")
+    if cut:
+        newest, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(since)}&sort=created&direction=desc",
+                                lambda c: (parse(c.get("created_at")) or now) < since)
+        ids = {c.get("id") for c in got}
+        cut = cut and not any(c.get("id") in ids for c in newest)
+        got = got + [c for c in reversed(newest) if c.get("id") not in ids]
+    return [c for c in got if (parse(c.get("updated_at") or c.get("created_at")) or now) >= since], cut
+
+
 def touch_times(comments: list[dict], events: list[dict], bot: str) -> dict[int, dt.datetime]:
     """Per thread, the newest touch by anyone but the switchboard's own login (its notices must not reset a clock)."""
     out: dict[int, dt.datetime] = {}
@@ -971,6 +993,22 @@ def touch_times(comments: list[dict], events: list[dict], bot: str) -> dict[int,
         t = parse(e.get("created_at"))
         if n and t and (n not in out or t > out[n]):
             out[n] = t
+    return out
+
+
+def closed_prs(events: list[dict]) -> dict[int, tuple[dt.datetime, str]]:
+    """PR number -> (when it first merged or closed, its job: the body's `Job:` line, else a job id in its title), from
+    the issue events read (asks.py read's `closed`)."""
+    out: dict[int, tuple[dt.datetime, str]] = {}
+    for e in events:
+        it = e.get("issue") or {}
+        t = parse(e.get("created_at"))
+        if e.get("event") not in ("closed", "merged") or "pull_request" not in it or not it.get("number") or not t:
+            continue
+        job = rules.job_of_pr(it.get("body")) or (asks.JOB_ID.findall(it.get("title") or "") or [""])[0]
+        n = int(it["number"])
+        if n not in out or t < out[n][0]:
+            out[n] = (t, job)
     return out
 
 
@@ -998,12 +1036,9 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
     problems: list[str] = []
     since_live, since_touch = now - LIVE, now - TOUCH_WINDOW
 
-    floor = since_live.astimezone(dt.timezone.utc)   # J-072: on a 6-hour floor the URL repeats, and its pages 304
-    floor = floor.replace(hour=floor.hour - floor.hour % 6, minute=0, second=0, microsecond=0)
-    comments, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(floor)}")
-    comments = [c for c in comments if (parse(c.get("updated_at") or c.get("created_at")) or now) >= since_live]
+    comments, cut = comment_window(gh, repo, since_live, now)
     if cut:
-        problems.append(f"comments since {iso(since_live)}: more than {MAX_PAGES * 100}, the rest not read")
+        problems.append(f"comments since {iso(since_live)}: more than {2 * MAX_PAGES * 100}, the middle not read")
     events, cut = newest_first(sw, "events", f"repos/{repo}/issues/events", since_touch,
                                lambda e: parse(e.get("created_at")), EVENT_KEYS)
     if cut:
@@ -1154,15 +1189,23 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             except Exception as err:   # noqa: BLE001
                 problems.append(f"proof run {r.id} jobs: {type(err).__name__}")
 
+    # With the plan live (work/switchboard.yml `plan: live`) every open issue of the team's titled J-NNN is a job,
+    # with the `job` label or not: a missing label is itself a collaboration defect and must never make the job
+    # disappear (a stranger's issue with a job's title is not one: the repo is public). Until then the jobs are
+    # the issues that carry the `job` label, as before.
+    plan_live = getattr(sw, "plan_mode", lambda: "off")() == "live"
+    with_label = [] if plan_live else gh.paged(f"repos/{repo}/issues?labels=job&state=open")
+    all_open_issues = gh.paged(f"repos/{repo}/issues?state=open")
     issues: list[IssueIn] = []
-    for it in gh.paged(f"repos/{repo}/issues?labels=job&state=open"):
-        if "pull_request" in it:
+    for it in all_open_issues if plan_live else with_label:
+        if "pull_request" in it or (plan_live and not (rules.job_of_title(it.get("title") or "")
+                                                       and rules.team_issue(it))):
             continue
         labels = tuple(l["name"] for l in it.get("labels") or [])
         issues.append(IssueIn(it["number"], it.get("html_url") or "", it.get("title") or "", labels,
                               touched_at(it.get("created_at"), it.get("updated_at"), touches, it["number"], since_touch)))
 
-    open_threads = {int(i["number"]) for i in gh.paged(f"repos/{repo}/issues?state=open")}
+    open_threads = {int(i["number"]) for i in all_open_issues}
     stream = []
     for c in comments:
         try:
@@ -1172,11 +1215,13 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
         stream.append({"n": n, "t": parse(c["created_at"]), "url": c.get("html_url") or "", "body": c.get("body") or "",
                        "id": str(c.get("id")), "login": (c.get("user") or {}).get("login")})
     judge = ask_judge(roster, thread_jobs(issues, prs, frozenset(system_prs))) if roster is not None else {}
+    closed = closed_prs(events)
     found = [AskIn(a["id"], a["n"], a["url"], a["target"], a["a"], a["t"])
-             for a in asks.unanswered(stream, open_threads, since_live, **judge) if a["login"] != rules.BOT_LOGIN]
+             for a in asks.unanswered(stream, open_threads, since_live, closed=closed, **judge)
+             if a["login"] != rules.BOT_LOGIN]
 
     feed = Feed(prs, open_prs, branches, issues, found, runs, rules.TRUNK, frozenset(system_branches),
-                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap)
+                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap, closed)
     return feed, sent
 
 

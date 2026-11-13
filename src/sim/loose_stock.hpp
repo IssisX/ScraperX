@@ -48,7 +48,13 @@ namespace scraperx::sim {
 
 class LooseStock final {
 public:
-    // Kit entities: piece i of the table is kFirstEntity + i.
+    // Kit entities: piece i of the table is kFirstEntity + i. The table is
+    // append-only: a new piece takes the end, in its own group laid after
+    // every other (as lay_matron_kinds and lay_hung_slab do). A piece put
+    // anywhere earlier renumbers every piece after it, and the entity id is
+    // what tests name a piece by and what the solver's contact order is
+    // keyed on (third_party/jolt_patch.cmake), so the renumbered stock
+    // drifts in its last bits across the whole tower (J-107, #426).
     static constexpr std::uint64_t kFirstEntity = kit::kStockEntityBase;
 
     enum class Kind : std::uint8_t {
@@ -182,6 +188,13 @@ public:
     // starting at matron_kinds_begin().
     void lay_matron_kinds();
     static constexpr int kMatronKinds = 2;
+    // J-092 (#410): the slab the 154 m deck's service cell hangs over her
+    // lane (slab_cell.hpp): one PlateSlab, laid where the cell's sling holds
+    // it, 20 m over the deck. Laid after her kinds, before the hightower
+    // stock, so every earlier piece and body keeps its place. The kHungSlabs pieces starting
+    // at hung_slab_begin().
+    void lay_hung_slab();
+    static constexpr int kHungSlabs = 1;
     // Where a hand takes a carried piece of this kind, in its own frame.
     [[nodiscard]] static JPH::Vec3 carry_handle(Kind kind) noexcept;
 
@@ -204,6 +217,7 @@ public:
     [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
     [[nodiscard]] int upper_begin() const noexcept { return upper_begin_; }
     [[nodiscard]] int matron_kinds_begin() const noexcept { return matron_kinds_begin_; }
+    [[nodiscard]] int hung_slab_begin() const noexcept { return hung_slab_begin_; }
     [[nodiscard]] int hightower_begin() const noexcept { return hightower_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
@@ -238,6 +252,7 @@ private:
     int east_west_begin_ = 0;
     int upper_begin_ = 0;
     int matron_kinds_begin_ = 0;
+    int hung_slab_begin_ = 0;
     int hightower_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);

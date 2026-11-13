@@ -7,10 +7,13 @@ Usage (from the repository root):
   git diff <a> <b> | python3 tools/rule_check/rule_check.py -   # any unified diff on stdin
 
 Prints one line per finding:  LEVEL file:line rule: text
-  BLOCK   needs the owner: a protected file, a test check removed or loosened, her budget changed.
+  BLOCK   a protected change: a protected file, a test check removed or changed (its text, bound or
+          operator), world geometry changed (a constant or a box of an existing body — a tuning-header
+          constant counts when it places a body, J-135), her budget changed.
           Those changes go only as a PR into ScraperX-Claude, and only the owner merges it.
   REVIEW  a reviewer must look (possible per-route special case, velocity write, position write,
-          structured binding near a lambda).
+          structured binding near a lambda, new world geometry, a mechanism's tuning number changed (a mass,
+          friction, damping, speed ... in a world-building file), a number in another build_* function).
 Exit status: 0 nothing found, 1 REVIEW only, 2 any BLOCK. It reads the diff only; it changes nothing.
 It is a first pass: a clean result does not replace 03_EXECUTION/REVIEW_CHECKLIST.md.
 """
@@ -24,6 +27,37 @@ PROTECTED_RE = [re.compile(r"(^|/)export_presets\.cfg$"), re.compile(r"\.(keysto
 # World geometry: every solid the builders make is generated into this file (CI fails when it drifts),
 # so any change to the world's collision shows here. A protected change.
 GEOMETRY_FILE = "src/sim/world_solids.inc"
+# The native world's builders, a protected change too (J-115). Every line of these files builds the world: the
+# bands (band_*.cpp, the Stack from grade among them) and the climbs and shafts built on their own; in their .hpp
+# files only the lines with a number (their constants) are geometry.
+GEOMETRY_SRC_RE = re.compile(r"^src/sim/(band_\w+|twin_tower|climb_c6|climb_c7|pipe_gallery)\.(cpp|hpp)$")
+# In these files only these functions build the world: the stack's decks and frame, and the generated dressing.
+GEOMETRY_FUNCS = {"src/sim/physics_world.cpp": re.compile(r"\bPhysicsWorld::(build_stack|build_world_solids)\s*\(")}
+# Any other build_* function in src/sim may build world bodies: a number changed in one is REVIEW. Not these: the
+# climber's map, a fabricated shape, her stance shapes.
+BUILD_FN_RE = re.compile(r"\bbuild_\w*\s*\(")
+BUILD_FN_NOT = re.compile(r"\bAffordanceMap::build_|\bbuild_shape\s*\(|\bbuild_stance_shapes\s*\(")
+# A statement that changes what is already built: an assignment to an existing name (not a new add_* kept in it),
+# or a part taken out.
+MUTATE_RE = re.compile(r"^\s*(?:(?P<name>[A-Za-z_]\w*)[\w.\[\]>-]*\s*[-+*/]?=(?!=)|.*\.(?:erase|pop_back|clear)\s*\()")
+NEW_PART_RE = re.compile(r"=\s*(\w+(\.|->))?add_\w+\s*\(")
+# A mechanism's tuning, not geometry: a number on a constant or a call named for one of these (kS2BeamMassKg,
+# set_guide_friction(...), set_damping(...), kCageGovernorSpeed). Her own limits stay BLOCK (budget-number-changed).
+TUNING_WORDS = {"mass", "kg", "friction", "damping", "damp", "stiffness", "stiff", "tension", "speed", "mps", "torque",
+                "time", "delay", "period", "restitution", "drag", "rate", "gain", "spring", "hz", "force", "power"}
+PASS_CALLS = {"max", "min", "clamp", "abs", "sqrt", "static_cast", "float", "double"}   # look past these to the owner
+LITERAL_RE = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
+# (d2) J-135: a constant that places or sizes a world body, wherever it is defined. The checker only watched
+# the files that build the world, so a geometry change made through a tuning constant (J-043: kHangRailTopY in
+# physics_world_tuning.hpp, used in PhysicsWorld::build_stack) went through clean. The constants are found by
+# what uses them at the head revision — the solids table and the body builders — not by a hand list that goes
+# stale. A constant used in another constant's definition is followed through it (kStackLevelHeight moves the
+# rail through kHangRailTopY). Uses are resolved with `git grep` at the head; without a resolver (a hand-fed
+# diff with no repo, or a test that passes none) this rule stays silent.
+CONST_DEF_RE = re.compile(r"^\s*(?:static\s+)?(?:inline\s+)?(?:constexpr|const)\s+(?:[\w:<>,]+[\s&*]+)?"
+                          r"(\w+)\s*(?:\[[^\]]*\])?\s*(?::\s*\w+\s*)?(?::?=|\{)")
+CONST_NAME_RE = re.compile(r"^(?:k[A-Z]\w*|[A-Z][A-Z0-9_]{1,})$")
+CPP_EXTS = (".hpp", ".cpp", ".h", ".inc")
 # CLAUDE.md's "## Settled" section holds the owner's calls: only he changes a line, and the automatic review is told
 # they are his (tools/switchboard claude_calls.settled_calls). A PR that edits the section is never merged by the
 # switch: the finding is a protected-file BLOCK, which nothing lifts.
@@ -61,6 +95,11 @@ LAMBDA_RE = re.compile(r"\[[&=]?[\w&=, ]*\]\s*(\(|\{|mutable)")
 findings = []
 
 
+class Hunk(list):
+    """A hunk's lines as (kind, line number, text); ctx is the text after its @@ header (git's function context)."""
+    ctx = ""
+
+
 def add(level, f, n, rule, text):
     findings.append((level, f, n, rule, text.strip()[:140]))
 
@@ -71,6 +110,52 @@ def skeleton(s):
 
 def nums(s):
     return [float(x.rstrip("Ff")) for x in NUM_RE.findall(s)]
+
+
+def code(t, gd=False):
+    """The line with its comment gone (a comment mark inside a string, after an odd count of quotes, is kept).
+    gd: a GDScript or Python line, whose comments start with #."""
+    s = t if gd else re.sub(r"/\*.*?\*/", "", t)
+    if not gd and re.match(r"\s*(/\*|\*(\s|/|$))", s):
+        return ""
+    for m in re.finditer(r"#" if gd else r"//", s):
+        if s.count('"', 0, m.start()) % 2 == 0:
+            return s[:m.start()].rstrip()
+    return s.rstrip()
+
+
+def norm(t, gd=False):
+    """The line's code with every space gone too: a change that leaves this alone is a comment or a reformat."""
+    return re.sub(r"\s+", "", code(t, gd))
+
+
+def check_lines(h, gd=False, side="-"):
+    """The removed (side "-") or added (side "+") lines of a hunk that belong to a check: a check's own line, or a
+    line of a check that runs on over several lines (its parentheses still open, or a line ended by a backslash)."""
+    out, depth, running = set(), 0, False
+    for kind, n, t in h:
+        if kind not in (" ", side):
+            continue
+        c = code(t, gd)
+        if running or CHECK_RE.search(c) or CMP_RE.search(c):
+            if kind == side:
+                out.add((n, t))
+            depth = (depth if running else 0) + c.count("(") - c.count(")")
+            running = depth > 0 or (gd and c.endswith("\\"))
+    return out
+
+
+BOUND_WORDS = {"tol", "tolerance", "max", "min", "limit", "bound", "margin", "eps", "epsilon", "slack", "within",
+               "least", "most"}
+
+
+def bound_constant(c):
+    """True for a test's named bound: a constant whose name says it is a limit (kMaxDrift, kTolerance, LOOK_MIN_Y)."""
+    m = re.match(r"\s*(?:static\s+)?(?:constexpr|const)\s+(?:[\w:<>,]+[\s&*]+)?(\w+)\s*(?::\s*\w+\s*)?(?::?=|\{)", c)
+    if not m or not LITERAL_RE.search(c[m.end():]):
+        return False
+    words = {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", m.group(1))}
+    return bool(words & BOUND_WORDS)
 
 
 def loosened(old, new):
@@ -109,7 +194,8 @@ def parse(diff):
         elif line.startswith("@@"):
             m = re.search(r"-(\d+)" if deleted else r"\+(\d+)", line)
             newno = int(m.group(1)) if m else 0
-            hunk = []
+            hunk = Hunk()
+            hunk.ctx = line.split("@@", 2)[2] if line.count("@@") >= 2 else ""
             if cur:
                 files[cur].append(hunk)
         elif hunk is not None and cur:
@@ -151,7 +237,262 @@ def settled_edit(hunks):
     return None
 
 
-def check(files):
+def tuning_name(name):
+    return bool({w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name or "")} & TUNING_WORDS)
+
+
+def number_owner_is_tuning(c, pos):
+    """Is the number at c[pos] a mechanism's tuning? Its owner is the innermost call it is an argument of (past
+    max/min/casts), or, outside any call, the constant or name it is given to."""
+    depth, i = 0, pos - 1
+    while i >= 0:
+        ch = c[i]
+        if ch in ")]}":
+            depth += 1
+        elif ch in "([{":
+            if depth:
+                depth -= 1
+            elif ch == "(":
+                m = re.search(r"(\w+)\s*$", c[:i])
+                if m and m.group(1) not in PASS_CALLS:
+                    return tuning_name(m.group(1))
+        i -= 1
+    m = None
+    for m in re.finditer(r"(\w+)\s*(?:=(?!=)|\{)", c[:pos]):
+        pass
+    return bool(m) and tuning_name(m.group(1))
+
+
+def tuning_only(old, new):
+    """For a changed line paired with its new self (the same skeleton): True when every number that changed is a
+    mechanism's tuning, so the change is REVIEW (mechanism-tuning-changed), not world geometry."""
+    a, b = list(NUM_RE.finditer(old)), list(NUM_RE.finditer(new))
+    changed = [y for x, y in zip(a, b) if x.group(0) != y.group(0)]
+    return len(a) == len(b) and bool(changed) and all(number_owner_is_tuning(new, y.start()) for y in changed)
+
+
+def world_geometry(f, hunks, whole, fn_re):
+    """(d) J-115: world geometry. In a world-building file (whole) or function (fn_re), a changed or removed line
+    (a constant or a box of what is built: a position, size, extent or the list of bodies) is a BLOCK, unless every
+    number it changes is a mechanism's tuning (a mass, friction, damping, speed ...: REVIEW). So is an added statement that changes what is already
+    built (an assignment to a name the addition does not declare, a part erased). Other added lines, a new body or
+    constant, are REVIEW: the reviewer checks they come after the existing bodies and move none. A comment, spacing,
+    or a line moved within its hunk is no change; a line moved to another hunk is REVIEW (the body order changes).
+    In any other build_* function of src/sim a number changed is REVIEW."""
+    header = f.endswith(".hpp")
+
+    def counts(t):
+        c = code(t).strip()
+        if not c or c.startswith("#") or re.fullmatch(r"[{}();,\s]*", c):
+            return False
+        return bool(LITERAL_RE.search(c)) if header else True
+
+    added_all = {norm(t) for h in hunks for k, _, t in h if k == "+" and counts(t)}
+    for h in hunks:
+        fn, lines = h.ctx, []
+        for kind, n, t in h:
+            if re.match(r"[A-Za-z_]", t):
+                fn = t   # a definition at column 0: the lines after it are in it
+            lines.append((kind, n, t, fn))
+        world = [(k, n, t) for k, n, t, fl in lines if counts(t) and (whole or (fn_re and fn_re.search(fl)))]
+        if not world:
+            build = [(k, n, t) for k, n, t, fl in lines if k != " " and LITERAL_RE.search(code(t))
+                     and BUILD_FN_RE.search(fl) and not BUILD_FN_NOT.search(fl)]
+            mine = {norm(t) for k, _, t in build if k == "-"}
+            theirs = {norm(t) for k, _, t in build if k == "+"}
+            moved = [(n, t) for k, n, t in build if norm(t) not in (theirs if k == "-" else mine)]
+            if moved:
+                add("REVIEW", f, moved[0][0], "possible-world-geometry",
+                    "a number changes in a build_* function: if it builds the world, a protected change | " + moved[0][1])
+            continue
+        minus = [(n, t) for k, n, t in world if k == "-"]
+        plus = [(n, t) for k, n, t in world if k == "+"]
+        plus_norm, minus_norm = {norm(t) for _, t in plus}, {norm(t) for _, t in minus}
+        plus_skel = {}
+        for n, t in plus:
+            plus_skel.setdefault(skeleton(code(t)), []).append((n, t))
+        blocked, tuned = False, set()
+        for n, t in minus:
+            if norm(t) in plus_norm:
+                continue
+            if norm(t) in added_all:
+                add("REVIEW", f, n, "world-geometry-moved", "built in another place, so the body order changes | " + t)
+                continue
+            pair = plus_skel.get(skeleton(code(t)))
+            pair = pair.pop(0) if pair else None   # paired in order: the first changed line with the first added
+            if pair and tuning_only(code(t), code(pair[1])):
+                add("REVIEW", f, pair[0], "mechanism-tuning-changed",
+                    code(t).strip() + " -> " + code(pair[1]).strip() + " (a mechanism's tuning, not geometry)")
+                tuned.add(pair)
+                continue
+            add("BLOCK", f, pair[0] if pair else n, "world-geometry-changed",
+                (code(t).strip() + " -> " + code(pair[1]).strip() if pair else "removed: " + code(t).strip())
+                + " (an existing body or constant: protected)")
+            blocked = True
+        if blocked:
+            continue
+        new = [(n, t) for n, t in plus if norm(t) not in minus_norm and (n, t) not in tuned]
+        declared = " ".join(code(t) for _, t in new)
+        for n, t in new:
+            m = MUTATE_RE.match(code(t))
+            name = m and m.group("name")
+            if m and NEW_PART_RE.search(code(t)):
+                continue   # a new body, guide or rope kept in its band's struct: added, not changed
+            if m and not (name and re.search(r"[\w>&*]\s+[&*]?" + re.escape(name) + r"\s*(=|\{|;|\[|:)", declared)):
+                add("BLOCK", f, n, "world-geometry-changed",
+                    "an added statement changes what is built (protected) | " + code(t).strip())
+                blocked = True
+        if new and not blocked:
+            add("REVIEW", f, new[0][0], "world-geometry-added",
+                "new geometry: built after every existing body, moving none? | " + code(new[0][1]).strip())
+
+
+def git_uses(head):
+    """A usage resolver backed by `git grep` at <head>: constant name -> [(path, lineno, text, func)] of its
+    uses in src/. The func is git's -p function context (the enclosing definition, or ""), so a use inside a
+    body builder can be told from one in a mechanism. A name git cannot find has no uses. Results are cached:
+    a diff that changes several constants, and the constants they are built from, still runs a handful of greps."""
+    cache = {}
+
+    def resolve(name):
+        if name in cache:
+            return cache[name]
+        uses, func = [], ""
+        try:
+            out = subprocess.check_output(["git", "grep", "-n", "-p", "-w", name, head, "--", "src"],
+                                          text=True, stderr=subprocess.DEVNULL)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            out = ""
+        for line in out.splitlines():
+            _rev, rest = line.split(":", 1)
+            m = re.match(r"^([^:=]+)=(\d+)=(.*)$", rest)
+            if m:
+                func = m.group(3)
+                continue
+            m = re.match(r"^([^:=]+):(\d+):(.*)$", rest)
+            if m:
+                uses.append((m.group(1), int(m.group(2)), m.group(3), func))
+        cache[name] = uses
+        return uses
+
+    return resolve
+
+
+def use_class(path, func):
+    """'block' | 'review' | None for one use of a constant: does it place or size a world body? The solids
+    table and the files that build the world are BLOCK, as a change to them is; a use in another build_*
+    function of src/sim is REVIEW, as a number changed there is."""
+    if path == GEOMETRY_FILE or GEOMETRY_SRC_RE.match(path):
+        return "block"
+    fn_re = GEOMETRY_FUNCS.get(path)
+    if fn_re and func and fn_re.search(func):
+        return "block"
+    if path.startswith("src/sim/") and func and BUILD_FN_RE.search(func) and not BUILD_FN_NOT.search(func):
+        return "review"
+    return None
+
+
+def constant_is_geometry(name, resolve, seen=None):
+    """('block', (path, lineno)) | ('review', None) | (None, None): does changing this constant move world
+    geometry, by what uses it at the head? A constant used in another constant's definition is followed
+    through it; a use that is only a comment or a string is not a use."""
+    if seen is None:
+        seen = set()
+    if name in seen:
+        return None, None
+    seen.add(name)
+    best = None
+    for path, _n, text, func in resolve(name):
+        c = code(text)
+        if not re.search(r"\b" + re.escape(name) + r"\b", re.sub(r'"[^"]*"', '""', c)):
+            continue
+        m = CONST_DEF_RE.match(c)
+        if m and CONST_NAME_RE.match(m.group(1)):
+            if m.group(1) == name:
+                continue  # its own definition
+            kind, where = constant_is_geometry(m.group(1), resolve, seen)
+        else:
+            fm = CONST_DEF_RE.match(func or "")
+            if fm and CONST_NAME_RE.match(fm.group(1)):
+                if fm.group(1) == name:
+                    continue  # a continuation line of its own definition
+                kind, where = constant_is_geometry(fm.group(1), resolve, seen)
+            else:
+                kind = use_class(path, func)
+                where = (path, _n) if kind == "block" else None
+        if kind == "block":
+            return "block", where
+        if kind == "review":
+            best = "review"
+    return best, None
+
+
+def _definitions(lines):
+    """{name: [(lineno, code)]} for the constant definitions in one side's lines, in hunk order. A definition
+    may run over several lines (the value on the line after its `constexpr` line); the lines after the start
+    belong to it until the `;` that ends it. Each side is read on its own, so the old version's `;` and the
+    new version's `;` — two lines in the diff — do not cut each other short."""
+    defs = {}
+    cur = None
+    for n, c in lines:
+        if cur is None:
+            m = CONST_DEF_RE.match(c)
+            if not (m and CONST_NAME_RE.match(m.group(1))):
+                continue
+            cur = [m.group(1), []]
+        cur[1].append((n, c))
+        if ";" in c:
+            defs[cur[0]] = cur[1]
+            cur = None
+    return defs
+
+
+def changed_constants(hunks):
+    """[(name, new_lineno, old, new)] for constant definitions whose value changed in these hunks. A definition
+    only added (no old side) or only removed (no new side) is not a value change: a new constant comes with the
+    builder call that uses it, and the existing rule flags that call; a removed one takes its uses with it. A
+    comment-only change is not a change. The finding sits on the definition's last line in the new file, which
+    is the changed line for a value on its own line."""
+    out = []
+    for h in hunks:
+        old_defs = _definitions([(n, code(t)) for kind, n, t in h if kind in (" ", "-")])
+        new_defs = _definitions([(n, code(t)) for kind, n, t in h if kind in (" ", "+")])
+        for name, new_lines in new_defs.items():
+            if name not in old_defs:
+                continue
+            old = " ".join(p.strip() for _n, p in old_defs[name])
+            new = " ".join(p.strip() for _n, p in new_lines)
+            if norm(old) == norm(new):
+                continue
+            out.append((name, new_lines[-1][0], old, new))
+    return out
+
+
+def tuning_constant_geometry(f, hunks, resolve):
+    """(d2) J-135: a constant that places or sizes a world body, changed wherever it is defined. The constants
+    are found by what uses them at the head revision, not by a hand list. A changed constant with a
+    world-building use is a BLOCK, the same as a world_solids.inc change; one used only in another build_*
+    function is REVIEW. A constant world_geometry already blocked on the same line is not reported twice; one
+    it called tuning is upgraded, because the use is the truth."""
+    for name, n, old, new in changed_constants(hunks):
+        kind, where = constant_is_geometry(name, resolve)
+        if kind == "block":
+            for x in list(findings):
+                if x[1] == f and x[2] == n and x[3] == "mechanism-tuning-changed":
+                    findings.remove(x)
+            if any(x[0] == "BLOCK" and x[1] == f and x[2] == n and x[3] == "world-geometry-changed"
+                   for x in findings):
+                continue
+            add("BLOCK", f, n, "world-geometry-changed",
+                f"places a world body (used in {where[0]}:{where[1]}): {old} -> {new}")
+        elif kind == "review":
+            if any(x[1] == f and x[2] == n for x in findings):
+                continue
+            add("REVIEW", f, n, "possible-world-geometry",
+                "a constant used in a build_* function: if it places a world body, a protected change | " + new)
+
+
+def check(files, resolve=None):
     old_paths = set(files.pop("__old__", []))
     hit = settled_edit(files.get(SETTLED_FILE, []))
     if hit:
@@ -165,29 +506,40 @@ def check(files):
         is_test = f.startswith("tests/") or "/tests/" in f or f.startswith("godot/presentation/ui/ui_test")
         is_src = f.startswith("src/")
         is_cpp = f.endswith((".cpp", ".hpp", ".h", ".inc"))
+        if GEOMETRY_SRC_RE.match(f) or f in GEOMETRY_FUNCS or (f.startswith("src/sim/") and f.endswith(".cpp")):
+            world_geometry(f, hunks, bool(GEOMETRY_SRC_RE.match(f)), GEOMETRY_FUNCS.get(f))
+        if resolve is not None and f != GEOMETRY_FILE and f.startswith("src/") and f.endswith(CPP_EXTS):
+            tuning_constant_geometry(f, hunks, resolve)
         for h in hunks:
             minus = [(n, t) for k, n, t in h if k == "-"]
             plus = [(n, t) for k, n, t in h if k == "+"]
             plus_text = {t.strip() for _, t in plus}
-            plus_skel = {}
-            for n, t in plus:
-                plus_skel.setdefault(skeleton(t), []).append((n, t))
             hunk_text = "\n".join(t for _, _, t in h)
-            # (a) test checks removed or loosened
+            # (a) test checks removed or changed: a check's line (or a line of a check over several lines), and a
+            # named bound. Moved within the hunk, or only its comment or spacing changed: not a change.
             if is_test:
+                gd = f.endswith((".gd", ".py"))   # a # comment (and // is a division)
+                plus_norm = {norm(t, gd) for _, t in plus}
+                plus_code_skel = {}
+                for n, t in plus:
+                    plus_code_skel.setdefault(skeleton(code(t, gd)), []).append((n, t))
+                checks = check_lines(h, gd)
                 for n, t in minus:
-                    if not (CHECK_RE.search(t) or CMP_RE.search(t)) or t.strip().startswith("//"):
+                    c = code(t, gd)
+                    is_check = (n, t) in checks and c.strip()
+                    if not (is_check or bound_constant(c)) or norm(t, gd) in plus_norm:
                         continue
-                    if t.strip() in plus_text:
-                        continue  # moved, not removed
-                    pair = plus_skel.get(skeleton(t))
+                    rule = "test-check-changed" if is_check else "test-bound-changed"
+                    pair = plus_code_skel.get(skeleton(c))
                     if pair:
-                        why = loosened(t, pair[0][1])
-                        if why:
-                            lvl = "BLOCK" if any("LOOSER" in w or "operator" in w for w in why) else "REVIEW"
-                            add(lvl, f, pair[0][0], "test-tolerance-changed", "; ".join(why) + " | " + pair[0][1])
+                        pn, pt = pair.pop(0) if len(pair) > 1 else pair[0]
+                        why = loosened(c, code(pt, gd)) or ["a number changed"]
+                        add("BLOCK", f, pn, "test-tolerance-changed" if any(
+                            "LOOSER" in w or "operator" in w for w in why) else rule, "; ".join(why) + " | " + pt)
                         continue
-                    add("BLOCK", f, n, "test-check-removed", t)
+                    if is_check and not check_lines(h, gd, "+"):
+                        rule = "test-check-removed"   # no check put in its place
+                    add("BLOCK", f, n, rule, t)
                 for n, t in plus:
                     if re.search(r"getenv\(\"SCRAPERX_(SKIP|LOOSE|TOLERANCE)", t) or re.search(r"\b(skip|disabled?)_?test\b", t, re.I):
                         add("BLOCK", f, n, "test-skip-added", t)
@@ -221,6 +573,7 @@ def main():
     a = sys.argv[1:]
     if a == ["-"]:
         diff = sys.stdin.read()
+        resolve = git_uses("HEAD")   # a hand-fed diff: uses resolve against HEAD, or stay silent without git
     else:
         base = a[0] if a else "origin/ScraperX-Claude"
         head = a[1] if len(a) > 1 else "HEAD"
@@ -228,7 +581,8 @@ def main():
                                        text=True)
         # CLAUDE.md with its whole text as context, so each change's section is known (settled_edit)
         diff += subprocess.check_output(["git", "diff", "-U100000", f"{base}...{head}", "--", SETTLED_FILE], text=True)
-    check(parse(diff))
+        resolve = git_uses(head)
+    check(parse(diff), resolve)
     for lvl, f, n, rule, text in findings:
         print(f"{lvl:6} {f}:{n} {rule}: {text}")
     blocks = sum(1 for x in findings if x[0] == "BLOCK")

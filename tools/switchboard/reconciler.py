@@ -115,6 +115,9 @@ STATES = ("accepted", "assigned", "working", "proof", "review", "landable", "blo
 CONFLICT = "merge conflict with the base"
 NOT_AN_ASK = "not an ask"            # why evidence() closes an ask the judge no longer reads as one
 THREAD_CLOSED = "its thread closed"  # why evidence() closes an ask whose issue or PR closed
+TABLE_OWNS = "the job machine's table owns it (plan: live)"   # why a job's non-ask obligation closes once it is live
+PARKED_LABEL = "state:parked"            # a job the finish plan parks (11-12): no start notice
+START_GRACE = dt.timedelta(hours=24)    # a queued job waits its turn; only a start owed past this is nagged
 INBOX_WINDOW = dt.timedelta(hours=24)   # how far back the integrator's inbox reads comments (switch.py INBOX_RUNS_WINDOW)
 
 CMD = re.compile(r"^[ \t]*(?:/(?P<cmd>ack|blocked|unblock|cancel)\b[ \t]*(?P<arg>[^\n]*)"
@@ -312,6 +315,12 @@ class Pass:
     # comment it read as a possible ask, and the (comment id, holder) of each ask it found, answered or not
     examined: set = dataclasses.field(default_factory=set)
     asks_read: set = dataclasses.field(default_factory=set)
+    asks_closed: set = dataclasses.field(default_factory=set)   # (comment id, holder) of asks a PR's close answered
+    # work/switchboard.yml `plan: live` (the job machine, tools/switchboard/machine.py, is the one that says who
+    # owes each step and when). Until then every rule here is as it was: a quiet job is owed a start after a day,
+    # and an /ack settles a FIX. Live: the table is the one clock for every step a job owes (start, proof, FIX,
+    # review, merge), so a job raises only its asks here, and any other obligation it had is closed as the table's.
+    plan_live: bool = False
 
 
 class Lookups:
@@ -506,9 +515,13 @@ def stream_asks(p: Pass, own: set[str], roster: L.Roster | None = None, thread_j
               for c in sorted(p.comments, key=lambda c: (c.t, c.id)) if c.id not in own]
     judge = L.ask_judge(roster, thread_job or {}) if roster is not None else {}
     who = judge.get("who") or (lambda name: name.lower())
-    p.examined, p.asks_read = set(), set()
+    p.examined, p.asks_read, p.asks_closed = set(), set(), set()
     out = []
-    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined, **judge):
+    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined,
+                       closed=getattr(p.feed, "closed", None) or {}, **judge):
+        if a["answer"] == asks.PR_CLOSED:   # no reply acks it: evidence() closes it (as the ledger drops it)
+            p.asks_closed.add((a["id"], who(a["target"])))
+            continue
         p.asks_read.add((a["id"], who(a["target"])))
         out.append(L.AskIn(a["id"], a["n"], "", a["target"], a["a"], a["t"]))
     return out
@@ -608,8 +621,18 @@ def waiting_wants(pr: L.PrIn, fixer: str, author: str, roster: L.Roster) -> list
     return out
 
 
+def fixer_of(ref: str, owner: str, author: str) -> str:
+    """Who fixes a head: the job's owner (a reassignment moves the work), else the branch's author, else Claude.
+    A claude/ head is always Claude's (switch.owner_of routes the same way): Muse cannot push to it, so mailing
+    her its red or FIX only cost her a turn to ack "helper's branch, not Muse's" (11-11, J-085: owner:muse, and
+    claude/integrate-protected-j085's reds and #435's Codex FIX went to her mail)."""
+    if ref.startswith("claude/"):
+        return "claude"
+    return owner or author or "claude"
+
+
 def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster, landed: set[str],
-           closed: dict[str, str] | None = None) -> tuple[str, list[Want]]:
+           closed: dict[str, str] | None = None, plan_live: bool = False) -> tuple[str, list[Want]]:
     """The job's state and the obligations it owes now, from what is open. Pure. `closed` maps a branch whose head
     is a PR closed without merging to that "closed #N": not landed, it owes the integrator one ruling."""
     closed = closed or {}
@@ -619,7 +642,7 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
     issue_thread = o.issue.number if o.issue else 0
     for pr in sorted(o.prs, key=lambda x: x.number):
         author = (roster.of_branch(pr.head_ref) or L.Person("", "")).agent
-        fixer = owner or author or "claude"
+        fixer = fixer_of(pr.head_ref, owner, author)
         ref, n, h = f"PR|#{pr.number}", pr.number, pr.head_sha
         if CONFLICT in pr.reasons:
             wants.append(Want("fix", fixer, f"conflict:{h}", ref, n, f"#{n} has a {CONFLICT}", "new-head|reply|ack"))
@@ -653,7 +676,7 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
     for b, run in o.branches:
         if b.name in landed:
             continue
-        fixer = owner or (roster.of_branch(b.name) or L.Person("", "")).agent or "claude"
+        fixer = fixer_of(b.name, owner, (roster.of_branch(b.name) or L.Person("", "")).agent)
         ref, n = f"BRANCH|{b.name}", issue_thread
         if b.name in closed:   # its PR was closed at this very head: not landed, and nothing reopens it by itself
             m = re.search(r"#(\d+)", closed[b.name])
@@ -678,14 +701,19 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
         else:
             states.append("proof" if run == "running" else "working")
     if o.issue is not None and not states:
-        if not owner:
+        if PARKED_LABEL in o.issue.labels:   # 11-12: the finish plan parks jobs; a parked job is owed no start
+            states.append("accepted")   # held, not started: nothing is owed until the label comes off
+        elif not owner:
             wants.append(Want("ruling", "claude", f"assign:{o.issue.number}", f"JOB|#{o.issue.number}",
                               o.issue.number, f"{o.job} has no owner: label", "owner|reply|ack"))
             states.append("accepted")
         elif rec.get("pr_done") == "merged" or any(is_landed(v[1]) for v in rec["landed"].values()):
             states.append("merged")   # its work landed; the issue is still open
-        elif not rec["head"] and not rec["prs"] and now - o.issue.touched < L.STALE:
-            states.append("assigned")   # just assigned: the owner has a day before a start is owed
+        elif not rec["head"] and not rec["prs"] and (plan_live or now - o.issue.touched < START_GRACE):
+            # Queued: the owner has a day before a start is owed (not L.STALE, 4 h). With the plan live a quiet
+            # job is never an instruction to start from here: the job machine says who owes a start and when
+            # (a stale owner label cannot authorize new work, and a job behind full lanes is owed nothing).
+            states.append("assigned")
         elif not rec["head"] and not rec["prs"]:   # quiet a day with no work seen (the feed reads 3 days of pushes)
             wants.append(Want("start-agent", owner, f"start:{o.issue.number}", f"JOB|#{o.issue.number}",
                               o.issue.number, f"start {o.job}", "work|reply|ack"))
@@ -701,6 +729,8 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
         if s in states:
             state = s
             break
+    if plan_live:   # the job machine's table is the one clock for every step a job owes: only asks stay here
+        wants = [w for w in wants if w.kind == "ask"]
     return state, wants
 
 
@@ -726,9 +756,11 @@ def apply_commands(state: State, p: Pass, thread_job: dict[int, str], events: Ev
                     rec, ob = hit
                     if key in rec["commands"] or not is_open(ob):
                         continue   # a repeat, or already settled: no second transition
+                    # (with the plan live no job FIX is an obligation here: the table's gate clears only on a new
+                    # head or verdict, so no /ack can settle one)
                     ob["ack"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
-                    rec["commands"] = (rec["commands"] + [key])[-MAX_CMDS:]
                     events("acked", rec["job"], id=oid, how="/ack", by=c.author)
+                    rec["commands"] = (rec["commands"] + [key])[-MAX_CMDS:]
                 if not ids:
                     unmatched[f"CMD|{c.id}"] = f"/ack with no O-xxxxxxxx id on #{c.thread}"
                 continue
@@ -806,6 +838,24 @@ def posted_marks(p: Pass) -> dict[tuple[str, int], str]:
             for m in POSTED_RE.finditer(c.body)}
 
 
+SHA40 = re.compile(r"[0-9a-f]{40}")
+
+
+def changed(rec: dict, w: Want) -> str:
+    """A new obligation's text. J-104: an acked obligation is never sent again while its version holds (its id is
+    the version's); a new head is a new version, so a new obligation, and its notice names what changed since the
+    ack, so the addressee need not work out why the same item came back."""
+    tag, _, head = w.version.rpartition(":")
+    if w.kind == "ask" or not SHA40.fullmatch(head):
+        return w.what
+    prior = next((ob for ob in reversed(rec["obligations"]) if ob.get("ack") and ob["kind"] == w.kind
+                  and ob["to"] == w.to and ob["ref"] == w.ref and ob["version"] != w.version
+                  and ob["version"].rpartition(":")[0] == tag), None)
+    if prior is None:
+        return w.what
+    return f"{w.what} (new head {head[:8]} since {prior['id']} was acked at {prior['version'].rpartition(':')[2][:8]})"
+
+
 def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, events: Events, evidence_of: Callable) \
         -> None:
     """Create the obligations wanted now (a want that comes back reopens its unseen or closed obligation); settle
@@ -839,7 +889,7 @@ def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, event
             continue
         via, due = due_at(roster, w.to, now, w.kind)
         ob = {"id": oid, "kind": w.kind, "to": w.to, "via": via, "ref": w.ref, "thread": w.thread,
-              "version": w.version, "what": w.what, "created": iso(now), "attempts": 0, "sends": 0,
+              "version": w.version, "what": changed(rec, w), "created": iso(now), "attempts": 0, "sends": 0,
               "last_sent": None, "last_error": "", "due": iso(due), "dead": iso(dead_time(w.to, via, now, due)),
               "ack": None, "ack_rule": w.ack_rule, "dead_lettered": None, "closed": None, "asked": iso(w.asked),
               "missing": 0, "unseen": None}
@@ -890,7 +940,8 @@ class Seen:
         self.branches = {b.name: b for b in f.branches}
         self.issues = {i.number: i for i in f.issues}
         self.open_threads = p.open_threads
-        self.examined, self.asks_read = p.examined, p.asks_read
+        self.plan_live = p.plan_live
+        self.examined, self.asks_read, self.asks_closed = p.examined, p.asks_read, p.asks_closed
         self.heads = dict(f.open_heads) | {pr.head_ref: pr.number for pr in f.prs}
         self.runs: dict[str, L.RunIn] = {}
         for r in sorted(f.runs, key=lambda r: r.created_at):
@@ -931,6 +982,8 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
         n = ob["thread"]   # but an ask on a thread that closed is over (the J-072 replay: #107's asks were
         if seen.open_threads is not None and n not in seen.open_threads and seen.issue(n).get("state") == "closed":
             return f"close:{THREAD_CLOSED}"   # re-sent and dead-lettered after the board moved to #340)
+        if (version, ob["to"]) in seen.asks_closed:
+            return f"close:{asks.PR_CLOSED}"   # a status ask to the integrator whose PR merged or closed (asks.py)
         if version in seen.examined and (version, ob["to"]) not in seen.asks_read:
             # the judge read this very comment this pass and it asks this holder nothing: a sentence that says
             # "To Grok asks", or a post that names an ask from its addressee, its answer (tools/board/asks.py)
@@ -1000,7 +1053,7 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
         issue = seen.issues.get(n)
         if tag == "assign" and issue is not None and seen.roster.of_labels(issue.labels):
             return "ack:owner labelled"
-        if tag == "start" and o is not None and (o.prs or o.branches):
+        if tag in ("start", "idle") and o is not None and (o.prs or o.branches):
             return "ack:work pushed"
         if issue is None and seen.issue(n).get("state") == "closed":
             return "close:issue closed"
@@ -1076,9 +1129,11 @@ class CommentOutbox:
     The marker on the delivered comment is the receipt: a crash before the state commit never re-sends."""
     live = True
 
-    def __init__(self, gh, roster: L.Roster, board: int, relay: bool = True):
+    def __init__(self, gh, roster: L.Roster, board: int, relay: bool = True,
+                 tests: Callable[[str], tuple] | None = None):
         self.gh, self.roster, self.board = gh, roster, board
         self.relay = relay   # False: the switch posts Codex's mention itself, with the team token (switch.codex_mention)
+        self.tests = tests   # head sha -> its red proof's failing tests (switch.Switch.red_tests_at, J-104)
         self.posted: dict[tuple[str, int], str] = {}   # (id, send): a Muse comment posted, its receipt not yet in
 
     def send(self, rec: dict, ob: dict, send: int, attempt: int) -> None:
@@ -1087,6 +1142,7 @@ class CommentOutbox:
         due = central(at(ob["due"]))
         mark = SENT_MARK.format(id=ob["id"], send=send, attempt=attempt)
         what = ob["what"]
+        failing = self.failing(ob)
         if ob["via"] == "email":
             # Muse (#350 hole 6): on the job's issue or the board, never a PR (the bridge's token is Issues-only);
             # plain text with no links, code marks or orders (work/tasks/mail-to-muse.md); labelled wake:muse so the
@@ -1095,7 +1151,7 @@ class CommentOutbox:
             # posted marker), never a second one the bridge would mail again.
             where = int(rec.get("issue") or 0) or self.board
             body = strip_mentions(f"CLAUDE_TO_MUSE: {rec['job'] or 'thread'} {what.replace('`', '')}{again}\n\n"
-                                  f"From the switchboard's reconciler (Claude). Due {due} Central. When it is "
+                                  f"{failing}From the switchboard's reconciler (Claude). Due {due} Central. When it is "
                                   f"done, reply on this thread or post /ack {ob['id']}.")
             cid = self.posted.get((ob["id"], send))
             if cid is None:
@@ -1121,9 +1177,21 @@ class CommentOutbox:
                     f" Post `@codex review` on #{n} yourself: the Codex app does not answer the bot's mentions."
                     f"\n\nDue {due} Central. Ack with `/ack {ob['id']}` once it is posted.")
         else:
-            body = strip_mentions(f"To {name}:{again} {what}\n\nDue {due} Central. Ack with `/ack {ob['id']}`, "
-                                  "or act.")
+            body = strip_mentions(f"To {name}:{again} {what}\n\n{failing}Due {due} Central. Ack with "
+                                  f"`/ack {ob['id']}`, or act.")
         self.gh.comment(n, f"{body}\n\n{mark}", f"reconciler: {ob['id']} to {ob['to']}")
+
+    def failing(self, ob: dict) -> str:
+        """J-104: a red notice names its failing tests ("<job>: <FAIL line>", already made safe by the switch), or
+        "" for any other notice, or when they cannot be read: the notice goes either way."""
+        tag, _, sha = str(ob.get("version") or "").rpartition(":")
+        if self.tests is None or ob.get("kind") != "fix" or tag != "red":
+            return ""
+        try:
+            lines = list(self.tests(sha))
+        except Exception:   # noqa: BLE001
+            return ""
+        return "Failing tests:\n" + "\n".join(f"- {line}" for line in lines) + "\n\n" if lines else ""
 
 
 def strip_mentions(text: str) -> str:
@@ -1483,9 +1551,14 @@ def step(job: str, rec: dict, o: JobObs | None, seen: Seen, roster: L.Roster, lo
         if live:
             rec["head"] = max(live, key=lambda b: b.pushed_at).sha
     live_work = o.issue is not None or o.prs or any(b.name not in landed for b, _ in o.branches)
-    state_now, wants = derive(o, rec, owner, now, roster, landed, closed)
+    state_now, wants = derive(o, rec, owner, now, roster, landed, closed, plan_live=seen.plan_live)
     if rec.get("cancelled"):
         wants = []
+    if seen.plan_live:   # one alarm for one fact: what the table has a gate for is closed here, never notified twice
+        for ob in rec["obligations"]:
+            if is_live(ob) and ob["kind"] != "ask":
+                ob["closed"] = {"why": TABLE_OWNS, "at": iso(now)}
+                events("closed", job, id=ob["id"], why=TABLE_OWNS)
     sync(rec, wants, now, roster, events, lambda ob: evidence(ob, o, seen, rec, now))
     if rec.get("cancelled") or not live_work:
         finalize(rec, o, lookups, now, events, seen.open_prs)
@@ -2023,7 +2096,12 @@ def read_pass(sw, gh: CountingGH, steered: list, board: int, proof_workflow: str
     shim = types.SimpleNamespace(gh=gh, team=sw.team, run_state=sw.run_state)
     feed, sent = L.read_feed(shim, steered, sw.now, board, proof_workflow, system_branches, system_prs, roster)
     led = L.classify(feed, sw.now, roster)
-    raw, _ = L.page_list(gh, f"repos/{gh.repo}/issues/comments?since={L.iso(sw.now - L.LIVE)}")   # cached: read once
+    # the ledger's own reader and URLs (cached: read once), with its newest-first read once the listing is full
+    # (J-104: reading only the oldest 1,000 of the window missed every /ack and reply after them)
+    raw, cut = L.comment_window(gh, gh.repo, sw.now - L.LIVE, sw.now)
+    if cut:
+        getattr(sw, "out", print)(f"WARN        reconciler: comments since {L.iso(sw.now - L.LIVE)} were more than "
+                                  "both reads hold; the middle of the window was not read")
     comments = []
     for c in raw:
         try:
@@ -2074,12 +2152,13 @@ def ledger_notifies(root: pathlib.Path) -> bool:
     return not (mode(root) == "live" and config(root).get("notices") == "v2")
 
 
-def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None, relay: bool = True):
+def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None, relay: bool = True,
+             tests: Callable[[str], tuple] | None = None):
     """(the notice outbox, Cory's notifier) for a mode: shadow records, live posts. `relay` False: Codex's asks
     need no relay through the integrator (the switch holds the team token and posts the mention itself)."""
     if not live:
         return ShadowOutbox(), ShadowCory()
-    return CommentOutbox(gh, roster, board, relay), CoryNotifier(gh, board, mailer)
+    return CommentOutbox(gh, roster, board, relay, tests), CoryNotifier(gh, board, mailer)
 
 
 def sweep(sw, steered: list, board: int, proof_workflow: str, system_branches: Iterable[str],
@@ -2094,8 +2173,10 @@ def sweep(sw, steered: list, board: int, proof_workflow: str, system_branches: I
     gh = CountingGH(sw.gh)
     p = read_pass(sw, gh, steered, board, proof_workflow, set(system_branches) | {STATE_BRANCH}, system_prs,
                   roster, cfg)
+    p.plan_live = config(sw.root).get("plan") == "live"
     # posts go through the switch's own client; with the team token the switch asks Codex itself (codex_mention)
-    outbox, cory = outboxes(which == "live", sw.gh, roster, board, relay=not getattr(sw, "merge_token", ""))
+    outbox, cory = outboxes(which == "live", sw.gh, roster, board, relay=not getattr(sw, "merge_token", ""),
+                            tests=getattr(sw, "red_tests_at", None))
     res = run_pass(GitStore(gh), p, roster, GitHubLookups(gh), sw.now, outbox, sw.out, cory=cory)
     sw.out(f"reconciler  {which} pass {res.status}: {res.events} events, {gh.calls} GitHub calls, "
            f"tries {res.tries}; SLO {json.dumps(res.slo, sort_keys=True)}")
