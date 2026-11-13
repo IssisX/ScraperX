@@ -10,7 +10,7 @@ extends RefCounted
 ## line said, whether or not a device mixes it, for the scripted runs.
 ##
 ## The gate: her voice is not picked yet (J-089, the owner picks by ear from
-## godot/presentation/audio/matron_voice_picks/), so the speech is silent while the gate is closed. A
+## 03_EXECUTION/VOICE_PICKS/ (out of the shipped tree)), so the speech is silent while the gate is closed. A
 ## silent speech still picks its line (the variety and no-repeat hold, the log and caption are written,
 ## her mouth is timed) but reports the silent placeholder take, clip "", so no clip of the unpicked bank
 ## plays. The director opens the gate by constructing it not silent.
