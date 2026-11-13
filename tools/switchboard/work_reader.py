@@ -177,7 +177,12 @@ def branch_works(sw, model, reads: dict, steered, known: set[str]) -> dict[str, 
             continue
         finished = proof == "green" or proof.startswith("red")
         at = machine.when(done_at) if finished and done_at else (reads.get("head_at") or {}).get(sha)
-        auto = proof == "green" and name.startswith(AUTO_PR_PREFIX) and auto_opens(sw, name, sha)
+        try:
+            auto = proof == "green" and name.startswith(AUTO_PR_PREFIX) and auto_opens(sw, name, sha)
+        except ghapi.RateLimited as err:   # as a proof read: this head and the rest stay unread, never guessed
+            sw.out(f"NOTE        work: rate limited reading the commit of {name} ({err}); "
+                   f"{len(todo) - i} head(s) left unread this pass")
+            return out
         out[sha] = machine.branch_work(name, sha, proof, at=at, auto_pr=auto)
     if len(todo) > PROOF_READS:
         sw.out(f"NOTE        work: {len(todo) - PROOF_READS} integrate head(s) with no PR not read this pass "

@@ -470,6 +470,17 @@ class AutoOpenStep(unittest.TestCase):
         self.assertEqual(w.gate, "auto-pr")
         self.assertTrue(any("was not read" in x for x in sw.lines), sw.lines)
 
+    def test_a_rate_limited_commit_read_leaves_that_head_and_the_rest_unread(self):
+        model = many_jobs(2)
+        branches = [br("fb-bot/integrate-j500", sha(10)), br("fb-bot/integrate-j501", sha(11))]
+        head_at = {sha(10): stamp(2), sha(11): stamp(1)}   # j500 newest, read first
+        sw = FakeSw({f"repos/{REPO}/commits/{sha(10)}": ghapi.OverBudget("GET", "c", "call budget spent", 403)},
+                    proofs={sha(10): ("green", "u", 1, stamp(3)), sha(11): ("green", "u", 2, stamp(3))})
+        works = W.read(sw, model, {"branches": branches, "head_at": head_at}, [])
+        self.assertEqual(works, {})
+        self.assertEqual(sw.proof_calls, [sha(10)])
+        self.assertTrue(any("2 head(s) left unread" in x for x in sw.lines), sw.lines)
+
     def test_the_rule_is_the_switchs(self):
         self.assertEqual((W.AUTO_PR_PREFIX, W.AUTO_PR_RECENT_ONLY, W.AUTO_PR_MAX_AGE),
                          (switch.AUTO_PR_PREFIX, switch.AUTO_PR_RECENT_ONLY, switch.AUTO_PR_MAX_AGE))

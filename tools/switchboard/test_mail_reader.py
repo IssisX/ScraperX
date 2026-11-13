@@ -262,6 +262,14 @@ class SubjectClaim(unittest.TestCase):
         self.assertEqual(gh.commits_read()[0], "20ac7723")   # the claim first
         self.assertEqual(mail.missing, {})
 
+    def test_a_second_subject_claim_github_lacks_is_owed_beside_one_it_has(self):
+        # J-080 shape: "pushed — feed @ 1b28977d + protected @ ba425084"; the protected half never reached GitHub
+        post = comment(6831175361, 392, "**Muse (via email bridge): J-077 pushed — feed @ 20ac7723 + protected @ "
+                       "ba425084**\n\nBoth halves pushed.", "2026-11-13T15:59:00Z")
+        gh = GH([post], absent=["ba425084"])
+        mail = mail_reader.read(make(gh, self.NOW), J077_PLAN, j077_reads(full("20ac7723")))
+        self.assertEqual(mail.missing, {"J-077": "ba425084"})
+
     def test_a_subject_head_github_lacks_is_still_owed_while_the_old_head_stands(self):
         gh = GH([comment(6858217631, 392, J077_MAIL.format(new="30bd8834"), "2026-11-13T15:59:00Z")],
                 absent=["30bd8834", "be74b436f"])

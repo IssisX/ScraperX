@@ -142,7 +142,7 @@ def _missing(sw, model, reads, mail: machine.Mail) -> dict[str, str]:
                 checked[sha] = _on_github(sw, sha)
             pushed = pushed or (sha in claims and checked[sha] is True)
             if checked[sha] is False:
-                if not pushed:
+                if sha in claims or not pushed:   # a subject claim is always owed ("feed @ A + protected @ B")
                     missing[job] = sha
                 break
     if unchecked:
