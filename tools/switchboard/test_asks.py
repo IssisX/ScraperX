@@ -185,15 +185,26 @@ class Author(unittest.TestCase):
         ):
             self.assertEqual(asks.author(body), want, body)
 
-    def test_an_address_with_no_signature_after_it_falls_back_as_before(self):
-        # no name right after the address: Claude by its footer, else ChatGPT (its file asks it to sign)
-        self.assertEqual(asks.author("To Claude: warp audit for J-064.\n\nLikely cause: spawn_body."), "ChatGPT")
+    def test_an_address_with_no_signature_after_it_is_unsigned_never_a_guess(self):
+        # 11-13 (Cory): no name right after the address: Claude by its footer, else unsigned. It was ChatGPT, and 8
+        # of the 9 such posts of 11-11 to 11-13 were Grok's or Grok Bot's.
+        U = asks.UNSIGNED
+        self.assertEqual(asks.author("To Claude: warp audit for J-064.\n\nLikely cause: spawn_body."), U)
         self.assertEqual(asks.author("To Grok: J-062 is yours, at your 10 AM run." + FOOT), "Claude")
         # a name later in the line, or a possessive, is not a signature
-        self.assertEqual(asks.author("To Claude: the ruling Grok gave on #320 does not hold."), "ChatGPT")
-        self.assertEqual(asks.author("To ChatGPT: Grok's architecture investigation, answering your brief."), "ChatGPT")
+        self.assertEqual(asks.author("To Claude: the ruling Grok gave on #320 does not hold."), U)
+        self.assertEqual(asks.author("To ChatGPT: Grok's architecture investigation, answering your brief."), U)
         # the switchboard's own notices are signed by no agent: "ask from Muse" is not Muse writing
-        self.assertEqual(asks.author("To Claude: ask from Muse on #128\n\nDue 11-09 11:17 PM Central."), "ChatGPT")
+        self.assertEqual(asks.author("To Claude: ask from Muse on #128\n\nDue 11-09 11:17 PM Central."), U)
+        self.assertNotIn(U, asks.AGENTS)
+
+    def test_an_unsigned_post_answers_no_ones_ask_not_even_the_threads_open_one(self):
+        # 6727860486 on #322 was ChatGPT's, unsigned, while the thread's open ask was Claude's to Grok: read as the
+        # open ask's addressee it would have closed Grok's ask a day early. It stays open until Grok's own post.
+        got = {(a["id"], a["target"]): a for a in judge(at(9, "12:00"))}
+        self.assertEqual(got[("6727860486", "Claude")]["a"], asks.UNSIGNED)
+        for cid in ("6721943546", "6722247011", "6722391933"):
+            self.assertEqual(got[(cid, "Grok")]["answer"], "", cid)
 
     def test_other_posts_are_read_as_before(self):
         self.assertEqual(asks.author("Claude (integrator): To Muse: resent, reworded." + FOOT), "Claude")
@@ -374,6 +385,92 @@ class OldestDay(unittest.TestCase):
         later = [dict(x, t=x["t"] + dt.timedelta(days=1)) for x in (answer, plain, quoting, acking)]
         got = asks.read(later, {500}, start, job_threads={500}, who=who)
         self.assertEqual(sorted(a["id"] for a in got), ["6665531598", "6752639130", "7001", "7002"])
+
+
+class StatusAsks(unittest.TestCase):
+    """11-11, #384: 13 "asks" to Claude were Muse's acks and status lines through the bridge, never answered on
+    GitHub because the integrator answers by mail. The bodies are the bridge's, cut."""
+    HDR = "**Muse (via email bridge): J-009 #377 FIX — ack**\n\n"
+
+    def open_after(self, *posts, closed=None, threads=None):
+        got = asks.read([dict(x) for x in posts], threads or {116, 340, 500}, at(10, "00:00"),
+                        job_threads={116, 500}, who=who, closed=closed)
+        return {(a["id"], a["target"]): a["answer"] for a in got}
+
+    def test_a_post_that_opens_with_ack_is_never_an_ask(self):
+        ack = c(6787162569, 116, at(11, "04:37"), self.HDR + "/ack O-f70eab45\n\nTo Claude: J-009 #377 Codex FIX "
+                "in work. Review 5853747817, one P1.")
+        bare = c(7101, 116, at(11, "04:40"), "/ack O-f70eab45 To Claude: done")
+        seen: set = set()
+        self.assertEqual(asks.read([ack, bare], {116}, at(10, "00:00"), job_threads={116}, who=who, examined=seen), [])
+        self.assertEqual(seen, {"6787162569", "7101"}, "judged: the reconciler closes an obligation it opened")
+        # an /ack further down a post that opens with an ask leaves the ask
+        late = c(7102, 116, at(11, "04:41"), "To Claude: J-009 one more thing.\n/ack O-f70eab45")
+        self.assertEqual(self.open_after(late), {("7102", "Claude"): ""})
+
+    def test_a_status_ask_closes_on_a_later_post_by_its_asker_that_asks_nothing(self):
+        status = c(6796026024, 116, at(11, "10:00"), self.HDR + "To Claude: J-009 #377 FIX #2 pushed @ 13d44d83.")
+        again = c(7201, 116, at(11, "11:00"), self.HDR + "To Claude: J-009 #377 FIX #3 pushed.")
+        self.assertEqual(self.open_after(status, again), {("6796026024", "Claude"): "", ("7201", "Claude"): ""},
+                         "a later post that is itself an ask closes nothing")
+        ack = c(7202, 116, at(11, "12:00"), self.HDR + "/ack O-12345678")
+        self.assertEqual(self.open_after(status, ack), {("6796026024", "Claude"): "a later post by the asker, no ask"})
+        # the same job on another thread (the job id in both openings) counts; another job does not
+        elsewhere = c(7203, 340, at(11, "12:00"), "**Muse (via email bridge): J-009 lane idle**\n\nlane idle.")
+        other = c(7204, 340, at(11, "12:00"), "**Muse (via email bridge): J-038 lane idle**\n\nlane idle.")
+        self.assertEqual(self.open_after(status, elsewhere), {("6796026024", "Claude"): "a later post by the asker, no ask"})
+        self.assertEqual(self.open_after(status, other), {("6796026024", "Claude"): ""})
+
+    def test_a_status_ask_closes_when_its_pr_merges_or_closes_after_it(self):
+        status = c(6794979766, 116, at(11, "11:47"), self.HDR + "To Claude: J-009 #377 FIX pushed @ cd515413.")
+        job_only = c(7301, 500, at(11, "11:50"), "**Muse (via email bridge): J-500 proof passed**\n\nTo Claude: "
+                     "J-500 protected proof PASSED.")
+        merged = {377: (at(11, "12:21"), "J-009"), 401: (at(11, "12:30"), "J-500")}
+        self.assertEqual(self.open_after(status, job_only, closed=merged),
+                         {("6794979766", "Claude"): asks.PR_CLOSED, ("7301", "Claude"): asks.PR_CLOSED})
+        before = {377: (at(11, "11:00"), "J-009")}
+        self.assertEqual(self.open_after(status, closed=before), {("6794979766", "Claude"): ""},
+                         "a PR closed before the ask does not close it")
+        self.assertEqual(self.open_after(status), {("6794979766", "Claude"): ""})
+
+    def test_a_real_question_or_a_blocked_stays_until_answered(self):
+        q = c(7401, 116, at(11, "10:00"), self.HDR + "To Claude: J-009 #377 — revert or keep the flag?")
+        url = c(7402, 116, at(11, "10:00"), self.HDR + "To Claude: J-009 #377 pushed, "
+                "https://github.com/IssisX/ScraperX/pull/377?w=1 and `a ? b`.")
+        blocked = c(7403, 116, at(11, "10:00"), self.HDR + "To Claude: J-009 BLOCKED: no window under the gains.")
+        ack = c(7404, 116, at(11, "11:00"), self.HDR + "/ack O-12345678")
+        merged = {377: (at(11, "12:00"), "J-009")}
+        self.assertEqual(self.open_after(q, url, blocked, ack, closed=merged),
+                         {("7401", "Claude"): "", ("7402", "Claude"): "a later post by the asker, no ask",
+                          ("7403", "Claude"): ""}, "a ? in a link or in code is no question")
+        answer = c(7405, 116, at(11, "12:30"), "CLAUDE_TO_MUSE: J-009 keep the flag.\n\n_The mail bridge's record of "
+                   "a mail the integrator sent to Muse by email, Nov 11 6:30 AM Central._")
+        self.assertEqual(self.open_after(q, answer)[("7401", "Claude")], "reply to the asker",
+                         "the bridge's record of Claude's mail answers it")
+
+    def test_the_loose_closers_are_for_the_integrator_only_and_never_the_switchboard(self):
+        to_grok = c(7501, 116, at(11, "10:00"), "To Grok: J-009 the pitch math, from Claude (integrator)." + FOOT)
+        later = c(7502, 116, at(11, "11:00"), "Claude (integrator): J-009 status: lane is green." + FOOT)
+        merged = {377: (at(11, "12:00"), "J-009")}
+        self.assertEqual(self.open_after(to_grok, later, closed=merged), {("7501", "Grok"): ""})
+        status = c(7503, 116, at(11, "10:00"), self.HDR + "To Claude: J-009 #377 pushed.")
+        notice = c(7504, 116, at(11, "11:00"), "CLAUDE_TO_MUSE: J-009 FIX on #377 @ c13d8edb", login=BOT)
+        to_other = c(7505, 116, at(11, "11:05"), "Claude (integrator): To Grok, check the grip math." + FOOT)
+        self.assertEqual(self.open_after(status, notice, to_other), {("7503", "Claude"): "", ("7505", "Grok"): ""},
+                         "the switchboard's notice and a Claude post to someone else answer nothing")
+
+    def test_the_ledger_reads_closed_prs_from_the_issue_events(self):
+        events = [{"event": "merged", "created_at": "2026-11-11T12:21:48Z",
+                   "issue": {"number": 377, "pull_request": {}, "title": "x", "body": "Job: J-009\n"}},
+                  {"event": "closed", "created_at": "2026-11-11T12:21:49Z",
+                   "issue": {"number": 377, "pull_request": {}, "title": "x", "body": "Job: J-009\n"}},
+                  {"event": "closed", "created_at": "2026-11-11T09:00:00Z",
+                   "issue": {"number": 401, "pull_request": {}, "title": "J-500: the lift", "body": ""}},
+                  {"event": "closed", "created_at": "2026-11-11T09:00:00Z", "issue": {"number": 402, "title": "J-1"}},
+                  {"event": "labeled", "created_at": "2026-11-11T09:00:00Z",
+                   "issue": {"number": 403, "pull_request": {}, "title": "J-501"}}]
+        self.assertEqual(L.closed_prs(events), {377: (at(11, "12:21") + dt.timedelta(seconds=48), "J-009"),
+                                                401: (at(11, "09:00"), "J-500")})
 
 
 class TheLedgers17(unittest.TestCase):

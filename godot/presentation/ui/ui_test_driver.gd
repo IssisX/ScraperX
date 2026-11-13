@@ -71,6 +71,11 @@ const SCENARIOS := {
 	"touch_wet": 16,
 	"pad_wet": 16,
 	"keyboard_wet": 16,
+	# J-132 (#458): missions 1 and 7 proven, one touch scenario each. The
+	# spawn is the mission's own start: mission 1 from grade, like
+	# touch_stack; mission 7 from the 220 ring, like touch_wet.
+	"touch_mission_1": 8,
+	"touch_mission_7": 16,
 	# AS-008, the Plate Shop, on its three machines from TP-340 to the 484 ring.
 	"touch_shop": 19,
 	"pad_shop": 19,
@@ -149,7 +154,14 @@ const SCENARIOS := {
 	# Walking choppiness: frame-time percentiles on a fixed walk-and-look
 	# route across the yard (rendered only, like the probes above).
 	"perf_walk": 8,
+	# The helmet lamp's frame cost, on and off at the same still midnight
+	# pose (J-081): rendered only, measured locally under xvfb, not in CI.
+	"perf_night": 8,
 	"touch_bay": 11,
+	# J-092: the slab trap on her deck (src/sim/slab_cell.hpp): GRAB its trip
+	# cord, watched she freezes, looked away from she creeps in under the
+	# slab, a step back opens the hook and 2 t lands on her.
+	"touch_slab_trap": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
 	# she climbs back up knocks her off it, alive (ui_test_act.gd).
@@ -195,6 +207,9 @@ const SCENARIOS := {
 	# Close up, the smooth finishes and the rough ones (renders only, not in CI).
 	"look_finishes": 8,
 	"look_night_lamps": 8,
+	# The night climb at dusk, midnight and dawn, low, middle and high
+	# (J-081): renders only, not in CI.
+	"look_night_climb": 8,
 	"look_tower_stock_deck2": 25,
 	"look_tower_stock_176": 14,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
@@ -439,6 +454,8 @@ func _run() -> void:
 			ok = await _wet(InputRouter.Device.GAMEPAD)
 		"keyboard_wet":
 			ok = await _wet(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_mission_7":
+			ok = await _mission_7(InputRouter.Device.TOUCH)
 		"touch_shop":
 			ok = await _shop(InputRouter.Device.TOUCH)
 		"pad_shop":
@@ -501,6 +518,8 @@ func _run() -> void:
 			ok = await _perf_view_top()
 		"perf_walk":
 			ok = await _perf_walk(InputRouter.Device.TOUCH)
+		"perf_night":
+			ok = await _perf_night()
 		"perf_attrib", "perf_attrib_top", "perf_attrib_locker":
 			ok = await _perf_attrib()
 		"touch_matron_pipe":
@@ -513,6 +532,8 @@ func _run() -> void:
 			ok = await _matron_climb_touch(InputRouter.Device.TOUCH)
 		"touch_bay":
 			ok = await _bay_touch(InputRouter.Device.TOUCH)
+		"touch_slab_trap":
+			ok = await _slab_trap_touch(InputRouter.Device.TOUCH)
 		"look_bay":
 			ok = await _look_matron("bay")
 		"look_matron_locker":
@@ -561,6 +582,8 @@ func _run() -> void:
 			ok = await _look_finishes()
 		"look_night_lamps":
 			ok = await _look_night_lamps()
+		"look_night_climb":
+			ok = await _look_night_climb()
 		"look_tower_stock_deck2":
 			ok = await _look_tower_stock("tower_stock_deck2")
 		"look_tower_stock_176":
@@ -615,6 +638,8 @@ func _run() -> void:
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":
 			ok = await _stack(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_mission_1":
+			ok = await _mission_1(InputRouter.Device.TOUCH)
 		"fall_voice":
 			ok = await _fall_voice()
 		"audio_mix":

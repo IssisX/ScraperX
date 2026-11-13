@@ -33,8 +33,13 @@ constexpr float kTurnRate = 7.0F;
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kPipeStallS = 2.5F;
 constexpr float kPipeOverloadS = 0.18F;
-constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.78
+constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.68
+// Where her legs bear on a flange: on its top just out from the riser's
+// face (0.35 m off its axis) and in from the flange's (0.40 m, clear of her
+// on her line: world_solids.inc), on her side of it.
+constexpr float kPipeLegsOffAxisM = 0.38F;
 constexpr float kPipeLegsLineN = 800.0F;  // her legs' pull back onto her line while she slides
+constexpr float kHoistRideMps = 1.0F;     // a hoist's car at her pace on it (matron_hoist.cpp's kBoardMps)
 // Her legs come down onto a flange: they bear on it, a support, not a grip.
 // What they can take is her one budget (3.7 times her weight); past it they
 // give and she sinks, but they do not open.
@@ -120,6 +125,21 @@ bool Matron::pipe_riser_top_under(const RVec3 at, float &top_y) const {
     return true;
 }
 
+bool Matron::pipe_corner_raised(const float deck) const {
+    // Straight down at her stand by the rail's corner, from over the rail:
+    // the first top met. Raised when it is within her perch of the rail's
+    // top (a top she stands on as she perches on the rail), not the deck.
+    const ClimbBodyFilter filter(body_, player_);
+    const float from = deck + kPipeRailTopM + 0.5F;
+    const RRayCast ray(RVec3(kPipeDeckX, from, kPipeDeckZ), Vec3(0.0F, -(kPipeRailTopM + 0.6F), 0.0F));
+    RayCastResult hit;
+    if (!physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)) {
+        return false;
+    }
+    const float top = float(ray.GetPointOnRay(hit.mFraction).GetY());
+    return std::abs(top - (deck + kPipeRailTopM)) <= 0.1F;
+}
+
 void Matron::pipe_take(const PipeGrip grip, const BodyID body, const SubShapeID member, const RVec3 point) {
     const BodyLockRead lock(physics_.GetBodyLockInterface(), body);
     pipe_support_ = body;
@@ -146,7 +166,14 @@ bool Matron::pipe_top_hold(const float top_y, const float z, const RVec3 at, con
 }
 
 bool Matron::pipe_rail_hold(const float deck, const RVec3 at) {
-    return pipe_top_hold(deck + kPipeRailTopM, kPipeRailZ, at, PipeGrip::Rail);
+    if (pipe_top_hold(deck + kPipeRailTopM, kPipeRailZ, at, PipeGrip::Rail)) {
+        return true;
+    }
+    // A raised corner's top runs out over the rail, its steel's edge on the
+    // rail's line: her hand takes the top a hand's width in from that edge,
+    // on her side of it.
+    const float toward = float(at.GetZ()) < kPipeRailZ ? -0.03F : 0.03F;
+    return pipe_corner_raised(deck) && pipe_top_hold(deck + kPipeRailTopM, kPipeRailZ + toward, at, PipeGrip::Rail);
 }
 
 bool Matron::pipe_lip_hold(const float deck, const RVec3 at) {
@@ -192,8 +219,17 @@ bool Matron::pipe_grip_in_reach(const RVec3 at) const {
         return pipe_in_hand_reach(at, pipe_hand_);
     case PipeGrip::Feet: {
         const float below = float(at.GetY() - pipe_hand_.GetY());
-        return std::abs(float(at.GetZ() - pipe_hand_.GetZ())) <= kPipeFootSpanM + 0.01F && below >= kStandCentre - 0.1F &&
-               below <= kStandCentre + 0.3F;
+        // Her soles within kPipeFootSpanM of her middle (her soles' span,
+        // matron.hpp): the full horizontal distance, not the z component
+        // alone. The Perch step drives her middle along x toward kPipeDeckX
+        // away from the planted take point, so the z-only check let the
+        // point sit 0.26-0.28 m off her middle — past her span — while
+        // still calling it held, and the contact truth exported a floor her
+        // soles cannot be on (S6, J-063: 5 ticks on the pipe descent).
+        // Out of reach it is let go, and the step below takes what is in
+        // her reach now.
+        const float across = std::hypot(float(at.GetX() - pipe_hand_.GetX()), float(at.GetZ() - pipe_hand_.GetZ()));
+        return across <= kPipeFootSpanM + 0.01F && below >= kStandCentre - 0.1F && below <= kStandCentre + 0.3F;
     }
     case PipeGrip::Legs:
         return true;
@@ -250,17 +286,26 @@ bool Matron::get_on_pipe(const float from_floor, const float to_floor) {
         return false;
     }
     // Her hands on the rail's top if it is in their reach; else she steps up
-    // to it first (the press).
+    // to it first (the press). Standing on a raised corner (the top level
+    // with the rail), her feet are already over the rail: she takes it on
+    // her feet there and goes on from over it.
     pipe_tuck_ = 0.0F;
     pipe_tuck_drawn_ = 0.0F;
     pipe_grip_ = PipeGrip::None;
     pipe_support_ = BodyID();
-    (void)pipe_rail_hold(from_floor, at);
+    const bool raised = pipe_corner_raised(from_floor);
+    if (raised && !pipe_feet_hold(from_floor, at)) {
+        climb_retry_s_ = 2.0F;
+        return false;
+    }
+    if (!raised) {
+        (void)pipe_rail_hold(from_floor, at);
+    }
     drop_stock();
     pipe_from_ = from_floor;
     pipe_to_ = to_floor;
     pipe_phase_ = PipePhase::Mount;
-    pipe_step_ = PipeStep::Press;
+    pipe_step_ = raised ? PipeStep::Over : PipeStep::Press;
     pipe_s_ = 0.0F;
     pipe_hold_m_ = 0.0F;
     pipe_best_ = -std::numeric_limits<float>::max();
@@ -323,7 +368,7 @@ void Matron::tear_off_pipe() {
     // The flange under her legs: straight down beside the riser's face, the
     // first top met.
     const ClimbBodyFilter filter(body_, player_);
-    const RRayCast ray(RVec3(kPipeCentreX - 0.45F, feet + 0.05F, at.GetZ()), Vec3(0.0F, -2.0F * kStackPitch, 0.0F));
+    const RRayCast ray(RVec3(kPipeCentreX - kPipeLegsOffAxisM, feet + 0.05F, at.GetZ()), Vec3(0.0F, -2.0F * kStackPitch, 0.0F));
     RayCastResult hit;
     pipe_stop_y_ = physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)
                        ? float(ray.GetPointOnRay(hit.mFraction).GetY())
@@ -408,7 +453,7 @@ void Matron::ride_pipe(const float dt) {
             rage_ = std::min(1.0F, rage_ + kKnockdownRage);
             BodyID flange;
             SubShapeID member;
-            const RVec3 legs(kPipeCentreX - 0.45F, pipe_stop_y_, az);
+            const RVec3 legs(kPipeCentreX - kPipeLegsOffAxisM, pipe_stop_y_, az);
             if (!hand_rests_on(query, legs, filter, flange, member)) {
                 get_off_pipe(true);
                 return;
@@ -467,12 +512,10 @@ void Matron::ride_pipe(const float dt) {
             pipe_let_go_y_ = float(at.GetY());
         }
     }
-    float pace = 0.4F;   // gone frail on it: slow
+    float pace = pipe_pace(down);
     if (stage_ == Stage::Changed) {
         const bool burst = std::fmod(pipe_s_, kTurnCycleSeconds) < kTurnBurstSeconds;
         pace = burst ? (down ? kPipeChangedDownBurstMps : kPipeChangedUpBurstMps) : kPipeChangedPauseMps;
-    } else if (stage_ == Stage::Dangerous) {
-        pace = down ? kPipeDownMps : kPipeUpMps;
     }
     // The rail she crosses (Mount: the deck she leaves; else the deck she
     // goes to), her middle perched over it, and her tuck as she rises over it.
@@ -732,6 +775,13 @@ void Matron::ride_pipe(const float dt) {
             facing = kToDeck;
             progress = -std::abs(az - kPipeRailZ);
             if (std::abs(az - kPipeRailZ) <= 0.04F && pipe_grip_ == PipeGrip::Feet) {
+                // Over a raised corner her feet stand on its top: that is
+                // her floor, and she is off the pipe onto it.
+                if (pipe_corner_raised(deck)) {
+                    get_off_pipe();
+                    pipe_listen_s_ = kPipeListenSeconds;
+                    return;
+                }
                 next_step(PipeStep::Perch);
             }
             break;
@@ -917,19 +967,145 @@ bool Matron::pipe_reaches(const float floor_y) noexcept {
     return std::abs(stories - std::round(stories)) < 0.02F;
 }
 
-bool Matron::follow_pipe(const float dt, const RVec3 at) {
-    // Frail, she cannot take hold of it.
-    if (stage_ == Stage::Pest) {
+float Matron::pipe_next_toward(const float floor_y, const float lead_y) noexcept {
+    // The deck nearest the lead, and the lead on it or on a top within
+    // kPipeLeadM of it: a story toward it. Else (her own deck, or a top deep
+    // inside a story) not the pipe's.
+    const float deck = std::round(lead_y / kStackPitch) * kStackPitch;
+    if (std::abs(deck - floor_y) < 1.0F || std::abs(lead_y - deck) > kPipeLeadM) {
+        return floor_y;
+    }
+    return deck < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
+}
+
+bool Matron::pipe_serves(const float next) {
+    if (scanned_ == nullptr) {
+        return true;
+    }
+    const int lead = scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_));
+    // The floor she gets off onto there: by the rail's corner, else that deck's largest.
+    int far = scanned_->region_at(Vec3(kPipeDeckX, next, kPipeDeckZ));
+    if (far < 0) {
+        far = scanned_->region_near_top(next, 0.3F);
+    }
+    if (lead < 0 || far < 0) {
+        return true;   // no floor of her map under the lead (a ladder, the air): the deck is as near as she gets
+    }
+    if (lead != pipe_serves_to_ || far != pipe_serves_from_) {
+        pipe_serves_from_ = far;
+        pipe_serves_to_ = lead;
+        pipe_serves_ok_ = far == lead || std::abs(scanned_->regions()[static_cast<std::size_t>(lead)].top - next) > kPipeLeadM ||
+                          !scanned_->plan(far, lead).empty();
+    }
+    return pipe_serves_ok_;
+}
+
+float Matron::pipe_pace(const bool down) const noexcept {
+    if (stage_ == Stage::Changed) {
+        // Its bursts and pauses, over a turn's cycle.
+        const float burst = kTurnBurstSeconds / kTurnCycleSeconds;
+        return burst * (down ? kPipeChangedDownBurstMps : kPipeChangedUpBurstMps) + (1.0F - burst) * kPipeChangedPauseMps;
+    }
+    if (stage_ == Stage::Dangerous) {
+        return down ? kPipeDownMps : kPipeUpMps;
+    }
+    return 0.4F;   // gone frail on it: slow
+}
+
+float Matron::pipe_time_s(const RVec3 at, const float floor_y, const float stand_z) const noexcept {
+    const float stories = std::max(1.0F, std::round(std::abs(lead_floor_ - floor_y) / kStackPitch));
+    const float walk = distance_xz(float(at.GetX()), float(at.GetZ()), kPipeDeckX, stand_z) +
+                       distance_xz(kPipeDeckX, stand_z, heard_x_, heard_z_);
+    const bool down = lead_floor_ < floor_y;
+    return walk / kHuntMps + stories * (kStackPitch / pipe_pace(down) + (down ? kPipeDownExtraS : kPipeUpExtraS));
+}
+
+bool Matron::own_way_sooner(const RVec3 at, const float pipe_s) {
+    if (scanned_ == nullptr) {
         return false;
     }
-    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    float next = floor_y;
-    if (lead_floor_ < floor_y - 0.6F) {
-        next = floor_y - kStackPitch;
-    } else if (lead_floor_ > floor_y + 0.6F) {
-        next = floor_y + kStackPitch;
+    const int here = region_under();
+    int goal = scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_));
+    if (goal < 0) {
+        goal = scanned_->region_near_top(lead_floor_, 0.3F);
     }
-    if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
+    if (here < 0 || goal < 0 || here == goal) {
+        return false;
+    }
+    if (here != own_way_from_ || goal != own_way_to_) {
+        own_way_from_ = here;
+        own_way_to_ = goal;
+        own_way_moves_.clear();
+        own_way_hoist_ = false;
+        // Her map's own way there: its moves off the floor, each with its
+        // cost (the scan's seconds); her walks between them are on her feet.
+        for (const int e : scanned_->plan(here, goal)) {
+            const traversal::Edge &edge = scanned_->edges()[static_cast<std::size_t>(e)];
+            if (edge.kind != traversal::MoveKind::Walk) {
+                own_way_moves_.push_back(OwnMove{edge.spec.start, edge.spec.goal, edge.spec.line, edge.cost});
+            }
+        }
+        // Or a hoist (matron_hoist.cpp) where no way of the map joins them.
+        own_way_hoist_ = own_way_moves_.empty() && find_hoist(here, goal, own_way_leg_);
+    }
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    float own_s = 0.0F;
+    if (own_way_hoist_) {
+        // To its landing, the car's travel at her own pace on it (she works
+        // it: matron_hoist.cpp), and off its far landing to him.
+        const Vec3 board = own_way_leg_.board_at;
+        const Vec3 exit = own_way_leg_.exit_at;
+        if (column_blocked_near(board.GetX(), board.GetZ())) {
+            return false;
+        }
+        own_s = (distance_xz(ax, az, board.GetX(), board.GetZ()) + distance_xz(exit.GetX(), exit.GetZ(), heard_x_, heard_z_)) /
+                    kHuntMps +
+                std::abs(exit.GetY() - board.GetY()) / kHoistRideMps;
+        return own_s < pipe_s;
+    }
+    if (own_way_moves_.empty()) {
+        return false;
+    }
+    // Only a way her journey plans: each of its moves inside the reach of
+    // her journey's own scan around her and the lead (start_journey_to).
+    // From the deck 6 landing the C2 pole and ladder up from the duct lie
+    // past it: not hers from there.
+    const float lo_x = std::min(ax, heard_x_) - kJourneyScanMarginM;
+    const float hi_x = std::max(ax, heard_x_) + kJourneyScanMarginM;
+    const float lo_z = std::min(az, heard_z_) - kJourneyScanMarginM;
+    const float hi_z = std::max(az, heard_z_) + kJourneyScanMarginM;
+    const auto inside = [&](const Vec3 p) {
+        return p.GetX() >= lo_x && p.GetX() <= hi_x && p.GetZ() >= lo_z && p.GetZ() <= hi_z;
+    };
+    float x = ax;
+    float z = az;
+    for (const OwnMove &move : own_way_moves_) {
+        if (!inside(move.start) || !inside(move.goal) ||
+            ((move.line.GetX() != 0.0F || move.line.GetZ() != 0.0F) && !inside(move.line))) {
+            return false;
+        }
+        own_s += distance_xz(x, z, move.start.GetX(), move.start.GetZ()) / kHuntMps + move.cost;
+        x = move.goal.GetX();
+        z = move.goal.GetZ();
+    }
+    own_s += distance_xz(x, z, heard_x_, heard_z_) / kHuntMps;
+    // One that failed under her a moment ago she leaves alone, as her plans do.
+    const Vec3 first = own_way_moves_.front().start;
+    return !column_blocked_near(first.GetX(), first.GetZ()) && own_s < pipe_s;
+}
+
+bool Matron::follow_pipe(const float dt, const RVec3 at) {
+    const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    const float next = pipe_next_toward(floor_y, lead_floor_);
+    if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next) || !pipe_serves(next)) {
+        return false;
+    }
+    // Frail, she climbs it up after him, slow (Cory, 11-11: she climbs as a
+    // pest too), but does not take hold of it to go down it. Up means over
+    // her feet, not over her levels_ entry: topped out of a ladder onto a
+    // landing over a deck, that entry is still the deck she left.
+    if (stage_ == Stage::Pest && next < float(at.GetY()) - kStandCentre + 1.0F) {
         return false;
     }
     // A way that failed under her a moment ago she leaves alone a while.
@@ -938,13 +1114,36 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     }
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
-    const float off = distance_xz(ax, az, kPipeDeckX, kPipeDeckZ);
+    // A raised corner (a top level with the rail standing on her deck
+    // there): she gets on from over the rail's line on that top, as perched
+    // on the rail.
+    const bool raised = pipe_corner_raised(floor_y);
+    const float stand_z = raised ? kPipeRailZ : kPipeDeckZ;
+    const float off = distance_xz(ax, az, kPipeDeckX, stand_z);
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
+    // A way of her own map that has her to him sooner than the pipe is hers
+    // first: the pipe is not her only way between decks (J-085).
+    if (off > 0.25F && own_way_sooner(at, pipe_time_s(at, floor_y, stand_z))) {
+        return false;
+    }
     if (off > 0.25F) {
         // To the rail's corner along her lines, slowing into it.
         float wx = kPipeDeckX;
         float wz = kPipeDeckZ;
         route_toward(ax, az, kPipeDeckX, kPipeDeckZ, false, wx, wz);
+        if (raised) {
+            // From the deck she first goes up onto that top by her own way
+            // over the steel (her scan's mantle, by her Climber's hands),
+            // then along it to the rail's line.
+            if (float(at.GetY()) - kStandCentre < floor_y + kStepUpM) {
+                journey_wait_ticks_ = std::max(0, journey_wait_ticks_ - 1);   // its tick here, as a found climb counts it
+                (void)start_journey_to(at, kPipeDeckX, floor_y + kPipeRailTopM, kPipeDeckZ);
+                walk_toward(dt, ax, az, 0.0F, accel);
+                return true;
+            }
+            wx = kPipeDeckX;
+            wz = stand_z;
+        }
         walk_toward(dt, wx, wz, std::min(kHuntMps, 1.0F + 3.0F * off), accel);
         return true;
     }
@@ -956,15 +1155,12 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
 }
 
 int Matron::pipe_way(const float from_floor, const float to_floor) noexcept {
-    // Its decks, 132, 143 and 154 (pipe_reaches): one story up from 132 or
-    // 143 (ways 0 and 1), or down from 143 or 154 (ways 2 and 3).
+    // Its decks, kPipeLowestFloor up a story at a time to kDeckTop
+    // (pipe_reaches): one story up from deck d is way d, one story down from
+    // deck d is way kPipeDecks - 2 + d.
     const auto deck = [](const float floor_y) {
-        for (int d = 0; d < 3; ++d) {
-            if (std::abs(floor_y - (kPipeLowestFloor + kStackPitch * float(d))) <= kOnSteelM) {
-                return d;
-            }
-        }
-        return -1;
+        const int d = static_cast<int>(std::lround((floor_y - kPipeLowestFloor) / kStackPitch));
+        return d >= 0 && d < kPipeDecks && std::abs(floor_y - (kPipeLowestFloor + kStackPitch * float(d))) <= kOnSteelM ? d : -1;
     };
     const int from = deck(from_floor);
     const int to = deck(to_floor);
@@ -975,7 +1171,7 @@ int Matron::pipe_way(const float from_floor, const float to_floor) noexcept {
         return from;
     }
     if (to == from - 1) {
-        return 1 + from;
+        return kPipeDecks - 2 + from;
     }
     return -1;
 }

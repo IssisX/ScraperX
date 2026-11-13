@@ -564,6 +564,8 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
+		2671:
+			return "TRIP CORD"
 	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
 		return _stock_name(entity)
 	if entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT:

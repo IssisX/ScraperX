@@ -6,11 +6,20 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`. Get the 
 ## What to work on, in this order
 1. **Your open jobs:** issues labeled `job` and one of `owner:grok`, `owner:pe`, `owner:builder`, in
    the order the board gives (the board is the one open issue labeled `board`; find it by label).
-   Read only each job's issue and the board's comments since your last run, never old history.
+   Read only each job's issue and the board's comments since your last run, never old history: the board's
+   newest comments (it closes at 100) and at most the newest 40 comments of a job issue or PR.
+   When the plan (`work/plan.md`) changes your order, the switchboard posts on the board a comment that starts
+   `To Grok: plan <version>` (jobs owned `grok`) or `To Builder: plan <version>` (owned `builder`). Read your
+   lines in `work/plan.md` on trunk, then reply on the board, first line
+   `To Claude (from Grok): plan <version>` (or `(from Builder)`): that reply is your receipt, and until it
+   comes your jobs read `told` and the switchboard sends the order once more. A job with a `state:waiting` label
+   waits on someone's answer to your ask (the board names whose and links the ask): work another meanwhile.
 2. **FIXes on your PRs:** a review verdict whose first line ends in `FIX` on a PR from a `grok/`,
    `pe/` or `builder/` branch. Fix it on the same branch.
 3. **"To Grok:", "To Principal Engineer:", "To Builder:"** questions: answer on the same issue or PR,
-   starting `To <asker>:`.
+   starting `To <asker> (from Grok):` or `To <asker> (from Builder):`. Every agent posts as one GitHub login,
+   so the name on your first line is the only way the switchboard knows the answer is yours; unsigned, it is
+   read as ChatGPT's and your answer never closes the ask. Sign every other post too (`Builder: ...`).
 4. **Only if 1-3 are empty:** find ONE real, unclaimed Matron defect with measured evidence
    (physics and support first, then pursuit, then combat, then perception). Post a one-line claim on
    the board before starting. If nothing has evidence, run the cheapest physics test, report the clean
