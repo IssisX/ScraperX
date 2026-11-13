@@ -2,7 +2,7 @@
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794492989 (2026-11-11 last quiet run)
+Read through: 1794584485 (2026-11-13 full check)
 
 ## Now (11-12 handover)
 - Cory 11-13: the collaboration system is ONE machine; finish it fast (no endless tweaking), then this session game-codes
@@ -21,7 +21,10 @@ Read through: 1794492989 (2026-11-11 last quiet run)
 - Session wiring (11-13): this session (made from the app) is the integrator; it holds the overview, both checks and the PAT
   reminder. The old session's copies are paused, not deleted (deleting a task can delete sessions it touched).
 - Cory 11-13: when the system passes its real-world test, do NOT start game coding: alert Cory (phone push + a big emoji banner message, e.g. "🚨✅ SYSTEM COMPLETE ✅🚨") and wait for his go.
+- Cory 11-13: never stop a helper that has run over 10 min; a helper failing repeatedly gets the higher effort on its NEXT run, not by killing this one.
 - Cory 11-13: remove failure modes, never just relocate them (a page, an unsubscribe or a retry is a backstop, not the fix).
+- Cory 11-13: Gemini Argon has done every very hard job given to it (his count: 100%); about 1.5 h of free thinking a day,
+  sees the repo and some GitHub, not this session. Use it freely for very hard work: one whole copyable prompt to Cory.
 - Cory 11-13: Fable is for the very hardest problems only, like Argon; when one shows up, alert Cory first with why it needs Fable.
 - Fable low fixed named causes right first try (J-106, J-015). Fable designs, Opus builds from a finished design (Cory 11-12).
 
