@@ -19,7 +19,7 @@ it to match, never ask him again.
   chores, never game code (11-12). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
   "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
   helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
-- Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
+- Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): an event is named by its link; a time decision
   runs `date`. Hooks refuse them; `time_audit.py` counts slips.
@@ -85,7 +85,7 @@ it to match, never ask him again.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews each
   green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
-  rules within the hour (11-10, an inbox NOTE-REVIEW line); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
+  rules within the hour (11-10, an inbox NOTE-REVIEW); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
   Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
 - **Protected changes** (a test's checks, world geometry, the save layout, her force/power/mass/leg-travel/launch limits)
