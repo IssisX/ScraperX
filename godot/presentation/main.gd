@@ -171,6 +171,32 @@ func _ready() -> void:
 	add_child(_sky_cycle)
 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
 	_sky_cycle.add_lamps(_light_rig)
+	_sky_cycle.add_lamp_fittings(_lamp_fittings)
+	# J-081: his helmet lamp -- a real spot on his head, aimed where he
+	# looks, on by itself as the light falls. A child of the eye, so it
+	# follows the head in first person and in the hold's third person.
+	var helmet_lamp := SpotLight3D.new()
+	helmet_lamp.name = "HelmetLamp"
+	helmet_lamp.position = Vector3(0.0, 0.18, -0.3)
+	helmet_lamp.light_color = Color(1.0, 0.92, 0.78)
+	# J-081: range 30, not 18 -- the steel ahead of him in the look
+	# pose sits ~20 m out, past an 18 m spot entirely (run 5's stills
+	# were pixel-identical to run 4's for exactly that reason). With
+	# range 30 a 0.3-albedo face reads lum 0.66 at 20 m, 0.45 at 25 m
+	# (calibrated 2026-11-11).
+	helmet_lamp.spot_range = 30.0
+	helmet_lamp.spot_angle = 55.0
+	helmet_lamp.spot_attenuation = 1.0
+	# J-081: the helmet lights the FAR batch too. The rig lamps above
+	# deliberately skip layer 2 (far sections are huge, 14 lamps each
+	# re-drawing them would cost), but the steel ahead of him at night
+	# is often far-batch -- with the default mask 1 it stayed pitch
+	# black at 16 m even at energy 60 (calibrated 2026-11-11: layer-2
+	# face lum 0.000 under a mask-1 spot, 0.822 under mask 3). One
+	# light with a 30 m range re-drawing the near far-batch is cheap.
+	helmet_lamp.light_cull_mask = 1 | BATCH_FAR_LAYER
+	_camera.add_child(helmet_lamp)
+	_sky_cycle.set_helmet_lamp(helmet_lamp)
 	_audio = AudioDirector.new()
 	_audio.name = "AudioDirector"
 	_audio.sky = _sky_cycle
@@ -845,7 +871,7 @@ func _open_pause(from_system: bool = false) -> void:
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
-		position.y, checkpoint.y, int(_ctx["deaths"])])
+		position.y, checkpoint.y, int(_ctx["deaths"])], _ctx.get("objectives", []))
 	get_tree().paused = true
 	_audio.ui_tap()
 
