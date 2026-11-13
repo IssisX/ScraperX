@@ -14,7 +14,7 @@ eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug,
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
-Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
+Overview: a scheduled task (trig_019Qy9rcek8tdRXTcpNjF1zs, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
 says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 48`, Claude's red branches, idle PRs over
 4 h) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
