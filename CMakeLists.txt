@@ -39,6 +39,7 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_traversal.cpp
     src/sim/physics_world_climb.cpp
     src/sim/physics_world_state.cpp
+    src/sim/stock_damage.cpp
     src/sim/mechanism_kit.cpp
     src/sim/rope_constraint.cpp
     src/sim/slab_cell.cpp
@@ -64,6 +65,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron_traversal.cpp
     src/sim/matron_journey.cpp
     src/sim/loose_stock.cpp
+    src/sim/objectives.cpp
     src/sim/fabricated.cpp
     src/sim/physics_world_fabricated.cpp
     src/sim/impacts.cpp

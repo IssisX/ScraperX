@@ -53,6 +53,10 @@ import budget as money  # noqa: E402
 import rules  # noqa: E402
 import ghapi  # noqa: E402
 import muse_queue  # noqa: E402
+import plan as collab_plan  # noqa: E402
+import machine  # noqa: E402
+import mail_reader  # noqa: E402
+import work_reader  # noqa: E402
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -107,7 +111,13 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
+MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
+MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
+# Shadow only prints, and one pass is about 245 reads on a cold cache (11-12, measured: 90 job threads, 60
+# compares, 60 proof reads, the listings), a third of a full pass's own. So in shadow it runs in the full pass of
+# every sixth hour, four times a day, and only with twice the rate floor left. Live, it runs every full pass.
+PLAN_SHADOW_EVERY_H = 6
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, and on the switch's hourly full pass, so nothing is lost; held between sweeps in the state.
 DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN"})
@@ -612,7 +622,7 @@ class Switch:
         return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
 
     def jobs(self) -> dict[str, dict]:
-        """Open issues labeled `job`, by J-NNN."""
+        """PR-review lookup, as before. The plan audit separately finds bare J-NNN issues."""
         if self._jobs is None:
             self._jobs = {}
             for it in self.gh.paged(f"repos/{self.gh.repo}/issues?labels=job&state=open"):
@@ -1319,7 +1329,11 @@ class Switch:
         sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
-        listed = self.gh.paged(f"repos/{self.gh.repo}/branches")
+        # 11-12: 647 branches, and paged() stops at 500 without saying so, so a finished branch past it never got
+        # its PR. Once the plan is live every page is read (past ALL_PAGES it raises). Until then this reads what
+        # it always read: the rebuild changes nothing the live switch does while it is in shadow.
+        path = f"repos/{self.gh.repo}/branches"
+        listed = collab_plan.whole(self.gh, path) if self.plan_mode() == "live" else self.gh.paged(path)
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
             alive = {b["name"] for b in listed}
             self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
@@ -1715,11 +1729,190 @@ class Switch:
             items += self.pr_inbox_items(s, runs, reported, prefix)
         items += self.branch_inbox_items(runs, reported, prefix)
         if not prefix:
+            items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
         if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
+
+    def plan_mode(self) -> str:
+        """work/switchboard.yml `plan`: shadow (compute and print, write nothing), live, or off."""
+        if not hasattr(self, "root"):
+            return "off"  # isolated merge-rule tests have no checkout
+        try:
+            import yaml
+            config = yaml.safe_load((self.root / "work/switchboard.yml").read_text(encoding="utf-8")) or {}
+            return config.get("plan") if config.get("plan") in ("shadow", "live") else "off"
+        except (OSError, ValueError):
+            return "off"
+
+    def read_plan(self) -> "collab_plan.Plan":
+        path = self.root / "work/plan.md"
+        try:
+            model = collab_plan.parse(path.read_text(encoding="utf-8"))
+        except OSError as err:
+            raise RuntimeError(f"read collaboration plan {path}: {err}") from err
+        if model.errors:
+            raise RuntimeError("invalid collaboration plan: " + "; ".join(model.errors[:5]))
+        return model
+
+    def plan_reads(self, model: "collab_plan.Plan") -> dict:
+        """collab_plan.observe, once per run: the one read of what the plan is checked against."""
+        memo = self.__dict__.get("_plan_reads")
+        if memo is None:
+            memo = collab_plan.observe(self.gh, model, self.now, self.out, listing=self.listing,
+                                       trunk=rules.TRUNK, errors=(GitHubError,))
+            self.__dict__["_plan_reads"] = memo
+        return memo
+
+    def plan_table(self, steered=()) -> tuple:
+        """(the plan, its reads, the mail, every job's row): the job machine's table, computed once per run from the
+        plan and the evidence (machine.py). Reads only."""
+        memo = self.__dict__.get("_plan_table")
+        if memo is None:
+            model = self.read_plan()
+            reads = self.plan_reads(model)
+            works = work_reader.read(self, model, reads, list(steered))
+            notes = self.plan_notice_comments(model, reads)   # the switch's own notices: never lost to a read window
+            mail = mail_reader.read(self, model, reads, also=notes)   # posts and notices from one comment set
+            mail = dataclasses.replace(mail, receipts={**machine.recorded_receipts(notes), **mail.receipts})
+            rows = machine.table(model, machine.collect(model, reads, works=works, mail=mail,
+                                                        planned_at=reads.get("planned_at")))
+            memo = self.__dict__["_plan_table"] = (model, reads, mail, rows)
+        return memo
+
+    def plan_notice_comments(self, model, reads) -> list[dict]:
+        """The comments that can hold the switch's plan marks: the live board's, and, only while the live board
+        holds no mark of an owner's present version, the closed boards' too (a board closes at 100 comments; a
+        notice sent on the last one is still sent, and is not sent again; the receipt filed beside it is read with
+        it, as mail_reader reads these comments too)."""
+        memo = self.__dict__.get("_plan_notes")
+        if memo is None:
+            memo = list(self.board_comments())
+            vers = machine.versions(model)
+            sent = {(n.owner, n.ver) for n in machine.sent_notices(memo)}
+            marked = (machine.MAIL_OWNERS | machine.SELF_TOLD) & {ln.owner for ln in model.lines}
+            if any((o, vers[o]) not in sent for o in marked):
+                for old in self.old_boards():
+                    memo += self.bounded_comments(old, MAX_OLD_BOARD_PAGES)
+            self.__dict__["_plan_notes"] = memo
+        return memo
+
+    def plan_check(self, steered=()) -> None:
+        """The job machine's pass. Shadow: every job's state, the late ones, and the views (labels, notices, the
+        board section) are computed and printed, and nothing is written; an error here is a printed note, never a
+        failed sweep. Live: the late jobs go to the integrator's inbox once each, the plan notice goes to a mail
+        owner once per order version, the labels and the board's job section are made to match."""
+        self.plan_items = ()
+        mode = self.plan_mode()
+        if mode == "off":
+            return
+        try:
+            self.plan_pass(mode, steered)
+        except Exception as err:   # noqa: BLE001
+            if mode == "live":
+                if isinstance(err, (GitHubError, RuntimeError, KeyError, ValueError)):
+                    raise
+                raise RuntimeError(f"plan: {type(err).__name__}: {err}") from err
+            self.out(f"NOTE        plan (shadow): not computed this pass ({type(err).__name__}: {plain(str(err)[:200])})")
+
+    def plan_pass(self, mode: str, steered=()) -> None:
+        model, reads, mail, rows = self.plan_table(steered)
+        late = machine.alarms(rows, self.now)
+        lanes = ", ".join(f"{o} {n}/{limit}" for o, (n, limit) in machine.wip(model, rows).items() if n)
+        self.out(f"PLAN        {len(model.lines)} jobs, {len(late)} late, lanes in flight: {lanes or 'none'}, mode={mode}")
+        for state in machine.STATES:
+            jobs = [r.job for r in rows if r.state == state]
+            if jobs:
+                self.out(f"PLAN-STATE  {state:<12} {len(jobs):>3}  {plain(', '.join(jobs[:40]))}")
+        lines = machine.alarm_lines(rows, self.now)
+        for line in lines[:MAX_PLAN_LINES]:
+            self.out(f"PLAN-LATE   {plain(line[:400])}")
+        aliases = {key: frozenset(a.get("owner_labels") or ())
+                   for key, a in ((load_yaml(self.root / "work/agents.yml") or {}).get("agents") or {}).items()}
+        changes = machine.labels(model, reads["issues"], aliases)
+        for number, add, remove in changes[:MAX_PLAN_LINES]:
+            self.out(f"PLAN-LABEL  #{number} add {', '.join(add) or '-'}; remove {', '.join(remove) or '-'}")
+        notices, receipts = [], []
+        notes = self.plan_notice_comments(model, reads)
+        vers = machine.versions(model)
+        owners = {ln.owner for ln in model.lines}
+        seen = [o for o in sorted(machine.SELF_TOLD & owners)   # each job's clock needs its line's first-seen time
+                if not any(n.ver == vers[o] for n in machine.marks(mail, o))]
+        for owner in seen:
+            self.out(f"PLAN-SEEN   {owner} plan {vers[owner]}" + ("" if mode == "live" else " (shadow: not written)"))
+        for owner in sorted(machine.MAIL_OWNERS & owners):
+            ver = vers[owner]
+            sent = machine.notice_at(mail, owner, ver)
+            answer = machine.receipt_post(mail, ver, sent) if sent else None
+            if answer and (owner, ver) not in mail.receipts:
+                receipts.append((owner, ver, answer))
+            unread = sent and any(r.owner == owner and r.state == "told" and r.late(self.now) for r in rows)
+            again = machine.NOTICE_AGAIN.format(owner=owner, ver=ver)
+            if sent and not (unread and not any(again in (c.get("body") or "") and
+                                                (c.get("user") or {}).get("login") == rules.BOT_LOGIN for c in notes)):
+                continue
+            text = machine.notice(model, rows, owner, ver, machine.notice_jobs(notes, owner), again=bool(sent))
+            notices.append((owner, ver, text, bool(sent)))
+            self.out(f"PLAN-NOTICE {owner} plan {ver}{' (again)' if sent else ''}" +
+                     ("" if mode == "live" else " (shadow: not sent)"))
+            self.out(text)
+        board = machine.board(model, rows, self.now)
+        if mode != "live":
+            return
+        self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}")
+                                for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
+        for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
+            c = machine.notice_comment(notes, owner, ver)
+            if c and c.get("id"):
+                mark = machine.RECEIPT_MARK.format(owner=owner, ver=ver, at=iso_z(answer.at), comment=answer.id)
+                self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{c['id']}",
+                              {"body": f"{c.get('body') or ''}\n{mark}"}, f"plan: record {owner}'s receipt of plan {ver}")
+        for owner, ver, text, resend in notices:
+            self.send_plan_notice(model, mail, owner, ver, text, resend, reads.get("planned_at"))
+        for owner in seen:
+            mark = machine.NOTICE_MARK.format(owner=owner, ver=vers[owner], jobs=machine.mark_jobs(
+                model, mail, owner, self.now, reads.get("planned_at")))
+            self.gh.comment(self.board_issue(), f"{machine.SELF_HEAD.format(ver=vers[owner], owner=owner)}\n\n{mark}",
+                            f"plan: record plan {vers[owner]} for {owner} on #{self.board_issue()}")
+        for number, add, remove in changes[:MAX_PLAN_LABELS]:
+            if add:
+                self.gh.write("POST", f"repos/{self.gh.repo}/issues/{number}/labels", {"labels": list(add)},
+                              f"plan: label #{number} {', '.join(add)}")
+            for name in remove:
+                from urllib.parse import quote
+                self.gh.write("DELETE", f"repos/{self.gh.repo}/issues/{number}/labels/{quote(name, safe='')}", None,
+                              f"plan: take {name} off #{number}")
+        self.write_plan_board(board)
+
+    def send_plan_notice(self, model, mail, owner: str, ver: str, text: str, resend: bool, planned_at=None) -> None:
+        """One plan notice to a mail owner, on the board, the way muse() sends: the comment, then the wake:muse
+        label, then the marker (so a failed label leaves no marker and the next pass sends it again). The marker
+        carries each job's line hash and when it was first told and acknowledged (machine.mark_jobs)."""
+        where = self.board_issue()
+        jobs = machine.mark_jobs(model, mail, owner, self.now, planned_at)
+        mark = (machine.NOTICE_AGAIN.format(owner=owner, ver=ver) if resend else
+                machine.NOTICE_MARK.format(owner=owner, ver=ver, jobs=jobs))
+        resp = self.gh.comment(where, text, f"plan: notice of plan {ver} to {owner} on #{where}")
+        self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
+                      f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+        cid = (resp if isinstance(resp, dict) else {}).get("id")
+        if cid is not None:
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": f"{text}\n\n{mark}"},
+                          f"plan: mark the notice of plan {ver} delivered")
+
+    def write_plan_board(self, text: str) -> None:
+        """The board body's job section, between its own markers; the rest of the body is left as it is."""
+        number = self.board_issue()
+        with self.gh.fresh():
+            body = (self.gh.get(f"repos/{self.gh.repo}/issues/{number}") or {}).get("body") or ""
+        new = machine.splice(body, text)
+        if new is None:
+            self.out(f"ERROR       plan: #{number}'s body has broken plan markers; not written (fix them by hand)")
+        elif new != body:
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{number}", {"body": new},
+                          f"plan: rewrite #{number}'s job section")
 
     def queue_text(self) -> str:
         """Trunk's work/tasks/muse.md, read once per run from this checkout; "" (an empty queue) when it cannot be."""
@@ -1736,14 +1929,29 @@ class Switch:
         a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own."""
         if delta.pipe or new_pr:
             return True
-        nums = {q.num for q in muse_queue.queue_lines(self.queue_text())}
-        return any(f"j{n}" in b.lower() for b in delta.active for n in nums)
+        if self.plan_mode() == "live":   # the queue is Muse's lines of work/plan.md, not muse.md's old block
+            jobs = {ln.job.lower().replace("-", "") for ln in self.read_plan().lines if ln.owner == "muse"}
+        else:
+            jobs = {f"j{q.num}" for q in muse_queue.queue_lines(self.queue_text())}
+        return any(j in b.lower() for b in delta.active for j in jobs)
 
     def queue_check(self, text: str | None = None) -> tuple[InboxItem, ...]:
         """QUEUE-LOW (J-097, Cory 11-11: "you should be making sure muse DOES NOT RUN LOW ON QUEUE at any point"):
         fewer than muse_queue.LOW_UNDER really-unstarted jobs in work/tasks/muse.md's Unstarted block (muse_queue's
         rules, read with this run's client). The item's head is the count and the unstarted jobs, so it is listed once
         per change, and a queue refilled and run low again is listed again. Sets and returns queue_items."""
+        # A live plan is the only route for new work: the count comes from the job machine's table. An explicit
+        # text argument remains for the pre-cutover queue parser's regression tests.
+        if text is None and self.plan_mode() == "live":
+            model, _, _, rows = self.plan_table()
+            waiting = [r.job for r in rows if r.owner == "muse" and r.state in ("planned", "told", "acknowledged")]
+            self.queue_items = ()
+            if len(waiting) < muse_queue.LOW_UNDER:
+                line = (f"QUEUE-LOW: {len(waiting)} unstarted Muse jobs in work/plan.md (under {muse_queue.LOW_UNDER}). "
+                        f"Unstarted: {', '.join(waiting) or 'none'}")
+                self.queue_items = (InboxItem("QUEUE-LOW", "work/plan.md",
+                                              model.fingerprint() + ":" + ",".join(waiting), line),)
+            return self.queue_items
         text = self.queue_text() if text is None else text
         self.queue_items = ()
         report = muse_queue.check(self.gh, text, self.now)
@@ -2663,6 +2871,15 @@ class Switch:
             issue = got
         self.gh.comment(issue["number"], body, f"digest for {today} on #{issue['number']}")
 
+    def blocked_lines(self) -> list[str]:
+        """The digest's blocked jobs. With `plan: live`, the job machine's `blocked` state (a job it comes `after`
+        is not closed), so the hand-set state:blocked label can come off; otherwise that label, as before."""
+        if self.plan_mode() == "live":
+            return [f"#{r.issue} {r.job}: {r.title[:62]} is blocked on {r.why}"
+                    for r in self.plan_table()[3] if r.state == "blocked"]
+        return [f"#{it['number']} {it['title'][:70]} is blocked" for it in self.jobs().values()
+                if any(lab["name"] == "state:blocked" for lab in it["labels"])]
+
     def digest_text(self, today: str) -> str:
         since = self.now - dt.timedelta(hours=24)
         closed = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=closed&base={rules.TRUNK}&sort=updated&direction=desc")[:100]
@@ -2684,9 +2901,7 @@ class Switch:
                     who = pick.agent if pick.route == "ask" else ""
                 if who and who != rules.API_REVIEWER:
                     asked.append(f"#{facts.number} waits on a review from {who}")
-        for it in self.jobs().values():
-            if any(l["name"] == "state:blocked" for l in it["labels"]):
-                waiting.append(f"#{it['number']} {it['title'][:70]} is blocked")
+        waiting += self.blocked_lines()
         entries = self.entries()
         paused = [e.note for e in entries if e.phase == "refused" and e.ts >= since]
         s = money.spent(entries, self.now, "")
@@ -3037,6 +3252,13 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
         return None
 
+    # The job machine's pass runs on the full pass only (a fast sweep keeps its read count). Live, it runs here:
+    # the inbox below lists its late jobs and the queue check counts from its table. In shadow it only prints,
+    # so it runs at the very end of this function, after every live part.
+    plan_due = bool(steer and not targeted and delta is None)
+    if plan_due and sw.plan_mode() == "live":
+        part("plan", lambda: sw.plan_check(steered))
+
     if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
         part("auto-open", lambda: sw.auto_open_prs(None if delta is None else delta.finished_auto))
     red_ripe = [r for r in timers.get("red") or []
@@ -3199,6 +3421,16 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
                                                          if deferred else []))
+    if plan_due and sw.plan_mode() == "shadow" and now.hour % PLAN_SHADOW_EVERY_H == 0:
+        # Shadow: after every live part, the heartbeat and the sweep state. No live part waits for its reads, and
+        # nothing in it fails the sweep, is retried, or changes what the next sweep does.
+        if isinstance(sw.gh.remaining, int) and sw.gh.remaining < 2 * floor():
+            sw.out("NOTE        plan (shadow): left out this pass, less than twice the rate floor is left")
+        else:
+            try:
+                sw.plan_check(steered)
+            except Exception as err:   # noqa: BLE001  plan_check keeps its own errors in shadow; this is the last guard
+                sw.out(f"NOTE        plan (shadow): not computed this pass ({type(err).__name__})")
     return 2 if failed else 0
 
 

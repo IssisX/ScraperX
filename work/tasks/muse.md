@@ -29,7 +29,9 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 A GitHub comment or PR of yours needs Cory to tap "allow", so you never comment or open PRs. You push
 your own branches (Cory 11-05) and mail the rest:
 - **Code:** push it to `fb-bot/integrate-<job>` and mail the branch and sha
-  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR. Only if
+  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR from the head
+  commit's message. A job that lands in parts: its last part's head commit carries `Closes #N` (N, the job's
+  issue), so the merge closes it; until then the next part is yours. Only if
   a push fails: the change as a unified diff in the mail body against the `ScraperX-Claude` sha you
   started from; over about 50,000 characters, numbered mails ("part 1 of 2").
 - **Verdicts and questions:** by email as above.
@@ -49,33 +51,12 @@ your own branches (Cory 11-05) and mail the rest:
   (CLAUDE.md, settled 11-05), and the integrator's pushes to `fb-bot/` are refused by its safety check, so the
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
-## Your queue (11-06)
-The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
-job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-Finish line (11-12, rule 56): only the finish plan (`03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md`, A5) is worked for the current parts.
-Finish (in flight): J-043 #241 rail move, J-038 #372 crates break (dents out), J-059 #307 wire-up, J-063 #321, J-015 #389 + J-109 #428 as one (F7), J-049 #278 parts 2-3 (F11), J-098 #416 (F13), J-105 #424 step 1 only (F10), J-045 (F3), J-053 #82, J-021 #128 waterfall fix only, J-077, J-078 #396, J-079 #397, J-080 #398 (push, land, then stop). J-044c: stop after the split you hold; the rest of her jointed body is parked.
-Parked (branches kept; they return as missions or after the finish): J-044d to k and n, J-060, J-036, J-040, J-099, J-022, J-054, J-055, J-091, J-094, J-095, J-100, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-113, J-114, J-120 to J-123, J-081, J-088, J-086 (until J-001's grab code lands). Close: J-067 (on the scorer), J-082.
-Unstarted, in order (11-12):
-1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous).
-2. J-117 #439: a checkpoint on a moving floor restores him on real support.
-3. J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment. J-116 to J-118 share one save version bump.
-4. J-133 #459: the climb and the ending in one touch run, zero deaths (F4).
-5. J-134 #460: measure her chase above 220 m, band by band (F5).
-6. J-124 #446: the parachute from every deck edge lands him alive (rule 51).
-7. J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb.
-8. J-125 #448: every shipped sound, voice, model and texture on record; Licences page true.
-9. J-129 #455: the objective core, saved with the checkpoint (missions start; same save bump as J-116).
-10. J-130 #456: Brenner's job lines on the foreman radio, text first.
-11. J-131 #457: the punch list on the pause card and one HUD line.
-12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
-13. J-135 #461: rule_check flags geometry changed through tuning-header constants.
-Waiting on J-001's grab code landing: J-018 #125.
-
-## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
-Your queue is never allowed to run dry: whenever fewer than eight big jobs above are unstarted, the
-integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
-You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
-matters to the player, files, and finish facts. The integrator rules on it within the hour.
+## Your live work
+Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does.
+Before starting a lane, push fb-bot/wip-<job> and mail its real SHA. Push every tested increment; an unpushed SHA is not a shared baseline. Check the live plan before each push.
+On a hold or transfer, first push or explicitly report local work; stop only after the new plan and handoff are acknowledged. At your in-flight limit, land, review or unblock, rather than starting another job.
+Include plan <version> in the subject after a plan-change notice. Keep the existing mail bridge and proof rules.
+Never wait for Claude's go on any step, protected changes included (Cory 11-07): go with your pick, push it, say it in the mail; he overrules by mail.
 
 ## Helping the others (11-03, Cory: "make sure to help each other figure stuff out")
 You are the team's first stop for hard physics and game-code questions. A `CLAUDE_TO_MUSE:` mail that

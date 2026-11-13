@@ -1189,15 +1189,23 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             except Exception as err:   # noqa: BLE001
                 problems.append(f"proof run {r.id} jobs: {type(err).__name__}")
 
+    # With the plan live (work/switchboard.yml `plan: live`) every open issue of the team's titled J-NNN is a job,
+    # with the `job` label or not: a missing label is itself a collaboration defect and must never make the job
+    # disappear (a stranger's issue with a job's title is not one: the repo is public). Until then the jobs are
+    # the issues that carry the `job` label, as before.
+    plan_live = getattr(sw, "plan_mode", lambda: "off")() == "live"
+    with_label = [] if plan_live else gh.paged(f"repos/{repo}/issues?labels=job&state=open")
+    all_open_issues = gh.paged(f"repos/{repo}/issues?state=open")
     issues: list[IssueIn] = []
-    for it in gh.paged(f"repos/{repo}/issues?labels=job&state=open"):
-        if "pull_request" in it:
+    for it in all_open_issues if plan_live else with_label:
+        if "pull_request" in it or (plan_live and not (rules.job_of_title(it.get("title") or "")
+                                                       and rules.team_issue(it))):
             continue
         labels = tuple(l["name"] for l in it.get("labels") or [])
         issues.append(IssueIn(it["number"], it.get("html_url") or "", it.get("title") or "", labels,
                               touched_at(it.get("created_at"), it.get("updated_at"), touches, it["number"], since_touch)))
 
-    open_threads = {int(i["number"]) for i in gh.paged(f"repos/{repo}/issues?state=open")}
+    open_threads = {int(i["number"]) for i in all_open_issues}
     stream = []
     for c in comments:
         try:

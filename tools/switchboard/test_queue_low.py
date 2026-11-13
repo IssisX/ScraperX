@@ -260,6 +260,18 @@ class Sweep(unittest.TestCase):
                 test_sweep_calls.sweep(gh, self.state())
             self.assertEqual(counted.call_count, want, name)
 
+    def test_live_a_proof_run_counts_on_a_branch_naming_a_muse_job_of_the_plan(self):   # muse.md's block is gone
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "work").mkdir()
+            (root / "work/plan.md").write_text("limit muse 2\nlimit claude 1\nJ-501 muse #501 | Muse's\n"
+                                              "J-601 claude #601 | Claude's\n", encoding="utf-8")
+            sw = test_inbox.make(test_sweep_calls.CountingGH(self.prs))
+            sw.root, sw.plan_mode = root, lambda: "live"
+            for name, want in (("fb-bot/integrate-j501-door", True), ("claude/integrate-j601", False)):
+                delta = switch.SweepDelta(set(), 0, set(), set(), active={name})
+                self.assertEqual(sw.queue_started(delta, False), want, name)
+
     def test_a_full_pass_counts(self):
         gh = test_sweep_calls.CountingGH(self.prs)
         with mock.patch.object(switch.Switch, "queue_check", autospec=True, return_value=()) as counted:
@@ -292,6 +304,10 @@ class Cli(unittest.TestCase):
             f"PARKED   J-053 #82  newest: {iso(1)} To Grok: the bar",
             "QUEUE STALE: 2 not unstarted",
         ])
+
+
+# The owner checks' scenarios (another owner's job, the parked line, a bare J-NNN issue) moved with the checks to
+# the job machine at the cutover: test_machine.Owners.
 
 
 if __name__ == "__main__":

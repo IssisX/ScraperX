@@ -263,7 +263,12 @@ void Simulation::PhysicsWorld::strike_cancel() noexcept {
     strike_grace_ = 0;
 }
 
+void Simulation::PhysicsWorld::force_strike_move_for_test(const std::uint8_t move) noexcept {
+    strike_forced_move_ = move;
+}
+
 void Simulation::PhysicsWorld::strike_begin(const std::uint8_t move, const int side, const bool in_hand) noexcept {
+    strike_forced_move_ = 255;  // a forced move is one press only
     strike_move_ = move;
     strike_phase_ = StrikePhase::Windup;
     strike_ticks_ = 0;
@@ -326,6 +331,11 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         guard_move = (strike_side_ == 0 && fist_usable(1)) ? 4 : 3;
         guard_side = guard_move == 4 ? 1 : strike_side_;
     } else if (press_move == 3) guard_side = fist_usable(0) ? 0 : arm;
+    if (strike_forced_move_ != 255) {
+        // Tests only: the forced move overrides the stance's pick (and the
+        // grace's follow-up) for one press.
+        guard_move = strike_forced_move_;
+    }
     if (strike_phase_ == StrikePhase::Guard) {
         strike_move_ = guard_move;
     }
@@ -470,6 +480,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
 }
 
 void Simulation::PhysicsWorld::strike_reset() noexcept {
+    strike_forced_move_ = 255;
     strike_phase_ = StrikePhase::Guard;
     strike_move_ = 0;
     strike_ticks_ = 0;
