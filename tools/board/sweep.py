@@ -4,10 +4,11 @@
 Lists every open PR and every agent branch pushed in the last day, and says
 the one next action each needs so nothing sits waiting:
 
-  MERGE     proof green and a second agent's LAND on the PR's head
-  REVIEW    proof green, no LAND or FIX yet
+  MERGE     proof green and a second agent's review LAND on the PR's head (an eye LAND alone is not one)
+  REVIEW    proof green, no review LAND and no FIX yet
   FIX-CI    the proof failed on the head (its owner fixes it)
-  FIX       a reviewer's FIX is the latest verdict, or a Codex P0/P1 finding has no reply
+  FIX       any reviewer's (or the eye's) newest verdict on the head is FIX or BLOCK, or a Codex P0/P1 finding has
+            no reply
   PROVING   the proof is running
   DISPATCH  pushed, but no proof ever ran on the head
   QUIET     nothing changed for --quiet-hours
@@ -72,19 +73,45 @@ def proof_state(repo: str, sha: str) -> tuple[str, str]:
     return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"]
 
 
-def latest_verdict(repo: str, number: int, head_time: dt.datetime) -> str:
-    """The newest LAND/FIX (a BLOCK counts as FIX) posted after the head commit, else ''."""
-    verdict, when = "", None
+HEADER = re.compile(r"^\*\*(?P<who>[^(\n*]+?)\s*(?:\((?P<what>[^)\n]*)\))?\s*:\s*\**\s*(?:LAND|FIX|BLOCK)\b")
+NAMED_HEAD = re.compile(r"@\s*([0-9a-f]{7,40})\b")
+
+
+def verdict_of(comments: list[dict], head_sha: str, head_time: dt.datetime) -> str:
+    """The PR's verdict on its head: FIX while any reviewer's newest LAND/FIX/BLOCK on this head is a FIX or BLOCK
+    (each reviewer, and the eye apart from the review, counts on its own: 11-13, #494 read MERGE on an eye LAND that
+    came after the API review's FIX 6840871637, still unfixed); else LAND when a review (not the eye) LANDed; else
+    ''. A verdict counts on this head when it names it (`@ <sha>`), or names none and came after the head commit."""
+    newest: dict[tuple[str, bool], tuple[dt.datetime, str]] = {}
+    for c in comments:
+        top = (c.get("body") or "")[:400]
+        m = VERDICT.search(top)
+        if not m:
+            continue
+        line = top[m.start():].split("\n", 1)[0]
+        h = HEADER.match(line)
+        who, what = (h.group("who").strip().lower(), (h.group("what") or "").lower()) if h else ("?", "")
+        named = NAMED_HEAD.search(what)
+        t = parse_time(c["created_at"])
+        if (named and not head_sha.startswith(named.group(1))) or (not named and t < head_time):
+            continue
+        key = (who, "eye" in who or "eye" in what)
+        if key not in newest or t >= newest[key][0]:
+            newest[key] = (t, "FIX" if m.group(1) == "BLOCK" else m.group(1))
+    if any(v == "FIX" for _, v in newest.values()):
+        return "FIX"
+    return "LAND" if any(v == "LAND" and not eye for (_, eye), (_, v) in newest.items()) else ""
+
+
+def latest_verdict(repo: str, number: int, head_sha: str, head_time: dt.datetime) -> str:
+    """verdict_of the PR's comments (at most MAX_PAGES pages)."""
+    comments: list[dict] = []
     for page in range(1, MAX_PAGES + 1):
-        comments = gh(f"repos/{repo}/issues/{number}/comments?per_page=100&page={page}")
-        for c in comments:
-            m = VERDICT.search(c["body"][:400])
-            t = parse_time(c["created_at"])
-            if m and t >= head_time and (when is None or t > when):
-                verdict, when = ("FIX" if m.group(1) == "BLOCK" else m.group(1)), t
-        if len(comments) < 100:
+        batch = gh(f"repos/{repo}/issues/{number}/comments?per_page=100&page={page}")
+        comments += batch
+        if len(batch) < 100:
             break
-    return verdict
+    return verdict_of(comments, head_sha, head_time)
 
 
 CODEX_SERIOUS = re.compile(r"!\[P[01] Badge\]")
@@ -125,7 +152,7 @@ def main() -> int:
         commit = gh(f"repos/{args.repo}/commits/{sha}")
         head_time = parse_time(commit["commit"]["committer"]["date"])
         state, url = proof_state(args.repo, sha)
-        verdict = latest_verdict(args.repo, pr["number"], head_time)
+        verdict = latest_verdict(args.repo, pr["number"], sha, head_time)
         if open_codex_findings(args.repo, pr["number"]):
             verdict = "FIX"
         quiet = (now - parse_time(pr["updated_at"])).total_seconds() / 3600
