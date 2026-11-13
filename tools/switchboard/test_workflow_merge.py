@@ -523,6 +523,51 @@ class TheReviewsRunApart(unittest.TestCase):
         self.assertIn('for part in "$PART"; do', prune["run"])
         self.assertEqual(jobs["cache-out"]["needs"], ["cache-in", "ask", "steer"])
 
+    def test_cache_out_fetches_only_its_own_parts_file(self):
+        # 11-13 (#350, sweep 43511901124): a sweep's cache-out fetched the ask part's file too, which no ask job made
+        # ("Artifact not found for name: switchboard-etags-ask-out")
+        for step in self.flow()["jobs"]["cache-out"]["steps"]:
+            if str(step.get("uses")).startswith("actions/download-artifact@"):
+                part = step["with"]["name"].split("-")[2]
+                self.assertEqual(step["if"], "inputs.part == 'ask'" if part == "ask" else "inputs.part != 'ask'",
+                                 step["name"])
+                self.assertTrue(step["continue-on-error"], step["name"])   # its part may have handed on nothing
+
+    def prune(self, listing_fails: bool) -> tuple[int, list[str], str]:
+        """cache-out's prune step, run with a fake gh: a listing answers ids, or GitHub's rate-limit refusal as gh gives
+        it (the error's body on stdout, exit 1)."""
+        import shutil
+        import tempfile
+        (step,) = [s for s in self.flow()["jobs"]["cache-out"]["steps"] if "run" in s]
+        self.assertNotIn("${{", step["run"])
+        refused = '{\n  "message": "API rate limit exceeded for installation.",\n  "status": "403"\n}'
+        with tempfile.TemporaryDirectory() as tmp:
+            log = pathlib.Path(tmp) / "log"
+            fake = pathlib.Path(tmp) / "gh"
+            fake.write_text(
+                f'#!/bin/bash\necho "gh $*" >> "{log}"\n'
+                'if [ "$2" = "-X" ]; then exit 0; fi\n'
+                + (f"echo '{refused}'\necho 'gh: API rate limit exceeded' >&2\nexit 1\n" if listing_fails else
+                   'case "$2" in *caches*) printf "11\\n12\\n" ;; *) printf "21\\n" ;; esac\n'), encoding="utf-8")
+            fake.chmod(0o755)
+            env = {**os.environ, **step["env"], "PATH": f"{tmp}:{os.environ['PATH']}", "REPO": "o/r", "RUN_ID": "7",
+                   "PART": "steer"}
+            got = subprocess.run([shutil.which("bash") or "bash", "-e", "-c", step["run"]], cwd=tmp, env=env,
+                                 capture_output=True, text=True)
+            return got.returncode, log.read_text(encoding="utf-8").splitlines(), got.stdout
+
+    def test_a_prune_github_refuses_fails_nothing_and_deletes_nothing(self):
+        code, calls, out = self.prune(listing_fails=True)
+        self.assertEqual(code, 0, "the state was saved before the prune: a refused listing is not a failed run")
+        self.assertEqual([c for c in calls if " -X DELETE " in c], [], "the error's body is never read as ids")
+        self.assertEqual(len(calls), 2)
+        self.assertIn("::warning::", out)
+        code, calls, _ = self.prune(listing_fails=False)
+        self.assertEqual(code, 0)
+        self.assertEqual([c for c in calls if " -X DELETE " in c],
+                         ["gh api -X DELETE repos/o/r/actions/caches/11", "gh api -X DELETE repos/o/r/actions/caches/12",
+                          "gh api -X DELETE repos/o/r/actions/artifacts/21"])
+
     def test_steer_starts_the_reviews_run_and_no_job_does_it_after_every_sweep(self):
         flow = self.flow()
         self.assertNotIn("ask", flow["jobs"]["steer"]["needs"])   # steer runs first and starts the reviews itself
