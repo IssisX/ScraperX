@@ -10,7 +10,7 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max, 11-13). Run it in its section-5 order, one helper at a time
-  (ask Cory the effort first), then the real test; done = that test passing (Cory 11-13), not the plan's 3 days. Today items done (#517 #518
+  (ask Cory the effort first: just my informed pick, no option list), then the real test; done = that test passing (Cory 11-13), not the plan's 3 days. Today items done (#517 #518
   drafts; #520-#525 opened). Paid reviewer's month spent ($98.24/$100) until 12-01. #502/#505 reverted (afff9d5f).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Security (Cory 11-13): only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
