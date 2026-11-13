@@ -14,6 +14,10 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   drafts; #520-#525 opened). Paid reviewer's month spent ($98.24/$100) until 12-01. #502/#505 reverted (afff9d5f).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Security (Cory 11-13): only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
+- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
+  alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
+- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
+  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
 - This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
