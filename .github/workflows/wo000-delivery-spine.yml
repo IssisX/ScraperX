@@ -962,6 +962,14 @@ jobs:
             --script res://tests/matron_speech_test.gd 2>&1 | tee artifacts/matron-speech.log
           grep -F "MATRON_SPEECH PASS fails=0" artifacts/matron-speech.log
 
+      - name: The punch list names the current job
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/punch_list_test.gd 2>&1 | tee artifacts/punch-list.log
+          grep -F "PUNCH_LIST PASS fails=0" artifacts/punch-list.log
+
       - name: The rip camera enters and returns without a cut or lock
         shell: bash
         run: |
