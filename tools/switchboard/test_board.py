@@ -217,6 +217,7 @@ class Sweep(unittest.TestCase):
     def sweep(self, gh, whole):
         sw = ti.make(gh, ti.NOW)
         sw.root = HERE.parents[1]
+        sw.plan_mode = lambda: "off"   # the plan part has its own sweep tests (test_plan_sweep); not the live config
         sw.merge_token = sw.review_key = ""
         sw._jobs = sw._board = None
         gh.state = whole

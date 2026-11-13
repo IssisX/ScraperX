@@ -325,6 +325,11 @@ func _exit_tree() -> void:
 	if _bank_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_bank_task)
 		_bank_task = -1
+	# The hold's amp is ours: the buses are global and outlive the director,
+	# so leaving it behind would duck Ambience by its last level forever and
+	# add one more copy on every scene reload (pause-menu restart).
+	_remove_bus_effect(BUS_AMBIENCE, _hold_amp)
+	_hold_amp = null
 	for child in get_children():
 		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
 			child.stop()
@@ -332,6 +337,21 @@ func _exit_tree() -> void:
 	_bank.clips.clear()
 	_her_bank.clips.clear()
 	_voice_clips.clear()
+
+
+# Remove `effect` from `bus_name` by identity, if it is there. A bus effect
+# outlives the node that added it, so a director that made one must take it
+# back when it leaves.
+func _remove_bus_effect(bus_name: StringName, effect: AudioEffect) -> void:
+	if effect == null:
+		return
+	var index := AudioServer.get_bus_index(bus_name)
+	if index < 0:
+		return
+	for i in AudioServer.get_bus_effect_count(index):
+		if AudioServer.get_bus_effect(index, i) == effect:
+			AudioServer.remove_bus_effect(index, i)
+			return
 
 
 # Stops every player now, and starts nothing after. The mixer releases a
@@ -1643,6 +1663,27 @@ func _her_swap(k: int, clip: StringName) -> void:
 var _dread_s := 0.0
 var _dread_depth_db := 0.0
 var _dread_amp: AudioEffectAmplify
+
+
+# The hold's mix: while her hands have him the world ducks under her (the
+# Ambience bed: wind, the yard's regions, the welders) and her breath and the
+# steel's creak, on the Effects bus, come forward over it. Her voice is a real
+# recording (matron_breath); nothing here synthesizes one.
+const HOLD_DUCK_DB := 8.0
+var _hold_amp: AudioEffectAmplify
+var _hold_duck_db := 0.0
+
+
+func hold_mix(delta: float, holding: bool) -> void:
+	if _hold_amp == null:
+		var index := AudioServer.get_bus_index(BUS_AMBIENCE)
+		if index < 0:
+			return
+		_hold_amp = AudioEffectAmplify.new()
+		AudioServer.add_bus_effect(index, _hold_amp)
+	_hold_duck_db = move_toward(_hold_duck_db, -HOLD_DUCK_DB if holding else 0.0,
+		delta * (16.0 if holding else 6.0))
+	_hold_amp.volume_db = _hold_duck_db
 
 
 # The duck under her dread: in fast, held, then back slowly; and while she

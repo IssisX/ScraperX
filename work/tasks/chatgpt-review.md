@@ -11,7 +11,9 @@ GitHub plugin as the live source.
 ## Where to look
 - **The board:** the one open issue labeled `board` (find it by label each run; never assume a
   number). Read its body and its comments since your last successful scan.
-- The open issues labeled `job`, and open PR conversations and submitted reviews.
+- The open issues labeled `job`, and open PR conversations and submitted reviews: only what is new since
+  your last successful scan, and at most the newest 40 comments of any one issue or PR (a job thread is capped
+  at 40), never a thread's whole history.
 - Never scan the retired boards #3 and #87.
 
 ## 1. Review asks

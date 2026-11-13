@@ -1032,6 +1032,9 @@ func _look_finishes() -> bool:
 # which lamps light the steel around them and whether any hangs on nothing.
 func _look_night_lamps() -> bool:
 	_main._sky_cycle.set_hour(23.5)
+	# The site lamps only: his helmet lamp is not one of them, and its pool
+	# from the posed eye would wash these shots.
+	_main._sky_cycle.set_helmet_lamp_enabled(false)
 	var by_kind := {}
 	for light in (_main._light_rig as Node3D).get_children():
 		if not (light is OmniLight3D):
@@ -1067,7 +1070,41 @@ func _look_night_lamps() -> bool:
 		await _pose(shot[0])
 	held.queue_free()
 	hud.visible = true
+	_main._sky_cycle.set_helmet_lamp_enabled(true)
 	_detail = "shots=%d lamps=%s" % [shots.size(), str(by_kind.keys().map(func(k): return "%s:%d" % [k, by_kind[k].size()]))]
+	return true
+
+
+# look_night_climb (J-081): renders only (not in CI): the night climb from
+# low, middle and high, at dusk, midnight and dawn -- the helmet lamp's pool
+# on the steel ahead, the trail of lit rings below him, the city's glow on
+# the northern horizon. Each shot poses the eye at a height he has climbed
+# to, so the trail reads as it would on the climb.
+func _look_night_climb() -> bool:
+	var hud := _main.get_node("HUD") as CanvasLayer
+	hud.visible = false
+	var held := HeldView.new(_main._camera)
+	add_child(held)
+	_main._sky_cycle.day_minutes = 0.0
+	var shots := 0
+	for spec in [["dusk", 18.3], ["midnight", 0.0], ["dawn", 6.4]]:
+		_main._sky_cycle.set_hour(float(spec[1]))
+		for deck in [11.0, 77.0, 143.0]:
+			# Inside the shaft, looking across at the next deck and the
+			# lamp above it: the eye at head height over the deck, the
+			# lamp on the east band a deck above the eye.
+			var eye := Vector3(0.0, deck + 1.7, -138.0)
+			var target := Vector3(16.4, deck + 3.4, -150.0)
+			_main._sky_cycle.set_passed_height(deck)
+			held.pose = Transform3D(Basis(), eye).looking_at(target, Vector3.UP)
+			held.fov = 55.0
+			await _frames(8)
+			await _pose("night_climb_%s_%dm" % [spec[0], int(deck)])
+			shots += 1
+	held.queue_free()
+	hud.visible = true
+	_main._sky_cycle.day_minutes = 24.0
+	_detail = "shots=%d" % shots
 	return true
 
 
