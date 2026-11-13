@@ -67,6 +67,9 @@ class FakeGh:
 
     def get(self, path: str):
         self.calls.append(path)
+        if path not in self.answers and path.startswith(f"repos/{REPO}/commits/"):
+            return {"commit": {"message": "Job: J-000: a head the auto-open takes\n",
+                               "committer": {"date": "2026-11-12T00:00:00Z"}}}   # unless a test says otherwise
         if path not in self.answers:
             raise AssertionError(f"unexpected GitHub read {path}")
         got = self.answers[path]
@@ -428,6 +431,48 @@ class Contract(unittest.TestCase):
         self.assertEqual(W.MARK, switch.MARK)
         self.assertEqual(W.AUTO_PR_PREFIX, switch.AUTO_PR_PREFIX)
         self.assertEqual((W.PROOF_READS, W.STACK_READS), (30, 10))
+
+
+class AutoOpenStep(unittest.TestCase):
+    """11-13: a green head the switch's auto-open never opens is its owner's PR to open, never the switchboard's
+    (6856712417 on #282: "open the PR for claude/integrate-j084" 44 h late, a digest line, on c35a6062, no Job line)."""
+    NOW = dt.datetime(2026, 11, 13, 15, 0, tzinfo=dt.timezone.utc)
+
+    def green(self, name: str, message: str, committed: str, now=NOW) -> M.Step:
+        path = f"repos/{REPO}/commits/{sha(7)}"
+        sw = FakeSw({path: {"commit": {"message": message, "committer": {"date": committed}}}},
+                    proofs={sha(7): ("green", "u", 2, stamp(4))})
+        sw.now = now
+        w = W.read(sw, MODEL, {"branches": [br(name, sha(7))]}, [])[sha(7)]
+        self.assertIn(path, sw.gh.calls)
+        return row("J-201" if name.startswith("claude/") else "J-059", w)
+
+    def test_a_head_with_no_job_line_is_its_owners_pr(self):
+        r = self.green("claude/integrate-j201", "Switchboard: a fix\n", "2026-11-13T14:00:00Z")
+        self.assertEqual((r.gate, r.owes, r.next), ("no-pr", "claude", "open the PR for claude/integrate-j201"))
+        r = self.green("fb-bot/integrate-j059-injury-feed", "merge trunk\n", "2026-11-13T14:00:00Z")
+        self.assertEqual((r.gate, r.owes), ("no-pr", "muse"))
+
+    def test_an_old_claude_head_is_its_owners_pr_and_an_old_muse_head_the_switchs(self):
+        r = self.green("claude/integrate-j201", "Job: J-201: x\n", "2026-11-09T14:00:00Z")
+        self.assertEqual((r.gate, r.owes), ("no-pr", "claude"))
+        r = self.green("fb-bot/integrate-j059-injury-feed", "Job: J-059: x\n", "2026-11-09T14:00:00Z")
+        self.assertEqual((r.gate, r.owes), ("auto-pr", "switchboard"))
+
+    def test_a_fresh_head_with_its_job_line_is_the_switchs(self):
+        r = self.green("claude/integrate-j201", "Job: J-201: x\n", "2026-11-13T14:00:00Z")
+        self.assertEqual((r.gate, r.owes), ("auto-pr", "switchboard"))
+
+    def test_a_failed_commit_read_keeps_the_switchs_step(self):
+        sw = FakeSw({f"repos/{REPO}/commits/{sha(7)}": ghapi.GitHubError("GET", "c", "gh: HTTP 502", 502)},
+                    proofs={sha(7): ("green", "u", 2, stamp(4))})
+        w = W.read(sw, MODEL, {"branches": [br("claude/integrate-j201", sha(7))]}, [])[sha(7)]
+        self.assertEqual(w.gate, "auto-pr")
+        self.assertTrue(any("was not read" in x for x in sw.lines), sw.lines)
+
+    def test_the_rule_is_the_switchs(self):
+        self.assertEqual((W.AUTO_PR_PREFIX, W.AUTO_PR_RECENT_ONLY, W.AUTO_PR_MAX_AGE),
+                         (switch.AUTO_PR_PREFIX, switch.AUTO_PR_RECENT_ONLY, switch.AUTO_PR_MAX_AGE))
 
 
 if __name__ == "__main__":

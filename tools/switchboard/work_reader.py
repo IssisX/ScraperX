@@ -8,7 +8,8 @@ codex_woken, the time a person's login asked Codex for this head;
 stacked: the name of another live branch of the same job and owner whose head is ahead of the PR's head while the
 PR has an open FIX, by GET compare/<pr head>...<branch head>, at most STACK_READS a pass); and one Work per
 planned job's own integrate head with no open PR (machine.branch_work with sw.proof(sha), newest heads first, at
-most PROOF_READS a pass; a head not read stays "unread", never "none").
+most PROOF_READS a pass; a head not read stays "unread", never "none"). A green one is the switch's to open only when
+its auto-open would (auto_opens: one GET commits/<sha> for its Job line and date), else its owner's.
 
 Every read that is skipped (a bound reached, a read that failed, a rate limit) leaves its head out of the answer
 and says so on sw.out: machine.collect then shows that head as unread, never as having no proof. A failed compare
@@ -27,6 +28,8 @@ import rules
 PROOF_READS = 30
 STACK_READS = 10
 AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")   # switch.AUTO_PR_PREFIX: the heads the switch opens a PR for
+AUTO_PR_RECENT_ONLY = ("claude/integrate-",)                  # switch.AUTO_PR_RECENT_ONLY (test_work_reader checks)
+AUTO_PR_MAX_AGE = dt.timedelta(days=3)                        # switch.AUTO_PR_MAX_AGE
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"   # switch.MARK
 CODEX_MENTION = "@codex review"                             # switch.CODEX_MENTION
 INTEGRATE = re.compile(r"(?:^|/)integrate-")
@@ -174,8 +177,31 @@ def branch_works(sw, model, reads: dict, steered, known: set[str]) -> dict[str, 
             continue
         finished = proof == "green" or proof.startswith("red")
         at = machine.when(done_at) if finished and done_at else (reads.get("head_at") or {}).get(sha)
-        out[sha] = machine.branch_work(name, sha, proof, at=at, auto_pr=name.startswith(AUTO_PR_PREFIX))
+        auto = proof == "green" and name.startswith(AUTO_PR_PREFIX) and auto_opens(sw, name, sha)
+        out[sha] = machine.branch_work(name, sha, proof, at=at, auto_pr=auto)
     if len(todo) > PROOF_READS:
         sw.out(f"NOTE        work: {len(todo) - PROOF_READS} integrate head(s) with no PR not read this pass "
                f"(at most {PROOF_READS}); they stay unread")
     return out
+
+
+def auto_opens(sw, name: str, sha: str) -> bool:
+    """Would the switch's auto-open (switch.auto_open_prs) open this green head's PR? Only a head whose commit carries
+    a `Job: J-NNN` line, and on claude/ only one committed in the last AUTO_PR_MAX_AGE; else the PR is its owner's to
+    open (11-13: "open the PR for claude/integrate-j084" sat 44 h as the switchboard's step, a digest line marked
+    nothing to decide, on a head with no Job line that the switch never opens). The commit is immutable: a cached
+    read. A failed read keeps the switch's step, as before."""
+    try:
+        commit = (sw.gh.get(f"repos/{sw.gh.repo}/commits/{sha}") or {}).get("commit") or {}
+    except ghapi.RateLimited:
+        raise
+    except (RuntimeError, KeyError, ValueError, TypeError) as err:
+        sw.out(f"NOTE        work: the commit of {name} @{sha[:8]} was not read ({type(err).__name__}: {err}); "
+               "the auto-open is taken to open it")
+        return True
+    if not rules.job_of_pr(commit.get("message") or ""):
+        return False
+    if name.startswith(AUTO_PR_RECENT_ONLY):
+        at, now = machine.when(((commit.get("committer") or {}).get("date")) or ""), getattr(sw, "now", None)
+        return at is not None and (now is None or now - at <= AUTO_PR_MAX_AGE)
+    return True

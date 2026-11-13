@@ -230,6 +230,49 @@ class Trust(unittest.TestCase):
         self.assertEqual(gh.commits_read(), ["2d330dc0"])
 
 
+J077_PLAN = plan.parse("limit muse 6\nJ-077 muse #392 | a dropped heavy piece puts her down\n")
+J077_MAIL = ("**Muse (via email bridge): J-077 FYI drop scenario rewritten, pushed @ {new} plan 629305576a35**\n\n"
+             "Branch fb-bot/integrate-j077, old head 4a81dbcb, new head {new}.\n\nPer your ruling (1a1d583852f82962): "
+             "the gate fix be74b436f is dropped — it stays local-only on fb-bot/integrate-protected-j077, never "
+             "pushed. Base: merged current trunk 7fbaea5a into the branch first (merge commit 12163bd1).")
+
+
+def j077_reads(head: str) -> dict:
+    return {"issues": [issue(392, "J-077 a dropped heavy piece puts her down"), issue(BOARD, "Board")],
+            "branches": [branch("fb-bot/integrate-j077", head)], "prs": []}
+
+
+class SubjectClaim(unittest.TestCase):
+    """11-13 (6858217631 on #392): the mail's subject says what it pushed; a commit its body calls dropped is not owed."""
+    NOW = "2026-11-13T16:10:00Z"
+
+    def test_j077_the_pushed_head_clears_the_mail_and_the_dropped_commit_is_not_owed(self):
+        gh = GH([comment(6858217631, 392, J077_MAIL.format(new="20ac7723"), "2026-11-13T15:59:00Z")],
+                absent=["be74b436f"])
+        reads = j077_reads(full("20ac7723"))
+        mail = mail_reader.read(make(gh, self.NOW), J077_PLAN, reads)
+        self.assertEqual(mail.missing, {})
+        self.assertEqual(machine.collect(J077_PLAN, reads, mail=mail)["J-077"].unpushed, "")
+
+    def test_a_subject_claim_read_on_github_also_clears_the_body_history(self):
+        gh = GH([comment(6858217631, 392, J077_MAIL.format(new="20ac7723"), "2026-11-13T15:59:00Z")],
+                absent=["be74b436f"])
+        reads = j077_reads(full("4a81dbcb"))   # the branch listing is older than the push: the claim is read
+        mail = mail_reader.read(make(gh, self.NOW), J077_PLAN, reads)
+        self.assertEqual(gh.commits_read()[0], "20ac7723")   # the claim first
+        self.assertEqual(mail.missing, {})
+
+    def test_a_subject_head_github_lacks_is_still_owed_while_the_old_head_stands(self):
+        gh = GH([comment(6858217631, 392, J077_MAIL.format(new="30bd8834"), "2026-11-13T15:59:00Z")],
+                absent=["30bd8834", "be74b436f"])
+        reads = j077_reads(full("4a81dbcb"))   # the branch still holds the old head the body names
+        mail = mail_reader.read(make(gh, self.NOW), J077_PLAN, reads)
+        self.assertEqual(mail.missing, {"J-077": "30bd8834"})
+        row = machine.step(machine.collect(J077_PLAN, reads, mail=mail)["J-077"])
+        self.assertEqual((row.gate, row.owes), ("unpushed", "muse"))
+        self.assertIn("push 30bd8834 to GitHub", row.next)
+
+
 class Bounds(unittest.TestCase):
     NOW = "2026-11-12T20:00:00Z"
 

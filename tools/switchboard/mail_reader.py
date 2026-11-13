@@ -28,6 +28,8 @@ Which named hex is a commit claim: machine.NAMED_SHA, less what the mail itself 
 (`tree 8d2ce0d4`), a head it calls local (`local merge commit 9c5a44ee1`, `remote object for local 3696ab5f`:
 it names the pushed head beside it) and a plan version in any case (`Plan 0123456789ab`). An unlabeled local head
 (`baseline f5ee22d6b`, J-106; `@ ad9fc702`, J-059) is still a claim, and GitHub's 422 shows it is missing.
+A commit the subject names (`pushed @ 20ac7723`) is read first; once GitHub has it, the mail's push is real and
+the body's other commits are history, never a push owed (11-13: J-077's "be74b436f is dropped, never pushed").
 """
 from __future__ import annotations
 
@@ -125,8 +127,12 @@ def _missing(sw, model, reads, mail: machine.Mail) -> dict[str, str]:
     checked = sw.__dict__.setdefault("_mail_commits", {})   # sha -> True / False / None, once a run
     left, unchecked, missing = SHA_READS, [], {}
     for job in sorted((j for j in named if j in by_job), key=lambda j: (named[j][0].at, named[j][0].id), reverse=True):
-        for sha in named[job][1]:
-            if any(k.startswith(sha) for k in known):
+        post, shas = named[job]
+        claims = set(machine.NAMED_SHA.findall(post.subject)) & set(shas)
+        pushed = False   # 11-13: a commit the subject claims (`pushed @ 20ac7723`) that GitHub has: the mail's push
+        for sha in sorted(shas, key=lambda s: s not in claims):   # is real; its body's others are history (J-077's
+            if any(k.startswith(sha) for k in known):              # "be74b436f is dropped, never pushed" read as
+                pushed = pushed or sha in claims                   # "push be74b436f", 6858217631 on #392)
                 continue
             if sha not in checked:
                 if left <= 0:
@@ -134,8 +140,10 @@ def _missing(sw, model, reads, mail: machine.Mail) -> dict[str, str]:
                     continue
                 left -= 1
                 checked[sha] = _on_github(sw, sha)
+            pushed = pushed or (sha in claims and checked[sha] is True)
             if checked[sha] is False:
-                missing[job] = sha
+                if not pushed:
+                    missing[job] = sha
                 break
     if unchecked:
         sw.out(f"{NOTE}{len(unchecked)} named commit(s) past the {SHA_READS}-read bound not checked this pass, none "
