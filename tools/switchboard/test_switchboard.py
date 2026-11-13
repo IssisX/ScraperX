@@ -1401,7 +1401,7 @@ class OldBoardsKeepMuseKeys(unittest.TestCase):
                              switch.MUSE_MARK.format(keys=key), "user": {"login": ti.BOT}}]
         self.assertEqual(ti.make(gh).muse([]), 0)
         self.assertEqual(gh.posts, [])
-        for old in switch.OLD_BOARDS:
+        for old in set(switch.OLD_BOARDS) - {switch.BOARD_ISSUE}:   # the fake's live board is #340: never an old one
             self.assertIn(f"repos/IssisX/ScraperX/issues/{old}/comments?per_page=100&page=1", gh.gets)
 
     def test_a_marker_by_another_login_on_a_closed_board_never_counts(self):

@@ -155,6 +155,7 @@ class AutoOpen(unittest.TestCase):
     def test_running_proof_opens_none(self):
         gh, head = green_setup()
         gh.runs[head][0] = dict(gh.runs[head][0], status="in_progress", conclusion=None)
+        gh.jobs = {7: [{"name": "native-tests", "status": "in_progress", "conclusion": None}]}
         gh.jobs[7] = [{"name": "native-tests", "status": "in_progress", "conclusion": None}]
         self.assertEqual(make(gh).auto_open_prs(), 0)
         self.assertEqual(gh.writes, [])
@@ -165,13 +166,48 @@ class AutoOpen(unittest.TestCase):
         self.assertEqual(make(gh).auto_open_prs(), 0)
         self.assertEqual(gh.writes, [])
 
-    def test_missing_job_line_opens_none_and_skips_the_proof_check(self):
+    def test_missing_job_line_opens_none_and_a_green_head_is_one_inbox_item(self):
+        # 11-13 (the system test): a new branch's green head with no Job line was skipped in silence every sweep
+        for name in ("fb-bot/integrate-j042-windup", "claude/integrate-j042-ammo"):
+            gh, head = green_setup(name=name)
+            gh.state = {}
+            gh.commits[head] = "Budget the windup lift\n\nNo job line here."
+            sw = make(gh)
+            self.assertEqual(sw.auto_open_prs(), 0)
+            self.assertEqual(gh.writes, [])
+            (item,) = sw.auto_pr_failed
+            self.assertEqual((item.kind, item.target, item.head), ("AUTO-PR-FAILED", name, head))
+            self.assertIn("no `Job: J-NNN` line", item.line)
+            self.assertEqual(switch.inbox_class(item), "hold")   # it reaches the integrator, never a digest entry
+            gh.gets.clear()
+            self.assertEqual(sw.auto_open_prs(), 0)   # once per head: no read, no item, the next sweep
+            self.assertEqual(sw.auto_pr_failed, ())
+            self.assertFalse(any("workflows/" in g or "pulls?state=all" in g for g in gh.gets), gh.gets)
+
+    def test_missing_job_line_on_a_red_running_or_old_head_is_no_item(self):
         gh, head = green_setup()
-        gh.commits[head] = "Budget the windup lift\n\nNo job line here."
+        gh.state = {}
+        gh.commits[head] = "No job line here."
+        gh.runs[head][0] = dict(gh.runs[head][0], conclusion="failure")
+        gh.jobs = {7: [{"name": "native-tests", "status": "completed", "conclusion": "failure"}]}
         sw = make(gh)
-        self.assertEqual(sw.auto_open_prs(), 0)
-        self.assertEqual(gh.writes, [])
-        self.assertFalse(any("workflows/" in g for g in gh.gets))   # proof never read without a Job line
+        sw.auto_open_prs()
+        self.assertEqual(sw.auto_pr_failed, ())   # a red head is the RED-BRANCH notice's
+        self.assertEqual(gh.state["no_job_at"], {"fb-bot/integrate-j042-windup": head})
+        gh, head = green_setup()
+        gh.state = {}
+        gh.commits[head] = "No job line here."
+        gh.runs[head][0] = dict(gh.runs[head][0], status="in_progress", conclusion=None)
+        gh.jobs = {7: [{"name": "native-tests", "status": "in_progress", "conclusion": None}]}
+        sw = make(gh)
+        sw.auto_open_prs()
+        self.assertEqual((sw.auto_pr_failed, gh.state["no_job_at"]), ((), {}))   # asked again next sweep
+        gh, head = green_setup()
+        gh.commits[head] = {"message": "No job line here.", "committer": {"date": "2026-10-27T12:00:00Z"}}
+        sw = make(gh)
+        sw.auto_open_prs()
+        self.assertEqual(sw.auto_pr_failed, ())
+        self.assertFalse(any("workflows/" in g or "pulls?state=all" in g for g in gh.gets), gh.gets)
 
     def test_open_pr_opens_none(self):
         gh, head = green_setup()

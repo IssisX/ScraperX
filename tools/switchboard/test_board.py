@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import pathlib
+import re
 import sys
 import types
 import unittest
@@ -211,6 +212,188 @@ class Rollover(unittest.TestCase):
         self.assertEqual((v.who, v.verdict), ("Muse", "LAND"))
 
 
+class RollGH(BoardGH):
+    """BoardGH whose issue writes act: a POST to /issues opens a board, a PATCH to closed closes one. `raced` boards
+    appear (opened by another sweep) at the next fresh listing; `fresh` counts GitHub's own reads."""
+
+    def __init__(self, live: dict, *more, raced=(), **kw):
+        super().__init__(**kw)
+        self.boards, self.closed_boards, self.down, self.state = [live, *more], [], (), {}
+        self.raced, self.fresh_reads, self.fresh_only, self.next_issue = list(raced), 0, False, 600
+
+    def fresh(self):
+        import contextlib
+        gh = self
+
+        @contextlib.contextmanager
+        def ctx():
+            gh.fresh_only = True
+            gh.fresh_reads += 1
+            gh.boards += gh.raced
+            gh.raced = []
+            try:
+                yield gh
+            finally:
+                gh.fresh_only = False
+        return ctx()
+
+    def write(self, method, path, body=None, what=""):
+        if self.dry_run:
+            self.log.append(f"DRY  {method} {path}  {what}")
+            return None
+        self.writes.append((method, path, body))
+        if method == "POST" and path == f"repos/{REPO}/issues":
+            self.next_issue += 1
+            self.boards.append({"number": self.next_issue, "body": body["body"], "title": body["title"],
+                                "comments": 0, "created_at": "2026-11-06T19:00:00Z"})
+            return {"number": self.next_issue}
+        m = re.fullmatch(rf"repos/{REPO}/issues/(\d+)", path)
+        if method == "PATCH" and m and body.get("state") == "closed":
+            n = int(m.group(1))
+            self.closed_boards += [b for b in self.boards if b["number"] == n]
+            self.boards = [b for b in self.boards if b["number"] != n]
+        return {}
+
+    def opened(self) -> list[dict]:
+        return [w[2] for w in self.writes if w[:2] == ("POST", f"repos/{REPO}/issues")]
+
+
+def board(number=384, comments=206, title="Board: live jobs (4)", body=None, created="2026-11-03T15:12:06Z") -> dict:
+    return {"number": number, "comments": comments, "title": title, "created_at": created,
+            "body": body if body is not None else (
+                "# Board: live jobs (4)\n\n<!-- ledger:start -->\nledger\n<!-- ledger:end -->\n\n**This body is the "
+                "board.** At 100 comments this board moves to \"Board: live jobs (5)\": open a new issue. (#3, #87, "
+                "#107 and #340 are closed records.)\n\n<!-- plan:start -->\njobs\n<!-- plan:end -->\n")}
+
+
+class Roll(unittest.TestCase):
+    """11-13: #384 held 206 comments and nothing rolled it (CLAUDE.md caps the board at 100)."""
+
+    def test_a_board_at_its_cap_rolls_to_one_fresh_board(self):
+        gh = RollGH(board())
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 601)
+        (made,) = gh.opened()
+        self.assertEqual(made["title"], "Board: live jobs (5)")
+        self.assertEqual(made["labels"], ["board"])
+        body = made["body"]
+        self.assertTrue(body.startswith("# Board: live jobs (5)\n\n_Continues #384, closed at 206 comments"), body)
+        self.assertIn(switch.BOARD_FROM_MARK.format(old=384), body)   # the link from the new board to the old
+        self.assertIn('moves to "Board: live jobs (6)"', body)
+        self.assertIn("(#3, #87, #107, #340 and #384 are closed records.)", body)
+        for kept in ("<!-- ledger:start -->", "<!-- ledger:end -->", "<!-- plan:start -->", "<!-- plan:end -->"):
+            self.assertIn(kept, body)
+        ((number, said),) = gh.posts   # the link from the old board to the new
+        self.assertEqual(number, 384)
+        self.assertIn("#601", said)
+        self.assertIn(switch.BOARD_MOVED_MARK.format(new=601), said)
+        self.assertIn(("PATCH", f"repos/{REPO}/issues/384", {"state": "closed", "state_reason": "completed"}), gh.writes)
+        self.assertEqual([b["number"] for b in gh.boards], [601])
+        self.assertEqual([b["number"] for b in gh.closed_boards], [384])   # closed, its label kept: old_boards reads it
+        # this run's later reads and posts are the new board's, and the next run's fallback is too
+        self.assertEqual((sw.board_issue(), gh.state["board"]), (601, 601))
+        self.assertEqual(ti.make(gh).board_issue(), 601)
+
+    def test_a_board_under_its_cap_costs_no_read_and_no_write(self):
+        gh = RollGH(board(comments=switch.BOARD_CAP - 1))
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 384)
+        self.assertEqual((gh.writes, gh.posts, gh.fresh_reads), ([], [], 0))
+        self.assertEqual(len(reads(gh, OPEN)), 1)   # board_issue's own listing, no more
+
+    def test_the_next_sweep_finds_the_new_board_and_rolls_nothing(self):
+        gh = RollGH(board())
+        ti.make(gh).board_rollover()
+        gh.writes.clear(), gh.posts.clear()
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 601)
+        self.assertEqual((gh.writes, gh.posts), ([], []))
+
+    def test_a_board_another_sweep_opened_is_used_not_a_second(self):
+        theirs = {"number": 650, "comments": 0, "title": "Board: live jobs (5)", "created_at": "2026-11-06T19:00:00Z",
+                  "body": "# Board: live jobs (5)\n\n" + switch.BOARD_FROM_MARK.format(old=384)}
+        gh = RollGH(board(), raced=[theirs])   # opened between this run's listing and its fresh read
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 650)
+        self.assertEqual(gh.opened(), [])
+        self.assertEqual([b["number"] for b in gh.boards], [650])
+
+    def test_two_sweeps_that_each_opened_one_keep_the_lower_and_close_the_other(self):
+        gh = RollGH(board())
+        gh.next_issue = 700   # this sweep's board will be #701
+        theirs = {"number": 690, "comments": 0, "title": "Board: live jobs (5)", "created_at": "2026-11-06T19:00:00Z",
+                  "body": "# Board: live jobs (5)\n\n" + switch.BOARD_FROM_MARK.format(old=384)}
+        real_write = gh.write
+
+        def write(method, path, body=None, what=""):   # the other sweep's POST lands just after this one's
+            got = real_write(method, path, body, what)
+            if method == "POST" and path == f"repos/{REPO}/issues":
+                gh.raced.append(theirs)
+            return got
+        gh.write = write
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 690)
+        self.assertEqual(len(gh.opened()), 1)
+        self.assertIn(("PATCH", f"repos/{REPO}/issues/701", {"state": "closed", "state_reason": "not_planned"}),
+                      gh.writes)
+        self.assertEqual(sorted(b["number"] for b in gh.boards), [690])
+        self.assertEqual({n for n, _ in gh.posts}, {701, 384})
+
+    def test_a_move_cut_short_is_finished_once(self):
+        # the run that opened #601 stopped before it told and closed #384: the next pass finishes, posts once
+        new = {"number": 601, "comments": 0, "title": "Board: live jobs (5)", "created_at": "2026-11-06T19:00:00Z",
+               "body": "# Board: live jobs (5)\n\n" + switch.BOARD_FROM_MARK.format(old=384)}
+        gh = RollGH(board(), new)
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_issue(), 601)   # the newest open board, and a WARN naming both
+        self.assertEqual(sw.board_rollover(), 601)
+        self.assertEqual(gh.opened(), [])
+        self.assertEqual([n for n, _ in gh.posts], [384])
+        self.assertEqual([b["number"] for b in gh.boards], [601])
+        gh.boards.append(board())   # its close did not take: the mark it posted is found, nothing is posted again
+        gh.posts.clear()
+        ti.make(gh).board_rollover()
+        self.assertEqual(gh.posts, [])
+
+    def test_a_dry_run_prints_and_moves_nothing(self):
+        gh = RollGH(board(), dry_run=True)
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 384)
+        self.assertEqual((gh.writes, gh.posts), ([], []))
+        self.assertTrue(any("POST repos/IssisX/ScraperX/issues " in line for line in gh.log), gh.log)
+        self.assertEqual(sw.board_issue(), 384)
+
+    def test_a_failed_listing_rolls_nothing(self):
+        gh = RollGH(board())
+        gh.down = (OPEN,)
+        gh.state = {"board": 384}
+        sw = ti.make(gh)
+        self.assertEqual(sw.board_rollover(), 384)
+        self.assertEqual(gh.writes, [])
+
+    def test_the_old_boards_recent_comments_are_still_read(self):
+        # a Muse verdict the bridge posted on #384 just before the roll still counts on the new board's reads
+        gh = RollGH(board())
+        gh.by_issue[384] = [{"id": 5, "body": "verdict", "user": {"login": ti.BOT}}]
+        ti.make(gh).board_rollover()
+        gh.gets.clear()
+        sw = ti.make(gh)
+        got = sw.board_comments()
+        self.assertIn(5, [c["id"] for c in got])
+        carry = [g for g in gh.gets if g.startswith(f"repos/{REPO}/issues/384/comments?since=")]
+        self.assertEqual(len(carry), 1)
+        sw.board_comments()
+        self.assertEqual(len([g for g in gh.gets if g.startswith(f"repos/{REPO}/issues/384/comments?since=")]), 1)
+
+    def test_a_title_with_no_number_still_rolls(self):
+        gh = RollGH(board(title="Board", body="no heading here"))
+        ti.make(gh).board_rollover()
+        (made,) = gh.opened()
+        self.assertEqual(made["title"], "Board (2)")
+        self.assertTrue(made["body"].startswith("# Board (2)\n\n_Continues #384"), made["body"])
+        self.assertTrue(made["body"].endswith("no heading here"), made["body"])
+
+
 class Sweep(unittest.TestCase):
     """run_sweep hands the board it resolved to the ledger and the reconciler; a sweep that needs no board reads none."""
 
@@ -241,6 +424,28 @@ class Sweep(unittest.TestCase):
         self.assertEqual(rec.call_args.args[2], NEW)
         self.assertEqual(gh.state["board"], NEW)
         self.assertEqual(len([c for c in gh.calls if c.startswith(OPEN)]), 1, gh.calls)
+
+    def test_a_full_pass_rolls_a_board_at_its_cap_before_the_ledger_and_the_reconciler_read_it(self):
+        import contextlib
+        gh = tsc.CountingGH([tsc.pr(361)], dry_run=False)
+        gh.boards = [board()]
+        gh.fresh = lambda: contextlib.nullcontext(gh)
+        write = gh.write
+
+        def acting(method, path, body=None, what=""):
+            got = write(method, path, body, what)
+            if method == "POST" and path == f"repos/{REPO}/issues":
+                gh.boards.append({"number": 601, "body": body["body"], "comments": 0,
+                                  "created_at": "2026-11-06T19:00:00Z"})
+                return {"number": 601}
+            if method == "PATCH" and path == f"repos/{REPO}/issues/384":
+                gh.boards = [b for b in gh.boards if b["number"] != 384]
+            return got
+        gh.write = acting
+        status, led, rec, sw = self.sweep(gh, {})
+        self.assertEqual(status, 0, sw.lines)
+        self.assertIn("BOARD       #384 closed; the live board is #601", sw.lines)
+        self.assertEqual((led.call_args.args[2], rec.call_args.args[2], gh.state["board"]), (601, 601, 601))
 
     def test_an_idle_sweep_reads_no_board(self):
         prs = [tsc.pr(n) for n in range(361, 364)]

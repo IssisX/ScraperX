@@ -64,9 +64,10 @@ def _comments(sw, model, reads, also=()) -> tuple[list[dict], frozenset[str]]:
     MAIL_THREADS), of the last RECENT and of `also`, once each; and the jobs whose thread was past the bound."""
     repo = sw.gh.repo
     board = sw.board_issue()
-    got = list(sw.board_comments())
+    got = list(sw.board_live_comments())
     if got and not len(got) % 100:   # the client's paged() may have stopped at its cap: read on, whole
         got = P.whole(sw.gh, f"repos/{repo}/issues/{board}/comments")
+    got += sw.board_carry()   # the board it continues, just before the roll (Switch.board_carry)
     open_issues = {int(it["number"]): it for it in reads.get("issues") or []
                    if it.get("state", "open") == "open" and it.get("pull_request") is None and it.get("number")}
     threads = sorted(dict.fromkeys(

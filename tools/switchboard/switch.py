@@ -97,6 +97,16 @@ MUSE_LABEL = "wake:muse"
 # names none and no sweep has found one (#340 opened 11-09, when #107 closed).
 BOARD_LABEL = "board"
 BOARD_ISSUE = 340
+# 11-13: nothing rolled the board at its cap (CLAUDE.md "Caps": 100 comments, then a fresh board), so #384 reached 206.
+# The full pass rolls it (Switch.board_rollover): a new issue labeled BOARD_LABEL with the old body, a link both
+# ways, the old one closed. The new body's BOARD_FROM mark names the board it continues: a second sweep finds it
+# and finishes the move rather than open another, and the old board's recent comments are still read (board_carry).
+BOARD_CAP = 100
+BOARD_FROM_MARK = "<!-- switchboard:board-from #{old} -->"
+BOARD_FROM = re.compile(r"^<!-- switchboard:board-from #(\d+) -->$", re.MULTILINE)
+BOARD_MOVED_MARK = "<!-- switchboard:board-moved to=#{new} -->"
+BOARD_CONTINUES = re.compile(r"^_Continues #\d+[^\n]*_\n?", re.MULTILINE)
+BOARD_CARRY = dt.timedelta(days=3)   # the old board's comments read with the new one's: the asks' 3-day window
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
@@ -173,13 +183,16 @@ COMPARE_FILES_CAP = 300   # GitHub's compare lists at most this many files: a li
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
-INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "STALLED", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
 # only reports (muse_report).
 # Beside these, inbox_class rides the late-job (PLAN) lines whose next step another owner holds.
 DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
+# 11-13: a claude/ PR's FIX, conflict or red waits on the integrator alone, so each wakes it at once, once per head and
+# kind (its key); still so at the next full pass, it is listed once more as STALLED (pr_inbox_items)
+OWN_STALL_KINDS = frozenset({"FIX", "CONFLICT", "RED"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
 MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
                                                # are dropped and named in the run's log (keep_held)
@@ -233,7 +246,7 @@ MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
 MAX_MUSE_FINDING = 600          # chars of a FIX finding quoted in a Muse comment
-OLD_BOARDS = (107, 87, 3)       # the boards closed before the label named them: Switch.old_boards() adds the labeled ones
+OLD_BOARDS = (340, 107, 87, 3)  # the boards closed with no label (#340 lost it): Switch.old_boards() adds the labeled ones
 MAX_OLD_BOARDS = 4              # closed boards whose muse markers still count, the newest first (a move never re-sends)
 MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a board closes at 100 comments)
 # The Muse mail pipe's health (bridge-health): the bridge (muse_bridge.gs) is an Apps Script whose errors only Cory
@@ -376,6 +389,30 @@ def no_verdict(text: str) -> str:
 
 def hours(span: dt.timedelta) -> str:
     return f"{span.total_seconds() / 3600:.1f} h"
+
+
+def board_body(old: dict, count: int) -> tuple[str, str]:
+    """The next board's (title, body) from the old one's issue: "Board: live jobs (4)" becomes "(5)", the body is
+    copied (the ledger and plan sections are rewritten between their markers by this same sweep), its own rule's
+    next name and closed-records list move one on, and a line and BOARD_FROM mark name the board it continues."""
+    number, title, body = old["number"], str(old.get("title") or "Board"), str(old.get("body") or "")
+    m = re.search(r"\((\d+)\)\s*$", title)
+    n = int(m.group(1)) if m else 1
+    name = re.sub(r"\s*\(\d+\)\s*$", "", title) or "Board"
+    new_title = f"{name} ({n + 1})"
+    body = BOARD_FROM.sub("", BOARD_CONTINUES.sub("", body))
+    body = body.replace(f"{name} ({n + 1})", f"{name} ({n + 2})")   # "At 100 comments this board moves to ..."
+
+    def records(rm: re.Match) -> str:
+        names = [x for x in re.split(r",\s*|\s+and\s+", rm.group(1)) if x] + [f"#{number}"]
+        return f"({', '.join(names[:-1])} and {names[-1]} are closed records.)"
+    body = re.sub(r"\(([^()]*?) (?:is a|are) closed records?\.\)", records, body, count=1)
+    head, _, rest = body.partition("\n")
+    if not head.startswith("# "):   # no heading of its own: the whole body follows the new one
+        rest = body
+    note = f"_Continues #{number}, closed at {count} comments; its comments stay there._\n" + \
+        BOARD_FROM_MARK.format(old=number)
+    return new_title, f"# {new_title}\n\n{note}\n\n{rest.lstrip(chr(10))}"
 
 
 def red_jobs(proof: str) -> list[str]:
@@ -604,6 +641,8 @@ def inbox_class(it: InboxItem) -> str:
     never only a digest entry."""
     if it.kind in ("TO-CLAUDE", "ASK-LATE", "RED-TRUNK"):   # RED-TRUNK: every agent's proof stands on trunk
         return "now"
+    if it.dest == "claude" and (it.kind in OWN_STALL_KINDS or it.kind == "STALLED"):
+        return "now"   # 11-13: Claude's own PR is stuck until the integrator acts (#503 FIX, #506 conflict sat)
     if it.kind in DIGEST_KINDS:
         return "ride"
     if it.kind == "PLAN":
@@ -754,6 +793,7 @@ class Switch:
                 raise
             got, why = [], f"the open issues labeled `{BOARD_LABEL}` could not be read ({plain(str(err)[:160])})"
         found = sorted(self._issue_numbers(got))
+        self._board_items = {it["number"]: it for it in got if isinstance(it, dict) and it.get("number") in found}
         last = 0 if fresh else self._last_board()
         if found:
             board = found[-1]
@@ -1757,6 +1797,39 @@ class Switch:
             text = f"the auto-open failed ({why}); the next sweep tries again."
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
+    def no_job_line(self, branch: str, sha: str, at: dt.datetime | None, had, state: dict) -> None:
+        """A head on an auto-open branch whose commit has no `Job:` line: no PR can open for it, so its owner hears.
+        New commits on a branch that had a PR (`had`, or a PR GitHub lists): unlanded work past a merged PR is one
+        AUTO-PR-FAILED item, asked once per head (prior_pr_at). 11-13 (the system test): a brand-new branch that never
+        had a PR was skipped in silence every sweep, green or not. Now its green head is one AUTO-PR-FAILED item too,
+        once per head (state "no_job_at"); a red head is the RED-BRANCH notice's, and one still running or with no
+        proof is asked again next sweep. A head older than AUTO_PR_MAX_AGE costs no read (the old claude/ branches
+        AUTO_PR_RECENT_ONLY names, and any prefix here)."""
+        seen = state.setdefault("no_job_at", {})
+        if had is None and (seen.get(branch) == sha or at is None or self.now - at > AUTO_PR_MAX_AGE):
+            return
+        owner = self.gh.repo.split("/")[0]
+        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+        if had is not None or prs:   # new commits on a branch that had a PR: unlanded work no PR can carry
+            past = self.unlanded_past(branch, sha, prs) if prs else 0
+            if past:
+                self.auto_pr_failure(branch, sha, "", "", stuck=(
+                    f"commits past merged #{past} are not on trunk and the head commit has no Job: "
+                    f"line, so no PR can open for them. The owner pushes a commit carrying the Job "
+                    f"line (the next sweep opens the PR), or the work is closed out."))
+            state.setdefault("prior_pr_at", {})[branch] = sha   # asked once per head
+            return
+        proof, _, _, _ = self.proof(sha)
+        if proof == "green":
+            self.auto_pr_failure(branch, sha, "", "", stuck=(
+                "its proof is green but the head commit has no `Job: J-NNN` line, so no PR can open. The owner "
+                "pushes a commit carrying the Job line on its own line (the next sweep opens the PR), or the work "
+                "is closed out."))
+        if proof == "green" or proof.startswith("red"):
+            seen[branch] = sha   # once per head
+        else:
+            self.out(f"SKIP       {branch} @{sha[:8]}: no Job: line and the proof is {proof}; asked again next sweep")
+
     def auto_open_prs(self, only: set[str] | None = None) -> int:
         """Open PRs for finished fb-bot/integrate-* and claude/integrate-* branches with no PR yet (J-047).
 
@@ -1775,8 +1848,8 @@ class Switch:
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
             alive = {b["name"] for b in listed}
             self.gh.state.pop("prior_pr", None)   # names only, before 11-13: blind to a new head, so dropped
-            self.gh.state["prior_pr_at"] = {n: h for n, h in (self.gh.state.get("prior_pr_at") or {}).items()
-                                            if n in alive}
+            for memo in ("prior_pr_at", "no_job_at"):
+                self.gh.state[memo] = {n: h for n, h in (self.gh.state.get(memo) or {}).items() if n in alive}
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
@@ -1797,19 +1870,10 @@ class Switch:
                 commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]   # immutable: a free 304 later
                 message = commit["message"]
                 job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
-                if not job:
-                    if had is not None:   # new commits on a branch that had a PR: unlanded work no PR can carry
-                        owner = self.gh.repo.split("/")[0]
-                        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
-                        past = self.unlanded_past(branch, sha, prs) if prs else 0
-                        if past:
-                            self.auto_pr_failure(branch, sha, job, "", stuck=(
-                                f"commits past merged #{past} are not on trunk and the head commit has no Job: "
-                                f"line, so no PR can open for them. The owner pushes a commit carrying the Job "
-                                f"line (the next sweep opens the PR), or the work is closed out."))
-                        state.setdefault("prior_pr_at", {})[branch] = sha   # asked once per head
-                    continue
                 at = parse_time(((commit.get("committer") or {}).get("date")) or "")
+                if not job:
+                    self.no_job_line(branch, sha, at, had, state)
+                    continue
                 if branch.startswith(AUTO_PR_RECENT_ONLY) and (at is None or self.now - at > AUTO_PR_MAX_AGE):
                     continue   # 11-13: 77 old claude/integrate-* branches never had a PR; none is opened, none is read
                 if self.prior_pr(branch, sha):
@@ -2023,10 +2087,110 @@ class Switch:
         return int((ctx.get("issue") or {}).get("number") or 0)
 
     def board_comments(self) -> list[dict]:
-        """The board's comments, read once per run (the review asks and off-PR verdicts of PRs with no job issue)."""
+        """The board's comments, read once per run (the review asks and off-PR verdicts of PRs with no job issue),
+        and the board it continues, its last BOARD_CARRY before the roll (board_carry)."""
+        return self.board_live_comments() + self.board_carry()
+
+    def board_live_comments(self) -> list[dict]:
+        """The live board's own comments, read once per run."""
         if getattr(self, "_board", None) is None:
             self._board = self.gh.paged(f"repos/{self.gh.repo}/issues/{self.board_issue()}/comments")
         return self._board
+
+    def board_carry(self) -> list[dict]:
+        """11-13: a board that rolled (board_rollover) names the one it continues (BOARD_FROM). That board's comments
+        from BOARD_CARRY before the new one opened are still read: a Muse verdict or an ask the bridge posted there
+        just before the roll would otherwise vanish from every read. One fixed URL, so the ETag cache answers it free
+        once the old board is closed. [] for a board that names none."""
+        memo = self.__dict__.get("_board_carry")
+        if memo is None:
+            memo = []
+            it = (getattr(self, "_board_items", None) or {}).get(self.board_issue()) or {}
+            m = BOARD_FROM.search(it.get("body") or "")
+            opened = parse_time(str(it.get("created_at") or ""))
+            if m and opened and int(m.group(1)) != it.get("number"):
+                memo = self.gh.paged(f"repos/{self.gh.repo}/issues/{int(m.group(1))}/comments"
+                                     f"?since={iso_z(opened - BOARD_CARRY)}")
+            self.__dict__["_board_carry"] = memo
+        return memo
+
+    def board_rollover(self) -> int:
+        """11-13 (#384 held 206 comments): the full pass rolls a board at BOARD_CAP comments to a fresh issue, labeled
+        BOARD_LABEL, its body the old one's (board_body), a link both ways (the new body names the old; a comment on
+        the old names the new), and closes the old one keeping its label (old_boards reads it). This run's later
+        parts read and post on the new board. Safe to repeat and to race: a board that already continues the live
+        one (its BOARD_FROM mark) is used, never a second; two sweeps that each opened one keep the lower number and
+        close the other; a move cut short (the old board still open) is finished by the next pass. Costs no read
+        unless a roll is due. Returns the live board after it."""
+        live = self.board_issue()
+        items = getattr(self, "_board_items", None) or {}
+        it = items.get(live)
+        if not it:   # the listing failed or named none: the board_issue WARN said so; nothing is rolled blind
+            return live
+        src = BOARD_FROM.search(it.get("body") or "")
+        if src and int(src.group(1)) in items and int(src.group(1)) != live:   # a move cut short: the old one is open
+            old = int(src.group(1))
+            nxt = self._board_successors(list(items.values()), old)
+        else:
+            count = it.get("comments")
+            if type(count) is not int or count < BOARD_CAP:
+                return live
+            old, nxt = live, self._board_successors(self._open_boards_fresh(), live)
+            if not nxt:   # GitHub's own answer says no sweep opened the next board yet
+                title, body = board_body(it, count)
+                got = self.gh.write("POST", f"repos/{self.gh.repo}/issues",
+                                    {"title": title, "body": body, "labels": [BOARD_LABEL]},
+                                    f"board: #{live} has {count} comments (cap {BOARD_CAP}): open {title!r}")
+                if not (isinstance(got, dict) and type(got.get("number")) is int):   # a dry run, or no number back
+                    self.out(f"BOARD       #{live} has {count} comments (cap {BOARD_CAP}): a fresh board opens now"
+                             + (" (dry run)" if self.gh.dry_run else
+                                "; no issue number came back, so the next full pass looks again"))
+                    return live
+                self.out(f"BOARD       #{live} has {count} comments (cap {BOARD_CAP}): opened #{got['number']}")
+                # a sweep that raced this one may have opened its own: read again, and the lower number stays
+                nxt = self._board_successors(self._open_boards_fresh(), live) or [dict(got, body=body)]
+        keep = nxt[0]
+        for dup in nxt[1:]:
+            self.gh.comment(dup["number"], f"Switchboard (board): a duplicate of #{keep['number']}, which continues "
+                                           f"#{old}; closed.", f"board: close duplicate #{dup['number']}")
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{dup['number']}",
+                          {"state": "closed", "state_reason": "not_planned"}, f"board: close duplicate #{dup['number']}")
+        return self._board_moved(old, keep["number"], keep)
+
+    def _open_boards_fresh(self) -> list[dict]:
+        """The open issues labeled BOARD_LABEL, GitHub's own answer (no ETag cache): what another sweep just did."""
+        with self.gh.fresh():
+            got = self.gh.paged(f"repos/{self.gh.repo}/issues?labels={urllib.parse.quote(BOARD_LABEL, safe='')}"
+                                "&state=open")
+        return [b for b in got if isinstance(b, dict) and "pull_request" not in b]
+
+    @staticmethod
+    def _board_successors(listed: list, old: int) -> list[dict]:
+        """The open boards whose body continues #old (BOARD_FROM), the lowest number first."""
+        return sorted((b for b in listed if type(b.get("number")) is int and b["number"] != old
+                       and any(int(n) == old for n in BOARD_FROM.findall(b.get("body") or ""))),
+                      key=lambda b: b["number"])
+
+    def _board_moved(self, old: int, new: int, item: dict) -> int:
+        """Finish a roll: the old board names the new one (once: its comments since the new one opened are read for
+        the mark) and is closed; this run's reads and posts move to the new board."""
+        opened = parse_time(str(item.get("created_at") or "")) or self.now
+        mark = BOARD_MOVED_MARK.format(new=new)
+        since = self.gh.paged(f"repos/{self.gh.repo}/issues/{old}/comments?since={iso_z(opened - dt.timedelta(minutes=5))}")
+        if not any(mark in (c.get("body") or "") for c in since if isinstance(c, dict)):
+            self.gh.comment(old, f"Switchboard (board): this board is closed at its cap of {BOARD_CAP} comments "
+                                 f"(CLAUDE.md). The live board is #{new}: read its body and post there.\n\n{mark}",
+                            f"board: #{old} moved to #{new}")
+        self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{old}", {"state": "closed", "state_reason": "completed"},
+                      f"board: close #{old}, moved to #{new}")
+        self.out(f"BOARD       #{old} closed; the live board is #{new}")
+        self._board_issue, self._board = new, None
+        self._board_items = {new: item}
+        for memo in ("_board_carry", "_plan_notes"):
+            self.__dict__.pop(memo, None)
+        if isinstance(getattr(self.gh, "state", None), dict):
+            self.gh.state["board"] = new
+        return new
 
     def bridged_verdicts(self, number: int, comments: list[dict]) -> list[rules.Verdict]:
         """Muse's verdicts on PR #number that the mail bridge posted off the PR (on the job issue or the board,
@@ -2757,8 +2921,8 @@ class Switch:
                 if failed:
                     out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})",
                                     both, run_id=rid))
-            if owner == "muse":
-                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse", run_id=rid))
+            if owner in ("muse", "claude"):   # 11-13: Claude's own PR too, at once (inbox_class), not only once stuck
+                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", owner, run_id=rid))
             on_head = [parse_time(r["created_at"]) for r in runs_here if r.get("head_sha") == f.head_sha]
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if head_since:
@@ -2766,6 +2930,13 @@ class Switch:
             if head_since and now - head_since >= INBOX_RED_STUCK and owner:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
                                              f"{hours(now - head_since)} ({proof_link})", owner, run_id=rid))
+        if not mine and owner == "claude" and getattr(self, "full_pass", False):
+            # 11-13 (#503's FIX, #506's conflict sat with nobody acting): Claude's own PR still FIX, in conflict or red
+            # at the head an earlier sweep listed it at is listed again, once per head, by the next full pass
+            stalled = [it for it in out if it.kind in OWN_STALL_KINDS and it.dest == "claude" and it.listed(reported)]
+            if stalled:
+                out.append(item("STALLED", f"still {', '.join(it.kind for it in stalled)} at this head, a sweep or more "
+                                           f"after it was listed, and no new head: {plain('; '.join(d.reasons))}"))
         if not rerun and not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
             action = ("FIX-CI" if f.proof.startswith("red") else
                       "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
@@ -4060,6 +4231,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                for t in board_ledger.ripe((state.get("timers") or {}).get("ledger") or [], now)):
             sw.out("RIPE        a ledger deadline on an item that changed since the full pass: a full pass now")
             delta, full = None, True
+    sw.full_pass = delta is None and not targeted   # 11-13: a full pass lists Claude's own stalled PRs (STALLED)
     if steer and not targeted and not sw.merge_only and full:
         sw.sweep_owner_labels()
     if delta is not None:
@@ -4123,6 +4295,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     # the inbox below lists its late jobs and the queue check counts from its table. In shadow it only prints,
     # so it runs at the very end of this function, after every live part.
     plan_due = bool(steer and not targeted and delta is None)
+    if plan_due:   # 11-13: before any part posts on the board, a board at its cap rolls to a fresh one (steer only)
+        part("board rollover", sw.board_rollover)
     if plan_due and sw.plan_mode() == "live":
         part("plan", lambda: sw.plan_check(steered))
 

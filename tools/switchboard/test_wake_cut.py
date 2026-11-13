@@ -120,10 +120,70 @@ class Classes(unittest.TestCase):
         for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "ride"),
                            ("reviewer", "ride")):
             self.assertEqual(switch.inbox_class(self.item("PLAN", owner)), cls, owner)
+        own = ("FIX", "CONFLICT", "RED", "STALLED")   # 11-13: Claude's own PR stuck on the integrator: at once
+        for kind in own:
+            self.assertEqual(switch.inbox_class(self.item(kind, "claude")), "now", kind)
         for kind in switch.INBOX_ORDER:   # every other kind is the integrator's work: it holds, never only rides
             if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "ASK-LATE", "RED-TRUNK", "PLAN"):
                 for dest in ("claude", "both"):
+                    if dest == "claude" and kind in own:
+                        continue
                     self.assertEqual(switch.inbox_class(self.item(kind, dest)), "hold", (kind, dest))
+
+
+class OwnPrStalled(unittest.TestCase):
+    """11-13: #503 (an open review FIX) and #506 (a merge conflict), both Claude's own system PRs, sat with nobody
+    acting: their items only held, and a first red on a claude/ PR gave none at all. Now each wakes the integrator
+    at once, once per head and kind, and the next full pass lists the PR once more if it is still stuck there."""
+
+    REF = "claude/integrate-cacheout-rate"
+
+    def own(self, **kw) -> switch.Steered:
+        return ti.steered(number=503, ref=self.REF, job="J-072", **kw)
+
+    def red(self):
+        return self.own(proof="red: native-tests", committed=ti.ago(1), run_id=7), \
+            ti.FakeGH(runs=[ti.run(7, self.REF, HEAD, hours=0.2)], jobs={7: ti.RED_JOBS})
+
+    def test_a_fix_a_conflict_and_a_first_red_each_post_at_once_even_inside_the_hold(self):
+        for s, gh in ((self.own(verdicts=[ti.fix()]), ti.FakeGH()), (self.own(mergeable=False), ti.FakeGH()), self.red()):
+            self.assertEqual(at(gh, 0).inbox([ti.human_merge(number=256)]), 1)   # a post a minute ago: the hold runs
+            self.assertEqual(at(gh, 1).inbox([s]), 1, s.decision)
+            (kind,) = {it.kind for it in at(gh, 2).inbox_items([s], frozenset())}
+            self.assertIn(kind, ("FIX", "CONFLICT", "RED"))
+            self.assertIn(f"- {kind} [#503]", gh.posts[-1][1])
+            self.assertEqual(at(gh, 3).inbox([s]), 0, "once per head and kind")
+
+    def test_a_new_head_is_a_new_item(self):
+        gh = ti.FakeGH()
+        at(gh, 0).inbox([self.own(verdicts=[ti.fix()])])
+        moved = self.own(head=OTHER_HEAD, verdicts=[ti.fix(head=OTHER_HEAD)])
+        self.assertEqual(at(gh, 1).inbox([moved]), 1)
+
+    def test_a_full_pass_lists_it_once_more_if_still_stuck_and_a_fast_sweep_never(self):
+        s = self.own(verdicts=[ti.fix()], committed=ti.ago(0.2))   # pushed lately: no FIX-STUCK beside it
+        gh = ti.FakeGH()
+        at(gh, 0).inbox([s])
+        fast = at(gh, 5)
+        fast.full_pass = False
+        self.assertEqual(fast.inbox([s]), 0)
+        full = at(gh, 60)
+        full.full_pass = True
+        self.assertEqual(full.inbox([s]), 1)
+        self.assertIn("- STALLED [#503]", gh.posts[-1][1])
+        self.assertIn("still FIX at this head", gh.posts[-1][1])
+        again = at(gh, 120)
+        again.full_pass = True
+        self.assertEqual(again.inbox([s]), 0, "STALLED once per head")
+
+    def test_a_full_pass_lists_no_stall_for_what_it_lists_first_or_for_muse(self):
+        gh = ti.FakeGH()
+        sw = at(gh, 0)
+        sw.full_pass = True
+        self.assertEqual([it.kind for it in sw.inbox_items([self.own(verdicts=[ti.fix()])], frozenset())], ["FIX"])
+        muse = ti.steered(ref="fb-bot/integrate-j042", verdicts=[ti.fix()])
+        seen = frozenset({switch.inbox_key("FIX", "#256", HEAD), switch.inbox_key("muse-FIX", "#256", HEAD)})
+        self.assertEqual(sw.inbox_items([muse], seen), [])   # Muse's own: the mail and FIX-STUCK, as before
 
 
 class Hold(unittest.TestCase):
