@@ -6,9 +6,9 @@ This file is only the rules that change what an agent does. Add a rule here only
 
 ## Fundamentals (Cory 11-13)
 
-- One goal: Claude and Muse build the game. Judge the system by what lands, not what was built.
-- Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: two
-  switchboard "fixes" stopped Muse landing for a day).
+- One goal: Claude and Muse build the game. Judge the system by what lands.
+- Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: a
+  day went to patches around two switchboard changes).
 - Build and test only what changed. Blocker first: nothing lower while it is stuck. A delay is a failure, never "wait".
 - Fix only what is measured broken, one small change at a time; no new machinery, no side projects.
 
@@ -112,7 +112,7 @@ it to match, never ask him again.
 - **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
   a new job gets a fresh helper, never a resumed one (11-13). Ask Cory before a second session. Stopping a working helper
   is Cory's call: give him its run time, model, effort (11-12).
-- **Context:** keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
+- **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
   current; after a compact re-read it, this file and the hourly file, and say what may be lost.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads go to a helper; read only the section a
   job needs (`REPO_MAP.md`, grep). Caps: the board 100 comments (then a fresh board), a job
