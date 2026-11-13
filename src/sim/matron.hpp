@@ -2044,6 +2044,14 @@ private:
     [[nodiscard]] float floor_of(float y) const;
     // An observed position's supporting scan surface, including floors below her level list.
     [[nodiscard]] float floor_at(float x, float y, float z) const;
+    // The scan patch top under a body centred at (x, y, z): the floor that
+    // body stands on, when her scan knows one there. False when no patch
+    // holds the spot within the body's standing height.
+    [[nodiscard]] bool scan_floor(float x, float y, float z, float &floor) const;
+    // The floor under a heard or glimpsed body: her scan's patch top under
+    // its feet (centre y less 0.9 m), else floor_at. A crash keeps floor_at:
+    // its impact point is not a body standing on a patch.
+    [[nodiscard]] float floor_under_body(float x, float y, float z) const;
     // (x, z) put on the nearest of her level's floor lines (not the
     // catwalk's, not a gap's): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
@@ -2863,6 +2871,9 @@ private:
     mutable std::uint32_t acoustic_queries_ = 0;
     bool lead_seen_ = false;
     Sense lead_sense_ = Sense::None;
+    // The lead is a crash she heard (a load's impact), not the player: once
+    // she stands at it there is nothing there to chase.
+    bool lead_crash_ = false;
     bool glimpsed_ = false;
     // The stalk (matron_stalk.cpp).
     bool watched_ = false;

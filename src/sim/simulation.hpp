@@ -4,8 +4,12 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace scraperx::sim {
+namespace stock_damage {
+struct DamageState;
+} // namespace stock_damage
 namespace traversal {
 class AffordanceMap;
 enum class MoveKind : std::uint8_t;
@@ -1681,15 +1685,18 @@ public:
     [[nodiscard]] std::uint32_t loose_stock_count() const noexcept;
     [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
     // Where each loose-stock group begins in the table (loose_stock.hpp):
-    // the crane steel, the machine weights, the Matron's throwables, and
-    // the east/west stock, so a test can reach a group without assuming
-    // it is the last.
+    // the crane steel, the machine weights, the Matron's throwables, the
+    // east/west stock, and the upper stock, so a test can reach a group
+    // without assuming it is the last.
     [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
     // J-042's two kinds by her band, laid last of all (after the east/west stock).
     [[nodiscard]] std::uint32_t loose_stock_matron_kinds_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_upper_begin() const noexcept;
+    // J-038 slice 1: a stock body's dent record, empty when undamaged.
+    [[nodiscard]] stock_damage::DamageState stock_damage(std::uint64_t entity) const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,
@@ -1830,6 +1837,10 @@ public:
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): kit body `body` spun at
+    // `angular_velocity` (rad/s), its linear velocity untouched — a spin
+    // without a throw, so a break can be read for its orbital term.
+    void debug_spin_kit_body(std::uint32_t body, Vector3 angular_velocity) noexcept;
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
@@ -1911,6 +1922,21 @@ public:
     // first: a reader keeps the last sequence it has seen.
     [[nodiscard]] std::vector<ImpactSnapshot> impacts() const;
     [[nodiscard]] std::uint64_t last_impact_sequence() const noexcept;
+    // Tests only (never bound to the bridge): the mass of the free load
+    // in the hands, or 0 — a handle or a shackle is held up by its
+    // hinge or its line, not the hands.
+    [[nodiscard]] float debug_carried_load_mass() const noexcept;
+    // Tests only (never bound to the bridge): the parent's motion at the
+    // last break-piece spawn — its centre-of-mass velocity, its angular
+    // velocity, and its world-space centre of mass. A test can check the
+    // spawn's orbital term against the parent's true motion, which no
+    // drop test can separate from the landing impact's own velocity.
+    struct BreakParentSample {
+        Vector3 velocity{};
+        Vector3 angular_velocity{};
+        Vector3 centre_of_mass{};
+    };
+    [[nodiscard]] BreakParentSample debug_last_break_parent() const noexcept;
     // The tower's machines heard (gap 10): each moving part tracked for hits,
     // whether it is its stage's running source, and the running noise of the
     // last step (loudness 0..1, what Matron::hear is given).
@@ -1986,6 +2012,11 @@ public:
     // nothing.
     [[nodiscard]] std::vector<std::uint8_t> save_game() const;
     [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
+    // Why the last load_game was refused, where the refusal names itself
+    // (so far: "DAMG record size N bytes, this build reads M", a stock
+    // damage section written by a build whose record differs); empty for
+    // any other refusal and after a load that was taken.
+    [[nodiscard]] std::string last_load_refusal() const;
     // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): an object
     // made outside the simulation, handed in between ticks as data, like a
     // touch. `hull` is its hull file (sim/fabricated.hpp), untrusted: its
@@ -2024,6 +2055,12 @@ public:
     std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
+    // Tests only: called after every fixed step (also inside a batched
+    // advance), with the given context, for a measurement that must see
+    // every tick (a chase sampler). Null by default: the game never sets
+    // it, and the hook must only read state, never change it.
+    using DebugStepHook = void (*)(void *context) noexcept;
+    void debug_set_step_hook(DebugStepHook hook, void *context) noexcept;
     // Test setup: put her home (her locker, where she wakes) on the deck whose
     // top is deck_top, kept across a world rebuilt after she ends a run. The
     // game's home is the stack's deck 1 (11 m); tests written for her old
@@ -2038,6 +2075,10 @@ private:
     void step_fixed() noexcept;
 
     std::unique_ptr<PhysicsWorld> physics_world_;
+    // A measurement's per-tick hook (debug_set_step_hook): null unless a
+    // test sets it.
+    DebugStepHook step_hook_ = nullptr;
+    void *step_hook_context_ = nullptr;
     // To start again whole (a run the Matron ended): how the world was made.
     InitialSpawn initial_spawn_ = InitialSpawn{};
     float matron_home_ = -1.0F;   // place_matron_home's deck top; -1: the world's own
@@ -2091,6 +2132,7 @@ private:
     Snapshot snapshot_{};
     StepTiming step_timing_{};   // kept across a world rebuilt after she ends a run
     Vector3 previous_player_position_{};
+    std::string last_load_refusal_;  // see last_load_refusal()
     Vector3 previous_matron_position_{};
     double previous_matron_yaw_ = 0.0;
     // Her body and facing at the start of this tick, for render_matron_*().

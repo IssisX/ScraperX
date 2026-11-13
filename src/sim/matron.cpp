@@ -609,6 +609,40 @@ float Matron::floor_of(const float y) const {
     return best;
 }
 
+// The scan patch top under a body centred at (x, y, z): the patch holding
+// the spot whose top is nearest the body's feet (y less 0.9 m), within the
+// body's standing height. False when her scan holds no such patch there.
+bool Matron::scan_floor(const float x, const float y, const float z, float &floor) const {
+    if (scanned_ == nullptr) return false;
+    float best = std::numeric_limits<float>::max();
+    bool found = false;
+    for (const traversal::Patch &p : scanned_->patches()) {
+        if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+            z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+            p.top > y + 0.15F || y - p.top > 2.2F) {
+            continue;
+        }
+        const float distance = std::abs(y - 0.9F - p.top);
+        if (distance < best) {
+            best = distance;
+            floor = p.top;
+            found = true;
+        }
+    }
+    return found;
+}
+
+// The floor under a heard or glimpsed body: her scan's patch top under its
+// feet, else floor_at. A body centre 0.9 m above its feet reads its real
+// floor off her scan instead of the levels table, which knows no floor
+// between the decks (J-127: a heard lead on the stepped beam read the deck
+// 2.8 m below him and walked her off the platform to it).
+float Matron::floor_under_body(const float x, const float y, const float z) const {
+    float floor = 0.0F;
+    if (scan_floor(x, y, z, floor)) return floor;
+    return floor_at(x, y, z);
+}
+
 // A sound or sighting belongs to the steel below its actual position, not
 // automatically to her own deck. The levels table does not include grade;
 // her collision scan does. Use the closest local top within the player's
@@ -617,25 +651,8 @@ float Matron::floor_at(const float x, const float y, const float z) const {
     float lowest = std::numeric_limits<float>::max();
     for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
     if (y < lowest - 0.5F) {
-        if (scanned_ != nullptr) {
-            float best = std::numeric_limits<float>::max();
-            float floor = 0.0F;
-            bool found = false;
-            for (const traversal::Patch &p : scanned_->patches()) {
-                if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
-                    z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
-                    p.top > y + 0.15F || y - p.top > 2.2F) {
-                    continue;
-                }
-                const float distance = std::abs(y - 0.9F - p.top);
-                if (distance < best) {
-                    best = distance;
-                    floor = p.top;
-                    found = true;
-                }
-            }
-            if (found) return floor;
-        }
+        float floor = 0.0F;
+        if (scan_floor(x, y, z, floor)) return floor;
         return y - 0.9F;
     }
     if (zipline_ != nullptr) {
@@ -910,6 +927,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     // her ears are not.
     lead_seen_ = sense == Sense::Sight || sense == Sense::Touch;
     lead_sense_ = sense;
+    lead_crash_ = false;  // a crash lead is marked by its caller
     lead_valid_ = true;
     chase_way_held_ = false;  // a fresh lead earns its own chase window
 }
@@ -2568,7 +2586,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
             take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
-                      floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())),
+                      floor_under_body(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()),
+                                       float(ev.heard_at.GetZ())),
                       ev.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -2653,8 +2672,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // middle 0.9 up (physics_world.cpp); a crouch drops the
             // middle 0.3 with the soles where they are, so this reads
             // at most 0.3 low for a crouched player, inside every
-            // floor tolerance here. A sound's lead keeps floor_of: a
-            // noise's height is not a floor she can see.
+            // floor tolerance here. A player's sound takes the same
+            // floor off her scan (floor_under_body); only a crash
+            // keeps floor_at, its impact point no body standing on a patch.
             take_lead(px, pz, float(ev.seen_at.GetY()) - 0.9F, heard ? loudness : 0.3F, Sense::Sight);
             wary_ = false;
             state_ = State::Hunting;
@@ -2664,7 +2684,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_x_ = px;
             look_z_ = pz;
             look_s_ = 1.0F;
-            take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
+            take_lead(px, pz, floor_under_body(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
@@ -2676,12 +2696,14 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
             const float sz = crash_first ? crash.z : float(ev.heard_at.GetZ());
-            const float sfloor = floor_at(sx, sy, sz);
+            const float sfloor =
+                crash_first ? floor_at(sx, sy, sz) : floor_under_body(sx, sy, sz);
             const float loud = crash_first ? crash.loudness : loudness;
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -2695,6 +2717,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // her level: another's she cannot see for its deck, she goes
                 // by the way there).
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
@@ -2959,6 +2982,26 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                                          : (lead_seen_ ? lose_track
                                                                         : std::min(lose_track, kAcousticMemorySeconds));
             const float heard_limit = (by_way_held && !wary_) ? lose_track : kAcousticMemorySeconds;
+            // A crash's place reached (a load's impact she heard, not the
+            // player): she is there and nothing there is to chase, so she
+            // looks about at once instead of standing in the hunt until
+            // the pursuit clock runs out (J-038: the clock alone held her
+            // 7 s at a crate's break, on top of the look). Only on her own
+            // level and standing on its steel (not under a lead decks up,
+            // nor still climbing to it), never wary (that one peers from
+            // its vantage), and only after her mischief has had its turn
+            // (a piece at that place is still hers to take or shove).
+            const bool at_crash = lead_crash_ && !lead_seen_ && !elsewhere && !wary_ &&
+                                  distance_xz(ax, az, heard_x_, heard_z_) <= 1.5F &&
+                                  std::abs(feet_y - floor_y) <= 1.0F;
+            const auto look_about = [&]() {
+                turn_ = Turn::None;
+                turn_s_ = 0.0F;
+                state_ = State::Searching;
+                search_s_ = 0.0F;
+                search_budget_s_ = 1.0e9F;
+                search_trip_s_ = 0.0F;
+            };
             if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit)) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
@@ -2989,12 +3032,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     guess_line_ = -1;
                     guess_climb_ = -1;
                 }
-                turn_ = Turn::None;
-                turn_s_ = 0.0F;
-                state_ = State::Searching;
-                search_s_ = 0.0F;
-                search_budget_s_ = 1.0e9F;
-                search_trip_s_ = 0.0F;
+                look_about();
             } else if (wary_) {
                 // Wary: up to where she can see the place, then she looks.
                 if (distance_xz(ax, az, heard_x_, heard_z_) <= kVantageM &&
@@ -3028,6 +3066,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     break;
                 }
                 stock_shove_ = -1;
+                if (at_crash) {
+                    // At the place, as her look about it stands (Searching).
+                    look_about();
+                    walk_toward(dt, ax, az, 0.0F);
+                    break;
+                }
                 // In the Turn a gap is no bar: she leaps it. A lead on
                 // another level she has no way to: the place on her own lines
                 // over or under it.
@@ -4449,6 +4493,7 @@ void Matron::restore(const Saved &saved) {
         wary_ = false;
         lead_seen_ = false;
         lead_sense_ = Sense::None;
+        lead_crash_ = false;
         glimpsed_ = false;
         end_encounter();
         lead_valid_ = false;

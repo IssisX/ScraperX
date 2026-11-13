@@ -45,6 +45,15 @@ constexpr std::uint64_t kStockEntityLimit = 6000;
 // a range of their own above every other in the world.
 constexpr std::uint64_t kFabricatedEntityBase = 0x20000;
 constexpr std::uint64_t kFabricatedEntityLimit = kFabricatedEntityBase + 32;
+// Break pieces (sim/stock_damage.hpp): after the fabricated range, 8 per
+// stock body, derived from the broken body's own entity. They are kit
+// bodies — spawn_break_pieces() makes them carryable — so the predicates
+// below must recognize them, or a checkpoint saved while carrying a piece
+// loses the carry on a fresh load and the grip-force release skips them.
+// Owned here, not in stock_damage.hpp: the include runs kit <- loose_stock
+// <- stock_damage, so stock_damage.hpp keeps an alias to these.
+constexpr std::uint64_t kPieceEntityBase = 0x20020;
+constexpr std::uint64_t kPieceEntityLimit = kPieceEntityBase + 8192;
 
 [[nodiscard]] constexpr bool is_stock_entity(const std::uint64_t entity) noexcept {
     return entity >= kStockEntityBase && entity < kStockEntityLimit;
@@ -54,14 +63,18 @@ constexpr std::uint64_t kFabricatedEntityLimit = kFabricatedEntityBase + 32;
     return entity >= kFabricatedEntityBase && entity < kFabricatedEntityLimit;
 }
 
+[[nodiscard]] constexpr bool is_piece_entity(const std::uint64_t entity) noexcept {
+    return entity >= kPieceEntityBase && entity < kPieceEntityLimit;
+}
+
 [[nodiscard]] constexpr bool is_kit_entity(const std::uint64_t entity) noexcept {
     return (entity >= kStaticEntityBase && entity < kEntityLimit) || is_stock_entity(entity) ||
-           is_fabricated_entity(entity);
+           is_fabricated_entity(entity) || is_piece_entity(entity);
 }
 
 [[nodiscard]] constexpr bool is_dynamic_entity(const std::uint64_t entity) noexcept {
     return (entity >= kDynamicEntityBase && entity < kEntityLimit) || is_stock_entity(entity) ||
-           is_fabricated_entity(entity);
+           is_fabricated_entity(entity) || is_piece_entity(entity);
 }
 
 // What a surface is made of, for the presentation's palette. Not physics.
@@ -510,6 +523,8 @@ public:
     // Taken out of the world (a thing picked up and kept): parked where it
     // is, drawn no more; a checkpoint keeps it so.
     void park(BodyIndex body) { set_enabled(body, false); }
+    // Back in the world: a parked body re-enters where the caller puts it.
+    void unpark(BodyIndex body) { set_enabled(body, true); }
 
     // ---- read back ------------------------------------------------------
     [[nodiscard]] std::uint32_t body_count() const noexcept {

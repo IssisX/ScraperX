@@ -669,12 +669,19 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
     return device_onto(s, YardCrane::kMagnetEntity, YardCrane::kMagnetKg, 2.0, x, z);
 }
 
-// The save's tail since her damage joined it: the grips' two lists ([n][n
-// loads][n][n ratings]), then her damage under its mark (MAD1: the mark,
-// two meters, one dead byte), then the fabricated objects if the world
-// holds any (FAB1: the mark, a count, each an entity, length-first hull
-// bytes, thirteen state numbers, two flag bytes). The offset of the grip
-// lists, or bytes.size() when the save does not hold them so.
+// Where the grips' two lists start ([n][n loads][n][n ratings]): the offset
+// of the first count, or bytes.size() if the save holds them nowhere the
+// layout lays them out. The lists are not always at the end: after them come
+// her damage (MAD1, always written now), her per-region injury (INJ1, J-059
+// #343 fix, always written now), the fabricated objects (FAB1), the stock
+// damage (DAMG), and the grip-entities section (GRIP, one entity per grip),
+// each only when the world holds it. A save with a grip-entities section is
+// found from its end, allowing her damage and injury between the lists and
+// it; a save with her damage and no entities section is found from the
+// damage mark, allowing her injury and a fabricated section after it. (A save
+// with a fabricated or damage section between the injury and the entities
+// section is not located here: no test saves a world whose grip holds a load
+// and whose stock is fabricated or damaged.)
 std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     const auto word = [&bytes](const std::size_t at, std::uint32_t &out) {
         if (at + 4 > bytes.size()) {
@@ -683,6 +690,67 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
         std::memcpy(&out, bytes.data() + at, 4);
         return true;
     };
+    // The grip-entities section, if any, is last: [GRIP][n][n entities].
+    // Her damage (MAD1, 13 bytes) may sit between the lists and it: a
+    // save the merged writer made always carries it; an older save does
+    // not. The lists end where the damage (or the section) starts, so
+    // the counts read back as n.
+    constexpr std::uint32_t kGripMark = 0x47524950U;
+    constexpr std::uint32_t kDamageMark = 0x314D414DU;
+    for (std::size_t n = 1; n <= 16; ++n) {
+        const std::size_t section = 8 + 8 * n;  // the entities section's bytes
+        if (bytes.size() < 2 * section) {
+            continue;
+        }
+        const std::size_t grip_at = bytes.size() - section;
+        std::uint32_t mark = 0, count = 0;
+        if (!word(grip_at, mark) || mark != kGripMark || !word(grip_at + 4, count) || count != n) {
+            continue;
+        }
+        for (const std::size_t gap : {std::size_t{0}, std::size_t{13}, std::size_t{89}}) {
+            if (grip_at < gap + 8 + 8 * n) {
+                continue;
+            }
+            const std::size_t at = grip_at - gap - (8 + 8 * n);
+            if (gap == 13 || gap == 89) {
+                std::uint32_t dmark = 0;
+                float damage = 0.0F, player = 0.0F;
+                std::uint8_t dead = 0;
+                if (!word(at + 8 + 8 * n, dmark) || dmark != kDamageMark) {
+                    continue;
+                }
+                std::memcpy(&damage, bytes.data() + at + 8 + 8 * n + 4, 4);
+                std::memcpy(&player, bytes.data() + at + 8 + 8 * n + 8, 4);
+                std::memcpy(&dead, bytes.data() + at + 8 + 8 * n + 12, 1);
+                if (!std::isfinite(damage) || !std::isfinite(player) || dead > 1) {
+                    continue;
+                }
+            }
+            if (gap == 89) {
+                // Her per-region injury (INJ1, J-059 #343 fix) between her
+                // damage and the entities section: the mark, then nine
+                // j_region and nine j_event, 72 bytes after it.
+                std::uint32_t imark = 0;
+                if (!word(at + 8 + 8 * n + 13, imark) || imark != 0x314A4E49U) {
+                    continue;
+                }
+                bool injury_ok = true;
+                for (std::size_t i = 0; i < 18 && injury_ok; ++i) {
+                    float d = 0.0F;
+                    std::memcpy(&d, bytes.data() + at + 8 + 8 * n + 13 + 4 + 4 * i, 4);
+                    injury_ok = std::isfinite(d) && d >= 0.0F;
+                }
+                if (!injury_ok) {
+                    continue;
+                }
+            }
+            std::uint32_t loads = 0, ratings = 0;
+            if (!word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
+                continue;
+            }
+            return at;
+        }
+    }
     // A fabricated section parses forward from its mark and ends exactly at
     // the save's end.
     const auto fabricated_to_end = [&bytes, &word](const std::size_t at) {
@@ -705,7 +773,6 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     };
     // Her damage's mark, then the grips just before it, then either the
     // save's end or a fabricated section to it.
-    constexpr std::uint32_t kDamageMark = 0x314D414DU;
     for (std::size_t m = 0; m + 13 <= bytes.size(); ++m) {
         std::uint32_t mark = 0;
         if (!word(m, mark) || mark != kDamageMark) {
@@ -725,14 +792,24 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
             if (!word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
                 continue;
             }
-            if (m + 13 == bytes.size() || fabricated_to_end(m + 13)) {
+            // After her damage, her per-region injury, under its own mark
+            // (INJ1, J-059 #343 fix): nine j_region and nine j_event, 72
+            // bytes after the mark. A save made before it ends at the
+            // damage, or at the fabricated objects' mark.
+            std::size_t tail = m + 13;
+            std::uint32_t injury_mark = 0;
+            if (tail + 76 <= bytes.size() && word(tail, injury_mark) && injury_mark == 0x314A4E49U) {
+                tail += 76;
+            }
+            if (tail == bytes.size() || fabricated_to_end(tail)) {
                 return at;
             }
         }
     }
     // A save from before her damage ends in the grips themselves.
     for (std::size_t n = 1; n <= 16 && bytes.size() >= 8 + 8 * n; ++n) {
-        std::uint32_t loads = 0, ratings = 0;
+        std::uint32_t loads = 0;
+        std::uint32_t ratings = 0;
         if (!word(bytes.size() - (8 + 8 * n), loads) || !word(bytes.size() - (4 + 4 * n), ratings)) {
             continue;
         }
