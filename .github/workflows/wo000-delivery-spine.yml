@@ -744,7 +744,7 @@ jobs:
 
       # Her drawn body, not the sim's: the probe records the skeleton the renderer poses for her (and her hair)
       # frame by frame while a scenario plays, and check.py fails on a bone drawn longer than its rest length
-      # by more than 5%, a drawn hand more than 5 cm off the grip the sim says it holds, a foot that slides
+      # by more than 5%, a drawn hand more than 3 cm off the grip the sim says it holds, a foot that slides
       # more than 5 cm while she stands, and hair or skirt more than 3 mm inside her body. A known defect is
       # an expected failure there, naming the exit-board item that fixes it. The owner, 2026-10-29: "I don't
       # think her arms should have passed the tests. That means the tests weren't sufficient."
