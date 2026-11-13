@@ -111,14 +111,15 @@ class Classes(unittest.TestCase):
         return switch.InboxItem(kind, "#1", HEAD, kind, dest)
 
     def test_each_kind_has_its_class(self):
-        self.assertEqual(switch.inbox_class(self.item("TO-CLAUDE")), "now")
+        for kind in ("TO-CLAUDE", "RED-TRUNK"):   # an ask, a red trunk
+            self.assertEqual(switch.inbox_class(self.item(kind)), "now", kind)
         for kind in ("FYI", "STARTED", "ACK", "RERUN"):
             self.assertEqual(switch.inbox_class(self.item(kind)), "ride", kind)
         for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "ride"),
                            ("reviewer", "ride")):
             self.assertEqual(switch.inbox_class(self.item("PLAN", owner)), cls, owner)
         for kind in switch.INBOX_ORDER:   # every other kind is the integrator's work: it holds, never only rides
-            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "PLAN"):
+            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "RED-TRUNK", "PLAN"):
                 for dest in ("claude", "both"):
                     self.assertEqual(switch.inbox_class(self.item(kind, dest)), "hold", (kind, dest))
 
