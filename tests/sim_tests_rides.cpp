@@ -6,25 +6,7 @@
 // the seat, STRAP IN and KICK THE TRIP; the ram comes down and strikes the
 // seat's buffer, the seat swings up to the 242 ring's edge and the rack holds
 // it; UNBUCKLE and step off north onto the ring.
-struct SwingRide final {
-    bool boarded = false;
-    bool idle_held = false;       // walked in, not strapped: the ram stays on its hook
-    bool strapped = false;
-    bool strapped_held = false;   // strapped, not kicked: nothing moves
-    bool tripped = false;
-    bool struck = false;
-    double hit_after_kick_s = 0.0;
-    double ram_speed_after_blow = 0.0;
-    double apex_floor = 0.0;
-    double held_floor = 0.0;
-    double held_drift = 0.0;
-    int tooth = -1;
-    double peak_g = 0.0;
-    double buffer_loss = 0.0;
-    double residual = 0.0;
-    bool on_242 = false;
-    scraperx::sim::Snapshot end{};
-};
+// (SwingRide lives in sim_tests.hpp, so the chase-measurement scenario can read it.)
 
 bool swing_board(scraperx::sim::Simulation &s) {
     return walk_to(s, -13.35, -127.5, 20.0) && walk_to(s, -13.35, -98.8, 25.0) &&
@@ -191,11 +173,7 @@ SCRAPERX_SELECT("swing", run_swing);
 
 // C6, the west band: from the 242 ring to the 264 ring on player inputs, no
 // ladder and no standpipe. What the climb saw, for its falsifiers.
-struct C6Notes final {
-    bool leap_caught = false;     // the running leap off the kentledge ended in the hands
-    bool balanced_out = false;    // the girder out over the void held the body on its line
-    bool balanced_up = false;     // so did the girder rising to the north
-};
+// (C6Notes lives in sim_tests.hpp, so the chase-measurement scenario can read it.)
 
 bool report_c6(const scraperx::sim::Simulation &simulation, const char *leg) {
     const auto state = simulation.snapshot();
@@ -362,16 +340,7 @@ SCRAPERX_SELECT("C6", run_c6);
 // 264 ring: the cascade mast. Its 110 kN slider raises the outer stage 9 m;
 // one rope makes the inner stage rise twice that and a second makes the deck
 // rise three times, 27 m, to its upper receiver at 291.25 m.
-struct MastRide final {
-    bool on_entry = false;
-    bool on_deck = false;
-    bool arrived = false;
-    double ride_s = 0.0;
-    double peak_speed = 0.0;
-    double deck_y = 0.0;
-    bool on_exit = false;
-    scraperx::sim::Snapshot end{};
-};
+// (MastRide lives in sim_tests.hpp, so the chase-measurement scenario can read it.)
 
 constexpr double kMastX = -10.65;      // the deck's centre
 constexpr double kMastEntryX = -16.0;  // on the lower and upper receivers

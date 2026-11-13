@@ -7,14 +7,14 @@ The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
 Pace: no throttling, no pace prediction, no meter asks, no quiet runs (11-10).
 Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
-How: helpers get the important work and long reads, never chores (11-06); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
+How: helpers get the important work and long reads, never chores (11-06); the integrator runs its own check-in lean and never hand-edits the board (the switchboard writes it from the plan). No coding inline.
 Fewer, batched calls.
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
-Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
+Overview: a scheduled task (trig_019Qy9rcek8tdRXTcpNjF1zs, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
 says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 48`, Claude's red branches, idle PRs over
 4 h) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
@@ -39,16 +39,16 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
    Only the hardest: an unknown cause blocking 2+ jobs, the climb or her chase, or a fix failed twice: take it (11-12).
-   First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, set its issue
-   to owner:claude and drop it from muse.md the same step (11-12: J-109 built twice), check its fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
+   Use `tools/board/plan.py give` only after the old owner pushes and acknowledges a stop; do not change the plan for
+   unpushed active work (11-12: J-109 built twice).
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 4 h with no owner step (11-12)
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
-4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than
-   eight big unstarted jobs in `work/tasks/muse.md` (count only jobs not started, not in flight, parked or done; under eight, refill to fifteen (the switchboard raises QUEUE-LOW, J-097); Cory 11-11: "cant have that happen"; before any queue mail, `python3 tools/board/queue_check.py` must print QUEUE CLEAN, and no two queued jobs may touch the same function at once; every full run also runs it and acts on each READY line and each PARKED job whose newest comment is an answer): derive the next from `03_EXECUTION/GAP_LIST.md` and
-   Cory's asks, a whole system or set piece, written whole on its own job issue, scored by `job-routing.md`, and mail it. Rule on Muse's
+4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Run `tools/board/plan.py check`; rule every LATE line and every conflict, then
+   route ready work through the plan only. The switchboard generates the board, labels and Muse notices. A new job
+   comes from `03_EXECUTION/GAP_LIST.md` and Cory's asks, written whole on its own job issue, scored by
+   `job-routing.md`, and added with `tools/board/plan.py add`. Rule on Muse's
    proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing. My own
    and my helpers' jobs too: a job red twice, or a red Muse's branches share, gets a question mailed to Muse that run, and climbs CLAUDE.md's ladder at once (CLAUDE.md, 11-12); one outside agent per question, a second only if needed (11-11: "Not AND"); nothing waits on Grok's run (Cory 11-11, 11-12).
-   Replace the "This hour" section of the board's body (the open issue labeled `board`) with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
 6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM) unless a system keeps failing (11-09). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up

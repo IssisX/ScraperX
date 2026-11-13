@@ -1711,6 +1711,7 @@ class LiveReconcilerRetry(unittest.TestCase):
         gh = tsc.CountingGH([tsc.pr(n) for n in range(361, 364)], dry_run=False)
         sw = test_inbox.make(gh, now)
         sw.root = HERE.parents[1]
+        sw.plan_mode = lambda: "off"   # the plan part has its own sweep tests (test_plan_sweep); not the live config
         sw.merge_token = sw.review_key = ""
         sw._jobs = sw._board = None
         gh.state = json.loads(json.dumps(whole))

@@ -53,7 +53,7 @@ from typing import Callable, Iterable
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent / "board"))
+sys.path.append(str(HERE.parent / "board"))   # after this dir: tools/board has a plan.py too
 
 import asks  # noqa: E402  tools/board/asks.py: what counts as an ask and as its answer
 import rules  # noqa: E402
@@ -178,8 +178,9 @@ class Roster:
         return str((self.agents.get(agent) or {}).get("wake", "issue"))
 
     def address(self, agent: str) -> str:
-        """The name a `To <Name>:` line uses: the agent's first name (Grok's runs read only `To Grok:`)."""
-        return self.person(agent).name
+        """The name a `To <Name>:` line uses: work/agents.yml `address`, else the agent's first name (Grok's runs
+        read only `To Grok:`; Grok Bot's only `To Builder:` and `To Principal Engineer:`, never `To PE:`)."""
+        return str((self.agents.get(agent) or {}).get("address") or self.person(agent).name)
 
 
 # ---------- inputs: what the reader got from GitHub ----------
@@ -275,6 +276,9 @@ class Feed:
     # PR number -> (when it merged or closed, its job id or ""), from the issue events read: a status ask to the
     # integrator that names it or its job is closed by it (tools/board/asks.py read, `closed`)
     closed: dict[int, tuple[dt.datetime, str]] = dataclasses.field(default_factory=dict)
+    # the switch's trunk proof (switch.Switch.trunk_proof: the newest trunk run that ran the build, kept until a newer
+    # one): when known, it alone decides the TRUNK item, so a notes-only push's green run never hides a red build
+    trunk_proof: dict | None = None
 
 
 # ---------- items ----------
@@ -483,11 +487,26 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
 
     # ---- red proof runs: each is current on an item, or resolved ----
     trunk_run = newest.get(feed.trunk)
+    tp = feed.trunk_proof
+    trunk_item = None
+    if tp is not None and str(tp.get("state", "")).startswith("red"):
+        first = str(tp.get("first_red") or tp.get("sha") or "")
+        broke = roster.of_branch(str(tp.get("branch") or "")) if tp.get("branch") else None
+        trunk_item = add(Item("TRUNK", feed.trunk, str(tp.get("url") or ""), "", broke or claude, claude,
+                              f"trunk's full proof {clean(tp.get('state') or 'red', 80)} since {first[:8]}"
+                              + (f" (the merge of #{int(tp['pr'])})" if tp.get("pr") else "")
+                              + ": until a green full proof", parse(str(tp.get("at") or "")) or now, ACT, first, 0,
+                              None))
     for r in feed.runs:
         if r.conclusion not in ("failure", "timed_out"):
             continue
         inp = f"run:{r.id}"
-        if r.branch == feed.trunk:
+        if r.branch == feed.trunk and tp is not None:
+            if trunk_item is not None and r.id == tp.get("run"):
+                acc[inp] = trunk_item.ident
+            else:
+                resolved(inp, "red run resolved (a newer full trunk proof, or its jobs pass)")
+        elif r.branch == feed.trunk:
             if trunk_run is r and (r.state.startswith("red") or not r.state):
                 add(Item("TRUNK", feed.trunk, r.url, "", claude, claude, f"trunk proof {r.state or 'red'}",
                          r.done_at or r.created_at, ACT, r.sha, 0, None), inp)
@@ -973,6 +992,24 @@ def comment_window(gh, repo: str, since: dt.datetime, now: dt.datetime) -> tuple
     return [c for c in got if (parse(c.get("updated_at") or c.get("created_at")) or now) >= since], cut
 
 
+def shared_window(sw, now: dt.datetime) -> tuple[list, bool]:
+    """comment_window over LIVE, read once per run and kept on the switch: the job machine's pass reads it first
+    (which job waits on an answer, switch.Switch.open_asks), and the ledger's read_feed after it, so the two never
+    read the 3-day window twice."""
+    memo = sw.__dict__.get("_ledger_window") if hasattr(sw, "__dict__") else None
+    if memo is None or memo[0] != now:
+        memo = (now, *comment_window(sw.gh, sw.gh.repo, now - LIVE, now))
+        if hasattr(sw, "__dict__"):
+            sw.__dict__["_ledger_window"] = memo
+    return list(memo[1]), memo[2]
+
+
+def open_issues(sw) -> list:
+    """The open issues and PRs, through the switch's once-a-run listing when it has one (switch.Switch.listing)."""
+    path = f"repos/{sw.gh.repo}/issues?state=open"
+    return sw.listing(path) if hasattr(sw, "listing") else sw.gh.paged(path)
+
+
 def touch_times(comments: list[dict], events: list[dict], bot: str) -> dict[int, dt.datetime]:
     """Per thread, the newest touch by anyone but the switchboard's own login (its notices must not reset a clock)."""
     out: dict[int, dt.datetime] = {}
@@ -1036,7 +1073,7 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
     problems: list[str] = []
     since_live, since_touch = now - LIVE, now - TOUCH_WINDOW
 
-    comments, cut = comment_window(gh, repo, since_live, now)
+    comments, cut = shared_window(sw, now)
     if cut:
         problems.append(f"comments since {iso(since_live)}: more than {2 * MAX_PAGES * 100}, the middle not read")
     events, cut = newest_first(sw, "events", f"repos/{repo}/issues/events", since_touch,
@@ -1189,15 +1226,23 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             except Exception as err:   # noqa: BLE001
                 problems.append(f"proof run {r.id} jobs: {type(err).__name__}")
 
+    # With the plan live (work/switchboard.yml `plan: live`) every open issue of the team's titled J-NNN is a job,
+    # with the `job` label or not: a missing label is itself a collaboration defect and must never make the job
+    # disappear (a stranger's issue with a job's title is not one: the repo is public). Until then the jobs are
+    # the issues that carry the `job` label, as before.
+    plan_live = getattr(sw, "plan_mode", lambda: "off")() == "live"
+    with_label = [] if plan_live else gh.paged(f"repos/{repo}/issues?labels=job&state=open")
+    all_open_issues = open_issues(sw)
     issues: list[IssueIn] = []
-    for it in gh.paged(f"repos/{repo}/issues?labels=job&state=open"):
-        if "pull_request" in it:
+    for it in all_open_issues if plan_live else with_label:
+        if "pull_request" in it or (plan_live and not (rules.job_of_title(it.get("title") or "")
+                                                       and rules.team_issue(it))):
             continue
         labels = tuple(l["name"] for l in it.get("labels") or [])
         issues.append(IssueIn(it["number"], it.get("html_url") or "", it.get("title") or "", labels,
                               touched_at(it.get("created_at"), it.get("updated_at"), touches, it["number"], since_touch)))
 
-    open_threads = {int(i["number"]) for i in gh.paged(f"repos/{repo}/issues?state=open")}
+    open_threads = {int(i["number"]) for i in all_open_issues}
     stream = []
     for c in comments:
         try:
@@ -1212,8 +1257,12 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
              for a in asks.unanswered(stream, open_threads, since_live, closed=closed, **judge)
              if a["login"] != rules.BOT_LOGIN]
 
+    trunk_proof = getattr(sw, "__dict__", {}).get("_trunk_proof")
+    if trunk_proof is None and isinstance(getattr(gh, "state", None), dict) and isinstance(gh.state.get("trunk_proof"), dict):
+        trunk_proof = gh.state["trunk_proof"]   # the inbox did not run this pass: the one the last pass kept
     feed = Feed(prs, open_prs, branches, issues, found, runs, rules.TRUNK, frozenset(system_branches),
-                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap, closed)
+                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap, closed,
+                trunk_proof or None)
     return feed, sent
 
 
