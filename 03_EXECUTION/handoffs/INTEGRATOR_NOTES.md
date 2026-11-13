@@ -13,8 +13,7 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   (ask Cory the effort first: just my informed pick, no option list), then the real test; done = that test passing (Cory 11-13), not the plan's 3 days. Today items done (#517 #518
   drafts; #520-#525 opened). Paid reviewer's month spent ($98.24/$100) until 12-01. #502/#505 reverted (afff9d5f).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
-- Reviews (Cory 11-13): Codex first; the moment Codex is out of credits, a Claude review counts, Claude's own work too (switch then, not before).
-- Security (Cory 11-13): only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
+- Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
   alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
 - Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
