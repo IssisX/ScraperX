@@ -2,21 +2,21 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j129": "6253e5ea8d31ba8872a377326f47899a2ec1b257"
+  "fb-bot/integrate-j129": "75e88726694ad8144572968eece5fa6fab658c7f"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-12T14:29:46Z",
  "deadline": null,
- "head": "6253e5ea8d31ba8872a377326f47899a2ec1b257",
+ "head": "75e88726694ad8144572968eece5fa6fab658c7f",
  "issue": 455,
  "job": "J-129",
  "landed": {
   "fb-bot/integrate-j129": [
-   "6253e5ea8d31ba8872a377326f47899a2ec1b257",
-   "merged #483",
-   "2026-11-12T22:53:22Z"
+   "75e88726694ad8144572968eece5fa6fab658c7f",
+   "",
+   "2026-11-13T02:13:35Z"
   ]
  },
  "obligations": [
@@ -55,6 +55,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "merged",
- "updated": "2026-11-12T22:53:22Z"
+ "state": "proof",
+ "updated": "2026-11-13T02:13:35Z"
 }

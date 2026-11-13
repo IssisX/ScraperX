@@ -2508,3 +2508,19 @@
 {"ev": "matched", "ident": "PR|#492", "job": "", "t": "2026-11-13T01:03:52Z"}
 {"ev": "matched", "ident": "PR|#493", "job": "", "t": "2026-11-13T01:03:52Z"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T01:03:52Z", "tries": 1}
+{"due": "2026-11-13T03:17:00Z", "ev": "obligation", "id": "O-e7eb5cd4", "job": "J-014", "kind": "ask", "ref": "ASK|ask on #121", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"due": "2026-11-13T03:17:00Z", "ev": "obligation", "id": "O-d0f4c694", "job": "J-040", "kind": "ask", "ref": "ASK|ask on #228", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"due": "2026-11-13T03:17:00Z", "ev": "obligation", "id": "O-b8f61f52", "job": "J-059", "kind": "ask", "ref": "ASK|ask on #307", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"due": "2026-11-13T03:17:00Z", "ev": "obligation", "id": "O-ca42650d", "job": "J-078", "kind": "ask", "ref": "ASK|ask on #393", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"due": "2026-11-13T03:17:00Z", "ev": "obligation", "id": "O-e45394be", "job": "J-080", "kind": "ask", "ref": "ASK|ask on #398", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"ev": "state", "frm": "working", "job": "J-043", "t": "2026-11-13T02:13:35Z", "to": "proof"}
+{"ev": "state", "frm": "merged", "job": "J-129", "t": "2026-11-13T02:13:35Z", "to": "proof"}
+{"ev": "matched", "ident": "PR|#494", "job": "", "t": "2026-11-13T02:13:35Z"}
+{"ev": "matched", "ident": "PR|#495", "job": "", "t": "2026-11-13T02:13:35Z"}
+{"ev": "inbox", "id": "O-e7eb5cd4", "job": "J-014", "ref": "ASK|ask on #121", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"ev": "inbox", "id": "O-d0f4c694", "job": "J-040", "ref": "ASK|ask on #228", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"ev": "dead_letter", "id": "O-7042d24d", "job": "J-053", "ref": "ASK|ask on #82", "t": "2026-11-13T02:13:35Z", "to": "claude"}
+{"ev": "inbox", "id": "O-b8f61f52", "job": "J-059", "ref": "ASK|ask on #307", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"ev": "inbox", "id": "O-ca42650d", "job": "J-078", "ref": "ASK|ask on #393", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"ev": "inbox", "id": "O-e45394be", "job": "J-080", "ref": "ASK|ask on #398", "t": "2026-11-13T02:13:35Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T02:13:35Z", "tries": 1}

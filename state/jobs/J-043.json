@@ -2,7 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-protected-j043-rail-stand": "137352db30319b8e37f9d4aaac72440a2e262492"
+  "fb-bot/integrate-protected-j043-rail-stand": "b9c87902764ec9024402106a2ee2b859b98839e5"
  },
  "cancelled": null,
  "ci": "",
@@ -11,14 +11,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-12T17:00:00Z",
- "head": "137352db30319b8e37f9d4aaac72440a2e262492",
+ "head": "b9c87902764ec9024402106a2ee2b859b98839e5",
  "issue": 241,
  "job": "J-043",
  "landed": {
   "fb-bot/integrate-protected-j043-rail-stand": [
-   "137352db30319b8e37f9d4aaac72440a2e262492",
+   "b9c87902764ec9024402106a2ee2b859b98839e5",
    "",
-   "2026-11-12T16:58:14Z"
+   "2026-11-13T02:13:35Z"
   ]
  },
  "obligations": [
@@ -307,6 +307,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "proof",
+ "updated": "2026-11-13T02:13:35Z"
 }
