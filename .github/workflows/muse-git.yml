@@ -1,6 +1,8 @@
 name: Muse git channel
 # Muse's messages through git, beside the mail bridge (trial, 11-13): tools/switchboard/muse_git.py says why and how.
-#   relay  Muse's new files on fb-bot/mail become comments, once each, under the team login (AGENT_GITHUB_TOKEN).
+#   relay  Muse's new files on fb-bot/mail become comments, once each, posted with this job's own github.token (the
+#          workflow bot; no secret, no environment). Readers know them by the bridge's first line, the bot's login
+#          and the channel's end mark (asks.muse_git_post).
 #   inbox  New CLAUDE_TO_MUSE notices become files on muse-inbox, the switchboard's branch that Muse fetches, and
 #          each team post asking Muse is relayed once as a switchboard notice (+ wake:muse), so the mail bridge mails it.
 # Not `on: push` of fb-bot/mail: a push runs the workflow file of the pushed commit, and that branch holds only
@@ -26,15 +28,16 @@ env:
 
 jobs:
   relay:
-    # Only trunk's copy runs (a dispatch on another ref is skipped, and the environment refuses it the secret), and
-    # only after a full sweep: the switchboard also runs on every comment, several a minute.
+    # Only trunk's copy runs (a dispatch on another ref is skipped), and only after a full sweep: the switchboard also
+    # runs on every comment, several a minute. A sweep is a schedule or dispatch run (the event, which no comment or
+    # title sets); its name then tells a sweep from the digest, provision or a dry run.
     if: >-
       github.ref == 'refs/heads/ScraperX-Claude' && (github.event_name != 'workflow_run' ||
-      startsWith(github.event.workflow_run.display_title, 'Switchboard sweep'))
+      (contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event.workflow_run.event) &&
+      startsWith(github.event.workflow_run.display_title, 'Switchboard sweep')))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # AGENT_GITHUB_TOKEN lives only in this environment, which deploys only from ScraperX-Claude (J-057, SECURITY.md).
-    environment: switchboard-merge
+    # No secret and no environment (J-138, the security review of #507): the posts need only issues: write.
     # Job-level, so a skipped run never displaces a pending one; a newer pending run replaces an older (each run
     # handles everything new, so nothing is lost).
     concurrency:
@@ -42,7 +45,8 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
-      issues: read          # the target issue, its comments (the duplicate check), the job and board listings
+      issues: write         # post Muse's messages; read the target issue, its comments (the duplicate check), the
+                            # job and board listings
       pull-requests: read   # a PR named in a subject: its Job: line
     outputs:
       posted: ${{ steps.relay.outputs.posted }}
@@ -56,13 +60,7 @@ jobs:
       - name: Post Muse's new messages
         id: relay
         env:
-          GH_TOKEN: ${{ github.token }}
-          # J-138: the hosted agent's token of the team login (J-057), reused so no new secret is needed. Its third
-          # use, beside ask and provision: this step and no other job or step. The posts need Issues: read and write
-          # on this repo. muse_git.py checks GET /user first and posts nothing unless the login is IssisX (fail
-          # closed), sends it only on that call and the comment POST, and takes it out of the environment before any
-          # git process runs, so no child inherits it.
-          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}   # muse_git.py takes it out of the environment before any git process runs
           REPO: ${{ github.repository }}
         run: python3 src/tools/switchboard/muse_git.py relay --git-dir "$RUNNER_TEMP/data.git" --output "$GITHUB_OUTPUT"
 
@@ -70,7 +68,8 @@ jobs:
     needs: relay
     if: >-
       always() && github.ref == 'refs/heads/ScraperX-Claude' && (github.event_name != 'workflow_run' ||
-      startsWith(github.event.workflow_run.display_title, 'Switchboard sweep'))
+      (contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event.workflow_run.event) &&
+      startsWith(github.event.workflow_run.display_title, 'Switchboard sweep')))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:

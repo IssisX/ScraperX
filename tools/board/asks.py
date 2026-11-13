@@ -48,7 +48,9 @@ addressed back to Muse), it is closed by:
 A Claude post there addressed to someone else still answers nothing ("rule on the grip cap", the #360 replay).
 An ask to Claude with a question, or that says BLOCKED, stays until one of the answers above answers it.
 Any other later post, on the thread or not, is not an answer; the switchboard's own posts never are. Muse answers
-by mail; the bridge posts those as `**Muse (via email bridge)...`, which counts as Muse.
+by mail; the bridge posts those as `**Muse (via email bridge)...`, which counts as Muse. So does a message Muse
+pushes to fb-bot/mail, which the git channel posts under the workflow bot's login with the same first line and its
+own end mark (muse_git_post): the one bot post that is not the switchboard's own.
 
 Muse never reads GitHub: an ask to Muse is listed with RELAY? until the switchboard relays it (11-13,
 tools/switchboard/muse_git.py forward: its relay carries `<!-- muse-git:relayed id=N -->`), then as relayed
@@ -95,6 +97,10 @@ BRIDGE_POST = "**Muse (via email bridge)"   # the first line of every inbound br
 QUOTE = re.compile(r"^>\s?(.+)$", re.MULTILINE)
 MIN_QUOTE = 12   # characters of quoted text that must appear in the ask for a quote to name it
 SWITCHBOARD_LOGIN = "github-actions[bot]"   # the switchboard's own login: its posts neither ask nor answer
+# ... except Muse's messages that the git channel posts with the workflow's own token (J-138, muse_git.py relay):
+# the bridge's first line and, at the very end, the channel's mark (muse_git.POST_MARK). Muse's text has every `<!--`
+# cut (muse_git.harmless), so it can carry no mark of its own; only a workflow of this repo posts as the bot.
+MUSE_GIT_MARK = re.compile(r"\n<!-- muse-git:posted key=\d{1,20} -->\s*\Z")
 # A post that names an ask is read as its answer only while that ask is in the stream too. So in the stream's
 # oldest day a post that names anything (a comment id or URL, an O-id, a quoted line) is not listed as an ask: the
 # ask it may be answering can be out of reach. (Without this "To ChatGPT (from Claude), answering 6752607408 ..."
@@ -166,6 +172,18 @@ RELAYED = re.compile(r"<!-- muse-git:relayed id=(\d+) -->")   # muse_git.RELAY_M
 def relayed_ids(comments: list[dict]) -> set[str]:
     """The comment ids the switchboard has relayed to Muse (muse_git.py forward): read from its own posts only."""
     return {i for c in comments if c.get("login") == SWITCHBOARD_LOGIN for i in RELAYED.findall(c.get("body") or "")}
+
+
+def muse_git_post(login: str, body: str) -> bool:
+    """A Muse message the git channel posted (J-138): the workflow bot's comment that opens with the bridge's first
+    line and ends with the channel's mark. Read as Muse's mail, as a bridge post is; never as the switchboard's own.
+    Nobody else's comment is one: anyone can type the first line and the mark, and only the bot's login counts."""
+    return login == SWITCHBOARD_LOGIN and body.lstrip().startswith(BRIDGE_POST) and bool(MUSE_GIT_MARK.search(body))
+
+
+def switchboards_own(login: str, body: str) -> bool:
+    """A post of the switchboard's own (its login), which neither asks nor answers; never a git-channel Muse post."""
+    return login == SWITCHBOARD_LOGIN and not muse_git_post(login, body)
 
 
 def acks_only(body: str) -> bool:
@@ -247,7 +265,7 @@ def answer_rule(reply: dict, ask: dict, target: str, refs: set[int], job_thread:
         return ""   # nobody's post (author): never anyone's reply
     if any(same(v) == holder and r in refs for v, r in reply["verdicts"]):
         return "verdict on a PR it names"
-    if reply.get("login") == SWITCHBOARD_LOGIN:
+    if switchboards_own(reply.get("login") or "", reply["body"]):
         return ""   # its notices carry the ask's id and "/ack O-..." themselves
     oid = ask.get("oid")
     if oid and re.search(rf"^[ \t]*/ack\b[^\n]*(?<![\w-]){re.escape(oid)}\b", reply["body"], re.MULTILINE | re.IGNORECASE):
@@ -304,7 +322,7 @@ def read(comments: list[dict], open_threads: set[int], start: dt.datetime, job_t
     live: list[dict] = []   # the asks no post has answered yet
     out: list[dict] = []
     for c in comments:
-        if c.get("login") == SWITCHBOARD_LOGIN:
+        if switchboards_own(c.get("login") or "", c["body"]):
             continue
         owed: dict[tuple[int, str], int] = {}
         for a in live:

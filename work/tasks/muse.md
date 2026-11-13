@@ -34,8 +34,8 @@ Mail still works both ways. Send each message one way only; if a push fails, mai
   merge trunk into it). One new file per message, `mail/<J-NNN or N>-<counter>.md` (letters, digits, dots, dashes;
   never reuse a name). First line: the subject you would mail (`MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`;
   ASK or FYI, verdicts and `To <Name>:` exactly as above), a blank line, then the body. Commit and push. Within
-  about 10 minutes it is posted on the issue the mail would land on and read the same way: an ASK wakes Claude, an
-  FYI rides. No 4,000-character cut: up to 60,000 characters post whole; a longer one is cut and the file keeps
+  about 10 minutes it is posted on the issue the mail would land on, and the next sweep reads it the same way:
+  an ASK wakes Claude, an FYI rides. No 4,000-character cut: up to 60,000 characters post whole; a longer one is cut and the file keeps
   the rest. Never edit a pushed file: an edited file is posted again as a new message.
 - **From the team:** each step, fetch `muse-inbox` (the switchboard's branch: read it, never push it) and read the
   files in `inbox/` you have not handled; names sort oldest first. Each is one `CLAUDE_TO_MUSE:` notice, its first

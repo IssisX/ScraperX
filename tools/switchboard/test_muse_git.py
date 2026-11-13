@@ -2,7 +2,8 @@
 
 Run: python3 -m unittest discover -s tools/switchboard -p 'test_muse_git.py'
 Real git, in a temporary directory (a bare "origin", Muse's own clone, the switchboard's data repo); GitHub is a
-table behind the real Api class, so which token each call carries is checked too. No network.
+table behind the real Api class, so which token each call carries is checked too (only the workflow's). No network.
+GitPostReaders: every reader that takes a bridge post as Muse's takes the channel's bot post so, and nothing more.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ import test_inbox  # noqa: E402
 
 NOW = dt.datetime(2026, 11, 13, 18, 0, tzinfo=dt.timezone.utc)
 REPO = "IssisX/ScraperX"
-READ, POST = "read-token", "post-token"
+READ = "workflow-token"   # GH_TOKEN, the job's own github.token: the only token the channel holds
 GIT_ENV = {"GIT_AUTHOR_NAME": "Muse", "GIT_AUTHOR_EMAIL": "muse@example.invalid", "GIT_COMMITTER_NAME": "Muse",
            "GIT_COMMITTER_EMAIL": "muse@example.invalid", "GIT_CONFIG_NOSYSTEM": "1", "HOME": tempfile.gettempdir()}
 
@@ -48,8 +49,7 @@ def git(cwd, *args, check=True) -> str:
 class FakeGitHub:
     """Issues, comments and the logins, behind Api._call: every call is recorded with the token it carried."""
 
-    def __init__(self, poster=G.TEAM_LOGIN):
-        self.poster = poster
+    def __init__(self):
         self.issues = {50: {"number": 50, "title": "J-002 second hit sounds", "state": "open", "labels": ["job"]},
                        60: {"number": 60, "title": "J-078 review flow", "state": "open", "labels": ["job"]},
                        340: {"number": 340, "title": "Board", "state": "open", "labels": ["board"]},
@@ -72,10 +72,10 @@ class FakeGitHub:
     def on(self, number) -> list[dict]:
         return [c for c in self.comments if c["issue_url"].endswith(f"/issues/{number}")]
 
-    def api(self, post=POST) -> G.Api:
-        api = G.Api(REPO, READ, post)
-        api._call = self.call   # the real Api's get/paged/poster/comment, over this table
-        return api
+    def api(self) -> G.Api:
+        api = G.Api(REPO, READ)
+        api._call = lambda method, path, body=None: self.call(method, path, api._token, body)   # the real get, paged,
+        return api                                                                             # comment, label
 
     def call(self, method, path, token, body=None):
         self.calls.append((method, path, token))
@@ -83,8 +83,6 @@ class FakeGitHub:
         q = dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv)
         page = int(q.get("page", "1"))
         window = lambda xs: xs[(page - 1) * 100: page * 100]  # noqa: E731
-        if method == "GET" and base == "user":
-            return {"login": self.poster}
         if method == "GET" and base == f"repos/{REPO}/issues":
             label = q.get("labels")
             return window([dict(i) for i in sorted(self.issues.values(), key=lambda i: i["number"])
@@ -97,9 +95,9 @@ class FakeGitHub:
         m = re.fullmatch(rf"repos/{REPO}/issues/(\d+)/comments", base)
         if m and method == "GET":
             return window(self.on(int(m.group(1))))
-        if m and method == "POST":   # the workflow's token posts as the switchboard, the post token as the team
-            assert set(body) == {"body"}
-            return self.add(int(m.group(1)), body["body"], rules.BOT_LOGIN if token == READ else G.TEAM_LOGIN)
+        if m and method == "POST":   # the workflow's token posts as the workflow bot
+            assert set(body) == {"body"} and token == READ
+            return self.add(int(m.group(1)), body["body"], rules.BOT_LOGIN)
         m = re.fullmatch(rf"repos/{REPO}/issues/(\d+)/labels", base)
         if m and method == "POST":
             assert token == READ
@@ -149,7 +147,7 @@ class Channel(unittest.TestCase):
         return G.relay(api or self.gh.api(), self.g(), log=self.lines.append)
 
     def inbox(self, posted=(), now=NOW):
-        return G.inbox(self.gh.api(post=""), self.g(), posted, now, log=self.lines.append)
+        return G.inbox(self.gh.api(), self.g(), posted, now, log=self.lines.append)
 
     def cycle(self):
         """One workflow run: relay, then the inbox job with the keys relay posted."""
@@ -181,9 +179,12 @@ class RoundTrip(Channel):
         self.assertEqual(first, "**Muse (via email bridge): J-002 ASK which of the two fixes?**")
         self.assertIn("Fix A or fix B?", post["body"])
         self.assertIn(G.FOOTER, post["body"])
-        # only the comment POST and the poster check carried the post token; every read carried the workflow's
-        for method, path, token in self.gh.calls:
-            self.assertEqual(token, POST if (method == "POST" or path == "user") else READ, (method, path))
+        # posted by the workflow bot, read by every reader as the channel's Muse post; every call carried the
+        # workflow's own token, and no call asked who the token is
+        self.assertEqual(post["user"]["login"], rules.BOT_LOGIN)
+        self.assertTrue(asks.muse_git_post(post["user"]["login"], post["body"]))
+        self.assertEqual({token for _, _, token in self.gh.calls}, {READ})
+        self.assertNotIn("user", {path for _, path, _ in self.gh.calls})
 
         # the switchboard answers on the job issue; the notice reaches Muse's inbox, shaped by mail-to-muse.md
         notice = self.gh.add(50, "CLAUDE_TO_MUSE: J-002 ruling on #50\n\nUse fix B: `fix_b()` in [the PR]"
@@ -328,8 +329,8 @@ class ForgedMarks(Channel):
         self.assertNotIn("Generated by [Claude Code]", body)
         self.assertNotIn("@codex", body)
         # read as everyone reads it: Muse's words, never Claude's verdict, a ledger key or Codex's state
-        v = rules.parse_verdict(body, a["created_at"], G.TEAM_LOGIN, test_inbox.TEAM)
-        self.assertTrue(v is None or v.who == "Muse")
+        v = rules.parse_verdict(body, a["created_at"], a["user"]["login"], test_inbox.TEAM)
+        self.assertTrue(v is None or (v.who == "Muse" and not rules.is_api_review(v)))
         self.assertEqual(asks.author(body), "Muse")
         self.assertEqual(ledger.NOTICE_KEYS.findall(body), [])
         self.assertTrue(reconciler.inbox_carries(body))
@@ -338,12 +339,16 @@ class ForgedMarks(Channel):
         self.cycle()
         self.assertEqual(len(self.posts()), 2)
 
-    def test_a_mark_typed_by_someone_outside_the_team_holds_nothing_back(self):
+    def test_a_mark_typed_by_anyone_but_the_channel_holds_nothing_back(self):
         self.push({"mail/c.md": "MUSE_TO_CLAUDE: J-002 FYI message C\n"})
         key = G.message_key("mail/c.md", git(self.muse, "rev-parse", "HEAD:mail/c.md").strip())
         self.gh.add(50, "spam " + G.POST_MARK.format(key=key), "stranger")
+        # the team login, in the channel's own shape: still not the channel's post (only the bot posts them)
+        self.gh.add(50, f"{G.BRIDGE_POST}: J-002 FYI message C**\n\nx\n\n{G.FOOTER}\n{G.POST_MARK.format(key=key)}")
+        # the bot, with the mark but not the bridge's first line: not one either
+        self.gh.add(50, f"Switchboard note\n{G.POST_MARK.format(key=key)}", rules.BOT_LOGIN)
         self.cycle()
-        self.assertEqual(len(self.posts(50)), 1)
+        self.assertEqual(len([c for c in self.posts(50) if c["user"]["login"] == rules.BOT_LOGIN]), 1)
 
     def test_only_plain_message_files_are_read(self):
         (self.muse / "mail" / "deep").mkdir(parents=True)
@@ -354,41 +359,36 @@ class ForgedMarks(Channel):
         self.cycle()
         self.assertEqual([p["body"].split("\n")[0] for p in self.posts()], ["**Muse (via email bridge): J-002 FYI fine**"])
         self.assertTrue(any(line.startswith("SKIP   mail/l.md") for line in self.lines), self.lines)
+        self.assertIsNone(G.MESSAGE_NAME.fullmatch("mail/ok.md\n"))   # `$` would have let a trailing newline in
+        self.assertIsNone(G.MESSAGE_NAME.fullmatch("x/mail/ok.md"))
 
-    def test_relay_fails_closed_at_start_without_the_team_logins_token(self):
-        def run(env, poster=G.TEAM_LOGIN, refuse=False):
-            self.gh.poster = poster
-            def call(_api, method, path, token, body=None):
-                if refuse and path == "user":
-                    raise G.ApiError(method, path, 403)
-                return self.gh.call(method, path, token, body)
-            fetched = []
-            with mock.patch.dict(os.environ, env, clear=False), \
-                    mock.patch.object(G.Api, "_call", call), \
-                    mock.patch.object(G.Git, "fetch", lambda g: fetched.append(1) or {}), \
-                    mock.patch("builtins.print", lambda *a, **k: self.lines.append(" ".join(map(str, a)))):
-                code = G.main(["relay", "--git-dir", self.data, "--repo", REPO])
-            return code, bool(fetched)
-        base = {"GH_TOKEN": READ}
-        os.environ.pop(G.POST_TOKEN_ENV, None)
-        self.assertEqual(run(base), (1, False))                                    # no token
-        self.assertEqual(run(dict(base, **{G.POST_TOKEN_ENV: POST}), "someone-else"), (1, False))
-        self.assertEqual(run(dict(base, **{G.POST_TOKEN_ENV: POST}), refuse=True), (1, False))
-        self.assertTrue(any("refused by GET /user (HTTP 403)" in line for line in self.lines), self.lines)
-        self.assertEqual(run(dict(base, **{G.POST_TOKEN_ENV: POST})), (0, True))   # the team login: on it goes
-        self.assertFalse(any(m == "POST" for m, _, _ in self.gh.calls))
-        self.assertNotIn(G.POST_TOKEN_ENV, os.environ)   # taken out before any git process
-
-    def test_a_post_token_of_another_login_posts_nothing(self):
+    def test_main_uses_the_workflow_token_alone_and_takes_it_out_of_the_environment(self):
         self.push({"mail/d.md": "MUSE_TO_CLAUDE: J-002 FYI message D\n"})
-        self.gh.poster = "someone-else"
-        with self.assertRaisesRegex(RuntimeError, "not IssisX"):
-            self.relay()
-        self.assertEqual(self.posts(), [])
+        sent, git_envs = [], []
+        real_run = G.Git.run
+
+        def call(api, method, path, body=None):
+            sent.append(api._token)
+            return self.gh.call(method, path, api._token, body)
+
+        def run(g, *args, **kw):
+            git_envs.append("GH_TOKEN" in os.environ)
+            return real_run(g, *args, **kw)
+
+        env = {"GH_TOKEN": READ, "AGENT_GITHUB_TOKEN": "a-team-secret"}   # even with a secret in the environment
+        with mock.patch.dict(os.environ, env, clear=False), mock.patch.object(G.Api, "_call", call), \
+                mock.patch.object(G.Git, "run", run), \
+                mock.patch("builtins.print", lambda *a, **k: self.lines.append(" ".join(map(str, a)))):
+            code = G.main(["relay", "--git-dir", self.data, "--repo", REPO, "--remote", self.origin])
+        self.assertEqual(code, 0, self.lines)
+        self.assertTrue(git_envs and not any(git_envs))   # GH_TOKEN was out before any git process ran
+        self.assertEqual(set(sent), {READ})                 # only the workflow's token was ever sent
+        [post] = self.posts()
+        self.assertEqual(post["user"]["login"], rules.BOT_LOGIN)
 
 
 class Classification(Channel):
-    """A git post is read exactly as a mailed one: an ASK wakes the integrator, an FYI rides the digest."""
+    """A git post (the workflow bot's) is read as a mailed one: an ASK wakes the integrator, an FYI rides the digest."""
 
     def test_ask_wakes_and_fyi_rides(self):
         self.push({"mail/1.md": "MUSE_TO_CLAUDE: J-002 ASK fix A or fix B\n\nTo Claude: which one?\n",
@@ -482,13 +482,113 @@ class RelayToMuse(Channel):
             if method == "POST" and path.endswith("/labels"):
                 raise G.ApiError(method, path, 502)
             return real(method, path, token, body)
-        api = self.gh.api(post="")
-        api._call = flaky
+        api = self.gh.api()
+        api._call = lambda method, path, body=None: flaky(method, path, READ, body)
         with self.assertRaisesRegex(RuntimeError, "1 relay"):
             G.inbox(api, self.g(), (), NOW, log=self.lines.append)
         self.inbox()                       # the comment went, the label did not: the rerun labels it, posts nothing
         self.assertEqual(len(self.relays()), 1)
         self.assertEqual(self.gh.labels, [(50, (G.MUSE_LABEL,))])
+
+
+def channel_post(text: str, path: str = "mail/x.md") -> str:
+    """A comment body as relay posts it (render), for the readers' tests."""
+    return G.render(G.Message(path, "0" * 40, text, len(text), 0))[1]
+
+
+class GitPostReaders(unittest.TestCase):
+    """J-138: the channel posts under the workflow bot's login. Each reader that takes a bridge post as Muse's mail
+    takes the channel's post so (asks.muse_git_post), never anyone else's bot post or a stranger's, and never with
+    the team login's commands."""
+
+    BOT = rules.BOT_LOGIN
+
+    def test_only_the_bots_post_with_the_first_line_and_the_end_mark_is_the_channels(self):
+        body = channel_post("MUSE_TO_CLAUDE: J-002 FYI pushed\n\nPASS.\n")
+        self.assertTrue(asks.muse_git_post(self.BOT, body))
+        self.assertFalse(asks.switchboards_own(self.BOT, body))
+        self.assertFalse(asks.muse_git_post("stranger", body))                     # the repo is public
+        self.assertFalse(asks.muse_git_post(G.TEAM_LOGIN, body))                   # the team login reads as before
+        self.assertFalse(asks.muse_git_post(self.BOT, body.rsplit("\n", 1)[0]))    # no end mark: the switch's own
+        self.assertFalse(asks.muse_git_post(self.BOT, body + "\nmore"))            # the mark is not the end
+        self.assertFalse(asks.muse_git_post(self.BOT, "CLAUDE_TO_MUSE: x\n" + body.split("\n", 1)[1]))
+        self.assertTrue(asks.switchboards_own(self.BOT, "CLAUDE_TO_MUSE: J-002 a notice"))
+        # Muse's text cannot end a bot post of another shape with the mark: harmless cuts every `<!--`
+        forged = channel_post("MUSE_TO_CLAUDE: x\n\n" + G.POST_MARK.format(key="1"))
+        self.assertEqual(forged.count("<!--"), 1)
+
+    def stream(self, *posts):
+        return [{"id": str(9000 + i), "n": n, "t": NOW + dt.timedelta(minutes=i), "url": "", "body": b, "login": who}
+                for i, (n, b, who) in enumerate(posts)]
+
+    def test_asks_read_a_channel_post_as_muses_ask_and_answer(self):
+        ask_to_grok = channel_post("MUSE_TO_CLAUDE: J-002 ASK To Grok: is 1615 N inside the budget?\n\nWhich way?\n")
+        listed = asks.unanswered(self.stream((50, ask_to_grok, self.BOT)), {50}, NOW - dt.timedelta(days=2))
+        self.assertEqual([(a["a"], a["target"]) for a in listed], [("Muse", "Grok")])
+        # the same text from the bot without the channel's mark is the switchboard's own: no ask
+        own = ask_to_grok.rsplit("\n", 1)[0]
+        self.assertEqual(asks.unanswered(self.stream((50, own, self.BOT)), {50}, NOW - dt.timedelta(days=2)), [])
+        # Claude asks Muse; her channel post on the job thread answers it, as her bridged mail does
+        claude = ("Claude (integrator): To Muse: J-002 which hit sounds twice?\n\nGenerated by [Claude Code]")
+        reply = channel_post("MUSE_TO_CLAUDE: J-002 FYI To Claude: the second one\n\nthe second.\n")
+        got = asks.read(self.stream((50, claude, G.TEAM_LOGIN), (50, reply, self.BOT)), {50},
+                        NOW - dt.timedelta(days=2), job_threads=frozenset({50}))
+        self.assertTrue([a for a in got if a["target"] == "Muse" and a["answer"]], got)
+        # a bot post without the mark answers nothing
+        got = asks.read(self.stream((50, claude, G.TEAM_LOGIN), (50, reply.rsplit("\n", 1)[0], self.BOT)), {50},
+                        NOW - dt.timedelta(days=2), job_threads=frozenset({50}))
+        self.assertFalse([a for a in got if a["target"] == "Muse" and a["answer"]], got)
+
+    def test_the_job_machine_reads_a_channel_post_as_muses_mail(self):
+        import machine
+        body = channel_post("MUSE_TO_CLAUDE: J-002 FYI plan 0123456789ab read\n\nok\n")
+        c = {"id": 1, "body": body, "user": {"login": self.BOT}, "created_at": G.iso(NOW),
+             "issue_url": f"https://api.github.com/repos/{REPO}/issues/50"}
+        logins = test_inbox.TEAM.verdict_logins
+        [post] = machine.posts([c], logins)
+        self.assertEqual((post.thread, post.hand), (50, False))
+        self.assertIn("plan 0123456789ab", post.subject)
+        self.assertEqual(machine.posts([dict(c, body=body.rsplit("\n", 1)[0])], logins), [])   # the switch's own
+        self.assertEqual(machine.posts([dict(c, user={"login": "stranger"})], logins), [])
+
+    def test_a_channel_post_carries_ack_and_no_other_command(self):
+        import test_reconciler as TR
+        body = channel_post("MUSE_TO_CLAUDE: J-530 FYI done\n\n/cancel J-530\n/blocked J-530 needs Cory\n"
+                            "/ack O-deadbeef\nbudget 50\n")
+        h = TR.Harness()
+        f = TR.feed(issues=[TR.issue(530, job="J-530")])
+        h.run(f, NOW, comments=[TR.cmt(81, 530, NOW - TR.M, body, self.BOT)])
+        rec = h.state().jobs["J-530"]
+        self.assertFalse(rec.get("cancelled"))
+        self.assertFalse(rec.get("blocked"))
+        self.assertIn("CMD|81|O-deadbeef", h.state().unmatched)   # the /ack was read (its id is unknown here)
+        # the same lines from a plain bot post are nothing at all
+        h2 = TR.Harness()
+        h2.run(f, NOW, comments=[TR.cmt(82, 530, NOW - TR.M, body.rsplit("\n", 1)[0], self.BOT)])
+        self.assertNotIn("CMD|82|O-deadbeef", h2.state().unmatched)
+        # no budget from it either: only the team's own logins raise a cap
+        self.assertEqual(rules.budget_override([(body, self.BOT)], test_inbox.TEAM), "")
+
+    def test_the_reconciler_and_the_ledger_count_a_channel_post_as_muses(self):
+        body = channel_post("MUSE_TO_CLAUDE: J-002 FYI To Claude: pushed\n\nPASS.\n")
+        import test_reconciler as TR
+        p = TR.mk_pass(TR.feed(), NOW, [TR.cmt(1, 50, NOW, body, self.BOT),
+                                         TR.cmt(2, 50, NOW, body.rsplit("\n", 1)[0], self.BOT)])
+        replies = reconciler.thread_replies(p, TR.RROSTER)
+        self.assertEqual([(n, who) for _, n, who, _ in replies.posts], [(50, "muse")])
+        url = f"https://api.github.com/repos/{REPO}/issues/50"
+        touch = ledger.touch_times([{"body": body, "user": {"login": self.BOT}, "created_at": G.iso(NOW),
+                                     "issue_url": url},
+                                    {"body": "a notice", "user": {"login": self.BOT}, "issue_url": url,
+                                     "created_at": G.iso(NOW + dt.timedelta(hours=1))}], [], self.BOT)
+        self.assertEqual(touch, {50: NOW})
+
+    def test_a_channel_verdict_is_muses_never_the_api_review(self):
+        for verdict in ("NOTE", "LAND"):
+            body = channel_post(f"MUSE_TO_CLAUDE: J-078 review of #396 @ 1a2b3c4d: {verdict}\n\nlooks right\n")
+            v = rules.parse_verdict(body, G.iso(NOW), self.BOT, test_inbox.TEAM)
+            self.assertEqual((v.who, v.vendor, v.kind, v.verdict), ("Muse", "meta", "review", verdict))
+            self.assertFalse(rules.is_api_review(v))
 
 
 class Wiring(unittest.TestCase):
@@ -511,20 +611,22 @@ class Wiring(unittest.TestCase):
             f, _ = ledger.read_feed(sw, [], NOW, 340, "proof.yml", {"inbox"}, set())
         self.assertTrue(G.BRANCHES <= f.system_branches and "inbox" in f.system_branches)
 
-    def test_the_workflow_runs_trunk_code_and_holds_the_token_in_one_step(self):
+    def test_the_workflow_runs_trunk_code_and_holds_no_secret(self):
         import yaml
         wf = yaml.safe_load((HERE.parents[1] / ".github" / "workflows" / "muse-git.yml").read_text())
         on = wf[True] if True in wf else wf["on"]
         self.assertEqual(set(on), {"workflow_run", "schedule", "workflow_dispatch"})
         self.assertEqual(wf["permissions"], {})
         relay, box = wf["jobs"]["relay"], wf["jobs"]["inbox"]
-        self.assertEqual(relay["environment"], "switchboard-merge")
-        self.assertNotIn("write", json.dumps(relay["permissions"]))
-        self.assertNotIn("environment", box)
-        text = json.dumps(wf)
-        self.assertEqual(text.count("secrets."), 1)
-        holders = [s for s in relay["steps"] if "AGENT_GITHUB_TOKEN" in json.dumps(s)]
-        self.assertEqual(len(holders), 1)
+        # J-138 (the security review of #507): no secret, no environment; the posts need only issues: write
+        self.assertEqual(relay["permissions"], {"contents": "read", "issues": "write", "pull-requests": "read"})
+        self.assertEqual(box["permissions"], {"contents": "write", "issues": "write", "pull-requests": "read"})
+        for job in (relay, box):
+            self.assertNotIn("environment", job)
+            # a sweep is told by its event, which no comment or title sets
+            self.assertIn("github.event.workflow_run.event", job["if"])
+            self.assertIn("refs/heads/ScraperX-Claude", job["if"])
+        self.assertNotIn("secrets", json.dumps(wf))
         for job in wf["jobs"].values():   # no third-party action: plain git and python
             self.assertFalse([s for s in job["steps"] if "uses" in s])
 

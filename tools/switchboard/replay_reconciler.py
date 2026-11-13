@@ -288,7 +288,7 @@ class History:
         self.trunk_pushes = [T(a["timestamp"]) for a in trunk if a["activity_type"] != "branch_deletion"]
         self._touch: dict[int, list] = {}
         for c in self.comments:
-            if c["user"]["login"] != rules.BOT_LOGIN:
+            if not asks.switchboards_own(c["user"]["login"], c["body"]):   # a git-channel Muse post is hers
                 self._touch.setdefault(c["_n"], []).append(c["_t"])
         for e in self.events:
             if (e.get("actor") or {}).get("login") != rules.BOT_LOGIN:
@@ -671,7 +671,7 @@ def real_answer(h: History, ask: dict, target: str) -> dict | None:
     asker = poster(ask["body"])
     refs = {int(r) for r in asks.PR_REF.findall(ask["body"][:600])} | {ask["_n"]}
     for d in h.comments:
-        if d["_t"] <= ask["_t"] or d["user"]["login"] == rules.BOT_LOGIN:
+        if d["_t"] <= ask["_t"] or asks.switchboards_own(d["user"]["login"], d["body"]):
             continue
         verdicts = {(m.group(1), int(m.group(2))) for m in asks.VERDICT.finditer(d["body"][:400])}
         if any((target, r) in verdicts for r in refs):
@@ -913,7 +913,7 @@ def check(h: History, passes: list[dict], state_dir: pathlib.Path, cfg: dict) ->
     misses = []
     opened_asks = {(r.ob["version"], r.ob["to"]) for r in rows if r.ob["kind"] == "ask"}
     for c in h.comments:
-        if c["_t"] < h.start - L.LIVE or c["_t"] > h.end or c["user"]["login"] == rules.BOT_LOGIN:
+        if c["_t"] < h.start - L.LIVE or c["_t"] > h.end or asks.switchboards_own(c["user"]["login"], c["body"]):
             continue
         if not h.open_at(c["_n"], c["_t"]) or asks.author(c["body"]) == "noise" or asks.LEDGER_MARK in c["body"]:
             continue

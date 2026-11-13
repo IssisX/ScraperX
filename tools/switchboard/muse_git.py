@@ -7,10 +7,14 @@ channel carries the same messages through git. The mail bridge keeps running bes
 
   OUT of Muse (relay)  Muse commits one file per message to OUTBOX_BRANCH (fb-bot/mail), at mail/<name>.md: first
         line the subject it would mail today (`MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`), then the body.
-        Each new file is posted once, as one comment under the team login (POST_TOKEN_ENV), on the issue the mail
-        bridge would pick for that subject (target), with the bridge's own first line, BRIDGE_POST. So every reader
-        (the inbox's ASK and FYI, review verdicts, asks.py, the ledger, the reconciler, the pipe health) reads a git
-        post exactly as a mailed one, with no change; only the footer (FOOTER) names the transport.
+        Each new file is posted once, as one comment with the workflow's own token (so the workflow bot's login;
+        the job holds no secret), on the issue the mail bridge would pick for that subject (target), with the
+        bridge's own first line, BRIDGE_POST, and this channel's mark (POST_MARK) as its last line. The readers that
+        take a bridge post as Muse's mail (the inbox's ASK and FYI, review verdicts, asks.py, the ledger, the
+        reconciler, the job machine's mail, the pipe health) take such a bot post the same way (asks.muse_git_post),
+        and never as the switchboard's own. It carries none of the team login's commands: a `/cancel`, `/blocked`,
+        `budget N` or `keep` in it does nothing; only `/ack` settles, as in Muse's mail. A post by the bot's token
+        starts no workflow run, so the next sweep (every 10 minutes) reads it.
   IN to Muse (inbox)   Each CLAUDE_TO_MUSE notice (a comment by the switchboard or the team login whose first line
         starts CLAUDE_TO_MUSE:) is written once as inbox/<time>-<comment id>.md on INBOX_BRANCH (muse-inbox), which
         only this module writes and Muse fetches each step. Its text is shaped by work/tasks/mail-to-muse.md, as
@@ -28,8 +32,8 @@ notice listing (one a run), and per new message its target reads, its duplicate 
 
 Once only, by path and blob: a message's key (message_key) is its path and blob sha. A posted key is kept in the
 inbox branch's state (POSTED_FILE), and every post carries the key in a hidden mark (POST_MARK). A key missing from
-the state is posted only when no team-login comment on the target already carries its mark, so a lost state, a
-re-push or a replay never posts twice; an edited file has a new blob and is posted again, as a new message.
+the state is posted only when no comment of the channel's (asks.muse_git_post) on the target carries its mark, so
+a lost state, a re-push or a replay never posts twice; an edited file has a new blob and is posted again, as a new message.
 
 Muse's text is untrusted data: read with `git cat-file` only (nothing is checked out, so nothing in the branch can
 run), size-bounded (MAX_READ_BYTES read, MAX_TEXT posted), and posted only. It cannot choose the repo, the path
@@ -37,7 +41,8 @@ beyond the one comments endpoint, or the first line; mentions, hidden markers (`
 from it (harmless), so it cannot forge this module's mark, a switchboard marker or another agent's signature.
 Muse's own words keep their lines, as the mail bridge posts them: a FIX verdict's `command:` lines must count.
 
-Run: python3 muse_git.py relay|inbox --git-dir DIR [--remote URL] [--dry-run]   (stdlib only; muse-git.yml)
+Run: python3 muse_git.py relay|inbox --git-dir DIR [--remote URL] [--dry-run]   (stdlib only; muse-git.yml; the token
+is GH_TOKEN, the workflow's own)
 Tests: tools/switchboard/test_muse_git.py
 """
 
@@ -70,19 +75,16 @@ POSTED_FILE = "state/posted.txt"         # the keys posted, one a line, of the f
 SINCE_FILE = "state/notices-since.txt"   # the notice listing's mark: the newest comment update read
 OUTBOX_REF = "refs/muse-git/outbox"      # where the two branches are fetched, in a bare repo of data only
 INBOX_REF = "refs/muse-git/inbox"
-# The post token (11-13): the hosted agent's token of the team login, in environment switchboard-merge, reused so Cory
-# adds no secret. Its posts need Issues: read and write on this repo; it is sent on the comment POST and GET /user only.
-POST_TOKEN_ENV = "AGENT_GITHUB_TOKEN"
 BRIDGE_POST = "**Muse (via email bridge)"    # switch.BRIDGE_POST: the first line every reader knows (module doc)
 MUSE_MARKER = "MUSE_TO_CLAUDE:"
 NOTICE_MARKER = "CLAUDE_TO_MUSE:"
 # Starts `_Mailed `, like the bridge's footer, so switch.unquoted drops it; no hex, `?` or asking word in it, so it
 # never turns a report into an ask (switch.MUSE_WAKES, MUSE_ASKS).
 FOOTER = f"_Mailed by git: {OUTBOX_BRANCH}, the git channel (trial)._"
-POST_MARK = "<!-- muse-git:posted key={key} -->"
+POST_MARK = "<!-- muse-git:posted key={key} -->"   # the last line of every post: asks.MUSE_GIT_MARK reads it
 POST_KEY = re.compile(r"<!-- muse-git:posted key=(\d{1,20}) -->")
 # A message file: under mail/, one level, a plain name. Anything else on the branch is never read.
-MESSAGE_NAME = re.compile(r"^mail/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.md$")
+MESSAGE_NAME = re.compile(r"mail/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.md")   # fullmatch: `$` also matches before a \n
 MUSE_LABEL = "wake:muse"      # switch.MUSE_LABEL: the mail bridge's OUT mails a labeled issue's new switchboard notices
 RELAY_MARK = "<!-- muse-git:relayed id={id} -->"   # on the switchboard's relay of team post `id` to Muse
 RELAYED = re.compile(r"<!-- muse-git:relayed id=(\d+) -->")
@@ -117,23 +119,22 @@ class ApiError(RuntimeError):
 
 
 class Api:
-    """The few GitHub calls this module makes. Reads carry the workflow's token; a comment POST, and only that,
-    carries the post token (the team login), so that token never reaches a read or any other path."""
+    """The few GitHub calls this module makes, all with the workflow's own token (GH_TOKEN): no secret is used."""
 
-    def __init__(self, repo: str, read_token: str, post_token: str = "", opener: Callable | None = None):
+    def __init__(self, repo: str, token: str, opener: Callable | None = None):
         if not REPO_NAME.match(repo):
             raise ValueError(f"not a repo name: {repo!r}")
-        self.repo, self._read, self._post = repo, read_token, post_token
+        self.repo, self._token = repo, token
         self._open = opener or urllib.request.urlopen
         self.calls = 0
 
-    def _call(self, method: str, path: str, token: str, body: dict | None = None):
+    def _call(self, method: str, path: str, body: dict | None = None):
         req = urllib.request.Request(API + path, method=method, data=None if body is None else
                                      json.dumps(body).encode("utf-8"))
         req.add_header("Accept", "application/vnd.github+json")
         req.add_header("X-GitHub-Api-Version", "2022-11-28")
-        if token:
-            req.add_header("Authorization", f"Bearer {token}")
+        if self._token:
+            req.add_header("Authorization", f"Bearer {self._token}")
         if body is not None:
             req.add_header("Content-Type", "application/json; charset=utf-8")
         self.calls += 1
@@ -145,7 +146,7 @@ class Api:
         return json.loads(text) if text else None
 
     def get(self, path: str):
-        return self._call("GET", path, self._read)
+        return self._call("GET", path)
 
     def paged(self, path: str) -> tuple[list, bool]:
         """Every page of a listing up to MAX_PAGES; True as well when it was cut there."""
@@ -158,24 +159,13 @@ class Api:
                 return out, False
         return out, True
 
-    def poster(self) -> str:
-        """The login the post token acts as (one read, with that token)."""
-        if not self._post:
-            raise RuntimeError(f"{POST_TOKEN_ENV} is not set")
-        return str((self._call("GET", "user", self._post) or {}).get("login") or "")
-
-    def switchboard_comment(self, number: int, body: str) -> dict:
-        """A comment as the switchboard (the workflow's token), for a relay to Muse: the mail bridge mails only the
-        workflow bot's CLAUDE_TO_MUSE comments."""
-        return self._call("POST", f"repos/{self.repo}/issues/{int(number)}/comments", self._read, {"body": body}) or {}
+    def comment(self, number: int, body: str) -> dict:
+        """A comment as the workflow bot: a Muse message (relay), or a relay to Muse (forward: the mail bridge mails
+        only the workflow bot's CLAUDE_TO_MUSE comments)."""
+        return self._call("POST", f"repos/{self.repo}/issues/{int(number)}/comments", {"body": body}) or {}
 
     def label(self, number: int, name: str) -> None:
-        self._call("POST", f"repos/{self.repo}/issues/{int(number)}/labels", self._read, {"labels": [name]})
-
-    def comment(self, number: int, body: str) -> dict:
-        if not self._post:
-            raise RuntimeError(f"{POST_TOKEN_ENV} is not set")
-        return self._call("POST", f"repos/{self.repo}/issues/{int(number)}/comments", self._post, {"body": body}) or {}
+        self._call("POST", f"repos/{self.repo}/issues/{int(number)}/labels", {"labels": [name]})
 
 
 class Git:
@@ -303,7 +293,7 @@ def outbox(git: Git, log: Callable[[str], None] = print) -> list[Message]:
     order = git.first_seen(OUTBOX_REF, OUTBOX_DIR)
     out = []
     for mode, typ, blob, path in git.tree(OUTBOX_REF, OUTBOX_DIR):
-        if typ != "blob" or mode not in ("100644", "100755") or not MESSAGE_NAME.match(path):
+        if typ != "blob" or mode not in ("100644", "100755") or not MESSAGE_NAME.fullmatch(path):
             log(f"SKIP   {plain(path)[:140]}: not a message file (mail/<name>.md, a plain file)")
             continue
         out.append(Message(path, blob, "", -1, order.get((path, blob), len(order) + len(out))))
@@ -415,13 +405,13 @@ class Targets:
 
 
 def posted_on(api: Api, number: int, key: str) -> bool:
-    """Does a team-login comment on #number already carry this key's mark? Only the team login counts: the repo is
-    public, so anyone could type a mark to hold a message back; Muse's own text cannot carry one (harmless)."""
+    """Does a post of this channel's (asks.muse_git_post: the workflow bot's) on #number already carry this key's
+    mark? No one else's counts: the repo is public, so anyone could type a mark to hold a message back; Muse's own
+    text cannot carry one (harmless)."""
     got, _ = api.paged(f"repos/{api.repo}/issues/{number}/comments")
     for c in got:
-        if ((c.get("user") or {}).get("login") or "").lower() != TEAM_LOGIN.lower():
-            continue
-        if key in POST_KEY.findall(c.get("body") or ""):
+        body = c.get("body") or ""
+        if asks.muse_git_post((c.get("user") or {}).get("login") or "", body) and key in POST_KEY.findall(body):
             return True
     return False
 
@@ -430,32 +420,14 @@ def read_posted(git: Git) -> set[str]:
     return {k for k in git.show(INBOX_REF, POSTED_FILE).split() if k.isdigit()}
 
 
-def check_poster(api: Api) -> str:
-    """Fail closed (11-13): the post token must act as the team login, or nothing is posted. A token missing,
-    refused by GET /user, or of another login raises, naming the cause; posts under another login would be read by
-    no one (every reader trusts the team login only)."""
-    try:
-        who = api.poster()
-    except ApiError as e:
-        raise RuntimeError(f"{POST_TOKEN_ENV} was refused by GET /user (HTTP {e.status}): nothing is posted") from None
-    if who.lower() != TEAM_LOGIN.lower():
-        raise RuntimeError(f"{POST_TOKEN_ENV} acts as {plain(who)[:40] or 'no login'}, not {TEAM_LOGIN}: "
-                           "no reader would see its posts, so none is made")
-    return who
-
-
-def relay(api: Api, git: Git, dry_run: bool = False, log: Callable[[str], None] = print,
-          checked: bool = False) -> tuple[list[str], int]:
+def relay(api: Api, git: Git, dry_run: bool = False, log: Callable[[str], None] = print) -> tuple[list[str], int]:
     """Posts each outbox message not posted yet, oldest first, at most MAX_POSTS. Returns the keys now posted
-    (found already posted included, so the state learns them) and the number that failed. `checked`: main ran
-    check_poster at start already."""
+    (found already posted included, so the state learns them) and the number that failed."""
     done = read_posted(git)
     fresh = [m for m in outbox(git, log) if m.key not in done]
     if not fresh:
         log("RELAY  nothing new on " + OUTBOX_BRANCH)
         return [], 0
-    if not dry_run and not checked:
-        check_poster(api)
     targets = Targets(api)
     keys, failed = [], 0
     for m in fresh[:MAX_POSTS]:
@@ -619,7 +591,7 @@ def forward(api: Api, targets: Targets, c: dict, dry_run: bool, log: Callable[[s
     if dry_run:
         log(f"DRY    would relay comment {cid} to Muse on #{number}")
         return None
-    got = api.switchboard_comment(number, relay_body(c))
+    got = api.comment(number, relay_body(c))
     api.label(number, MUSE_LABEL)
     log(f"RELAY  comment {cid} on #{thread_of(c)} relayed to Muse on #{number}")
     return got
@@ -705,22 +677,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--output", default="", help="relay: append posted=<keys> to this file ($GITHUB_OUTPUT)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
-    # The tokens are taken out of the environment, so no git child process inherits them.
-    read_token = os.environ.pop("GH_TOKEN", "")
-    post_token = os.environ.pop(POST_TOKEN_ENV, "")
-    api = Api(a.repo, read_token, post_token if a.part == "relay" else "")
-    if a.part == "relay" and not a.dry_run:
-        try:   # fail closed, first: no fetch, no read, no post unless the token is the team login's
-            print(f"RELAY  {POST_TOKEN_ENV} acts as {check_poster(api)}")
-        except RuntimeError as e:
-            print(f"RELAY  FAIL: {e}")
-            return 1
+    # The token is taken out of the environment, so no git child process inherits it (the inbox's push carries it
+    # in its own git config, set by the workflow step).
+    api = Api(a.repo, os.environ.pop("GH_TOKEN", ""))
     git = Git(a.git_dir, a.remote or f"https://github.com/{a.repo}.git")
     heads = git.fetch()
     print(f"FETCH  {OUTBOX_BRANCH} {heads.get(OUTBOX_BRANCH, 'absent')[:12]}, "
           f"{INBOX_BRANCH} {heads.get(INBOX_BRANCH, 'absent')[:12]}")
     if a.part == "relay":
-        keys, failed = relay(api, git, a.dry_run, checked=True)
+        keys, failed = relay(api, git, a.dry_run)
         if a.output:
             with open(a.output, "a", encoding="utf-8") as f:
                 f.write(f"posted={','.join(keys)}\n")

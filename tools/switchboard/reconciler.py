@@ -738,10 +738,15 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
 def apply_commands(state: State, p: Pass, thread_job: dict[int, str], events: Events, unmatched: dict,
                    roster: L.Roster) -> None:
     for c in sorted(p.comments, key=lambda c: (c.t, c.id)):
-        if c.login not in p.trusted:
+        # A Muse message the git channel posted (J-138, the workflow bot's login) may /ack, as her mail does, and
+        # nothing else: whoever can push fb-bot/mail never gets the team login's /cancel, /blocked or /unblock.
+        by_git = asks.muse_git_post(c.login, c.body)
+        if c.login not in p.trusted and not by_git:
             continue
         for m in CMD.finditer(c.body):
             cmd = (m.group("cmd") or "blocked").lower()
+            if by_git and cmd != "ack":
+                continue
             arg = (m.group("arg") if m.group("cmd") else m.group("blk")) or ""
             named = JOB_ID.search(arg)
             job = named.group(0) if (named and cmd in ("cancel", "blocked")) else thread_job.get(c.thread, "")
@@ -803,7 +808,7 @@ class Replies:
 def thread_replies(p: Pass, roster: L.Roster) -> Replies:
     posts = []
     for c in sorted(p.comments, key=lambda c: (c.t, c.id)):
-        if c.login == rules.BOT_LOGIN:
+        if asks.switchboards_own(c.login, c.body):   # a git-channel Muse post is hers (asks.muse_git_post)
             continue
         who = roster.of_name(c.author)   # an unsigned post (asks.UNSIGNED) is no agent's: nobody's reply
         if who:

@@ -42,11 +42,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import datetime as dt
 import hashlib
+import pathlib
 import re
+import sys
 from typing import NamedTuple
 
 import plan as P
 import rules
+
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent / "board"))   # after: tools/board has a plan.py too
+import asks  # noqa: E402  tools/board/asks.py: a Muse post of the git channel (muse_git_post)
 
 STATES = ("planned", "told", "acknowledged", "started", "pushed", "proven", "reviewed", "landed", "closed",
           "held", "blocked", "conflict")
@@ -501,7 +506,7 @@ def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *,
     if f.draft:
         return Work(**base, gate="draft", at=proven)
     if not lands:
-        note = any(v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
+        note = any(v.verdict == "NOTE" and rules.is_api_review(v)   # the API's NOTE, never Muse's posted by git
                    and rules.names_head(v, f.head_sha) for v in f.verdicts)
         return Work(**base, gate="note" if note else "" if codex_woken else "codex" if codex_asked else "", at=proven)
     at = max(t for t in (proven, when(lands[0].created_at)) if t) if proven or when(lands[0].created_at) else None
@@ -598,14 +603,17 @@ class Mail:
 def posts(comments: list[dict], logins, bot: str = rules.BOT_LOGIN) -> list[Post]:
     """The bridge's posts among `comments`, oldest first: the worker's mails and the hand mails to it. Only from a
     team login (the repo is public: anyone can type the bridge's first line), and never the switch's own
-    CLAUDE_TO_MUSE notices (the bot's login), which are not hand mail."""
+    CLAUDE_TO_MUSE notices (the bot's login), which are not hand mail. A worker's mail the git channel posted under
+    the bot's login (J-138, asks.muse_git_post) is one of its mails too."""
     out = []
     for c in comments:
         login = ((c.get("user") or {}).get("login") or "").lower()
         body = (c.get("body") or "").lstrip()
         at = when(c.get("created_at") or "")
         hand = body.startswith(HAND_MAIL)
-        if login not in logins or login == bot.lower() or at is None or not (hand or body.startswith(BRIDGE_POST)):
+        by_git = asks.muse_git_post((c.get("user") or {}).get("login") or "", body)
+        if at is None or not (by_git or (login in logins and login != bot.lower()
+                                          and (hand or body.startswith(BRIDGE_POST)))):
             continue
         first = body.split("\n", 1)[0]
         subject = first[len(HAND_MAIL):] if hand else first[len(BRIDGE_POST):].lstrip("):")

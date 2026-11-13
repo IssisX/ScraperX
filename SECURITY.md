@@ -35,8 +35,7 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
-  the `ask` and `provision` steps that call out (J-057), and `AGENT_GITHUB_TOKEN` also the Muse git channel's
-  `relay` step (J-138, below); the PR check of the switch stays read-only with no
+  the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
   secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
   `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
   (J-072).
@@ -76,21 +75,27 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   unaddressed mail and the board's verdicts are read and written.
 
 ### Muse git channel (`.github/workflows/muse-git.yml`, `tools/switchboard/muse_git.py`)
-- The `relay` step posts with `AGENT_GITHUB_TOKEN` (the team login; the posts need Issues: read and write on this
-  repository). `muse_git.py` calls `GET /user` first and posts nothing unless the login is IssisX (fail closed),
-  sends the token only on that call and its comment POST, and takes it out of the environment before any git
-  process runs. Any other step of `muse-git.yml` that reads it is P0.
-- Only trunk's file and code run (`workflow_run`, `schedule`, a dispatch on trunk), never `on: push` of a message
-  branch, whose own workflow copy would run. `fb-bot/mail` and `muse-inbox` are read with `git fetch` and
-  `cat-file` into a bare repo, never checked out or run.
-- A message file is posted as data: its first line is fixed (`**Muse (via email bridge): <subject>**`, as the mail
-  bridge's), mentions, `<!--` and Claude's footer are cut, it is size-bounded, and it cannot choose the repo or any
-  path beyond the one comments endpoint. Its other lines are Muse's words, as a mailed one's are: whoever can push
-  `fb-bot/mail` can say what the team login can. Message text that can carry a hidden marker or another first line
-  is P1. The `inbox` job holds only `github.token` (`contents: write`, `issues: write`), pushes `muse-inbox` alone,
-  and posts only its relays to Muse: a team-login post that asks Muse (never a stranger's) is quoted as data, every
-  line behind `| `, markers, backticks and links cut, under a fixed `CLAUDE_TO_MUSE:` first line, plus `wake:muse`.
-  A relay that lets the post's text start a line, or relays a post from outside the team login, is P1.
+- Neither job holds a secret or deploys to an environment: both use the job's own `github.token`. `relay` has
+  `issues: write` (its posts) and read scopes; `inbox` has `contents: write` (it pushes `muse-inbox` alone) and
+  `issues: write`. A secret, or `environment: switchboard-merge`, in either job is P1.
+- Only trunk's file and code run (`workflow_run` after a schedule or dispatch sweep, `schedule`, a dispatch on
+  trunk), never `on: push` of a message branch, whose own workflow copy would run. `fb-bot/mail` and `muse-inbox`
+  are read with `git fetch` and `cat-file` into a bare repo, never checked out or run.
+- A message file is posted as data, under the workflow bot's login: its first line is fixed (`**Muse (via email
+  bridge): <subject>**`), mentions, `<!--` and Claude's footer are cut, it is size-bounded, it ends with the
+  channel's mark, and it cannot choose the repo or any path beyond the one comments endpoint. Readers take such a
+  post (`asks.muse_git_post`: the bot's login, that first line and that end mark) as Muse's mail and as nothing
+  else: never as the switchboard's own post or marker, never as an API review or the eye (its verdict's author is
+  Muse), and it carries none of the team login's powers: only `/ack` settles; `/cancel`, `/blocked`, `/unblock`,
+  `budget N` and `keep` in it do nothing. So whoever can push `fb-bot/mail` speaks as Muse, her review verdicts
+  included, and holds no other power. The bound is push access to the repo: a workflow on any pushed branch can
+  post as the bot too (as it can type any unsigned switchboard marker); only a signing key, a secret, would close
+  that. Message text that can carry a hidden marker or another first line, or a reader that takes the bot's post
+  as a team-login command, is P1.
+- The `inbox` job posts only its relays to Muse: a team-login post that asks Muse (never a stranger's or the
+  bot's) is quoted as data, every line behind `| `, markers, backticks and links cut, under a fixed
+  `CLAUDE_TO_MUSE:` first line, plus `wake:muse`. A relay that lets the post's text start a line, or relays a post
+  from outside the team login, is P1.
 
 ### Downloaded code
 - Anything that downloads and runs code (toolchains, Godot, NDK, `pip install`, `npm`, scripts fetched

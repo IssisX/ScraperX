@@ -1012,10 +1012,12 @@ def open_issues(sw) -> list:
 
 
 def touch_times(comments: list[dict], events: list[dict], bot: str) -> dict[int, dt.datetime]:
-    """Per thread, the newest touch by anyone but the switchboard's own login (its notices must not reset a clock)."""
+    """Per thread, the newest touch by anyone but the switchboard's own login (its notices must not reset a clock); a
+    Muse message the git channel posted under that login (asks.muse_git_post) is her touch."""
     out: dict[int, dt.datetime] = {}
     for c in comments:
-        if (c.get("user") or {}).get("login") == bot:
+        login = (c.get("user") or {}).get("login") or ""
+        if login == bot and not asks.muse_git_post(login, c.get("body") or ""):
             continue
         try:
             n = int((c.get("issue_url") or "").rsplit("/", 1)[1])
@@ -1257,7 +1259,7 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
     closed = closed_prs(events)
     found = [AskIn(a["id"], a["n"], a["url"], a["target"], a["a"], a["t"])
              for a in asks.unanswered(stream, open_threads, since_live, closed=closed, **judge)
-             if a["login"] != rules.BOT_LOGIN]
+             if not asks.switchboards_own(a["login"] or "", a["body"])]
 
     trunk_proof = getattr(sw, "__dict__", {}).get("_trunk_proof")
     if trunk_proof is None and isinstance(getattr(gh, "state", None), dict) and isinstance(gh.state.get("trunk_proof"), dict):
