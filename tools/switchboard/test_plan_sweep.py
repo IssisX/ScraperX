@@ -123,9 +123,12 @@ class Hub:
                 return {"status": "behind", "commits": []}
             return {"status": "ahead", "commits": [{"sha": sha, "commit": {"committer": {"date": self.pushed[sha]}}}]}
         if m := re.fullmatch(r"commits/([0-9a-f]+)", rest):
-            if not any(s.startswith(m.group(1)) for s in self.pushed):
+            full = next((s for s in self.pushed if s.startswith(m.group(1))), "")
+            if not full:
                 raise switch.GitHubError("GET", path, "gh: No commit found (HTTP 422)", 422)
-            return {"sha": m.group(1)}
+            job = next((re.search(r"j(\d{3,})", n) for n, s in self.branches.items() if s == full), None)
+            return {"sha": m.group(1), "commit": {"message": f"Job: J-{job.group(1)}\n" if job else "a commit\n",
+                                                   "committer": {"date": self.pushed[full]}}}
         if m := re.fullmatch(r"issues/(\d+)/comments", rest):
             return some([c for c in self.comments if c["issue_url"].endswith(f"/{m.group(1)}")])
         if m := re.fullmatch(r"issues/(\d+)", rest):

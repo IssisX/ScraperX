@@ -178,19 +178,28 @@ def jobs_named(body: str) -> set[str]:
     return set(JOB_ID.findall(body[:300]))
 
 
+# 11-13: a ruling asked for in words, with no `?` and no BLOCKED, is still a wait: Muse's "Repair is your call — (a)
+# ... (b) ... (c)" (6842076630 on #391, J-076) and "verdict: NO FIX. The review's premise is wrong" (6842001469 on
+# #393, the FIX on #494) each sat past a day as a report, with no ASK-LATE and the board saying nobody waits.
+# "per your ruling" only cites one; `NO FIX` is the team's answer to a FIX, in capitals (a lowercase "no fix" reports).
+RULING = re.compile(r"\byour call\b|\bruling (?:is )?(?:needed|owed)\b|\bneeds? (?:your|a) (?:ruling|decision|call)\b",
+                    re.IGNORECASE)
+NO_FIX = re.compile(r"\bNO FIX\b")
+
+
 def blocking(body: str) -> bool:
-    """Does a post wait on an answer: a question (a `?` outside links and code) or a BLOCKED line? A post with
-    neither only reports (status_ask). The board's "waiting on <Name>'s answer" and the inbox's ASK-LATE read
-    only these (tools/switchboard/switch.py open_asks)."""
+    """Does a post wait on an answer: a question (a `?` outside links and code), a BLOCKED line, or a ruling it asks
+    for in words (RULING, NO_FIX)? A post with none of them only reports (status_ask). The board's "waiting on
+    <Name>'s answer" and the inbox's ASK-LATE read only these (tools/switchboard/switch.py open_asks)."""
     text = UNQUOTED.sub("", (body or "")[:4000])
-    return "?" in text or bool(BLOCKED.search(text))
+    return "?" in text or bool(BLOCKED.search(text) or RULING.search(text) or NO_FIX.search(text))
 
 
 def status_ask(ask: dict, holder: str, same) -> bool:
-    """An ask to the integrator that asks no question and says no BLOCKED: the loose closers apply (module docstring).
-    An ask whose text is not known is never one."""
-    body = UNQUOTED.sub("", (ask.get("body") or "")[:4000])
-    return holder == same(INTEGRATOR) and bool(body.strip()) and "?" not in body and not BLOCKED.search(body)
+    """An ask to the integrator that does not wait on an answer (blocking): the loose closers apply (module
+    docstring). An ask whose text is not known is never one."""
+    body = ask.get("body") or ""
+    return holder == same(INTEGRATOR) and bool(UNQUOTED.sub("", body[:4000]).strip()) and not blocking(body)
 
 
 def names_ask(reply: dict, ask: dict) -> bool:

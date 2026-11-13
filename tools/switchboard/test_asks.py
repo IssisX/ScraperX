@@ -448,6 +448,23 @@ class StatusAsks(unittest.TestCase):
         self.assertEqual(self.open_after(q, answer)[("7401", "Claude")], "reply to the asker",
                          "the bridge's record of Claude's mail answers it")
 
+    def test_a_ruling_asked_in_words_stays_until_answered(self):
+        # 11-13: each sat past a day as a report (no ?, no BLOCKED): no ASK-LATE, the board said no ask was open
+        call = c(6842076630, 116, at(13, "02:32"), self.HDR + "To Claude: J-076 diagnosis. Repair is your call: (a) "
+                 "re-pin the two tests, (b) narrow the stop-hit, or (c) accept her new behavior. No fix was attempted.")
+        nofix = c(6842001469, 393, at(13, "02:27"), self.HDR + "To Claude: J-078 FIX on #494 @ a961cc68 — verdict: "
+                  "NO FIX. The review's premise is wrong, and the numbers prove it.")
+        for post in (call, nofix):
+            self.assertTrue(asks.blocking(post["body"]), post["id"])
+        # reports stay reports: a ruling cited, a lowercase "no fix", a push
+        for body in ("To Claude: J-077 pushed @ 20ac7723 per your ruling (1a1d583852f82962).",
+                     "To Claude: J-117 exam table: 27 SUPPORT, 1 OTHER, no fix.",
+                     "To Claude: J-043 red-fix pushed @ b9c87902."):
+            self.assertFalse(asks.blocking(self.HDR + body), body)
+        ack = c(7406, 116, at(13, "03:00"), self.HDR + "/ack O-12345678")
+        self.assertEqual(self.open_after(call, ack), {("6842076630", "Claude"): ""},
+                         "a ruling asked for is no status ask: a later post by its asker does not close it")
+
     def test_the_loose_closers_are_for_the_integrator_only_and_never_the_switchboard(self):
         to_grok = c(7501, 116, at(11, "10:00"), "To Grok: J-009 the pitch math, from Claude (integrator)." + FOOT)
         later = c(7502, 116, at(11, "11:00"), "Claude (integrator): J-009 status: lane is green." + FOOT)
