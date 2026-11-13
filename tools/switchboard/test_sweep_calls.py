@@ -507,7 +507,7 @@ class WarmFullPass(unittest.TestCase):
             self.assertFalse(sw.prior_pr("fb-bot/integrate-never"))
         self.assertEqual(sum("had-one" in c for c in calls), 1)   # a yes is kept; a no is asked each time
         self.assertEqual(sum("never" in c for c in calls), 3)
-        self.assertEqual(gh.state["prior_pr"], ["fb-bot/integrate-had-one"])
+        self.assertEqual(gh.state["prior_pr_at"], {"fb-bot/integrate-had-one": ""})   # kept per head (11-13)
 
 
 

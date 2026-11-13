@@ -1682,19 +1682,44 @@ class Switch:
         return ""
 
     # ---------- auto-open (J-047) ----------
-    def prior_pr(self, branch: str) -> bool:
-        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch. A yes never turns
-        into a no, so it is kept in the sweep state (J-072: a PR listing answers 200 even with its ETag, so the warm
-        full pass spent 45 of its 72 counted calls asking again about branches that had a PR long ago)."""
+    def prior_pr(self, branch: str, sha: str = "") -> bool:
+        """Does a PR account for this branch's head `sha`? A head is accounted for when a PR (open, closed or merged)
+        was opened on the branch, unless every one of its PRs merged and the head has moved past them with work trunk
+        lacks (11-13: c200cd50 and 566cd4bd sat on claude/integrate-rate-budget after #505 merged, and nothing saw
+        them; Muse reuses one integrate branch per job the same way). Such a head is unlanded work: no, so the
+        auto-open opens a new PR for it through the same path as a branch that never had one.
+        A yes is kept per head in the sweep state (J-072: a PR listing answers 200 even with its ETag, so the warm
+        full pass spent 45 of its 72 counted calls asking again); a new head on that branch is asked once more."""
         state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
-        known = state.setdefault("prior_pr", [])
-        if branch in known:
+        heads = state.setdefault("prior_pr_at", {})   # the old "prior_pr" list kept names only: asked again once
+        if branch in heads and (not sha or heads[branch] == sha):
             return True
         owner = self.gh.repo.split("/")[0]
-        had = bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
-        if had:
-            known.append(branch)
-        return had
+        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+        if not prs:
+            return False
+        if sha and self.unlanded_past(branch, sha, prs):
+            return False
+        heads[branch] = sha
+        return True
+
+    def unlanded_past(self, branch: str, sha: str, prs: list) -> int:
+        """The merged PR this head has moved past with work trunk lacks, or 0. Only when every PR on the branch
+        merged and none was at this head: an open PR is the open PR's, and a PR closed unmerged stays a decision
+        someone made. Trunk merges PRs with a merge commit, so the merged commits are on trunk and a compare of
+        trunk with the head lists only what is not; a head that only took trunk in changes no file."""
+        if any(not p.get("merged_at") for p in prs):
+            return 0
+        heads = [((p.get("head") or {}).get("sha") or "") for p in prs]
+        if not all(heads) or sha in heads:
+            return 0   # a merged PR with no head sha in the listing is taken as this head's
+        cmp = self.gh.get(f"repos/{self.gh.repo}/compare/{rules.TRUNK}...{sha}") or {}
+        if int(cmp.get("ahead_by") or 0) <= 0 or not cmp.get("files"):
+            return 0
+        last = max(prs, key=lambda p: p.get("merged_at") or "")
+        self.out(f"NOTE        {branch} @{sha[:8]}: {cmp.get('ahead_by')} commit(s) past merged #{last.get('number')} "
+                 "that trunk lacks: unlanded work")
+        return int(last.get("number") or 1)
 
     def open_pr(self, branch: str, sha: str, job: str, message: str) -> str:
         """Open the PR for a finished branch: title is the commit subject, body starts with the Job line.
@@ -1716,12 +1741,15 @@ class Switch:
         self.out(f"NOTE  {why} ({branch} @{sha[:8]})")
         return why
 
-    def auto_pr_failure(self, branch: str, sha: str, job: str, reason: str, refused: bool = False) -> None:
+    def auto_pr_failure(self, branch: str, sha: str, job: str, reason: str, refused: bool = False,
+                        stuck: str = "") -> None:
         """One AUTO-PR-FAILED inbox item (J-051), keyed by branch and head: a head is listed once, however many
         sweeps fail on it. The branch and GitHub's words are outside text: in code spans, no verdict string."""
         where = f"{untrusted(branch)} head {sha[:8]}" + (f", {job}" if job else "")
         why = no_verdict(untrusted(" ".join(reason.split()), 160))
-        if refused:
+        if stuck:   # no PR can open until someone acts: our own words, said once per head
+            text = stuck
+        elif refused:
             text = (f"GitHub refused to open the PR ({why}). Cory turns on Settings → Actions → General → "
                     f"\"Allow GitHub Actions to create and approve pull requests\"; until then the integrator opens "
                     f"the PR by hand. This sweep's auto-open stopped here.")
@@ -1746,7 +1774,9 @@ class Switch:
         listed = collab_plan.whole(self.gh, path) if self.plan_mode() == "live" else self.gh.paged(path)
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
             alive = {b["name"] for b in listed}
-            self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
+            self.gh.state.pop("prior_pr", None)   # names only, before 11-13: blind to a new head, so dropped
+            self.gh.state["prior_pr_at"] = {n: h for n, h in (self.gh.state.get("prior_pr_at") or {}).items()
+                                            if n in alive}
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
@@ -1759,19 +1789,30 @@ class Switch:
             if branch in open_refs:
                 continue
             try:
-                known = self.gh.state.get("prior_pr") or [] if isinstance(getattr(self.gh, "state", None), dict) else []
-                if branch in known:   # a branch that had a PR: no read at all (prior_pr's own memo)
+                state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+                had = (state.get("prior_pr_at") or {}).get(branch)
+                if had == sha:   # this head had a PR: no read at all (prior_pr's own memo)
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
                 commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]   # immutable: a free 304 later
                 message = commit["message"]
                 job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
                 if not job:
+                    if had is not None:   # new commits on a branch that had a PR: unlanded work no PR can carry
+                        owner = self.gh.repo.split("/")[0]
+                        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+                        past = self.unlanded_past(branch, sha, prs) if prs else 0
+                        if past:
+                            self.auto_pr_failure(branch, sha, job, "", stuck=(
+                                f"commits past merged #{past} are not on trunk and the head commit has no Job: "
+                                f"line, so no PR can open for them. The owner pushes a commit carrying the Job "
+                                f"line (the next sweep opens the PR), or the work is closed out."))
+                        state.setdefault("prior_pr_at", {})[branch] = sha   # asked once per head
                     continue
                 at = parse_time(((commit.get("committer") or {}).get("date")) or "")
                 if branch.startswith(AUTO_PR_RECENT_ONLY) and (at is None or self.now - at > AUTO_PR_MAX_AGE):
                     continue   # 11-13: 77 old claude/integrate-* branches never had a PR; none is opened, none is read
-                if self.prior_pr(branch):
+                if self.prior_pr(branch, sha):
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
                 proof, url, _, _ = self.proof(sha)

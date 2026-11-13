@@ -57,7 +57,8 @@ class FakeGH:
     repo, dry_run = "IssisX/ScraperX", False
 
     def __init__(self, branches=(), open_prs=(), prior=None, commits=None, runs=None, jobs=None,
-                 dry_run=False, fail_write=""):
+                 dry_run=False, fail_write="", compares=None):
+        self.compares = compares or {}   # head sha -> the compare of trunk with it
         self.branches = list(branches)
         self.open_prs = list(open_prs)
         self.prior = prior or {}
@@ -87,6 +88,8 @@ class FakeGH:
         if "/actions/runs/" in path and "/jobs" in path:
             rid = int(path.split("/actions/runs/")[1].split("/")[0])
             return {"jobs": list(self.jobs.get(rid, []))}
+        if "/compare/" in path and path.rsplit("...", 1)[1] in self.compares:
+            return dict(self.compares[path.rsplit("...", 1)[1]])
         if "/commits/" in path:
             head = path.rsplit("/commits/", 1)[1]
             got = self.commits[head]   # a message, or {"message", "committer"}; no date: committed just now
@@ -279,6 +282,120 @@ class AutoOpen(unittest.TestCase):
         self.assertEqual(len(gh.writes), 1)   # the second branch was never attempted
         self.assertTrue(any("not permitted to create pull requests" in line for line in sw.lines))
         self.assertTrue(any("repo setting" in line for line in sw.lines))
+
+
+class PastAMergedPr(unittest.TestCase):
+    """11-13: c200cd50 and 566cd4bd sat on claude/integrate-rate-budget after #505 merged, and nothing saw them.
+    Commits on a branch past its merged PR that trunk lacks are unlanded work: a new PR, by the same path."""
+
+    NAME = "claude/integrate-rate-budget"
+    OLD = sha(9)   # the head #505 merged at
+
+    def moved(self, files=("tools/switchboard/switch.py",), ahead=2, prs=None, message=None):
+        gh, head = green_setup(name=self.NAME, job="J-072")
+        gh.state = {}
+        gh.prior = {self.NAME: prs if prs is not None else
+                    [{"number": 505, "state": "closed", "merged_at": "2026-11-13T15:00:00Z", "head": {"sha": self.OLD}}]}
+        gh.compares = {head: {"ahead_by": ahead, "files": [{"filename": f} for f in files]}}
+        if message is not None:
+            gh.commits[head] = message
+        return gh, head
+
+    def test_new_commits_past_a_merged_pr_open_a_new_pr(self):
+        gh, head = self.moved()
+        sw = make(gh)
+        self.assertEqual(sw.auto_open_prs(), 1)
+        (method, path, body), = gh.writes
+        self.assertEqual((body["head"], body["base"]), (self.NAME, rules.TRUNK))
+        self.assertTrue(body["body"].startswith("Job: J-072\n"), body["body"])
+        self.assertTrue(any("past merged #505" in line for line in sw.lines), sw.lines)
+        self.assertEqual(sw.auto_pr_failed, ())
+
+    def test_fb_bot_branch_reused_after_its_merge_opens_too(self):
+        gh, head = green_setup(name="fb-bot/integrate-j042-windup", job="J-042")
+        gh.prior = {"fb-bot/integrate-j042-windup": [{"number": 250, "state": "closed",
+                                                      "merged_at": "2026-11-06T11:00:00Z", "head": {"sha": sha(9)}}]}
+        gh.compares = {head: {"ahead_by": 1, "files": [{"filename": "src/a.cpp"}]}}
+        self.assertEqual(make(gh).auto_open_prs(), 1)
+
+    def test_the_merged_head_itself_opens_none_and_reads_no_compare(self):
+        gh, head = self.moved()
+        gh.prior[self.NAME][0]["head"]["sha"] = head
+        self.assertEqual(make(gh).auto_open_prs(), 0)
+        self.assertEqual(gh.writes, [])
+        self.assertFalse(any("/compare/" in g for g in gh.gets))
+
+    def test_a_head_that_only_took_trunk_in_opens_none(self):
+        for ahead, files in ((0, ()), (1, ())):   # nothing trunk lacks / a merge of trunk that changes no file
+            gh, head = self.moved(files=files, ahead=ahead)
+            self.assertEqual(make(gh).auto_open_prs(), 0, (ahead, files))
+            self.assertEqual(gh.writes, [])
+
+    def test_a_pr_closed_unmerged_or_still_open_opens_none(self):
+        gh, head = self.moved(prs=[{"number": 505, "state": "closed", "merged_at": "2026-11-13T15:00:00Z",
+                                    "head": {"sha": self.OLD}},
+                                   {"number": 510, "state": "closed", "merged_at": None, "head": {"sha": sha(8)}}])
+        self.assertEqual(make(gh).auto_open_prs(), 0)
+        gh, head = self.moved()
+        gh.open_prs = [{"number": 512, "head": {"ref": self.NAME}}]
+        self.assertEqual(make(gh).auto_open_prs(), 0)
+        self.assertEqual(gh.writes, [])
+
+    def test_a_red_moved_head_waits_for_green(self):
+        gh, head = self.moved()
+        gh.runs[head][0] = dict(gh.runs[head][0], conclusion="failure")
+        gh.jobs[7] = [{"name": "native-tests", "status": "completed", "conclusion": "failure"}]
+        self.assertEqual(make(gh).auto_open_prs(), 0)
+        gh.runs[head][0] = green_run(head)   # the fix lands green: the next sweep opens it
+        gh.jobs[7] = GREEN_JOBS
+        self.assertEqual(make(gh).auto_open_prs(), 1)
+
+    def test_a_covered_head_is_kept_and_a_new_head_is_asked_again(self):
+        gh, head = self.moved()
+        gh.prior[self.NAME][0]["head"]["sha"] = head
+        sw = make(gh)
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertEqual(gh.state["prior_pr_at"], {self.NAME: head})
+        gh.gets.clear()
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertFalse(any("pulls?state=all" in g or "/commits/" in g for g in gh.gets))   # no read at all
+        new = sha(10)   # two more commits pushed after the merge
+        gh.branches = [branch(self.NAME, 10)]
+        gh.commits[new] = "Pace each run on the hour\n\nJob: J-072"
+        gh.runs[new] = [green_run(new)]
+        gh.compares[new] = {"ahead_by": 2, "files": [{"filename": "tools/switchboard/switch.py"}]}
+        self.assertEqual(sw.auto_open_prs(), 1)
+        self.assertEqual(gh.writes[0][2]["body"].split("\n")[0], "Job: J-072")
+
+    def test_names_only_memo_is_dropped_so_a_moved_head_is_seen(self):
+        gh, head = self.moved()
+        gh.state = {"prior_pr": [self.NAME]}   # the memo before 11-13: a name was never asked again
+        self.assertEqual(make(gh).auto_open_prs(), 1)
+        self.assertNotIn("prior_pr", gh.state)
+
+    def test_a_moved_head_with_no_job_line_is_one_inbox_item(self):
+        gh, head = self.moved()
+        gh.state = {"prior_pr_at": {self.NAME: self.OLD}}
+        gh.commits[head] = "Pace each run on the hour, no job line"
+        sw = make(gh)
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertEqual(gh.writes, [])
+        (item,) = sw.auto_pr_failed
+        self.assertEqual((item.kind, item.target, item.head), ("AUTO-PR-FAILED", self.NAME, head))
+        self.assertIn("past merged #505", item.line)
+        self.assertIn("Job: line", item.line)
+        gh.gets.clear()
+        self.assertEqual(sw.auto_open_prs(), 0)   # asked once per head
+        self.assertEqual(sw.auto_pr_failed, ())
+        self.assertFalse(any("pulls?state=all" in g for g in gh.gets))
+
+    def test_a_moved_head_with_no_job_line_and_nothing_unlanded_is_quiet(self):
+        gh, head = self.moved(files=(), ahead=1)
+        gh.state = {"prior_pr_at": {self.NAME: self.OLD}}
+        gh.commits[head] = "Merge trunk in"
+        sw = make(gh)
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertEqual(sw.auto_pr_failed, ())
 
 
 if __name__ == "__main__":
