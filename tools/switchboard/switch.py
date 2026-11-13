@@ -224,6 +224,7 @@ LEDGER_NOTICE = "<!-- switchboard:ledger keys="   # the hidden marker of a ledge
 # sends it, and switchboard.yml names the run with it. A live bridge that is not trunk's, or names none, alarms once.
 BRIDGE_FILE = "tools/switchboard/muse_bridge.gs"
 SWITCHBOARD_WORKFLOW = "switchboard.yml"
+REVIEWS_RUN = "Switchboard reviews"   # switchboard.yml's run name for a part=ask run (SYSTEM_PLAN 6, wake_reviews)
 BRIDGE_VERSION_LINE = re.compile(r"^var BRIDGE_VERSION = '([0-9a-f]*)';", re.MULTILINE)
 BRIDGE_RUN = re.compile(r"^Switchboard sweep \(bridge ([0-9a-f]{12})\)$")
 BRIDGE_SEEN = dt.timedelta(minutes=25)    # the clock dispatches every 10 min: two missed in a row is no clock
@@ -2751,17 +2752,81 @@ class Switch:
                 self.owner_labels(it["number"], "")
 
     # ---------- ask (paid) ----------
+    def api_turn(self, facts: rules.PrFacts, ctx: dict, author: str, say: bool = True) -> bool:
+        """Is this head's next review the automatic one (its mark not yet checked)? One decision for ask_pr, which
+        runs it, and wake_reviews, which starts the run that does (SYSTEM_PLAN 6). `say`: print the Codex wait."""
+        if not rules.needs_review(facts, author, self.team):
+            return False
+        if self.codex_pending(facts, ctx):
+            if say:
+                self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no automatic review yet")
+            return False
+        if self.team.pool:
+            return self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
+        return rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
+
+    def eye_ok(self, ctx: dict) -> bool:
+        """May the eye run today: the worst case of one call fits under every cap (as api_ok for the review)."""
+        spec = self.budget.calls["eye"]
+        worst = money.worst_case(self.budget, "eye", spec.max_input_tokens)
+        return money.check(self.budget, self.entries(), self.now, ctx["job"], worst, self.job_cap(ctx)).ok
+
+    def reviews_due(self, seen: Steered) -> str:
+        """What a reviews run would do for this PR as steer left it: "the automatic review" or "the eye" when it is
+        its turn on the head, it is not posted yet and the budget lets it run (a refused call posts nothing, so a
+        run for it would do nothing); "" otherwise. A head merged in this sweep needs neither."""
+        facts, ctx = seen.facts, seen.ctx
+        if seen.decision.action == "MERGE" or self.stale(facts):
+            return ""
+        author = self.team.vendor_of_branch(facts.head_ref)
+        # the pool leaves the API out of its rotation when api_ok refuses (pooled_reviewer)
+        if self.api_turn(facts, ctx, author, say=False) and (self.team.pool or self.api_ok(ctx)) and \
+                not self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
+            return "the automatic review"
+        if rules.needs_eye(facts) and not self.marked(ctx["comments"], "eye", facts.number, facts.head_sha) and \
+                self.eye_ok(ctx):
+            return "the eye"
+        return ""
+
+    def wake_reviews(self, steered: list[Steered]) -> None:
+        """SYSTEM_PLAN 6 (11-13): a sweep's run has no ask job, so a merge never waits behind a review. When a head
+        this sweep read waits for the automatic review or the eye, steer starts one "Switchboard reviews" run
+        (switchboard.yml part=ask, its own concurrency group), which runs ask alone; the review's comment wakes the
+        usual sweep, which merges. One dispatch a sweep, at the first head due; none in a dry run; none while a
+        reviews run is queued or running (one read of the run list). A refused dispatch is a WAKE-REVIEWS line, never
+        a failed sweep: the next sweep that reads the head tries again, and the fallback clock asks the next reviewer."""
+        if self.gh.dry_run or getattr(self, "merge_only", False):
+            return
+        try:
+            due = next(((s, what) for s in steered for what in (self.reviews_due(s),) if what), None)
+            if due is None:
+                return
+            seen, what = due
+            n, head = seen.facts.number, seen.facts.head_sha[:8]
+            try:
+                runs = (self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{SWITCHBOARD_WORKFLOW}/runs"
+                                    f"?event=workflow_dispatch&branch={rules.TRUNK}&per_page=20&exclude_pull_requests=true")
+                        or {}).get("workflow_runs") or []
+            except GitHubError as err:   # not known: start one anyway (GitHub keeps one pending run in the group)
+                self.out(f"NOTE        the run list was not read ({err.detail[:120]}): the reviews run is started anyway")
+                runs = []
+            busy = [r for r in runs if r.get("display_title") == REVIEWS_RUN and r.get("status") != "completed"]
+            if busy:
+                self.out(f"WAKE-REVIEWS #{n} waits for {what} @{head}: reviews run {busy[0].get('id')} is "
+                         f"{busy[0].get('status')}; none started")
+                return
+            self.gh.write("POST", f"repos/{self.gh.repo}/actions/workflows/{SWITCHBOARD_WORKFLOW}/dispatches",
+                          {"ref": rules.TRUNK, "inputs": {"part": "ask"}},
+                          f"start the reviews run: #{n} waits for {what} @{head}")
+            self.out(f"WAKE-REVIEWS #{n} waits for {what} @{head}: the reviews run is started")
+        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+            self.out(f"WAKE-REVIEWS no reviews run started: {type(err).__name__}: {err}")
+
     def ask_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
-            self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no automatic review yet")
-            api_turn = False
-        elif self.team.pool:
-            api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
-        else:
-            api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
+        api_turn = self.api_turn(facts, ctx, author)
         # A workflow-file PR is reviewed like any other: no security pass (SYSTEM_PLAN 4.1, 11-13).
         if api_turn:
             if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
@@ -3553,6 +3618,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     if read >= 2 and len(item_errors) == read:
         failed += 1   # no PR could be read: the sweep did not finish
         sw.out(f"ERROR       every one of the {read} PRs read failed: the sweep did not finish")
+    if steer and not ask:   # SYSTEM_PLAN 6: the reviews run apart; a head waiting for one starts it (never in a dry run)
+        sw.wake_reviews(steered)
     quiet = delta is not None and not delta.prs and not delta.comments and not delta.finished and \
         not retry & {"inbox", "muse"}
     timers: dict = dict((state or {}).get("timers") or {}) if sweep_state_ok(state) else {}   # kept until replaced
