@@ -496,18 +496,22 @@ class WarmFullPass(unittest.TestCase):
             back.load_etags(os.path.join(d, "e.json"))
         self.assertEqual(len(back.etags), 500)   # at the old 20 MB cap, 51 prior-PR entries were lost
 
-    def test_a_branch_that_had_a_pr_is_not_asked_again(self):
+    def test_a_head_that_had_a_pr_is_not_asked_again(self):
         gh = CountingGH([])
         gh.state = {}
         calls = []
-        gh.paged = lambda path, key="": (calls.append(path), [{"number": 5}] if "had-one" in path else [])[1]
+        old, new = "a" * 40, "b" * 40
+        gh.paged = lambda path, key="": (calls.append(path),
+                                         [{"number": 5, "head": {"sha": old}}] if "had-one" in path else [])[1]
         sw = test_inbox.make(gh)
         for _ in range(3):
-            self.assertTrue(sw.prior_pr("fb-bot/integrate-had-one"))
-            self.assertFalse(sw.prior_pr("fb-bot/integrate-never"))
+            self.assertTrue(sw.prior_pr("fb-bot/integrate-had-one", old))
+            self.assertFalse(sw.prior_pr("fb-bot/integrate-never", old))
         self.assertEqual(sum("had-one" in c for c in calls), 1)   # a yes is kept; a no is asked each time
         self.assertEqual(sum("never" in c for c in calls), 3)
-        self.assertEqual(gh.state["prior_pr"], ["fb-bot/integrate-had-one"])
+        self.assertEqual(gh.state["prior_pr"], [f"fb-bot/integrate-had-one@{old}"])
+        self.assertFalse(sw.prior_pr("fb-bot/integrate-had-one", new))   # SYSTEM_PLAN item 2: asked of the head
+        self.assertEqual(sum("had-one" in c for c in calls), 2)
 
 
 
