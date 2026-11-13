@@ -387,3 +387,4 @@
 {"job": "J-098", "kind": "review", "note": "review#523@67caf6d3 month cap $100.00: spent $98.24, this call up to $2.68", "phase": "refused", "run": "694c57b6d675", "ts": "2026-11-13T18:52:23Z", "usd": "0"}
 {"job": "J-130", "kind": "review", "note": "review#484@f409406d month cap $100.00: spent $98.24, this call up to $2.60", "phase": "refused", "run": "a4d6f04d279f", "ts": "2026-11-13T19:07:52Z", "usd": "0"}
 {"job": "J-094", "kind": "eye", "note": "eye#522@35a51aeb in=21941", "phase": "reserve", "run": "01cf508266b2", "ts": "2026-11-13T19:43:25Z", "usd": "0.247764"}
+{"job": "J-094", "kind": "eye", "note": "eye#522@35a51aeb claude-opus-5-5 in=22326 out=1811 stop=end_turn", "phase": "end", "run": "01cf508266b2", "ts": "2026-11-13T19:43:25Z", "usd": "0.125524"}
