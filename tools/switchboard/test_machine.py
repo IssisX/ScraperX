@@ -572,18 +572,6 @@ class WorkOf(unittest.TestCase):
         self.assertEqual(row.next, "push the fix onto fb-bot/integrate-j101: it sits on fb-bot/integrate-j101-fix, "
                                    "which waits for #343 to land")
 
-    def test_a_workflow_pr_waiting_on_codex_says_the_one_thing_the_integrator_must_do(self):   # #473
-        api = rules.Verdict("anthropic", "Claude", "review", "LAND", "a" * 40, iso(2), rules.BOT_LOGIN, False, signed=True)
-        f = facts(head_ref="claude/integrate-switch", touches_workflows=True,
-                  verdicts=(api, verdict("meta", "Muse", "LAND", "a" * 40, 3)))
-        w = self.work(f, token=True, key=True)
-        self.assertEqual((w.state, w.gate), ("reviewed", "codex"))
-        ln = plan.parse(PLAN).by_job()["J-201"]
-        row = M.step(M.Evidence("J-201", ln, (201,), works=(w,)))
-        self.assertEqual((row.owes, row.limit), ("integrator", M.hours(1)))
-        self.assertEqual(row.next, "post `@codex review` on #473 (only a person's login wakes Codex)")
-        self.assertLess(len(row.alarm(at(9))), 200)
-
     def test_the_switchs_own_codex_ask_on_a_green_head_is_the_integrators_step(self):
         w = self.work(facts(), codex_asked=True)
         self.assertEqual((w.state, w.gate), ("proven", "codex"))

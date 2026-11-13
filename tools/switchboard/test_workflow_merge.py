@@ -131,19 +131,6 @@ def make(gh, token: str = TOKEN, key: str = KEY):
 
 
 class TheRule(unittest.TestCase):
-    def test_token_every_gate_and_a_clean_api_review_merge(self):
-        d = decide(facts())
-        self.assertEqual((d.action, d.land_by), ("MERGE", "Codex"))   # the Codex app's LAND is the one that counts
-        self.assertIn("clean automatic Claude review (LAND) on @1a2b3c4d", d.reasons[0])
-        # The security pass's NOTE is a hole it suspects but cannot show (SECURITY_REVIEW_SYSTEM): a person merges.
-        d = decide(facts(verdicts=(codex(), api("NOTE"))))
-        self.assertEqual(d.action, "HUMAN-MERGE")
-        self.assertIn("automatic Claude review on this head is NOTE, not LAND", d.reasons[0])
-        # The Claude API's own LAND is never the other vendor's LAND on a workflow PR, on any branch.
-        d = decide(facts(verdicts=(api(),)))
-        self.assertEqual(d.action, "HUMAN-MERGE")
-        self.assertIn("no LAND from a vendor other than meta", d.reasons[0])
-
     def test_no_token_is_human_merge_exactly_as_before(self):
         today = ("HUMAN-MERGE", ("ready, but it changes .github/workflows; the workflow token cannot merge it",))
         for f, by in ((facts(), "Claude"), (facts(verdicts=(codex(),)), "Codex")):
@@ -151,46 +138,89 @@ class TheRule(unittest.TestCase):
             self.assertEqual((d.action, d.reasons, d.land_by), today + (by,))
             self.assertEqual(rules.merge_decision(f, "meta", TEAM), d)   # the default is no token
 
-    def test_api_review_fix_or_block_is_not_merge(self):
-        # Without a repro a FIX or BLOCK reads as a NOTE elsewhere; for the security pass it still holds the merge.
-        for raw in ("FIX", "BLOCK"):
-            d = decide(facts(verdicts=(codex(), api(raw))))
-            self.assertEqual(d.action, "HUMAN-MERGE", raw)
-            self.assertIn("automatic Claude review on this head is FIX or BLOCK, not LAND", d.reasons[0])
-            self.assertEqual(decide(facts(verdicts=(codex(), api(raw, extra=REPRO)))).action, "FIX", raw)
-        # A hand-posted Claude LAND after the API's FIX clears open_fixes, never the security pass.
-        later = v("**Claude (review of #9 @ 1a2b3c4d): LAND**", T2)
-        self.assertEqual(decide(facts(verdicts=(codex(), api("FIX", extra=REPRO), later))).action, "HUMAN-MERGE")
-
-    def test_no_api_review_on_the_head_is_not_merge(self):
-        hand = v("**Claude (automatic review of #9 @ 1a2b3c4d): LAND**", T1, "IssisX")   # not the bot: not the API
-        for verdicts in ((codex(),), (codex(), api(sha=OTHER_HEAD)), (codex(), hand)):
-            d = decide(facts(verdicts=verdicts))
-            self.assertEqual(d.action, "HUMAN-MERGE")
-            self.assertIn("no automatic Claude review on this head (the security pass)", d.reasons[0])
-
-    def test_the_apis_own_land_on_claudes_work_is_not_the_other_vendors_land(self):
-        ref = "claude/integrate-j056-workflow-merge"
-        self.assertEqual(decide(facts(head_ref=ref, verdicts=(api(),), touches_workflows=False)).action, "MERGE")
-        d = decide(facts(head_ref=ref, verdicts=(api(),)))
-        self.assertEqual(d.action, "HUMAN-MERGE")
-        self.assertIn("no LAND from a vendor other than anthropic", d.reasons[0])
-        self.assertEqual(decide(facts(head_ref=ref, verdicts=(api(), codex()))).action, "MERGE")
-
     def test_every_other_gate_still_holds_with_the_token(self):
         for f, action in ((facts(proof="running"), "WAIT"), (facts(proof="red: native-tests"), "FIX-CI"),
-                          (facts(verdicts=(api(),), head_ref="claude/integrate-x"), "HUMAN-MERGE"),
                           (facts(verdicts=(api(sha=OTHER_HEAD),)), "WAIT"), (facts(mergeable=False), "WAIT"),
                           (facts(rule_check_block=True), "WAIT"), (facts(rule_check_block=None), "WAIT"),
                           (facts(never_edit=True, rule_check_block=True, head_ref="muse/integrate-protected-x"), "WAIT"),
                           (facts(draft=True), "SKIP"), (facts(needs=frozenset({"eyes"})), "WAIT")):
             self.assertEqual(decide(f).action, action, f)
 
-    def test_the_security_pass_is_asked_only_where_it_is_missing(self):
-        self.assertTrue(rules.needs_security_pass(facts(verdicts=(codex(),))))
-        for f in (facts(), facts(touches_workflows=False, verdicts=(codex(),)), facts(proof="running", verdicts=(codex(),)),
-                  facts(draft=True, verdicts=(codex(),)), facts(verdicts=(codex(), api("FIX", extra=REPRO)))):
-            self.assertFalse(rules.needs_security_pass(f), f)
+class LandsLikeAnyPR(unittest.TestCase):
+    """SYSTEM_PLAN 4.1 (11-13): a PR that changes .github/workflows lands like any other PR. Green proof, a LAND
+    from another vendor, no open FIX and a clean rule check merge it with the merge token; no security pass and no
+    Codex-only LAND. MERGE-BY-HAND stays only when no merge token is set."""
+
+    def steer(self, f, token: str = TOKEN, key: str = KEY):
+        gh = RecordingGH()
+        sw = make(gh, token=token, key=key)
+        seen: list = []
+        sw.steer_pr(f, ctx(), seen)
+        (s,) = seen
+        return sw, gh, s
+
+    def test_a_codex_land_and_the_token_merge_it_with_the_token(self):
+        f = facts(head_ref="claude/integrate-j072", verdicts=(codex(),))   # no automatic Claude review at all
+        d = decide(f)
+        self.assertEqual((d.action, d.land_by), ("MERGE", "Codex"))
+        self.assertIn("with the merge token", d.reasons[0])
+        self.assertEqual(decide(f, key=False), d)   # the review key no longer holds a merge
+        sw, gh, s = self.steer(f, key="")
+        self.assertEqual((s.decision.action, s.merge_note), ("MERGE", ""))
+        self.assertEqual([(m, p.rsplit("/", 2)[-2:], t) for m, p, t, _ in gh.writes], [("PUT", ["9", "merge"], TOKEN)])
+        ((_, note),) = gh.posted
+        self.assertIn("with the merge token", note)   # the merged note says how it landed
+        self.assertNotIn(TOKEN, note + "\n".join(sw.lines))
+
+    def test_a_typed_chatgpt_land_merges(self):
+        typed = v(f"**ChatGPT (review of #9 @ {HEAD}): LAND**")   # posted by the team login, typed by name
+        for ref in ("muse/integrate-j072", "claude/integrate-j072"):
+            d = decide(facts(head_ref=ref, verdicts=(typed,)))
+            self.assertEqual((d.action, d.land_by), ("MERGE", "ChatGPT"), ref)
+        # the author's own vendor still never lands it: ChatGPT on Codex's work is the same vendor
+        self.assertEqual(decide(facts(head_ref="codex/integrate-j072", verdicts=(typed,))).action, "WAIT")
+
+    def test_no_token_is_merge_by_hand(self):
+        f = facts(head_ref="claude/integrate-j072", verdicts=(codex(),))
+        sw, gh, s = self.steer(f, token="")
+        self.assertEqual(s.decision.action, "HUMAN-MERGE")
+        self.assertIn("the workflow token cannot merge it", s.decision.reasons[0])
+        self.assertEqual(gh.writes, [])
+        (item,) = sw.pr_inbox_items(s, [], frozenset())
+        self.assertEqual(item.kind, "MERGE-BY-HAND")
+
+    def test_an_open_fix_is_fix(self):
+        typed_fix = v(f"**ChatGPT (review of #9 @ {HEAD}): FIX**{REPRO}")
+        for verdicts in ((codex(unresolved=True),),                       # the Codex app's open findings
+                         (codex(), api("FIX", extra=REPRO)),               # the automatic review's FIX with a repro
+                         (codex(), typed_fix)):                            # any vendor's FIX with a repro
+            f = facts(head_ref="claude/integrate-j072", verdicts=verdicts)
+            self.assertEqual(decide(f).action, "FIX", verdicts)
+            sw, gh, s = self.steer(f)
+            self.assertEqual((s.decision.action, gh.writes), ("FIX", []), verdicts)
+
+    def test_ask_pr_on_it_makes_no_paid_call(self):
+        def ask(f, comments=()):
+            sw = make(RecordingGH())
+            sw.api_ok = lambda c: True
+            sw.review_load = lambda: ({}, {})
+            sw.stale = lambda f: False
+            sw.codex_pending = lambda f, c: False
+            sw.paid = lambda *a, **kw: self.fail("a paid call")
+            calls = []
+            sw.review = lambda facts, c, author, security=False: calls.append((facts.number, security))
+            sw.ask_pr(f, ctx(comments))
+            self.assertFalse(any(l.startswith("SECURITY") for l in sw.lines), sw.lines)
+            return calls
+        # Codex already landed the head: no automatic review, no security pass
+        for ref in ("claude/integrate-j072", "muse/integrate-j072"):
+            self.assertEqual(ask(facts(head_ref=ref, verdicts=(codex(),))), [], ref)
+        self.assertFalse(hasattr(rules, "needs_security_pass"))
+        # The API's own turn on an unreviewed workflow head is the ordinary review, never the security pass
+        self.assertEqual(ask(facts(verdicts=())), [(9, False)])
+        # and a plain review mark on the head, unsigned, stops a second one
+        mark = said("review\n" + switch.MARK.format(kind="review", pr=9, head=HEAD))
+        self.assertEqual(ask(facts(verdicts=()), [mark]), [])
 
 
 class TheMerge(unittest.TestCase):
@@ -466,19 +496,6 @@ class TheSecurityPass(unittest.TestCase):
         sw.ask_pr(f, ctx())
         return calls, sw.lines
 
-    def test_a_workflow_pr_codex_landed_gets_the_automatic_review(self):
-        calls, lines = self.ask(facts(head_ref="claude/integrate-j056", verdicts=(codex(),)))
-        self.assertEqual(calls, [(9, True)])
-        self.assertTrue(any(l.startswith("SECURITY    #9") for l in lines))
-
-    def test_the_apis_own_turn_on_a_workflow_pr_is_the_security_pass_too(self):
-        # Codex on #297, finding A: when the ordinary route picks the API (no LAND yet, or the Codex wait is over),
-        # its review of a workflow-file head ran the gameplay prompt, and its LAND then opened the token merge.
-        calls, _ = self.ask(facts(verdicts=()))
-        self.assertEqual(calls, [(9, True)])
-        calls, _ = self.ask(facts(verdicts=(), touches_workflows=False))   # off .github/workflows: as before
-        self.assertEqual(calls, [(9, False)])
-
     def test_no_second_review_and_none_off_workflow_files(self):
         self.assertEqual(self.ask(facts(head_ref="claude/integrate-j056"))[0], [])   # the API already reviewed it
         self.assertEqual(self.ask(facts(head_ref="claude/integrate-j056", verdicts=(codex(),),
@@ -514,21 +531,6 @@ class DiffGH(RecordingGH):
 
 class TheSecurityFindings(unittest.TestCase):
     """The three holes the security review of #297 found, one test each (J-056)."""
-
-    def test_1_an_8_character_prefix_collision_is_refused(self):
-        # HEAD was reviewed under the old 8-character marks; COLLIDE shares those 8 characters and nothing else.
-        for verdicts in ((api(width=8), codex(COLLIDE)),            # the API's old mark names only the prefix
-                         (api(sha=COLLIDE), codex(HEAD[:8])),       # a Codex state naming only the prefix
-                         (api(width=8), codex(HEAD[:8]))):
-            d = decide(facts(head_sha=COLLIDE, verdicts=verdicts))
-            self.assertEqual(d.action, "HUMAN-MERGE", verdicts)
-        self.assertIn("no automatic Claude review on this head",
-                      decide(facts(head_sha=COLLIDE, verdicts=(api(width=8), codex(COLLIDE)))).reasons[0])
-        # The ground head gets its own security pass: an old mark on another head does not stand in for it.
-        self.assertTrue(rules.needs_security_pass(facts(head_sha=COLLIDE, verdicts=(codex(COLLIDE), api(width=8)))))
-        self.assertEqual(decide(facts(head_sha=COLLIDE, verdicts=(api(sha=COLLIDE), codex(COLLIDE)))).action, "MERGE")
-        # Off .github/workflows an old 8-character mark keeps its meaning.
-        self.assertEqual(decide(facts(touches_workflows=False, verdicts=(api(width=8),))).action, "MERGE")
 
     def test_1_the_automatic_review_and_the_ask_name_the_whole_head(self):
         gh = DiffGH({})
@@ -608,45 +610,6 @@ class TheSecurityFindings(unittest.TestCase):
         self.assertIs(plain_system, claude_calls.REVIEW_SYSTEM)
         self.assertNotIn("<security_guidelines>", plain_text)
 
-    def test_3_a_typed_name_land_is_refused_on_a_workflow_pr(self):
-        typed = v(f"**ChatGPT (review of #9 @ {HEAD}): LAND**")          # any agent can type it: one login
-        typed_codex = v(f"**Codex (review of #9 @ {HEAD}): LAND**")      # the name alone, posted by IssisX
-        for lands in ((typed,), (typed_codex,), (typed, typed_codex), ()):
-            for ref in ("muse/integrate-j056", "claude/integrate-j056", "grok/integrate-j056"):
-                d = decide(facts(head_ref=ref, verdicts=(api(),) + lands))
-                self.assertEqual(d.action, "HUMAN-MERGE", (ref, lands))
-                self.assertIn("no LAND from a vendor other than", d.reasons[0])
-        # A typed Codex LAND after the Codex app's FIX on the head clears open_fixes, never this gate.
-        d = decide(facts(verdicts=(api(), codex(unresolved=True), dataclasses.replace(typed_codex, created_at=T2))))
-        self.assertEqual(d.action, "HUMAN-MERGE")
-        # The Codex app's clean review on the whole head, by its own login, is the LAND that counts.
-        for ref in ("muse/integrate-j056", "claude/integrate-j056", "grok/integrate-j056"):
-            d = decide(facts(head_ref=ref, verdicts=(api(), typed, codex())))
-            self.assertEqual((d.action, d.land_by), ("MERGE", "Codex"), ref)
-        # Codex is the author's own vendor on ChatGPT's or Codex's work: no LAND counts there.
-        self.assertEqual(decide(facts(head_ref="chatgpt/integrate-j056", verdicts=(api(), codex()))).action, "HUMAN-MERGE")
-        # Off .github/workflows a typed LAND counts as before.
-        self.assertEqual(decide(facts(touches_workflows=False, verdicts=(typed,))).action, "MERGE")
-
-    def test_3b_muse_stands_in_for_codex_only_while_codex_cannot_review(self):
-        # Cory, 11-10 ("muse"): Codex out of quota on #386 left a workflow PR with no reviewer that counts
-        muse = v(f"**Muse (review of #9 @ {HEAD}): LAND**")
-        short = v(f"**Muse (review of #9 @ {HEAD[:8]}): LAND**")
-        d = decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), muse), codex_failed=True))
-        self.assertEqual((d.action, d.land_by), ("MERGE", "Muse"))
-        # not while Codex can review; not on a prefix of the head; not without the security pass; not on Muse's own work
-        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), muse))).action, "HUMAN-MERGE")
-        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), short), codex_failed=True)).action,
-                         "HUMAN-MERGE")
-        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(muse,), codex_failed=True)).action,
-                         "HUMAN-MERGE")
-        self.assertEqual(decide(facts(head_ref="muse/integrate-j056", verdicts=(api(), muse), codex_failed=True)).action,
-                         "HUMAN-MERGE")
-        # the inbox line says what lands it
-        d = decide(facts(head_ref="claude/integrate-j075", verdicts=(api(),), codex_failed=True))
-        self.assertIn(f"review of #9 @ {HEAD}: LAND", d.reasons[0])
-
-
 class ThreadGH(RecordingGH):
     """RecordingGH with a PR thread: switch.verdicts() reads these comments on #9."""
 
@@ -696,61 +659,6 @@ class TheSignedReview(unittest.TestCase):
     as github-actions[bot], so on a workflow-file PR only an automatic review carrying a MAC under
     SWITCHBOARD_REVIEW_KEY (held only in environment switchboard-merge) is the security pass (J-056)."""
 
-    def forgeries(self) -> dict:
-        real = posted_review()
-        sig = last_line(real)
-        self.assertIn("switchboard:review-sig v1", sig)
-        bare = without_last_line(real)   # the review with its MAC line cut off: its plain mark is still there
-        other_sha, other_pr, note = (last_line(posted_review(sha=OTHER_HEAD)), last_line(posted_review(number=8)),
-                                     last_line(posted_review("NOTE")))
-        return {
-            "no MAC": bare,
-            "a wrong MAC (another key)": posted_review(key="not-the-review-key"),
-            "a MAC of zeros": bare + "\n" + sig.rsplit("mac=", 1)[0] + "mac=" + "0" * 64 + " -->",
-            "another sha's MAC line": bare + "\n" + other_sha,
-            "another sha's MAC, relabeled": bare + "\n" + other_sha.replace(f"head={OTHER_HEAD}", f"head={HEAD}"),
-            "another PR's MAC line": bare + "\n" + other_pr,
-            "another PR's MAC, relabeled": bare + "\n" + other_pr.replace("pr=8 ", "pr=9 "),
-            "another verdict's MAC line": bare + "\n" + note,
-            "another verdict's MAC, relabeled": bare + "\n" + note.replace("verdict=NOTE", "verdict=LAND"),
-            "the MAC line above the end": bare.replace("\n\n", "\n\n" + sig + "\n", 1),
-        }
-
-    def test_a_forged_bot_land_is_human_merge_and_the_pass_is_still_needed(self):
-        for what, body in self.forgeries().items():
-            got = read(body)
-            (forged,) = got
-            self.assertTrue(rules.is_api_review(forged) and forged.verdict == "LAND" and forged.sha == HEAD, what)
-            self.assertFalse(forged.signed, what)
-            f = facts(verdicts=got + (codex(),))
-            d = decide(f)
-            self.assertEqual(d.action, "HUMAN-MERGE", what)
-            self.assertIn("no automatic Claude review on this head (the security pass)", d.reasons[0], what)
-            self.assertTrue(rules.needs_security_pass(f), what)
-            # Its plain mark does not stand in for the real review either: the security pass still runs.
-            sw = make(RecordingGH())
-            sw.stale, sw.codex_pending = (lambda f: False), (lambda f, c: False)
-            calls = []
-            sw.review = lambda facts, c, author, security=False: calls.append((facts.number, security))
-            sw.ask_pr(f, ctx([said(body)]))
-            self.assertEqual(calls, [(9, True)], what)
-
-    def test_a_signed_land_and_the_codex_apps_land_merge(self):
-        body = posted_review()
-        (got,) = read(body)
-        self.assertTrue(got.signed)
-        f = facts(verdicts=(got, codex()))
-        self.assertEqual((decide(f).action, decide(f).land_by), ("MERGE", "Codex"))
-        self.assertFalse(rules.needs_security_pass(f))
-        self.assertTrue(make(RecordingGH()).marked([said(body)], "review", 9, HEAD, signed=True))   # paid once
-        # Signed is not clean: the security pass's signed NOTE or FIX still holds the merge.
-        self.assertEqual(decide(facts(verdicts=read(posted_review("NOTE")) + (codex(),))).action, "HUMAN-MERGE")
-        self.assertEqual(decide(facts(verdicts=read(posted_review("FIX")) + (codex(),))).action, "FIX")
-        # The same body by any other login, or read on another head, is not the security pass.
-        hand = make(ThreadGH([said(body, "IssisX")])).verdicts(9)[0]
-        self.assertEqual(decide(facts(verdicts=tuple(hand) + (codex(),))).action, "HUMAN-MERGE")
-        self.assertIsNone(rules.api_review_on(read(body), COLLIDE))
-
     def test_a_failed_security_pass_note_is_signed_so_it_is_not_paid_twice(self):
         gh = RecordingGH()
         make(gh).review_failed(facts(verdicts=(codex(),)), ctx(), "meta", True, "The automatic review failed to run. ")
@@ -758,28 +666,6 @@ class TheSignedReview(unittest.TestCase):
         self.assertTrue(make(RecordingGH()).marked([said(body)], "review", 9, HEAD, signed=True))
         self.assertFalse(make(RecordingGH()).marked([said(without_last_line(body))], "review", 9, HEAD, signed=True))
         self.assertIsNone(switch.VERDICT_TRIGGER.search(body))
-
-    def test_no_key_is_human_merge_and_says_so(self):
-        d = decide(facts(), key=False)
-        self.assertEqual(d.action, "HUMAN-MERGE")
-        self.assertIn(switch.REVIEW_KEY_ENV, d.reasons[0])
-        # The steer reads its key: none set, no merge.
-        sw = make(RecordingGH(), key="")
-        seen: list = []
-        sw.steer_pr(facts(), ctx(), seen)
-        self.assertEqual(seen[0].decision.action, "HUMAN-MERGE")
-        self.assertIn(switch.REVIEW_KEY_ENV, seen[0].decision.reasons[0])
-        self.assertEqual(sw.gh.writes, [])
-        # Reviews are posted unsigned, and read as unsigned with the key or without it.
-        body = posted_review(key="")
-        self.assertNotIn("review-sig", body)
-        self.assertFalse(read(body)[0].signed or read(body, key="")[0].signed)
-        # Without a key the plain mark still stops a second paid review of the head.
-        sw = make(RecordingGH(), key="")
-        sw.stale, sw.codex_pending = (lambda f: False), (lambda f, c: False)
-        sw.review = lambda *a, **kw: self.fail("paid twice on one head")
-        sw.ask_pr(facts(verdicts=read(body, key="") + (codex(),)), ctx([said(body)]))
-        self.assertTrue(any(l.startswith("REVIEWED    #9") for l in sw.lines))
 
 
 if __name__ == "__main__":
