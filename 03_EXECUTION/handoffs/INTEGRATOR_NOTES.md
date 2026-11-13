@@ -9,16 +9,16 @@ Read through: 1794584485 (2026-11-13 full check)
   take the HARD game jobs. Until then Claude's game jobs are held in the plan (J-001 J-015 J-084 J-090 J-093 J-096 J-109 J-137,
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
 - On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- Open system work: per-hour GitHub call budget + GraphQL batching (switchboard helper; next switchboard helper at xhigh);
-  Muse's git channel #507 (+ auto-relay of "To Muse:" posts, rule_check save-layout/raised-limit BLOCKs); #503, #506.
+- Open system work, all built, in review: #503 cache-out, #506 job clocks, #507 Muse git channel + "To Muse:" relay (Cory's
+  paste for Muse is on #504; give it after #507 merges), J-139 rule_check (#508), J-072 claude/integrate-rate-hourly (hourly
+  budget, GraphQL, new PR for commits past a merged PR). An xhigh test helper runs the real-world test as each lands; evidence
+  in work/tasks/system-test.md on claude/integrate-system-test. Open: J-044c has Muse fb-bot heads too (ownership, at game time).
 - Cory 11-13 ways of working: remove failure modes, never relocate them; never stop a helper past 10 min (escalate effort on
   its next run); check everything he says, push back when it costs more than it gains.
 - Hard problems: Gemini Carbon (newer, smarter, 11-13) or Argon (every hard job so far done); each ~1.5 h free a day, repo +
   some GitHub; via one copyable prompt to Cory; Fable only for the very hardest, alert Cory first (it draws on this limit; he holds 2 refunds). Fable designs, Opus builds.
-- Visuals for his art AI: flat, white, no cartoon; each item pinned WHERE it lives in the flow, numbered badges matching a
-  legend, ~110 words. Crowded and a bare 40-word list both failed; refine from his feedback.
-- Session wiring (11-13): this session is the integrator and holds the overview, both checks and the PAT reminder; the old
-  session's copies are paused, not deleted (deleting a task can delete sessions it touched).
+- Visuals for his art AI: flat, white, each item pinned WHERE it lives in the flow, numbered badges = legend, ~110 words.
+- This session is the integrator (overview, both checks, PAT reminder); the old session's copies are paused, never deleted.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
