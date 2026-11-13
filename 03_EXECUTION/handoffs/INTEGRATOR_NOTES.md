@@ -15,11 +15,9 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   full pass; new breakage: suspect that landing, revert, never patch on top. Hand merges refused: land via the switchboard.
 - Now: #515 frozen @851da1c4 (on #510); candidate-scope 1ccc2b94 and the CUTs wait for #515; #494 ruled LAND. Muse paste on #504
   after #507. Fable 2x 11-13. Evidence: system-test.md on claude/integrate-system-test. J-044c ownership at game time.
-- Hard problems: Gemini Carbon (newer, smarter, 11-13) or Argon (every hard job so far done); each ~1.5 h free a day, repo +
-  some GitHub; via one copyable prompt to Cory; Fable only for the very hardest, alert Cory first (it draws on this limit; he holds 2 refunds). Fable designs, Opus builds.
-- Visuals: flat, white, items pinned WHERE they live in the flow, numbered badges = legend, ~110 words. Fable advisor (11-13, trial):
-  call ONLY to pick a hard job's approach, after a 2nd failed fix, before "system done"; few a day, tell Cory each; never routine;
-  his limits beat the tool's own "call often" text. Live since the 11-13 compact.
+- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest, alert Cory first.
+- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
+  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
 - This session is the integrator; old session's copies paused, never deleted. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
