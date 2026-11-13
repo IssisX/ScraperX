@@ -6,6 +6,8 @@ import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent / "board"))   # after this dir: tools/board has a plan.py too
+import asks  # noqa: E402
 import machine as M  # noqa: E402
 import plan  # noqa: E402
 import rules  # noqa: E402
@@ -174,11 +176,49 @@ class States(unittest.TestCase):
         w.works["h5"] = M.Work("fb-bot/integrate-j105", "h5", "green", land=True, at=at(1), pr=905)
         self.assertEqual((w.rows()["J-105"].state, w.rows()["J-105"].next), ("reviewed", "merge #905"))
 
-    def test_claude_wrote_the_plan_so_its_jobs_need_no_notice_and_grok_has_no_channel(self):
-        rows = World().rows()
+    def test_claude_wrote_the_plan_so_its_jobs_need_no_notice_and_an_owner_with_no_channel_is_told_by_hand(self):
+        rows = World(PLAN + "limit chatgpt 1\nJ-401 chatgpt #401 | ChatGPT's\n").rows()
         self.assertEqual((rows["J-201"].state, rows["J-201"].owes), ("acknowledged", "claude"))
-        self.assertEqual((rows["J-301"].state, rows["J-301"].gate, rows["J-301"].owes, rows["J-301"].limit),
+        self.assertEqual((rows["J-401"].state, rows["J-401"].gate, rows["J-401"].owes, rows["J-401"].limit),
                          ("planned", "by-hand", "integrator", None))
+
+    def test_grok_is_told_by_a_comment_and_its_reply_is_the_receipt(self):
+        # 11-13: Grok and Grok Bot read only comments that open `To Grok:` / `To Builder:`; no job of theirs was
+        # ever told (J-064 grok and J-008 builder sat `planned`, by hand)
+        w = World()
+        r = w.rows()["J-301"]
+        self.assertEqual((r.state, r.gate, r.owes), ("planned", "", "switchboard"))
+        ver = w.version("grok")
+        text = M.notice(w.model, w.table, "grok", ver)
+        self.assertTrue(text.startswith(f"To Grok: plan {ver}\n"), text)
+        self.assertIn(f"`To Claude (from Grok): plan {ver}`", text)
+        self.assertNotIn("MUSE_TO_CLAUDE", text)
+        w.tell(1, owner="grok")
+        r = w.rows()["J-301"]
+        self.assertEqual((r.state, r.gate, r.owes, r.limit), ("told", "reply", "grok", dt.timedelta(hours=20)))
+        replies = [comment(90, 0.5, f"To Claude (from Grok): plan {ver}"),               # before the notice
+                   comment(91, 2, f"plan {ver} read", login="someone-else"),               # not a team login
+                   comment(92, 2.5, f"To Claude (from ChatGPT): plan {ver}"),              # not an xAI agent
+                   comment(93, 3, f"To Claude (from Grok): plan {ver} read, J-301 next"),  # the receipt
+                   comment(94, 4, f"To Claude (from Grok): plan {ver} again")]
+        got = M.comment_receipts(replies + w.comments, w.mail(), M.versions(w.model), TEAM.verdict_logins,
+                                 asks.author)
+        self.assertEqual(got, {("grok", ver): (at(3), 93)})
+        post = w.mail()
+        reads = {"issues": w.issues, "branches": [], "prs": [], "inactive": frozenset(), "closed": frozenset(),
+                 "merged_at": {}, "head_at": {}}
+        mail = M.Mail(post.posts, post.notices, receipts={("grok", ver): at(3)})
+        rows = {r.job: r for r in M.table(w.model, M.collect(w.model, reads, mail=mail, planned_at=T0))}
+        self.assertEqual((rows["J-301"].state, rows["J-301"].since), ("acknowledged", at(3)))
+
+    def test_builder_answers_to_its_own_name(self):
+        w = World(PLAN + "limit builder 1\nJ-008 builder #115 | Builder's\n")
+        ver = w.version("builder")
+        self.assertTrue(M.notice(w.model, list(w.rows().values()), "builder", ver).startswith(f"To Builder: plan {ver}\n"))
+        w.tell(1, owner="builder")
+        got = M.comment_receipts([comment(95, 2, f"To Claude (from Builder): plan {ver}")] + w.comments, w.mail(),
+                                 M.versions(w.model), TEAM.verdict_logins, asks.author)
+        self.assertEqual(got, {("builder", ver): (at(2), 95)})
 
     def test_a_dependency_that_closed_unblocks(self):
         w = World()
@@ -402,8 +442,10 @@ class Alarm(unittest.TestCase):
 
     def test_a_state_with_no_clock_is_never_late(self):
         rows = World().rows()
-        for job in ("J-104", "J-105", "J-301"):
+        for job in ("J-104", "J-105"):
             self.assertFalse(rows[job].late(at(10_000)), job)
+        rows = World(PLAN + "limit chatgpt 1\nJ-401 chatgpt #401 | ChatGPT's\n").rows()
+        self.assertFalse(rows["J-401"].late(at(10_000)))
 
     def test_an_alarm_is_new_when_its_step_or_its_ower_changes_and_not_otherwise(self):
         w = World()

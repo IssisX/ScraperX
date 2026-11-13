@@ -76,6 +76,8 @@ TABLE: dict[tuple[str, str], Rule] = {
     ("planned", ""): Rule(SWITCH, hours(1), "send {owner} the notice of plan {ver}"),
     ("planned", "by-hand"): Rule(INTEGRATOR, None, "tell {owner} its order by hand: no notice channel reaches it"),
     ("told", ""): Rule(OWNER, hours(2), 'answer the notice: put "plan {ver}" in a mail subject'),
+    # Grok's runs are at 10 AM and 4 PM Central, so a notice sent after the second is read the next morning
+    ("told", "reply"): Rule(OWNER, hours(20), 'answer the notice: reply "plan {ver}" on the thread it is on'),
     ("acknowledged", ""): Rule(OWNER, hours(24), "start it: push {wip}"),
     ("acknowledged", "queued"): Rule(OWNER, None, "wait for a lane: {why}"),
     ("started", ""): Rule(OWNER, hours(72), "push {integrate} so its proof runs"),
@@ -117,9 +119,15 @@ TABLE: dict[tuple[str, str], Rule] = {
 }
 
 # Who is told its order, and how. A mail owner gets the versioned notice through the bridge and answers with a
-# receipt. The integrator writes the plan, so Claude's own lines need no notice. Any other owner has no channel
-# the machine can prove: its jobs stay `planned` and the integrator tells it by hand.
+# receipt. A comment owner gets it as a board comment that starts `To <Name>:`, the one thing its runs read
+# (work/tasks/grok-answers.md, grok-engineer.md: Grok and Grok Bot read comments that start `To Grok:` or
+# `To Builder:`), and answers with a reply naming `plan <version>` (comment_receipts). The integrator writes the
+# plan, so Claude's own lines need no notice. Any other owner has no channel the machine can prove: its jobs stay
+# `planned` and the integrator tells it by hand.
 MAIL_OWNERS = frozenset({"muse"})
+COMMENT_OWNERS = {"grok": "Grok", "builder": "Builder"}   # owner -> the name its notice opens with
+COMMENT_AUTHORS = frozenset({"Grok", "Builder", "PE"})    # who may answer one (asks.author: Grok Bot signs as any)
+NOTICE_OWNERS = MAIL_OWNERS | frozenset(COMMENT_OWNERS)
 SELF_TOLD = frozenset({"claude"})
 PREFIXES = {"muse": ("fb-bot/", "muse/"), "builder": ("builder/", "pe/")}
 
@@ -340,8 +348,8 @@ def _step(ev: Evidence, ahead: str) -> Step:
     if told:
         return _row(ev, state, since=ev.receipt_at or ev.planned_at)
     if ev.notice_at:
-        return _row(ev, state, since=ev.notice_at)
-    return _row(ev, state, "" if ln.owner in MAIL_OWNERS else "by-hand", since=ev.planned_at)
+        return _row(ev, state, "reply" if ln.owner in COMMENT_OWNERS else "", since=ev.notice_at)
+    return _row(ev, state, "" if ln.owner in NOTICE_OWNERS else "by-hand", since=ev.planned_at)
 
 
 def table(model: P.Plan, evidence: dict[str, Evidence]) -> list[Step]:
@@ -662,6 +670,36 @@ def recorded_receipts(comments: list[dict], bot: str = rules.BOT_LOGIN) -> dict[
     return out
 
 
+def notice_head(owner: str, ver: str) -> str:
+    """A notice's first line: `To <Name>: plan <ver>` for a comment owner (its runs read only comments that open
+    with its address), the bridge's `CLAUDE_TO_MUSE: plan <ver>` for a mail owner."""
+    return f"To {COMMENT_OWNERS[owner]}: plan {ver}" if owner in COMMENT_OWNERS else f"{NOTICE_HEAD}{ver}"
+
+
+def comment_receipts(comments: list[dict], mail: Mail, vers: dict[str, str], logins, author,
+                     bot: str = rules.BOT_LOGIN) -> dict[tuple[str, str], tuple[dt.datetime, int]]:
+    """(comment owner, its present version) -> (when, comment id) of its receipt: the first comment after that
+    version's notice, from a team login (never the switch's own), written by one of COMMENT_AUTHORS (`author`:
+    asks.author, the signed first line) and naming `plan <version>` near its top. Pure: the caller reads."""
+    team = {str(x).lower() for x in logins} - {bot.lower()}
+    out: dict[tuple[str, str], tuple[dt.datetime, int]] = {}
+    for owner in COMMENT_OWNERS:
+        ver = vers.get(owner)
+        sent = notice_at(mail, owner, ver) if ver else None
+        if sent is None:
+            continue
+        for c in sorted(comments, key=lambda c: (c.get("created_at") or "", c.get("id") or 0)):
+            at = when(c.get("created_at") or "")
+            body = c.get("body") or ""
+            if (at is None or at < sent or ((c.get("user") or {}).get("login") or "").lower() not in team
+                    or author(body) not in COMMENT_AUTHORS):
+                continue
+            if ver in {v.lower() for v in PLAN_VER.findall(body[:600])}:
+                out[(owner, ver)] = (at, int(c.get("id") or 0))
+                break
+    return out
+
+
 def receipt_post(mail: Mail, ver: str, sent: dt.datetime) -> Post | None:
     """The worker's first mail after the notice that carries `plan <ver>`: the proof that version was read. Read
     from the subject and the body; a version is 12 hex after the word plan, never a commit."""
@@ -912,7 +950,7 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
             if not h.wip and h.ref not in refs and h.ref not in stacked:
                 ws.append(works.get(h.sha) or branch_work(h.ref, h.sha, at=h.at))
         ver, h = vers.get(ln.owner, ""), line_hash(ln)
-        first, ack = told(mail, ln.owner, ln.job, h, ver) if ln.owner in MAIL_OWNERS | SELF_TOLD else (None, None)
+        first, ack = told(mail, ln.owner, ln.job, h, ver) if ln.owner in NOTICE_OWNERS | SELF_TOLD else (None, None)
         if ln.owner in SELF_TOLD:
             first, ack = None, ack or planned_at
         moved = handover(mail, ln, vers)
@@ -937,13 +975,46 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
 # ---------- the views: labels, the board, a worker's queue and its notice. Text and diffs only; the switch
 # writes them, and only when work/switchboard.yml says `plan: live` ----------
 PARKED = "state:parked"   # reconciler.PARKED_LABEL: the one state label kept, made from a hold
+WAITING = "state:waiting"   # the owner asked someone and the job waits on the answer (waits)
+
+
+class Wait(NamedTuple):
+    """A job waiting on an answer: its owner's oldest open ask that blocks it (asks.blocking)."""
+    to: str              # the addressee, as the ask names it: Claude, Muse, Grok, ...
+    url: str
+    asked: dt.datetime
+    thread: int
+
+
+def waits(model: P.Plan, open_asks: list[dict], thread_job: dict[int, str], who) -> dict[str, Wait]:
+    """job -> the oldest open ask its owner posted that it waits on. `open_asks`: asks.unanswered's dicts (`a` the
+    asker, `target`, `n`, `t`, `url`, `body`), each one already judged open and blocking by the caller.
+    `thread_job`: a job's own issue and PR numbers -> its job. `who`: a name -> its agent key (Builder and PE are
+    one), so an ask counts only when its asker is the job's owner and it is addressed to someone else. An ask on
+    the job's own thread is its job's; elsewhere (the board) it is the job its opening names, when it names one."""
+    by_job = model.by_job()
+    out: dict[str, Wait] = {}
+    for a in sorted(open_asks, key=lambda a: a["t"]):
+        named = sorted({P.plan_job(j, by_job) for j in JOB_ID.findall((a.get("body") or "")[:300])} & set(by_job))
+        job = thread_job.get(a["n"]) or (named[0] if len(named) == 1 else "")
+        ln = by_job.get(job)
+        if ln is None or job in out or who(a["a"]) != who(ln.owner) or who(a["target"]) == who(ln.owner):
+            continue
+        out[job] = Wait(a["target"], a.get("url") or "", a["t"], a["n"])
+    return out
+
+
+def wait_text(w: Wait, now: dt.datetime) -> str:
+    return f"waiting on {w.to}'s answer ([ask]({w.url}), {span(now - w.asked)})" if w.url else \
+        f"waiting on {w.to}'s answer (#{w.thread}, {span(now - w.asked)})"
 
 
 def labels(model: P.Plan, issues: list[dict],
-           aliases: dict[str, frozenset[str]] | None = None) -> list[tuple[int, tuple[str, ...], tuple[str, ...]]]:
+           aliases: dict[str, frozenset[str]] | None = None,
+           waiting=frozenset()) -> list[tuple[int, tuple[str, ...], tuple[str, ...]]]:
     """(issue, labels to add, labels to remove) for every line whose own open issue carries labels the plan does
-    not say: `job`, one owner label, `state:parked` exactly when held; every other `owner:` and `state:` label
-    goes. `aliases`: per owner, the labels work/agents.yml counts as that owner's (owner:claude-lane-a is
+    not say: `job`, one owner label, `state:parked` exactly when held, `state:waiting` exactly while the job is in
+    `waiting` (it waits on an answer, waits()); every other `owner:` and `state:` label goes. `aliases`: per owner, the labels work/agents.yml counts as that owner's (owner:claude-lane-a is
     Claude's): one already there is left alone. A line whose issue number is wrong gets nothing (it is a
     conflict): a label is never written to an issue the plan cannot prove is the job's."""
     out = []
@@ -955,7 +1026,7 @@ def labels(model: P.Plan, issues: list[dict],
             continue
         have = {(lab.get("name") if isinstance(lab, dict) else lab) or "" for lab in issue.get("labels") or []}
         own = (set((aliases or {}).get(ln.owner) or ()) | {f"owner:{ln.owner}"}) if ln.owner != "unassigned" else set()
-        want = {"job"} | ({PARKED} if ln.hold else set())
+        want = {"job"} | ({PARKED} if ln.hold else set()) | ({WAITING} if ln.job in waiting else set())
         if own and not have & own:
             want.add(f"owner:{ln.owner}")
         add = tuple(sorted(want - have))
@@ -965,8 +1036,9 @@ def labels(model: P.Plan, issues: list[dict],
     return out
 
 
-def board(model: P.Plan, rows: list[Step], now: dt.datetime) -> str:
-    """The board's job section: per owner its lanes, then every job that is not closed with its state and step."""
+def board(model: P.Plan, rows: list[Step], now: dt.datetime, waiting: dict[str, Wait] | None = None) -> str:
+    """The board's job section: per owner its lanes, then every job that is not closed with its state and step, and
+    what it waits on when its owner's ask is open (waits())."""
     lanes = wip(model, rows)
     out = ["### Jobs (made from work/plan.md and what GitHub shows; nobody edits this by hand)", ""]
     for owner in sorted({r.owner for r in rows if r.owner}):
@@ -976,7 +1048,8 @@ def board(model: P.Plan, rows: list[Step], now: dt.datetime) -> str:
         for r in mine:
             late = " **LATE**" if r.late(now) else ""
             who = f"; next: {r.owes}, {r.next}" if r.owes else f"; {r.next}"
-            out.append(f"- {r.job} #{r.issue} {r.state}{late}{who}")
+            wait = f"; {wait_text((waiting or {})[r.job], now)}" if r.job in (waiting or {}) else ""
+            out.append(f"- {r.job} #{r.issue} {r.state}{late}{wait}{who}")
         out.append("")
     strays = [r for r in rows if not r.owner]
     if strays:
@@ -1028,8 +1101,9 @@ def notice(model: P.Plan, rows: list[Step], owner: str, ver: str, before: list[s
     order is; what is newly or no longer the owner's since the last notice (`before`: that notice's jobs, None
     when unknown); what is held; and the next jobs only while a lane is free: a held, blocked or over-limit job
     is never named as work to start. `again`: the re-send of an unanswered version, two lines."""
-    head = f"{NOTICE_HEAD}{ver}"
-    receipt = f'Receipt: put "plan {ver}" in the subject of your next MUSE_TO_CLAUDE mail.'
+    head = notice_head(owner, ver)
+    receipt = (f'Receipt: reply on this thread, first line `To Claude (from {COMMENT_OWNERS[owner]}): plan {ver}`.'
+               if owner in COMMENT_OWNERS else f'Receipt: put "plan {ver}" in the subject of your next MUSE_TO_CLAUDE mail.')
     if again:
         return "\n".join([head, "", f"Sent again: plan {ver} is on ScraperX-Claude in work/plan.md and has no "
                           "receipt from you yet. Pull trunk and read your lines there.", receipt])
