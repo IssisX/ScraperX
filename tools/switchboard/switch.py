@@ -1469,8 +1469,30 @@ class Switch:
         reached = [f for f in files if proof_scope.groups_of(f)]
         if not reached:
             return ""
+        if self.head_reads_no_game(facts):
+            # 11-13 (#510 held on candidate-510's 13-job proof): the head changes no file a proof reads, so every such
+            # file of its merge with trunk is trunk's own, which trunk's proof covers. No skew is possible there.
+            self.out(f"NO SKEW     #{facts.number}: trunk moved game code, but this head changes no file a proof reads")
+            return ""
         return (f"trunk is {ahead} commit(s) ahead with {len(reached)} file(s) its proof reads, "
                 f"e.g. {untrusted(reached[0], 80)}")
+
+    def head_reads_no_game(self, facts: rules.PrFacts) -> bool:
+        """Does this head's own change (its merge base with trunk to the head) touch no file any proof group reads
+        (ci/proof_scope.py)? False on any doubt: the compare cannot be read, or is cut short, or a file is reached."""
+        try:
+            own = self.gh.get(f"repos/{self.gh.repo}/compare/{rules.TRUNK}...{facts.head_sha}") or {}
+        except RateLimited:
+            raise
+        except GitHubError:
+            return False
+        files = [f.get("filename") or "" for f in own.get("files") or []]
+        ahead = int(own.get("ahead_by") or 0)
+        if own.get("status") not in ("ahead", "diverged") or not files or not ahead \
+                or len(own.get("commits") or []) < ahead or len(files) >= COMPARE_FILES_CAP:
+            return False
+        renamed = [f.get("previous_filename") or "" for f in own.get("files") or [] if f.get("previous_filename")]
+        return not any(proof_scope.groups_of(f) for f in files + renamed)
 
     def trunk_moved_game(self, old: str, new: str) -> bool:
         """Did trunk's commits from `old` to `new` change any file a proof reads (or could that not be read)?"""

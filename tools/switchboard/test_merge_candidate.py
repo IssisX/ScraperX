@@ -85,6 +85,60 @@ GREEN_JOBS = [{"name": "native-tests (a)", "conclusion": "success"}]
 RED_JOBS = [{"name": "native-tests (a)", "conclusion": "failure"}]
 
 
+
+class SkewGH:
+    """base_skew's two compares: trunk's commits the head lacks, and the head's own change since its merge base."""
+    repo = REPO
+
+    def __init__(self, trunk_files=("src/sim/matron.cpp",), own=("tools/switchboard/switch.py",), own_status="diverged",
+                 own_down=False, renamed_from=""):
+        self.trunk_files, self.own, self.own_status, self.own_down = trunk_files, own, own_status, own_down
+        self.renamed_from, self.gets, self.dry_run = renamed_from, [], False
+
+    def get(self, path, accept=""):
+        self.gets.append(path)
+        if path == f"repos/{REPO}/compare/{HEAD}...{rules.TRUNK}":
+            return {"status": "diverged", "ahead_by": 7, "commits": [{"sha": TRUNK}] * 7,
+                    "files": [{"filename": f} for f in self.trunk_files]}
+        if path == f"repos/{REPO}/compare/{rules.TRUNK}...{HEAD}":
+            if self.own_down:
+                raise switch.GitHubError("GET", path, "gh: Server Error (HTTP 502)", 502)
+            files = [{"filename": f} for f in self.own]
+            if self.renamed_from:
+                files[0]["previous_filename"] = self.renamed_from
+            return {"status": self.own_status, "ahead_by": 3, "commits": [{"sha": HEAD}] * 3, "files": files}
+        raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+
+
+class NoGameHead(unittest.TestCase):
+    """11-13: #510 changes only the switchboard, yet trunk's game commits held it on candidate-510's 13-job proof.
+    A head that changes no file a proof reads merges with trunk's own game code, which trunk's proof covers."""
+
+    def skew(self, **kw) -> str:
+        return ti.make(SkewGH(**kw)).base_skew(facts())
+
+    def test_a_head_that_changes_no_proof_read_file_has_no_skew(self):
+        self.assertEqual(self.skew(), "")
+        self.assertEqual(self.skew(own=("work/plan.md", "CLAUDE.md", "tools/board/sweep.py")), "")
+
+    def test_a_head_that_changes_game_code_keeps_its_skew_check(self):
+        for own in (("src/sim/matron.cpp",), ("tools/switchboard/switch.py", "godot/scripts/x.gd"),
+                    ("ci/proof_scope.py",), (".github/workflows/wo000-delivery-spine.yml",)):
+            self.assertIn("its proof reads", self.skew(own=own), own)
+
+    def test_any_doubt_keeps_the_skew(self):
+        self.assertIn("its proof reads", self.skew(own_down=True))   # the head's compare not read
+        self.assertIn("its proof reads", self.skew(own=()))           # nothing listed
+        self.assertIn("its proof reads", self.skew(own=("a.md",) * switch.COMPARE_FILES_CAP))   # cut short
+        self.assertIn("its proof reads", self.skew(own_status="identical"))
+        self.assertIn("its proof reads", self.skew(renamed_from="src/sim/matron.cpp"))   # moved out of the game
+
+    def test_trunk_moving_only_notes_reads_no_second_compare(self):
+        gh = SkewGH(trunk_files=("work/plan.md",))
+        self.assertEqual(ti.make(gh).base_skew(facts()), "")
+        self.assertEqual(len(gh.gets), 1)
+
+
 class Build(unittest.TestCase):
     def test_it_builds_its_own_branch_merges_trunk_in_and_dispatches_the_proof(self):
         gh = CandGH()
