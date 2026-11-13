@@ -1392,6 +1392,24 @@ public:
     // The game's hook rack on the 220 ring, and the hook gun lying on it.
     static constexpr std::uint64_t kHookRackFrameEntityId = 1959;
     static constexpr std::uint64_t kHookGunEntityId = 2970;
+    // J-094 (#412): the probe plate/pan/stop rig, proving ground only.
+    // Ids 2300/2301 are free (kit bodies run 2000-2223). Plate 25 kg, not 50:
+    // at 50 kg him is 526 J vs the 500 J stop; at 25 kg he is 437 J, she 966 J.
+    static constexpr std::uint64_t kProbePlateEntityId = 2300;
+    static constexpr std::uint64_t kProbePanEntityId = 2301;
+    static constexpr double kProbeRigX = 18.0;
+    static constexpr double kProbeRigZ = 8.0;
+    static constexpr double kProbePlateHalfM = 0.75;
+    static constexpr double kProbePlateHalfHeightM = 0.025;
+    static constexpr double kProbePlateMassKg = 25.0;
+    static constexpr double kProbePanHalfM = 0.8;
+    static constexpr double kProbePanHalfHeightM = 0.03;
+    static constexpr double kProbePanMassKg = 10.0;
+    static constexpr double kProbePanTopYM = 0.16;
+    static constexpr double kProbeDropM = 0.35;
+    static constexpr double kProbeStrokeM = 0.05;
+    static constexpr double kProbeStopCapN = 10000.0;
+    static constexpr double kProbeStopCapacityJ = 500.0;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
