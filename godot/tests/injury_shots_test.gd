@@ -572,5 +572,20 @@ func _run() -> void:
 	await _shot("injury_left_cheek", head + Vector3(0.45, 0.08, 0.55), head, 40.0)
 	await _shot("injury_face_front", head + Vector3(0.0, 0.05, 0.7), head, 45.0)
 	await _shot("injury_skull_back", head + Vector3(0.0, 0.15, -0.7), head, 45.0)
+	# J-059 #343 P1: a checkpoint restore rewinds her — the view resets its
+	# cache, so a bruise acquired after the checkpoint vanishes when the
+	# restore lands, and a later hit re-injures from scratch.
+	_set_injury({"eye_l": {"j_region": 150.0, "j_event": 80.0}})
+	_pose["restores"] = 0
+	await _step(2)
+	_check(layer.black_eye_visible("eye_l"), "restore_before", "sev %.0f" % layer.severity("eye_l"))
+	_set_injury({})
+	_pose["restores"] = 1
+	await _step(2)
+	_check(not layer.black_eye_visible("eye_l") and not layer.patch_visible("eye_l") and not layer.lid_visible("eye_l") and "eye_l" not in layer.visible_regions(), "restore_rewind",
+		"regions %s" % [layer.visible_regions()])
+	_set_injury({"face_l": {"j_region": 150.0, "j_event": 60.0}})
+	await _step(2)
+	_check(layer.bruise_visible("face_l"), "restore_reinjure", "sev %.0f" % layer.severity("face_l"))
 	print("INJURY %s (%d failed)" % ["PASS" if _fails == 0 else "FAIL", _fails])
 	quit(1 if _fails > 0 else 0)
