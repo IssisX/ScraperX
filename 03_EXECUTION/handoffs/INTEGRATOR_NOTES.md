@@ -23,6 +23,8 @@ Read through: 1794584485 (2026-11-13 full check)
 - Cory 11-13: when the system passes its real-world test, do NOT start game coding: alert Cory (phone push + a big emoji banner message, e.g. "🚨✅ SYSTEM COMPLETE ✅🚨") and wait for his go.
 - Cory 11-13: never stop a helper that has run over 10 min; a helper failing repeatedly gets the higher effort on its NEXT run, not by killing this one.
 - Cory 11-13: remove failure modes, never just relocate them (a page, an unsubscribe or a retry is a backstop, not the fix).
+- Cory 11-13: Gemini Argon has done every very hard job given to it (his count: 100%); about 1.5 h of free thinking a day,
+  sees the repo and some GitHub, not this session. Use it freely for very hard work: one whole copyable prompt to Cory.
 - Cory 11-13: Fable is for the very hardest problems only, like Argon; when one shows up, alert Cory first with why it needs Fable.
 - Fable low fixed named causes right first try (J-106, J-015). Fable designs, Opus builds from a finished design (Cory 11-12).
 
