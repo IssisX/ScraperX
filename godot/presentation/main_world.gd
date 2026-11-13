@@ -845,7 +845,7 @@ func _build_mountains_and_waterfall() -> void:
 		_add_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
 			base + Vector3(0.0, peak_height * 0.9, 0.0), snow).visible = false
 
-	_build_waterfall(Vector3(200.0, 0.0, -560.0))
+	_build_waterfall(Vector3(200.0, 0.0, -167.0))
 	_build_foothill_forest()
 	_build_basin()
 	MountainMesh.draw($TowerPresentation, _peaks)
@@ -1008,19 +1008,35 @@ void fragment() {
 	ALPHA = clamp(sheet * (0.35 + 0.45 * streak) * smoothstep(0.0, 0.03, UV.y), 0.0, 0.85);
 }
 """
+	# The sheet lies on the peak's south face, from its foot (`at`) 400 m up
+	# the face and 348 m north of it — the face's measured line (J-021 lane C:
+	# the first build put the sheet at the peak's axis, (200, -560), where the
+	# carved rock stands 437 m, 17 m above the sheet's top, so the fall was
+	# buried inside the peak and never seen). It weaves behind the rock's own
+	# bulges where they stand proud of the line, as a fall does; its lip
+	# emerges from a cleft about 360 m up. UV.y 0 stays at the lip: the
+	# sheet's +Y runs up the face.
+	var lip := at + Vector3(0.0, 400.0, -348.0)
+	var run := lip - at
+	# The face's outward normal (south-up): the sheet stands 12 m off the
+	# rock on it, so it clears the face's own bulges; the spray at its foot
+	# covers the gap. Without the stand-off the sheet weaves behind the
+	# bulges and its middle alone shows.
+	var face_out := Vector3(0.0, -run.z, run.y).normalized()
 	var quad := QuadMesh.new()
-	quad.size = Vector2(26.0, 420.0)
+	quad.size = Vector2(26.0, run.length())
 	quad.material = falls
 	var instance := MeshInstance3D.new()
 	instance.name = "Waterfall"
 	instance.set_meta(&"part", "Waterfall")
 	instance.mesh = quad
-	instance.position = at + Vector3(0.0, 210.0, 0.0)
+	instance.position = (at + lip) * 0.5 + face_out * 12.0
+	instance.rotation.x = atan2(run.z, run.y)
 	$TowerPresentation.add_child(instance)
 
 	var mist := CPUParticles3D.new()
 	mist.name = "WaterfallMist"
-	mist.position = at + Vector3(0.0, 8.0, 8.0)
+	mist.position = at + Vector3(0.0, 6.0, 7.0)
 	mist.amount = 50
 	mist.lifetime = 6.0
 	mist.direction = Vector3(0.0, 1.0, 0.4)

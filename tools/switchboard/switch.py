@@ -69,6 +69,19 @@ def only_wake_left(jobs: list[dict]) -> bool:
     """True when the proof's one unfinished job is the one waking this sweep: every proof job is done."""
     return any(j["name"] == WAKE_JOB for j in jobs) and all(
         j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
+
+
+BUILD_JOBS = ("host-build", "native-tests", "godot-touch", "android-build")   # the game's build and tests
+
+
+def built_run(jobs: list[dict]) -> bool:
+    """Did this proof run build or test the game: a host-build, native-tests, godot-touch or android-build job that
+    was not skipped (a failed host-build counts: its tests are skipped because it failed)? A push that changes only
+    notes, rules or the switchboard skips them all (ci/proof_scope.py) and reads green, so such a run says nothing
+    about trunk's code (RED-TRUNK)."""
+    return any((j.get("name") or "").startswith(BUILD_JOBS) and j.get("conclusion") != "skipped" for j in jobs)
+
+
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
 STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switchboard/reconciler.py, J-072)
@@ -126,7 +139,15 @@ MAX_PLAN_LABELS = 20                           # issues whose labels a live pass
 # compares, 60 proof reads, the listings), a third of a full pass's own. So in shadow it runs in the full pass of
 # every sixth hour, four times a day, and only with twice the rate floor left. Live, it runs every full pass.
 PLAN_SHADOW_EVERY_H = 6
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+# RED-TRUNK (11-13: trunk's full proof was red about a day, J-129's doubled order key 1100, and nobody owned it: the
+# notes-only pushes after it skip the build, so trunk's newest run read green). Trunk's proof is its newest run that
+# RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
+# a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
+TRUNK_RUN_READS = 6
+# The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
+# the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
+MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
@@ -551,7 +572,7 @@ def inbox_class(it: InboxItem) -> str:
     job whose next step another owner holds). "hold": the integrator's own work,
     posted at most once per INBOX_HOLD, or sooner riding an ask. Any kind not named here holds, so a new kind is
     never only a digest entry."""
-    if it.kind == "TO-CLAUDE":
+    if it.kind in ("TO-CLAUDE", "RED-TRUNK"):   # RED-TRUNK: every agent's proof stands on trunk
         return "now"
     if it.kind in DIGEST_KINDS:
         return "ride"
@@ -1406,29 +1427,33 @@ class Switch:
         return ""
 
     # ---------- auto-open (J-047) ----------
-    def prior_pr(self, branch: str) -> bool:
-        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch. A yes never turns
-        into a no, so it is kept in the sweep state (J-072: a PR listing answers 200 even with its ETag, so the warm
-        full pass spent 45 of its 72 counted calls asking again about branches that had a PR long ago)."""
+    def prior_pr(self, branch: str, sha: str) -> bool:
+        """Has this head of this branch ever been a PR's head (open, closed or merged)? The head filter names the
+        branch; a PR counts only at its own head, so a branch reused past a merged or closed PR gets a new one
+        (SYSTEM_PLAN item 2). A yes never turns into a no, so it is kept in the sweep state as "branch@sha" (J-072:
+        a PR listing answers 200 even with its ETag, so the warm full pass spent 45 of its 72 counted calls asking
+        again about branches that had a PR long ago)."""
         state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
         known = state.setdefault("prior_pr", [])
-        if branch in known:
+        key = f"{branch}@{sha}"
+        if key in known:
             return True
         owner = self.gh.repo.split("/")[0]
-        had = bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
+        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+        had = any((p.get("head") or {}).get("sha") == sha for p in prs or [])
         if had:
-            known.append(branch)
+            known.append(key)
         return had
 
-    def open_pr(self, branch: str, sha: str, job: str, message: str) -> str:
-        """Open the PR for a finished branch: title is the commit subject, body starts with the Job line.
-        Returns "" when opened (or in a dry run), else why not."""
+    def open_pr(self, branch: str, sha: str, job: str, message: str, title: str = "") -> str:
+        """Open the PR for a finished branch: title is `title`, else the commit subject; body starts with the Job
+        line. Returns "" when opened (or in a dry run), else why not."""
         subject, _, rest = message.partition("\n")
         body = f"Job: {job}\n\nOpened by the switchboard from {branch} @ {sha}"
         if rest.strip():
             body += f"\n\n{rest.strip()}"
         got = self.gh.write("POST", f"repos/{self.gh.repo}/pulls",
-                            {"title": subject, "head": branch, "base": rules.TRUNK, "body": body},
+                            {"title": title or subject, "head": branch, "base": rules.TRUNK, "body": body},
                             f"open PR for {branch} @{sha[:8]} (job {job})")
         if self.gh.dry_run:
             self.out(f"DRY  open PR for {branch} @{sha[:8]} (job {job})")
@@ -1454,13 +1479,16 @@ class Switch:
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
-        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* branches with no PR yet (J-047).
+        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* heads with no PR yet (J-047).
 
-        A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
-        that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
-        whose head already had a PR (open, closed or merged) is never opened again. Every failure on a
-        branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops this
-        sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
+        SYSTEM_PLAN item 2: the job is the head commit's `Job: J-NNN` line, else the branch name's
+        (plan.job_of_branch); a head whose subject starts "Merge" is titled "J-NNN: <the plan line's title>". A head
+        opens when the proof on it is green, the plan has a line for its job, the line has no `hold:`, the plan does
+        not list the head as `kept`, and no PR ever had this head (a branch past its merged or closed PR opens
+        again). A held job or a kept head opens nothing. A green head with no job, or a job the plan has no line
+        for, is one AUTO-PR-FAILED item per head. At most MAX_AUTO_PRS per sweep, in branch-name order. Every
+        failure on a branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops
+        this sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
         # 11-12: 647 branches, and paged() stops at 500 without saying so, so a finished branch past it never got
@@ -1468,12 +1496,20 @@ class Switch:
         # it always read: the rebuild changes nothing the live switch does while it is in shadow.
         path = f"repos/{self.gh.repo}/branches"
         listed = collab_plan.whole(self.gh, path) if self.plan_mode() == "live" else self.gh.paged(path)
-        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
-            alive = {b["name"] for b in listed}
-            self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget heads gone or moved
+            current = {f"{b['name']}@{b['commit']['sha']}" for b in listed}
+            state["prior_pr"] = [k for k in state.get("prior_pr") or [] if k in current]
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
+        model = self.read_plan()
+        lines = model.by_job()
+        kept = {(ref, ksha) for ln in model.lines for ref, ksha in ln.kept}
+        # a no-plan-job item is made once per head: until the inbox lists it (its ring, inbox_box), not just once made,
+        # so a sweep whose inbox never ran (a fast or quiet one) loses nothing
+        box = state.get("inbox") if isinstance(state.get("inbox"), dict) else {}
+        listed_keys = {k for k in box.get("keys") or [] if isinstance(k, str)}
         open_refs = {p["head"]["ref"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
         opened = 0
         for b in sorted(branches, key=lambda x: x["name"]):
@@ -1482,19 +1518,42 @@ class Switch:
             branch, sha, job = b["name"], b["commit"]["sha"], ""
             if branch in open_refs:
                 continue
+            key = f"{branch}@{sha}"
             try:
-                if self.prior_pr(branch):
+                if key in (state.get("prior_pr") or []):
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
+                if any(ref == branch and sha.startswith(ksha) for ref, ksha in kept):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: the plan keeps this head as a record")
+                    continue
                 message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
-                job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
-                if not job:
+                job = rules.job_of_pr(message) or collab_plan.job_of_branch(branch)   # the Job: line, else the name
+                line = lines.get(collab_plan.plan_job(job, lines)) if job else None
+                if line is None and inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                    continue
+                if line is not None and line.hold:
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): the plan holds {line.job}")
+                    continue
+                if self.prior_pr(branch, sha):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
                 proof, url, _, _ = self.proof(sha)
                 if proof != "green":
-                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): proof is {proof}")
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job or 'no job'}): proof is {proof}")
                     continue
-                why = self.open_pr(branch, sha, job, message)
+                if line is None:
+                    why = (f"{job} has no line in work/plan.md" if job else
+                           "its head commit has no `Job: J-NNN` line and its name no job")
+                    self.out(f"NOTE  {branch} @{sha[:8]} is green with no PR: {why}; nothing opened")
+                    where = f"{untrusted(branch)} head {sha[:8]}" + (f", {job}" if job else "")
+                    self.auto_pr_failed += (InboxItem(
+                        "AUTO-PR-FAILED", branch, sha,
+                        f"AUTO-PR-FAILED {where}: green with no PR, and {why}, so the switch opens none. The "
+                        f"integrator gives the job a plan line (the next sweep opens it) or opens the PR by hand."),)
+                    continue
+                subject = message.partition("\n")[0]
+                why = self.open_pr(branch, sha, job, message,
+                                   f"{job}: {line.title}" if subject.startswith("Merge") else "")
                 if why:
                     self.auto_pr_failure(branch, sha, job, why)
                     continue
@@ -1930,6 +1989,9 @@ class Switch:
         if not prefix:
             items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
+        if ripe is None:
+            audience = ("muse", "both") if prefix else ("claude", "both")
+            items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
         if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
@@ -2480,6 +2542,88 @@ class Switch:
                                      dest, tests=self.red_tests(rid) if wanted and not self.defer_logs else (),
                                      run_id=rid if wanted else None))
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
+
+    def trunk_proof(self, runs: list[dict]) -> dict:
+        """Trunk's proof as the sweep state keeps it: {"sha", "run", "url", "state", "at", "first_red", "pr",
+        "branch"}, from the newest trunk run in `runs` that ran the build (built_run), read newest first back to the
+        run kept (at most TRUNK_RUN_READS jobs reads). A run that skipped the build (a notes-only push,
+        ci/proof_scope.py) never replaces it, so a red stays until a green full proof. `first_red`: the head of the
+        first red run of this red streak, and `pr`/`branch`: the PR whose merge it is (its merge message), whose
+        owner is paged. Once per run; {} when no full trunk run has been seen."""
+        memo = self.__dict__.get("_trunk_proof")
+        if memo is not None:
+            return memo
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        kept = dict(state.get("trunk_proof") or {}) if isinstance(state.get("trunk_proof"), dict) else {}
+        trunk = sorted((r for r in runs if r.get("head_branch") == rules.TRUNK and r.get("status") == "completed"),
+                       key=lambda r: r.get("created_at") or "", reverse=True)
+        checked = max(str(kept.get("checked") or ""), str(kept.get("created") or ""))
+        newest, done_all = (trunk[0].get("created_at") or "") if trunk else "", True
+        for i, r in enumerate(trunk):
+            if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
+                break   # nothing newer than the runs already judged
+            if i >= TRUNK_RUN_READS:
+                done_all = False   # the rest wait for the next sweep: nothing past them is marked judged
+                break
+            try:
+                if not built_run(self.run_jobs(r["id"])):
+                    continue   # the build was skipped: this run proves nothing about trunk's code
+                proof, url, rid, done = self.run_state(r)
+            except RateLimited:
+                raise
+            except GitHubError as err:
+                self.out(f"NOTE        trunk proof run {r.get('id')}'s jobs were not read ({err_text(err)}): read next sweep")
+                done_all = False
+                break
+            sha = r.get("head_sha") or ""
+            red = proof.startswith("red")
+            first = (kept.get("first_red") or sha) if red and str(kept.get("state", "")).startswith("red") else sha
+            new = {"sha": sha, "run": rid, "url": url, "state": proof, "at": done, "created": r.get("created_at") or ""}
+            if red:
+                new["first_red"] = first
+                if first == kept.get("first_red") and kept.get("pr") is not None:
+                    new["pr"], new["branch"] = kept.get("pr"), kept.get("branch") or ""
+                else:   # the commit that broke it: trunk's commits are PR merges, so its message names the branch
+                    try:
+                        msg = (self.gh.get(f"repos/{self.gh.repo}/commits/{first}") or {}).get("commit", {}).get("message", "")
+                    except GitHubError:
+                        msg = ""
+                    m = MERGE_FROM.match(msg or "")
+                    branch = m.group(2).removeprefix(self.gh.repo.split("/")[0] + "/") if m else ""
+                    new["pr"], new["branch"] = (int(m.group(1)), branch) if m else (0, "")
+            kept = new
+            break
+        if done_all and newest > checked and kept:   # every run down to the judged ones was read: none is read again
+            kept = dict(kept, checked=newest)
+        if not getattr(self.gh, "dry_run", False) and kept and isinstance(getattr(self.gh, "state", None), dict):
+            self.gh.state["trunk_proof"] = kept
+        self.__dict__["_trunk_proof"] = kept
+        return kept
+
+    def trunk_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
+        """RED-TRUNK: trunk's full proof is red (trunk_proof). One item per red streak (its first red head), at once
+        (inbox_class "now"), to the integrator, and to Muse too when the PR whose merge first went red was hers
+        (its fb-bot/ branch): the owner of the commit that broke it. The owner fixes; with no green fix head in 60 min a
+        helper reverts that merge in its own PR. No merge freeze: the fix lands by the normal rule."""
+        t = self.trunk_proof(runs)
+        if not str(t.get("state", "")).startswith("red"):
+            return []
+        first = t.get("first_red") or t.get("sha") or ""
+        branch = t.get("branch") or ""
+        dest = "both" if owner_of(branch) == "muse" else "claude"   # Claude's own trunk pushes, too: the integrator
+        owner = "Muse" if dest == "both" else "Claude"
+        by = f"; first red at {first[:8]}, the merge of #{t['pr']} ({untrusted(branch)})" if t.get("pr") else \
+            f"; first red at {first[:8]}"
+        undo = f"`git revert -m 1 {first[:8]}`" if t.get("pr") else f"`git revert {first[:8]}`"
+        since = parse_time(str(t.get("at") or "")) or self.now
+        wanted = dest in ("muse", "both") if prefix == "muse-" else True
+        return [InboxItem("RED-TRUNK", rules.TRUNK, first,
+                          f"RED-TRUNK trunk's full proof is red on {plain(', '.join(red_jobs(t['state'])))} "
+                          f"({hours(self.now - since)}){by}; owner {owner}. {owner} fixes it; no green fix head in "
+                          f"60 min, a helper reverts it ({undo}, its own PR). No merge freeze: the fix lands by the "
+                          f"normal rule ([proof]({t.get('url') or ''}))", dest,
+                          tests=self.red_tests(t.get("run")) if wanted and not getattr(self, "defer_logs", False) else (),
+                          run_id=t.get("run") if wanted else None)]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments. With no job issue, the board's

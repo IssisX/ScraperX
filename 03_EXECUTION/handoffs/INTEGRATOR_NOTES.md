@@ -2,26 +2,26 @@
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794584485 (2026-11-13 full check)
-
+Read through: 1794599051 (2026-11-13 mail+asks)
 ## Now (11-13)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
-  take the HARD game jobs. Until then Claude's game jobs are held in the plan (J-001 J-015 J-084 J-090 J-093 J-096 J-109 J-137,
-  J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
-- On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- Open system work, all built, in review: #503 cache-out, #506 job clocks, #507 Muse git channel + "To Muse:" relay (Cory's
-  paste for Muse is on #504; give it after #507 merges), J-139 rule_check (#508), J-072 claude/integrate-rate-hourly (hourly
-  budget, GraphQL, new PR for commits past a merged PR). An xhigh test helper runs the real-world test as each lands; evidence
-  in work/tasks/system-test.md on claude/integrate-system-test. Open: J-044c has Muse fb-bot heads too (ownership, at game time).
-- Cory 11-13 ways of working: remove failure modes, never relocate them; never stop a helper past 10 min (escalate effort on
-  its next run); check everything he says, push back when it costs more than it gains.
-- Hard problems: Gemini Carbon (newer, smarter, 11-13) or Argon (every hard job so far done); each ~1.5 h free a day, repo +
-  some GitHub; via one copyable prompt to Cory; Fable only for the very hardest, alert Cory first (it draws on this limit; he holds 2 refunds). Fable designs, Opus builds.
-- Visuals for his art AI: flat, white, each item pinned WHERE it lives in the flow, numbered badges = legend, ~110 words.
-- This session is the integrator (overview, both checks, PAT reminder); the old session's copies are paused, never deleted.
+  take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
+- Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
+  10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
+- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
+  done = the real test passing. NOW: switchboard out of GitHub calls ~19:30Z; reads fix (xhigh helper, -switchboard-reads). Step 5 built
+  (3f005b57, no PR): open it alone after #527-9 merge; steps 7, 8 (on step1 branch), 10 building in parallel (helper-high); 9 after #527, 6 after 5. Steps 1-4 are PRs #526-#529 (#527 watch: empty-diff PR from a trunk-merge-only head); after #526
+  watch #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 proofs re-run).
+- System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
+- Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
+- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
+  alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
+- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
+  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
+- This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper. Parallel helpers OK (Cory 11-13: fast), max four. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
-- My hand merges and branch deletes are refused by the safety check; never work around it.
+- My PR merges and branch deletes are refused by the safety check; never work around it. Direct trunk pushes of tooling and docs work.
 - Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
 - Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused. Keep a helper's worktree until its PR lands: removing it kills the resume (11-12, #469).
