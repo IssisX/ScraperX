@@ -10,7 +10,7 @@
   "6796658785:61"
  ],
  "created": "2026-11-10T22:50:55Z",
- "deadline": "2026-11-13T04:17:00Z",
+ "deadline": null,
  "head": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
  "issue": 391,
  "job": "J-076",
@@ -81,7 +81,11 @@
    "what": "ask from Muse on #391"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T17:32:51Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T02:32:50Z",
    "attempts": 1,
@@ -114,5 +118,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-13T03:14:07Z"
+ "updated": "2026-11-13T18:13:09Z"
 }

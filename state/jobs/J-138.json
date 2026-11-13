@@ -7,7 +7,7 @@
  "commands": [],
  "created": "2026-11-13T15:53:29Z",
  "deadline": null,
- "head": "ba29b2def445c29d5dbb12408f0ed7f85f582da8",
+ "head": "729a0d92e6c80261d2413f559a939bf6fdb41699",
  "issue": 504,
  "job": "J-138",
  "landed": {},
@@ -20,7 +20,7 @@
  "prs": [
   507
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-13T16:59:50Z"
+ "review": "",
+ "state": "review",
+ "updated": "2026-11-13T18:13:09Z"
 }

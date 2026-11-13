@@ -11270,7 +11270,7 @@
    "updated": "2026-11-10T05:48:45Z"
   },
   "J-072": {
-   "attempt": 9,
+   "attempt": 11,
    "blocked": null,
    "branches": {
     "claude/integrate-j072-board-source": "8b68ebd4834fb3db28f79d9916bf2334d52d95aa",
@@ -11285,6 +11285,7 @@
     "claude/integrate-j072-review-all-findings": "8bebcd7a313132fd83bef76fbff544a6400681e0",
     "claude/integrate-j072-trackers": "21b30001fff6ca527e70e719de24d5d5c7197ad0",
     "claude/integrate-rate-budget": "566cd4bd28dadedc2fd425630823fae559a25a41",
+    "claude/integrate-rate-hourly": "2fc9595909b86e81c53fdf1457ffd6e5c7643e95",
     "claude/integrate-system-gaps": "259c886b5cc7b2a6a7275c7fbf7b915926b75d14",
     "claude/j072-handback": "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75"
    },
@@ -11295,7 +11296,7 @@
    ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-13T20:59:50Z",
-   "head": "2f3be34f917f4fce3f43e8e9f050f361118bdeb2",
+   "head": "51cf8c99b6424bbe658e66f4e6b77a262ec39a56",
    "issue": 350,
    "job": "J-072",
    "landed": {
@@ -11358,6 +11359,11 @@
      "566cd4bd28dadedc2fd425630823fae559a25a41",
      "",
      "2026-11-13T15:53:29Z"
+    ],
+    "claude/integrate-rate-hourly": [
+     "2fc9595909b86e81c53fdf1457ffd6e5c7643e95",
+     "closed #510",
+     "2026-11-13T18:13:09Z"
     ],
     "claude/integrate-system-gaps": [
      "259c886b5cc7b2a6a7275c7fbf7b915926b75d14",
@@ -11912,11 +11918,13 @@
     379,
     506,
     503,
-    510
+    510,
+    515,
+    512
    ],
-   "review": "waiting",
+   "review": "",
    "state": "review",
-   "updated": "2026-11-13T16:59:50Z"
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-074": {
    "attempt": 2,
@@ -12024,7 +12032,7 @@
     "6796658785:61"
    ],
    "created": "2026-11-10T22:50:55Z",
-   "deadline": "2026-11-13T04:17:00Z",
+   "deadline": null,
    "head": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
    "issue": 391,
    "job": "J-076",
@@ -12095,7 +12103,11 @@
      "what": "ask from Muse on #391"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T17:32:51Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-13T02:32:50Z",
      "attempts": 1,
@@ -12128,16 +12140,16 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-13T03:14:07Z"
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-077": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j077": "20ac7723d95564358416315cc16676fbfe297356"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [
     "6823494496:36"
    ],
@@ -12330,12 +12342,14 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 516,
    "pr_done": "",
-   "prs": [],
-   "review": "",
-   "state": "proof",
-   "updated": "2026-11-13T15:53:29Z"
+   "prs": [
+    516
+   ],
+   "review": "LAND",
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-078": {
    "attempt": 2,
@@ -12350,7 +12364,7 @@
     "6796657784:60"
    ],
    "created": "2026-11-10T22:50:55Z",
-   "deadline": "2026-11-13T03:17:00Z",
+   "deadline": null,
    "head": "a961cc6822223fef7195023d29cf493fe4e6cd7b",
    "issue": 393,
    "job": "J-078",
@@ -12510,7 +12524,11 @@
      "what": "`fb-bot/integrate-protected-j078` is green with no PR: open one (Muse cannot open PRs)"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T17:38:49Z",
+      "by": "claude",
+      "how": "verdict on a PR it names"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-13T01:33:01Z",
      "attempts": 1,
@@ -12535,7 +12553,11 @@
      "what": "ask from Muse on #393"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-13T17:38:49Z",
+      "by": "claude",
+      "how": "verdict on a PR it names"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-13T02:27:51Z",
      "attempts": 1,
@@ -12569,9 +12591,9 @@
     396,
     494
    ],
-   "review": "FIX",
-   "state": "working",
-   "updated": "2026-11-13T03:14:07Z"
+   "review": "",
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-079": {
    "attempt": 1,
@@ -14688,20 +14710,20 @@
    "updated": "2026-11-12T22:53:22Z"
   },
   "J-100": {
-   "attempt": 1,
+   "attempt": 2,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j100": "4c03c7633633f84fc95db446d2f222bc6760ce2d",
     "fb-bot/integrate-protected-j100": "31b98c50fc83d7b1eb537f21981145a140f6ebaf"
    },
    "cancelled": null,
-   "ci": "red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)",
+   "ci": "green",
    "commands": [
     "6829009961:44"
    ],
    "created": "2026-11-11T16:04:39Z",
    "deadline": null,
-   "head": "de39529d83a2e5585eb22c377f63546b0cc75b78",
+   "head": "31b98c50fc83d7b1eb537f21981145a140f6ebaf",
    "issue": 418,
    "job": "J-100",
    "landed": {
@@ -14895,14 +14917,15 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 478,
+   "pr": 513,
    "pr_done": "",
    "prs": [
-    478
+    478,
+    513
    ],
-   "review": "",
-   "state": "working",
-   "updated": "2026-11-13T16:59:50Z"
+   "review": "LAND",
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-101": {
    "attempt": 0,
@@ -15024,8 +15047,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "merged",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "accepted",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-103": {
    "attempt": 0,
@@ -15615,20 +15638,20 @@
    "updated": "2026-11-12T21:45:56Z"
   },
   "J-116": {
-   "attempt": 1,
+   "attempt": 2,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
     "fb-bot/integrate-protected-j116": "09b04270abb3542c94dc2cd49092bda555ce3b1f"
    },
    "cancelled": null,
-   "ci": "red: host-build",
+   "ci": "green",
    "commands": [
     "6829010752:44"
    ],
    "created": "2026-11-12T01:29:02Z",
    "deadline": null,
-   "head": "4b79a7739a7973a325bb13f03c41667111ce7089",
+   "head": "09b04270abb3542c94dc2cd49092bda555ce3b1f",
    "issue": 438,
    "job": "J-116",
    "landed": {
@@ -15706,14 +15729,15 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 487,
+   "pr": 514,
    "pr_done": "",
    "prs": [
-    487
+    487,
+    514
    ],
-   "review": "",
-   "state": "working",
-   "updated": "2026-11-13T16:59:50Z"
+   "review": "LAND",
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-117": {
    "attempt": 1,
@@ -16047,8 +16071,8 @@
     480
    ],
    "review": "",
-   "state": "review",
-   "updated": "2026-11-13T16:59:50Z"
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-120": {
    "attempt": 0,
@@ -16445,8 +16469,8 @@
     481
    ],
    "review": "",
-   "state": "review",
-   "updated": "2026-11-13T16:59:50Z"
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-126": {
    "attempt": 1,
@@ -16695,8 +16719,8 @@
     484
    ],
    "review": "",
-   "state": "review",
-   "updated": "2026-11-13T16:59:50Z"
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-131": {
    "attempt": 1,
@@ -16757,8 +16781,8 @@
     485
    ],
    "review": "",
-   "state": "review",
-   "updated": "2026-11-13T16:59:50Z"
+   "state": "landable",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-132": {
    "attempt": 0,
@@ -16827,7 +16851,7 @@
     "fb-bot/integrate-j133": "f1740626b23eb0b78c441e0a063bbad0cd64b262"
    },
    "cancelled": null,
-   "ci": "red: godot-touch (touch-1)",
+   "ci": "green",
    "commands": [],
    "created": "2026-11-12T14:29:46Z",
    "deadline": null,
@@ -16906,9 +16930,9 @@
    "prs": [
     488
    ],
-   "review": "",
-   "state": "working",
-   "updated": "2026-11-13T16:59:50Z"
+   "review": "waiting",
+   "state": "review",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-134": {
    "attempt": 0,
@@ -17125,7 +17149,7 @@
    "commands": [],
    "created": "2026-11-13T15:53:29Z",
    "deadline": null,
-   "head": "ba29b2def445c29d5dbb12408f0ed7f85f582da8",
+   "head": "729a0d92e6c80261d2413f559a939bf6fdb41699",
    "issue": 504,
    "job": "J-138",
    "landed": {},
@@ -17138,9 +17162,9 @@
    "prs": [
     507
    ],
-   "review": "FIX",
-   "state": "working",
-   "updated": "2026-11-13T16:59:50Z"
+   "review": "",
+   "state": "review",
+   "updated": "2026-11-13T18:13:09Z"
   },
   "J-139": {
    "attempt": 1,

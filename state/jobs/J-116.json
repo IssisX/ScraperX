@@ -1,18 +1,18 @@
 {
- "attempt": 1,
+ "attempt": 2,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
   "fb-bot/integrate-protected-j116": "09b04270abb3542c94dc2cd49092bda555ce3b1f"
  },
  "cancelled": null,
- "ci": "red: host-build",
+ "ci": "green",
  "commands": [
   "6829010752:44"
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "4b79a7739a7973a325bb13f03c41667111ce7089",
+ "head": "09b04270abb3542c94dc2cd49092bda555ce3b1f",
  "issue": 438,
  "job": "J-116",
  "landed": {
@@ -90,12 +90,13 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 487,
+ "pr": 514,
  "pr_done": "",
  "prs": [
-  487
+  487,
+  514
  ],
- "review": "",
- "state": "working",
- "updated": "2026-11-13T16:59:50Z"
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-13T18:13:09Z"
 }

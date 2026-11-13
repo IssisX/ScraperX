@@ -2725,3 +2725,31 @@
 {"attempt": 1, "ev": "sent", "id": "O-854363fe", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-13T16:59:50Z", "to": "muse", "via": "email"}
 {"attempt": 1, "ev": "sent", "id": "O-2b456642", "job": "", "ref": "BRANCH|claude/integrate-systest-red", "send": 1, "t": "2026-11-13T16:59:50Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 111, "status": "ok", "t": "2026-11-13T16:59:50Z", "tries": 1}
+{"branch": "claude/integrate-rate-hourly", "ev": "closed_unmerged", "how": "closed #510", "job": "J-072", "sha": "2fc9595909b86e81c53fdf1457ffd6e5c7643e95", "t": "2026-11-13T18:13:09Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-dbf18e09", "job": "J-076", "t": "2026-11-13T18:13:09Z"}
+{"ev": "acked", "how": "verdict on a PR it names", "id": "O-ca42650d", "job": "J-078", "t": "2026-11-13T18:13:09Z"}
+{"ev": "acked", "how": "verdict on a PR it names", "id": "O-89dce027", "job": "J-078", "t": "2026-11-13T18:13:09Z"}
+{"ev": "state", "frm": "proof", "job": "J-077", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-078", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-100", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "merged", "job": "J-102", "t": "2026-11-13T18:13:09Z", "to": "accepted"}
+{"ev": "state", "frm": "working", "job": "J-116", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "review", "job": "J-119", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "review", "job": "J-125", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "review", "job": "J-130", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "review", "job": "J-131", "t": "2026-11-13T18:13:09Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-133", "t": "2026-11-13T18:13:09Z", "to": "review"}
+{"ev": "state", "frm": "working", "job": "J-138", "t": "2026-11-13T18:13:09Z", "to": "review"}
+{"ev": "unmatched", "ident": "PR|#519", "job": "", "t": "2026-11-13T18:13:09Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#518", "job": "", "t": "2026-11-13T18:13:09Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#517", "job": "", "t": "2026-11-13T18:13:09Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "BRANCH|switchboard/candidate-514", "job": "", "t": "2026-11-13T18:13:09Z", "why": "unknown branch prefix (proof red: scope, no PR)"}
+{"ev": "unmatched", "ident": "READ|read 8", "job": "", "t": "2026-11-13T18:13:09Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-511 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 9", "job": "", "t": "2026-11-13T18:13:09Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-514 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 10", "job": "", "t": "2026-11-13T18:13:09Z", "why": "a listing was cut short or failed: items may be missing (head commit of switchboard/candidate-516 not read (25 per sweep))"}
+{"ev": "unmatched", "ident": "READ|read 11", "job": "", "t": "2026-11-13T18:13:09Z", "why": "a listing was cut short or failed: items may be missing (proof runs: 500 or more in the window, the rest not read)"}
+{"ev": "matched", "ident": "BRANCH|switchboard/candidate-501", "job": "", "t": "2026-11-13T18:13:09Z"}
+{"ev": "matched", "ident": "PR|#512", "job": "", "t": "2026-11-13T18:13:09Z"}
+{"ev": "matched", "ident": "PR|#513", "job": "", "t": "2026-11-13T18:13:09Z"}
+{"ev": "matched", "ident": "PR|#514", "job": "", "t": "2026-11-13T18:13:09Z"}
+{"ev": "pass", "job": "", "jobs": 111, "status": "ok", "t": "2026-11-13T18:13:09Z", "tries": 1}

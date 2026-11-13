@@ -11,7 +11,7 @@
   "6796657784:60"
  ],
  "created": "2026-11-10T22:50:55Z",
- "deadline": "2026-11-13T03:17:00Z",
+ "deadline": null,
  "head": "a961cc6822223fef7195023d29cf493fe4e6cd7b",
  "issue": 393,
  "job": "J-078",
@@ -171,7 +171,11 @@
    "what": "`fb-bot/integrate-protected-j078` is green with no PR: open one (Muse cannot open PRs)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T17:38:49Z",
+    "by": "claude",
+    "how": "verdict on a PR it names"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T01:33:01Z",
    "attempts": 1,
@@ -196,7 +200,11 @@
    "what": "ask from Muse on #393"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T17:38:49Z",
+    "by": "claude",
+    "how": "verdict on a PR it names"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T02:27:51Z",
    "attempts": 1,
@@ -230,7 +238,7 @@
   396,
   494
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-13T03:14:07Z"
+ "review": "",
+ "state": "landable",
+ "updated": "2026-11-13T18:13:09Z"
 }

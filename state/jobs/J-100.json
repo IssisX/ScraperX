@@ -1,18 +1,18 @@
 {
- "attempt": 1,
+ "attempt": 2,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j100": "4c03c7633633f84fc95db446d2f222bc6760ce2d",
   "fb-bot/integrate-protected-j100": "31b98c50fc83d7b1eb537f21981145a140f6ebaf"
  },
  "cancelled": null,
- "ci": "red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)",
+ "ci": "green",
  "commands": [
   "6829009961:44"
  ],
  "created": "2026-11-11T16:04:39Z",
  "deadline": null,
- "head": "de39529d83a2e5585eb22c377f63546b0cc75b78",
+ "head": "31b98c50fc83d7b1eb537f21981145a140f6ebaf",
  "issue": 418,
  "job": "J-100",
  "landed": {
@@ -206,12 +206,13 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 478,
+ "pr": 513,
  "pr_done": "",
  "prs": [
-  478
+  478,
+  513
  ],
- "review": "",
- "state": "working",
- "updated": "2026-11-13T16:59:50Z"
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-13T18:13:09Z"
 }
