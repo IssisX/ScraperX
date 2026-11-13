@@ -117,6 +117,16 @@ const BAY_EAST_X := -0.4
 const BAY_PLANK_SETBACK := 0.05
 const DECK13_GATE_WEST := -8.4
 const DECK13_GATE_EAST := -5.1
+# The hang rail under the 154 m deck's north band (src/sim/physics_world_tuning.hpp
+# kHangRail*): the crossing from the bay to the shaft edge is a hang on this rail,
+# so it must be drawn — the native frame() body has no kit part and the machine
+# renderer never sees it. Section 0.12 m; top 0.50 m below the soffit (153.00);
+# south end at the shaft edge, north end 0.05 m clear of the leaf's south edge.
+const HANG_RAIL_X := -2.15
+const HANG_RAIL_SECTION := 0.12
+const HANG_RAIL_TOP_Y := 153.0
+const HANG_RAIL_NORTH_Z := -129.35
+const HANG_RAIL_SOUTH_Z := -133.0
 
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
@@ -155,6 +165,16 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 				Vector3(cx + sx * inner_half, deck_y - 0.55, cz), oxidised)
 			_add_box("OuterEdgeBeam", Vector3(0.6, 1.1, STACK_HALF_EXTENT * 2.0),
 				Vector3(cx + sx * STACK_HALF_EXTENT, deck_y - 0.7, cz), rust_deep)
+
+		if level == MATRON_DECK_LEVEL:
+			# The hang rail under this deck's north band: the crossing from the bay
+			# to the shaft edge is a hang on this rail. It hangs 0.50 m below the
+			# soffit, along the bay's centre line, from the shaft edge to 0.05 m
+			# clear of the leaf.
+			_add_box("HangRail", Vector3(HANG_RAIL_SECTION, HANG_RAIL_SECTION,
+					HANG_RAIL_NORTH_Z - HANG_RAIL_SOUTH_Z),
+				Vector3(HANG_RAIL_X, HANG_RAIL_TOP_Y - HANG_RAIL_SECTION * 0.5,
+					(HANG_RAIL_NORTH_Z + HANG_RAIL_SOUTH_Z) * 0.5), galvanised)
 
 		# Handrails around the open shaft -- the safety line you walk beside.
 		for sz in [1.0, -1.0]:
