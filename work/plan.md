@@ -15,21 +15,21 @@ limit grok 1
 limit muse 10
 limit unassigned 1
 J-008 builder #115 | Tower "258 down" leg under determinism math, and the stable tie order (#97)
-J-001 claude #108 kept chatgpt/integrate-j001-swat-budget@50e1bf496782 kept fb-bot/integrate-j001-combined-armplay@b555dd6183ff kept fb-bot/integrate-j001-hold@35b67484fd15 | Her hold with real arms (5 beats)
-J-015 claude #122 kept fb-bot/integrate-j015-slice1@2f8b1f21d655 kept fb-bot/integrate-j015-wreck-way-on@a280fe6b127c kept fb-bot/integrate-protected-j015-magnet-grips@a949f76fee5c kept fb-bot/integrate-protected-j015-slice1@2ba17f22df23 kept fb-bot/integrate-protected-j015-wreck-way-on@aee6d79d9124 | A wrecked machine leaves a way on (PE 3)
+J-001 claude #108 kept chatgpt/integrate-j001-swat-budget@50e1bf496782 kept fb-bot/integrate-j001-combined-armplay@b555dd6183ff kept fb-bot/integrate-j001-hold@35b67484fd15 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | Her hold with real arms (5 beats)
+J-015 claude #122 kept fb-bot/integrate-j015-slice1@2f8b1f21d655 kept fb-bot/integrate-j015-wreck-way-on@a280fe6b127c kept fb-bot/integrate-protected-j015-magnet-grips@a949f76fee5c kept fb-bot/integrate-protected-j015-slice1@2ba17f22df23 kept fb-bot/integrate-protected-j015-wreck-way-on@aee6d79d9124 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on (PE 3)
 J-038 claude #169 kept fb-bot/integrate-j038-slice1@94a53394cc5c kept fb-bot/integrate-protected-j038-slice1-r3@3e249d09ba7f | Destructible loose things: cargo, barrels, boxes and shipping containers dent and break
 J-044 muse #242 kept chatgpt/integrate-j044-review-gate-20261109@55b8b3e22548 | Console-quality fighting: physically causal reactions, localized injuries, boxing-grade exchanges
 J-067 claude #328 kept fb-bot/integrate-j067-back-hair-fixes@25e1bdc52e40 | Her hair: fine strands again, not flat ribbons or strips
 J-082 claude #400 kept fb-bot/integrate-protected-j082@9d24a3df2d7b hold: parked in live issue; reconcile pushed work before release | Above 340 m every stage is a new physical action, not another board and ladder (rules 52, 53, gap 1)
-J-084 claude #402 kept fb-bot/integrate-j084@56a593ef90c1 | One scenario plays the whole climb, from the ground to the summit, on the canonical route (rules 56, 27)
-J-090 claude #408 | Hook her and let the rope decide: his grappling hook bites her body, and mass, footing and the line decide who moves
-J-093 claude #411 | J-001's protected follow-ups: the rail reach near miss and the budget's unaccounted list (Claude)
-J-096 claude #414 | Things bend under weight: planks, boards and gratings flex by real load, spring back, and snap past their limit
+J-084 claude #402 kept fb-bot/integrate-j084@56a593ef90c1 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | One scenario plays the whole climb, from the ground to the summit, on the canonical route (rules 56, 27)
+J-090 claude #408 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | Hook her and let the rope decide: his grappling hook bites her body, and mass, footing and the line decide who moves
+J-093 claude #411 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | J-001's protected follow-ups: the rail reach near miss and the budget's unaccounted list (Claude)
+J-096 claude #414 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | Things bend under weight: planks, boards and gratings flex by real load, spring back, and snap past their limit
 J-101 claude #419 | CI survives an apt mirror outage
 J-102 claude #421 | She chases him again (regression)
 J-108 claude #427 | The bait lift: one test spot, she sinks and he rises (Cory OK'd as a test)
-J-109 claude #428 kept fb-bot/integrate-j109@7791c2a8830c | A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)
-J-137 claude #474 | She pins in a Lunge about 4 m short of a still climber and never closes
+J-109 claude #428 kept fb-bot/integrate-j109@7791c2a8830c hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)
+J-137 claude #474 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | She pins in a Lunge about 4 m short of a still climber and never closes
 J-064 grok #322 | Her warps: every place her position jumps faster than she can move
 J-043 muse #241 | Belly of the Deck: an underside girder crossing while she walks overhead
 J-059 muse #307 | Her black eye: a clean punch to her eye bruises it dark and swells the lid
@@ -95,3 +95,4 @@ J-120 muse #442 hold: parked in live issue; reconcile pushed work before release
 J-121 muse #443 hold: parked in live issue; reconcile pushed work before release | The kit's rope is proven on its own: length, slack, struts, the winch and the snatch it was built to stop
 J-122 muse #444 hold: parked in live issue; reconcile pushed work before release | His footsteps sound like what is under him: plate, grating, timber, concrete, earth, rungs and wet steel
 J-123 muse #445 hold: parked in live issue; reconcile pushed work before release | Every machine sounds like itself: find the silent ones, then give each its motor, brake and cable by its real motion
+J-138 claude #504 | Muse's git message channel: messages as files on fb-bot/mail and muse-inbox, mail retired after a clean trial
