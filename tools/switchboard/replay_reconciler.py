@@ -528,7 +528,8 @@ def verdicts_at(h: History, team: rules.Team, p: dict, t: dt.datetime, off_pr: l
     out = []
     for c in h.comments_at(t, p["number"]):
         v = rules.parse_verdict(c["body"], c["created_at"], c["user"]["login"], team) or \
-            rules.parse_codex_state(c["body"], c.get("updated_at") or c["created_at"], c["user"]["login"])
+            rules.parse_codex_state(c["body"], c.get("updated_at") or c["created_at"], c["user"]["login"]) or \
+            rules.parse_codex_receipt(c["body"], c["created_at"], c["user"]["login"])
         if v:
             out.append(v)
     for r in p.get("reviews") or []:

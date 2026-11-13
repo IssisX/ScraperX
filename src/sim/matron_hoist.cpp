@@ -37,7 +37,34 @@ constexpr float kExitGiveUpS = 20.0F;
 float distance_xz(const float ax, const float az, const float bx, const float bz) {
     return std::hypot(ax - bx, az - bz);
 }
+
+// Whether the car stands at a stop, and the other end's travel: false between
+// its stops (moving, or stuck).
+bool at_stop(const Matron::HoistFeed &h, float &other) {
+    if (std::abs(h.travel - h.min_travel) * std::abs(h.axis_y) < kStopTolM) {
+        other = h.max_travel;
+        return true;
+    }
+    if (std::abs(h.travel - h.max_travel) * std::abs(h.axis_y) < kStopTolM) {
+        other = h.min_travel;
+        return true;
+    }
+    return false;
+}
 } // namespace
+
+std::vector<BodyID> Matron::platforms_at_rest() const {
+    std::vector<BodyID> out;
+    for (const HoistFeed &h : hoists_) {
+        AABox box;
+        float floor_top = 0.0F;
+        float other = 0.0F;
+        if (h.platform && h.axis_y != 0.0F && at_stop(h, other) && hoist_footprint(h, box, floor_top)) {
+            out.push_back(h.car);
+        }
+    }
+    return out;
+}
 
 bool Matron::hoist_footprint(const HoistFeed &h, AABox &box, float &floor_top) const {
     const BodyInterface &bodies = physics_.GetBodyInterface();
@@ -89,7 +116,7 @@ int Matron::hoist_landing(const AABox &car, const float floor_top, Vec3 &point) 
 
 // A hoist that joins `from` to `goal`: waiting at a stop whose landing she can
 // walk or climb to, its far stop's landing one she can go on from to the goal.
-bool Matron::plan_hoist(const int from, const int goal) {
+bool Matron::find_hoist(const int from, const int goal, HoistLeg &leg) const {
     if (scanned_ == nullptr || from < 0) {
         return false;
     }
@@ -97,17 +124,13 @@ bool Matron::plan_hoist(const int from, const int goal) {
         const HoistFeed &h = hoists_[i];
         AABox box;
         float floor_now = 0.0F;
-        if (!hoist_footprint(h, box, floor_now) || h.axis_y == 0.0F) {
-            continue;
+        if (!h.caught || !hoist_footprint(h, box, floor_now) || h.axis_y == 0.0F) {
+            continue;   // a platform with no catch is a floor, not a hoist she rides
         }
         // Where it waits, and where it goes: from the end it stands at to the other.
         const float span = h.max_travel - h.min_travel;
         float other = 0.0F;
-        if (std::abs(h.travel - h.min_travel) * std::abs(h.axis_y) < kStopTolM) {
-            other = h.max_travel;
-        } else if (std::abs(h.travel - h.max_travel) * std::abs(h.axis_y) < kStopTolM) {
-            other = h.min_travel;
-        } else {
+        if (!at_stop(h, other)) {
             continue;   // between its stops: it is moving, or stuck
         }
         if (span * std::abs(h.axis_y) < 2.0F) {
@@ -126,20 +149,29 @@ bool Matron::plan_hoist(const int from, const int goal) {
         if (!to_board || !to_goal) {
             continue;
         }
-        hoist_ = {};
-        hoist_path_.clear();
-        hoist_.phase = 1;
-        hoist_.hoist = static_cast<int>(i);
-        hoist_.board = board;
-        hoist_.exit = exit;
-        hoist_.goal = goal;
-        hoist_.board_at = board_at;
-        hoist_.exit_at = exit_at;
-        hoist_.from_travel = h.travel;
-        hoist_.to_travel = other;
+        leg = {};
+        leg.phase = 1;
+        leg.hoist = static_cast<int>(i);
+        leg.board = board;
+        leg.exit = exit;
+        leg.goal = goal;
+        leg.board_at = board_at;
+        leg.exit_at = exit_at;
+        leg.from_travel = h.travel;
+        leg.to_travel = other;
         return true;
     }
     return false;
+}
+
+bool Matron::plan_hoist(const int from, const int goal) {
+    HoistLeg leg;
+    if (!find_hoist(from, goal, leg)) {
+        return false;
+    }
+    hoist_ = leg;
+    hoist_path_.clear();
+    return true;
 }
 
 void Matron::step_hoist(const float dt) {

@@ -281,9 +281,21 @@ struct MidstackService final {
     kit::BinIndex o_bucket_bin;
     kit::ChainIndex o_chain;
     kit::RopeIndex o_rope;
+
+    // J-108, the bait lift: her weight on A sinks it to the 662 deck and
+    // lifts B, with him on it, to C5's plant floor.
+    kit::BodyIndex bait_a;
+    kit::BodyIndex bait_b;
+    kit::GuideIndex bait_a_guide;
+    kit::GuideIndex bait_b_guide;
+    kit::ChainIndex bait_chain;
+    kit::RopeIndex bait_rope;
 };
 
 void build_midstack_service(kit::Kit &kit, MidstackService &service);
+// J-108: the bait lift's two platforms, built after every other kit body (its
+// steel is on the band's frame, built by build_midstack_service).
+void build_bait_lift(kit::Kit &kit, MidstackService &service);
 
 // Band 0, the Stack, grade -> 154 m. 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md.
 struct Stack final {
