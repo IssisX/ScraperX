@@ -1482,7 +1482,9 @@ class Noise(unittest.TestCase):
                      "A proposal for the vault", "<!-- codex review -->\nTo Claude: x", self.MUSE + self.FOOT,
                      "\nTo Claude: after a blank first line"):
             gh = test_inbox.FakeGH(comments=[test_inbox.comment(7, 292, body)], open_issues=[292])
-            listed = bool([it for it in test_inbox.items_of(gh) if it.kind == "TO-CLAUDE"])
+            # carried: as a TO-CLAUDE line, or (a Muse report, 11-13) as a digest entry on the next inbox post
+            listed = bool([it for it in test_inbox.items_of(gh)
+                           if it.kind == "TO-CLAUDE" or switch.inbox_class(it) == "ride"])
             self.assertEqual(R.inbox_carries(body), listed, body)
 
     def test_a_reopened_threads_old_asks_come_back_as_backlog_not_as_new_work(self):

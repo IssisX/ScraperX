@@ -6,7 +6,10 @@ Your session has a hard dollar budget; when it is reached you stop, so work in s
 
 ## First
 1. Read `/workspace/ScraperX/CLAUDE.md` (the rules every agent follows) and the job issue's body and
-   its newest comments (`curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/IssisX/ScraperX/issues/N/comments?per_page=100`).
+   its newest 40 comments. GitHub lists comments oldest first, so read the last page: `C` is the issue's
+   `comments` count (`GET .../issues/N`), then
+   `curl -s -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/IssisX/ScraperX/issues/N/comments?per_page=40&page=P"`
+   with `P` = C / 40 rounded up (and page P-1 too when the last page holds only a few).
 2. Post one line on the job issue claiming it: `Claude (API agent), HH:MM Central: started.`
 
 ## Do the job

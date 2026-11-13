@@ -78,6 +78,7 @@ void run_athletic_traversal_1() {
     run_wall_chain();
     run_up_controls();
     run_zipline();
+    run_hang_rail();
 }
 
 void run_athletic_traversal_2() {
@@ -105,6 +106,7 @@ void run_athletic_traversal_2() {
     run_matron_ring_descent();
     run_matron_ways();
     run_matron_same_region();
+    run_matron_heard_lead();
     run_matron_climb();
     run_strike();
     run_one_arm_route();

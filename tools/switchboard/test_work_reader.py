@@ -332,7 +332,7 @@ class BranchHeads(unittest.TestCase):
                          br("fb-bot/integrate-j999", sha(4)),               # no plan line
                          br("fb-bot/integrate-j079", sha(5)),               # an open PR's head (by sha)
                          br("fb-bot/integrate-protected-j079", sha(6)),     # an open PR's head (by ref)
-                         br("claude/integrate-j201", sha(7)),               # Claude's, read; no auto PR
+                         br("claude/integrate-j201", sha(7)),               # Claude's, read; the switch opens its PR (11-13)
                          br("fb-bot/integrate-j059-old", sha(8))],          # landed
             "prs": [{"number": 1, "state": "open", "head": {"ref": "fb-bot/integrate-j079", "sha": sha(5)}},
                     {"number": 2, "state": "open", "head": {"ref": "fb-bot/integrate-protected-j079", "sha": sha(66)}}],
@@ -342,7 +342,7 @@ class BranchHeads(unittest.TestCase):
         self.assertEqual(sorted(sw.proof_calls), [sha(1), sha(7)])
         self.assertEqual(set(works), {sha(1), sha(7)})
         self.assertEqual((works[sha(1)].gate, works[sha(1)].why, works[sha(1)].at), ("red", "native", at(stamp(3))))
-        self.assertEqual(works[sha(7)].gate, "no-pr")
+        self.assertEqual(works[sha(7)].gate, "auto-pr")
 
     def test_a_steered_pr_head_is_never_read_again_by_the_branch_side(self):
         sw = FakeSw()

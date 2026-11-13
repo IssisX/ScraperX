@@ -203,6 +203,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         JPH::Vec3(0.0F, 0.5F * kPlayerHalfHeight, 0.0F), JPH::Quat::sIdentity(),
         new JPH::CapsuleShape(0.5F * kPlayerHalfHeight - kPlayerRadius, kPlayerRadius));
     grip_region_shape_ = new JPH::BoxShape(kGripSearchHalf);
+    grip_region_shape_bar_ = new JPH::BoxShape(kBarSearchHalf);
     // A climber's moves are swept with a body 5 cm slimmer than the
     // capsule: a body on its holds already touches the rungs it climbs.
     climb_sweep_shape_ =
@@ -1676,6 +1677,16 @@ void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {
                 frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
                       JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
             }
+        }
+        if (level == kStackLevelCount) {
+            // J-043 (#241): the hang rail under the 154 deck's north band,
+            // along the crossing from the bay to the shaft edge (see
+            // kHangRail* in physics_world_tuning.hpp). A static frame body
+            // like the deck slabs, top flush with the soffit.
+            const float half_len = 0.5F * (kHangRailNorthZ - kHangRailSouthZ);
+            frame(JPH::Vec3(0.5F * kHangRailSection, 0.5F * kHangRailSection, half_len),
+                  JPH::RVec3(kHangRailX, kHangRailTopY - 0.5F * kHangRailSection,
+                             0.5F * (kHangRailNorthZ + kHangRailSouthZ)));
         }
     }
 
