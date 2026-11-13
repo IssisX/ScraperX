@@ -2610,3 +2610,6 @@
 {"ev": "inbox", "id": "O-fbdb626a", "job": "J-059", "ref": "ASK|ask on #307", "t": "2026-11-13T08:43:54Z", "to": "claude", "via": "session"}
 {"ev": "inbox", "id": "O-e6004416", "job": "J-100", "ref": "ASK|ask on #418", "t": "2026-11-13T08:43:54Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T08:43:54Z", "tries": 1}
+{"due": "2026-11-13T15:17:00Z", "ev": "obligation", "id": "O-69a20f29", "job": "J-100", "kind": "ask", "ref": "ASK|ask on #418", "t": "2026-11-13T09:44:14Z", "to": "claude", "via": "session"}
+{"ev": "inbox", "id": "O-69a20f29", "job": "J-100", "ref": "ASK|ask on #418", "t": "2026-11-13T09:44:14Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T09:44:14Z", "tries": 1}
