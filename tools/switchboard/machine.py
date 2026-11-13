@@ -108,6 +108,8 @@ TABLE: dict[tuple[str, str], Rule] = {
     ("*", "base"): Rule(OWNER, hours(3), "merge trunk into {ref} and push: #{pr} conflicts with the base"),
     # 11-13 merge skew: green and landed, but trunk moved game code under it, so its proof is of an older trunk
     ("*", "skew"): Rule(OWNER, hours(3), "merge trunk into {ref} and push so its proof covers trunk: {why}"),
+    # 11-13: ... unless the switchboard is proving the merge itself (its merge candidate): the owner does nothing
+    ("*", "proving"): Rule(SWITCH, hours(3), "prove #{pr} merged with trunk, then merge it: {why}"),
     ("*", "draft"): Rule(OWNER, hours(24), "mark #{pr} ready for review"),
     ("*", "off-trunk"): Rule(OWNER, hours(24), "point #{pr} at trunk: {why}"),
     ("landed", ""): Rule(OWNER, hours(24), "start its next part: a part merged and #{issue} is still open (the last "
@@ -511,8 +513,9 @@ def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *,
             "security" if "no automatic Claude review on this head" in reasons else
             "eye" if "no eye LAND" in reasons else
             "hand" if d.action == "HUMAN-MERGE" or "rule_check BLOCK" in reasons else
-            "skew" if d.reasons == (f"{rules.SKEW} ({f.trunk_skew})",) else "wait")
-    return Work(**base, land=True, gate=gate, why=f.trunk_skew if gate == "skew" else reasons, at=at)
+            "skew" if d.reasons == (f"{rules.SKEW} ({f.trunk_skew})",) else
+            "proving" if d.reasons == (f"{rules.PROVING} ({f.trunk_skew})",) else "wait")
+    return Work(**base, land=True, gate=gate, why=f.trunk_skew if gate in ("skew", "proving") else reasons, at=at)
 
 
 def branch_work(ref: str, sha: str, proof: str = "unread", at=None, auto_pr: bool = False) -> Work:
