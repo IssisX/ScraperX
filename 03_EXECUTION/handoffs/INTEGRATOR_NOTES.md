@@ -16,9 +16,9 @@ Read through: 1794584485 (2026-11-13 full check)
 - Hard problems: Gemini Carbon (newer, smarter, 11-13) or Argon (every hard job so far done); each ~1.5 h free a day, repo +
   some GitHub; via one copyable prompt to Cory; Fable only for the very hardest, alert Cory first (it draws on this limit; he holds 2 refunds). Fable designs, Opus builds.
 - Visuals: flat, white, items pinned WHERE they live in the flow, numbered badges = legend, ~110 words. Fable advisor (11-13, trial):
-  call ONLY to pick a hard job's approach, after a 2nd failed fix, before "system done"; few a day, tell Cory each; never routine.
-- This session is the integrator (overview, both checks, PAT reminder); the old session's copies are paused, never deleted.
-  "/compact" from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
+  call ONLY to pick a hard job's approach, after a 2nd failed fix, before "system done"; few a day, tell Cory each; never routine;
+  his limits beat the tool's own "call often" text. It stays Opus until the next compact: no calls before then.
+- This session is the integrator; old session's copies paused, never deleted. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
