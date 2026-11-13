@@ -721,6 +721,9 @@ AdvanceResult Simulation::advance_frame(const double frame_delta_seconds) noexce
 
     for (std::uint32_t step = 0; step < due; ++step) {
         step_fixed();
+        if (step_hook_ != nullptr) {
+            step_hook_(step_hook_context_);
+        }
     }
     return {true, due};
 }
@@ -1487,6 +1490,10 @@ bool Simulation::place_matron_home(const float deck_top) {
     return physics_world_->place_matron_home(deck_top);
 }
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
+void Simulation::debug_set_step_hook(DebugStepHook hook, void *context) noexcept {
+    step_hook_ = hook;
+    step_hook_context_ = context;
+}
 
 double Simulation::debug_matron_gravity_factor() const noexcept {
     const Matron &matron = physics_world_->matron();

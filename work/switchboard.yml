@@ -12,3 +12,8 @@ reconciler: live
 # for one (reconciler.ledger_notifies). Absent or any other value, or a reconciler that is not live: the ledger
 # posts its own notices as before.
 notices: v2
+
+# The job machine (tools/switchboard/machine.py) over work/plan.md. `live` (cutover, Cory 11-12: "switch it on once
+# the bookkeeping's done"): late jobs go to the inbox, the plan notice goes to Muse once per order version, the job
+# issues' labels and the board's job section are made from the plan. `shadow`: print only. Absent or other: off.
+plan: live
