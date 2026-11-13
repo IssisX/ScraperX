@@ -39,9 +39,9 @@ it to match, never ask him again.
 
 - **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
   faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
-  unclear input gets one simple follow-up on what he means before acting, never on wording (11-12).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names, shas or tech detail unless asked (11-10). Answer first; what happened, why and the fix in everyday words; progress is what is left (11-11).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
+  unclear input gets one simple follow-up on what he means before acting, never on wording.
+- SIMPLE, every message: a few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan: answer it, no warning him off (11-13). What happened, why, the fix; progress is what is left.
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links. For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
