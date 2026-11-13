@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-13 | *"I am realizing I don't want to have to name every single time like this"*: Claude picks a helper's effort and tells him in one line; he changes it if he wants. Ends the same day's "ask him the effort before any helper". | CLAUDE.md, Settled |
 | 11-13 | *"you're doing these mindlessly, without the whole picture in play"*; *"when you would change one thing, you wouldn't realize that it would break a bunch more ... you would just chase your tail"*; *"you need to make sure that those notes don't get wiped ... these are super obvious fucking things and are fundamental to coding"*: whole picture first; a change that breaks something is undone, not patched; one behavior per change; blocker first; only measured breaks get fixed; the system is judged by what lands and its cost. Also at the top of `CLAUDE.md`. | Rule 13 |
 | 11-13 | *"I don't know why we have to sit here and try to predict the future"*; *"I'm not going to want a change to the plan until I see something go wrong when it runs"*; *"We run a real world test, and if it works, it works. We don't have to wait a day."*: plans run as written; a real run's failure is the only reason to change one; done is a real test, not waiting. | Rule 14 |
 | 11-13 | *"But context is what creates accuracy"*: compact at a natural break once work is saved, never early to save cost. | Rule 16 |

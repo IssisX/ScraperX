@@ -8,8 +8,8 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Its section-5 order, one helper at a time (effort: my pick, Cory's call);
-  done = the real test passing (Cory), not 3 days. NOW: step 1 is PR #526 (rules already say it, Cory yes);
+- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Its section-5 order, one helper at a time (I pick the effort, tell him in one line);
+  done = the real test passing (Cory), not 3 days. NOW: step 2 helper (Opus high, claude/integrate-plan-step2): on report open its PR. Step 1 is PR #526 (rules already say it, Cory yes);
   after it lands watch #488 #523 merge, then step 2. Trunk red twice from green-alone merges (credits; test key 1090, 62ea2833). Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 failed on 2-day heads; proofs re-run).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
