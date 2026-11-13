@@ -3981,13 +3981,13 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.out(f"RETRY       {', '.join(sorted(retry & FULL_PARTS))} did not finish last sweep: a full pass now")
         full = True
     sw.gh.budget = call_budget(args, ask, steer, full or targeted)
-    if not targeted and not args.dry_run:
+    if not targeted:   # a dry run too (the selftest's): it spends the same hour
         # 11-13: the hour's budget beside the run's. Runs pile up (33 triggers in the hour from 14:13, ten of them
         # sweeps), so each paces itself on what the token has left until its reset, and a full pass the hour can no
         # longer afford waits (a fast sweep, the merges kept) rather than run the hour dry
         # only the hourly full pass can wait, and only once: a retried part (the reconciler, the ledger) or a full
         # pass already an hour late goes now, inside what the hour can spare
-        movable = full and sweep_state_ok(state) and not retry & FULL_PARTS and \
+        movable = full and not args.dry_run and sweep_state_ok(state) and not retry & FULL_PARTS and \
             now - parse_time(state["full_at"]) < 2 * FULL_EVERY
         paced, keep_full = hour_pace(sw.gh.budget, full, sw.gh.remaining, sw.gh.reset, sw.gh.limit, now,
                                      CALL_BUDGET["fast"] + (CALL_BUDGET["ask-fast"] if ask else 0), movable)
