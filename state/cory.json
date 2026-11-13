@@ -229,9 +229,21 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (1), from the switchboard at 11-12 9:14 PM Central.\n\n- Needs you: J-053 ask on #82: ask from Muse on #82. Claude did not act (in its inbox, no ack); since 11-12 8:13 PM Central. Done: /ack O-7042d24d\n\nStill standing from earlier batches: 18 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-13T05:33:57Z",
+   "keys": [
+    "O-e7eb5cd4",
+    "O-d0f4c694",
+    "O-b8f61f52",
+    "O-ca42650d",
+    "O-e45394be"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (5), from the switchboard at 11-12 11:33 PM Central.\n\n- Needs you: J-014 ask on #121: ask from Muse on #121. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-e7eb5cd4\n- Needs you: J-040 ask on #228: ask from Muse on #228. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-d0f4c694\n- Needs you: J-059 ask on #307: ask from Muse on #307. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-b8f61f52\n- Needs you: J-078 ask on #393: ask from Muse on #393. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-ca42650d\n- Needs you: J-080 ask on #398: ask from Muse on #398. Claude did not act (in its inbox, no ack); since 11-12 11:33 PM Central. Done: /ack O-e45394be\n\nStill standing from earlier batches: 19 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-13T03:14:07Z",
+ "last_batch": "2026-11-13T05:33:57Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
@@ -284,13 +296,16 @@
   "O-b3763b40": "2026-11-12T02:29:16Z",
   "O-b495ff32": "2026-11-12T19:27:38Z",
   "O-b4fd7064": "2026-11-12T23:54:27Z",
+  "O-b8f61f52": "2026-11-13T05:33:57Z",
   "O-bc1328fe": "2026-11-12T02:29:16Z",
   "O-bec95aec": "2026-11-12T23:54:27Z",
   "O-c13609bc": "2026-11-12T19:27:38Z",
   "O-c8233adf": "2026-11-12T20:30:39Z",
+  "O-ca42650d": "2026-11-13T05:33:57Z",
   "O-cc58764e": "2026-11-12T19:27:38Z",
   "O-ccc7effe": "2026-11-11T02:09:10Z",
   "O-d0889dd8": "2026-11-10T15:09:20Z",
+  "O-d0f4c694": "2026-11-13T05:33:57Z",
   "O-d1c32a4b": "2026-11-12T02:29:16Z",
   "O-d1f36275": "2026-11-10T20:49:16Z",
   "O-d27a4a0a": "2026-11-12T19:27:38Z",
@@ -299,6 +314,8 @@
   "O-e05d786e": "2026-11-11T05:28:39Z",
   "O-e0c870e4": "2026-11-12T20:30:39Z",
   "O-e0d043a6": "2026-11-10T20:49:16Z",
+  "O-e45394be": "2026-11-13T05:33:57Z",
+  "O-e7eb5cd4": "2026-11-13T05:33:57Z",
   "O-ebd5c0bd": "2026-11-12T19:27:38Z",
   "O-f33f597b": "2026-11-12T02:29:16Z",
   "O-f45193c7": "2026-11-10T15:09:20Z",

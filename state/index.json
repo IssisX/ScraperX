@@ -2386,7 +2386,7 @@
      "closed": null,
      "created": "2026-11-13T02:13:35Z",
      "dead": "2026-11-13T05:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-13T05:33:57Z",
      "due": "2026-11-13T03:17:00Z",
      "id": "O-e7eb5cd4",
      "kind": "ask",
@@ -2502,6 +2502,31 @@
      "version": "6843216906",
      "via": "session",
      "what": "ask from Muse on #121"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-13T05:17:49Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-13T05:33:57Z",
+     "dead": "2026-11-13T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-13T15:17:00Z",
+     "id": "O-74ca3c12",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-13T05:33:57Z",
+     "missing": 0,
+     "ref": "ASK|ask on #121",
+     "sends": 1,
+     "sent_by": "inbox",
+     "thread": 121,
+     "to": "claude",
+     "unseen": null,
+     "version": "6844865878",
+     "via": "session",
+     "what": "ask from Muse on #121"
     }
    ],
    "outcome": null,
@@ -2515,7 +2540,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-13T04:24:31Z"
+   "updated": "2026-11-13T05:33:57Z"
   },
   "J-015": {
    "attempt": 3,
@@ -5036,7 +5061,7 @@
      "closed": null,
      "created": "2026-11-13T02:13:35Z",
      "dead": "2026-11-13T05:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-13T05:33:57Z",
      "due": "2026-11-13T03:17:00Z",
      "id": "O-d0f4c694",
      "kind": "ask",
@@ -5387,7 +5412,7 @@
    "attempt": 1,
    "blocked": null,
    "branches": {
-    "fb-bot/integrate-protected-j043-rail-stand": "b9c87902764ec9024402106a2ee2b859b98839e5"
+    "fb-bot/integrate-protected-j043-rail-stand": "b239caf8e48e77efec4c2a736a515f1e7cf4f017"
    },
    "cancelled": null,
    "ci": "green",
@@ -5401,9 +5426,9 @@
    "job": "J-043",
    "landed": {
     "fb-bot/integrate-protected-j043-rail-stand": [
-     "b9c87902764ec9024402106a2ee2b859b98839e5",
-     "",
-     "2026-11-13T02:13:35Z"
+     "b239caf8e48e77efec4c2a736a515f1e7cf4f017",
+     "merged #496",
+     "2026-11-13T05:33:57Z"
     ]
    },
    "obligations": [
@@ -5783,19 +5808,44 @@
      "version": "6843393331",
      "via": "session",
      "what": "ask from Muse on #241"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-13T04:57:46Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-13T05:33:57Z",
+     "dead": "2026-11-13T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-13T15:17:00Z",
+     "id": "O-312832d2",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-13T05:33:57Z",
+     "missing": 0,
+     "ref": "ASK|ask on #241",
+     "sends": 1,
+     "sent_by": "inbox",
+     "thread": 241,
+     "to": "claude",
+     "unseen": null,
+     "version": "6844539826",
+     "via": "session",
+     "what": "ask from Muse on #241"
     }
    ],
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
    "pr": 496,
-   "pr_done": "",
+   "pr_done": "merged",
    "prs": [
     496
    ],
    "review": "waiting",
-   "state": "review",
-   "updated": "2026-11-13T04:24:31Z"
+   "state": "merged",
+   "updated": "2026-11-13T05:33:57Z"
   },
   "J-044": {
    "attempt": 0,
@@ -8869,7 +8919,7 @@
      "closed": null,
      "created": "2026-11-13T02:13:35Z",
      "dead": "2026-11-13T05:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-13T05:33:57Z",
      "due": "2026-11-13T03:17:00Z",
      "id": "O-b8f61f52",
      "kind": "ask",
@@ -12245,7 +12295,7 @@
      "closed": null,
      "created": "2026-11-13T02:13:35Z",
      "dead": "2026-11-13T05:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-13T05:33:57Z",
      "due": "2026-11-13T03:17:00Z",
      "id": "O-ca42650d",
      "kind": "ask",
@@ -12574,7 +12624,7 @@
      "closed": null,
      "created": "2026-11-13T02:13:35Z",
      "dead": "2026-11-13T05:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-13T05:33:57Z",
      "due": "2026-11-13T03:17:00Z",
      "id": "O-e45394be",
      "kind": "ask",
@@ -12615,6 +12665,31 @@
      "version": "6842001814",
      "via": "session",
      "what": "ask from Muse on #398"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-13T05:17:47Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-13T05:33:57Z",
+     "dead": "2026-11-13T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-13T15:17:00Z",
+     "id": "O-4a8f4538",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-13T05:33:57Z",
+     "missing": 0,
+     "ref": "ASK|ask on #398",
+     "sends": 1,
+     "sent_by": "inbox",
+     "thread": 398,
+     "to": "claude",
+     "unseen": null,
+     "version": "6844865469",
+     "via": "session",
+     "what": "ask from Muse on #398"
     }
    ],
    "outcome": null,
@@ -12627,7 +12702,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-13T03:14:07Z"
+   "updated": "2026-11-13T05:33:57Z"
   },
   "J-081": {
    "attempt": 1,
