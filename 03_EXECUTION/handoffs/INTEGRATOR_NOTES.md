@@ -9,13 +9,9 @@ Read through: 1794589446 (2026-11-13 17:06Z mail+asks)
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- 11-13 RETHINK (Fable design pass running, Cory OK; no system change before its ranked list): #502 and #505 (this morning) stopped Muse landing; reverted on trunk (afff9d5f). Trunk = the working system
-  of 11-12. Proof first: Muse's ready PRs merge (check trig_01WKR5tVQFRnuYnArbynyooB). Then fix slowness one small change at a
-  time, each judged by landings; landings drop: undo. #510 closed (moot); #503 #506 #507 #511 #512 #515 parked as drafts, none
-  lands unless it fixes a measured break. Muse paste on #504 only if #507 ever lands. J-044c ownership at game time.
-- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest, alert Cory first.
-- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
-  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
+- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max, 11-13). Run it in its section-5 order, one helper at a time
+  (ask Cory the effort first), then the real test, then 'done' = its numbers 3 days running. Today items done (#517 #518
+  drafts; #520-#525 opened). Paid reviewer's month spent ($98.24/$100) until 12-01. #502/#505 reverted (afff9d5f).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Security (Cory 11-13): only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
