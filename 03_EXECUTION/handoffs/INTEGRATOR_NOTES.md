@@ -5,6 +5,8 @@ calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never 
 Read through: 1794492989 (2026-11-11 last quiet run)
 
 ## Now (11-12 handover)
+- Cory 11-13: the collaboration system is ONE machine; finish it fast (no endless tweaking), then this session game-codes
+  extensively, as THE priority, never as small side patches. Until then Muse works its game jobs; Claude and helpers do none.
 - Collaboration system LIVE (#471, #476, #477 merged; doc COLLABORATION_SYSTEM_REBUILD.md section C). Priority one until proven
   (Cory): NO new game code from Claude or helpers till then. Expect many label changes and real conflicts on the first live passes
   (J-044: fb-bot and claude j044c heads both exist); that is the true state, act on it.
