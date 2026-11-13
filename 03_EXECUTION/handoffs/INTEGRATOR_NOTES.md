@@ -2,16 +2,16 @@
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794599051 (2026-11-13 mail+asks)
+Read through: 1794600995 (2026-11-13 mail+asks)
 ## Now (11-13)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
   take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
-  done = the real test passing. NOW: switchboard out of GitHub calls ~19:30Z; reads fix (xhigh helper, -switchboard-reads). Step 5 built
-  (3f005b57, no PR): open it alone after #527-9 merge; steps 7, 8 (on step1 branch), 10 building in parallel (helper-high); 9 after #527, 6 after 5. Steps 1-4 are PRs #526-#529 (#527 watch: empty-diff PR from a trunk-merge-only head); after #526
-  watch #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 proofs re-run).
+  done = the real test passing. NOW: all plan steps 1-10 built; 1-5, 8 landed; 6,7,9,10 + reads fix (-switchboard-reads) + selftest D8 (-switchboard-selftest)
+  auto-open and land. Then the real test. REAL TEST = plan sec 5 table read
+  over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven (3 trunk reds 11-13: key 1090, voice picks, J-098 picks). Trunk red since #523 (Muse, mailed; send_later revert check).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,

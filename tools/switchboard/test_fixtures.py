@@ -278,6 +278,9 @@ EXPLAINED: dict[tuple[str, int, str], str] = {
                                                       "J-059, and a hold that is not in the plan is not one",
     ("j079-473-unasked-codex", 12, "J-079"): "a list of every lane's status is not the words of a start (`J-079 "
                                              "started`); the next step is Muse's either way",
+    **{("j079-473-unasked-codex", i, "J-079"): "SYSTEM_PLAN 4.1 (11-13): a workflow PR lands like any other, so the "
+                                            "signed automatic review's LAND is enough and the switchboard merges "
+                                            "it; no Codex review is owed any more" for i in (20, 21, 22)},
     ("j106-local-head-not-trunk", 1, "J-063"): "fb-bot/integrate-j063-torso-drive is on the remote (checked on "
                                                "11-12), so J-063 is pushed, not started",
     ("j106-local-head-not-trunk", 2, "J-063"): "as at event 1",
@@ -410,17 +413,14 @@ class Cases(unittest.TestCase):
         self.assertEqual(self.row(case, 25, "J-106").state, "closed")
         # the local "baseline" f5ee22d6b itself: test_mail_reader reads it from this timeline (GitHub's 422)
 
-    def test_j079_the_codex_review_nobody_asked_for_is_the_integrators_step_said_plainly(self):
+    def test_j079_the_workflow_pr_with_its_land_is_the_switchboards_to_merge(self):
+        # SYSTEM_PLAN 4.1 (11-13): #473 changes .github/workflows and lands like any other PR, so once the signed
+        # automatic review's LAND is on its head the step is the switchboard's merge, never a Codex ask
         case = "j079-473-unasked-codex"
-        for i in (20, 21):                # 21 is the inbox line that said only MERGE-BY-HAND
+        for i in (20, 21, 22):
             r = self.row(case, i, "J-079")
-            self.assertEqual((r.state, r.gate, r.owes, r.limit), ("reviewed", "codex", "integrator", M.hours(1)))
-            self.assertEqual(r.next, "post `@codex review` on #473 (only a person's login wakes Codex)")
-        late = self.row(case, 21, "J-079").alarm(self.at(case, 20) + M.hours(2))
-        self.assertIn("post `@codex review` on #473", late)
-        self.assertIn("belongs to integrator", late)
-        r = self.row(case, 22, "J-079")   # asked by hand: the step is Codex's, and nobody is told to ask again
-        self.assertEqual((r.gate, r.owes), ("asked", "reviewer"))
+            self.assertEqual((r.state, r.gate, r.owes), ("reviewed", "", "switchboard"), i)
+            self.assertNotIn("@codex review", r.next)
         r = self.row(case, 24, "J-079")
         self.assertEqual((r.state, r.gate, r.owes), ("proven", "fix", "muse"))
 

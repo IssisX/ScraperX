@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+#include "sim/matron_injury.hpp"
+
 namespace scraperx::sim {
 namespace stock_damage {
 struct DamageState;
@@ -319,6 +321,13 @@ struct MatronSnapshot final {
     std::uint32_t knockdowns = 0;
     double damage_ns = 0.0;
     double player_damage_ns = 0.0;
+    // J-059 #307: the same impulse, split by where it landed (J-044a §D).
+    // Indexed by injury::Region; unclassified is the share no region owns.
+    std::array<double, injury::kRegions> injury_j_region{};
+    std::array<double, injury::kRegions> injury_j_event{};
+    double injury_j_region_unclassified = 0.0;
+    // What each limb has left: arm_l, arm_r, leg_l, leg_r (1 = whole).
+    std::array<double, 4> limb_health{1.0, 1.0, 1.0, 1.0};
     std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
     bool blow_low = false;      // the last blow came at her shins
@@ -1301,6 +1310,7 @@ struct Snapshot final {
     Vector3 checkpoint_position{};
     std::uint64_t checkpoint_commit_count = 0;
     std::uint64_t death_count = 0;
+    std::uint64_t restores = 0;  // checkpoint restores (death + load), runtime-only
 
     // The carry. carrying_entity_id is the body on the player's carry point
     // (0 for none), read from the carry constraint's actual presence;
@@ -1848,6 +1858,10 @@ public:
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).
     void debug_matron_player_blow() noexcept;
+    // Tests only (never bound to the bridge): a player blow of `impulse_ns`
+    // at `at` (the strike's contact point on her capsule surface), so the
+    // region it hits is what the test measures, not the fist in the air.
+    void debug_matron_player_blow_at(Vector3 impulse_ns, Vector3 at, bool low) noexcept;
     // Tests only (never bound to the bridge): the next strike press throws
     // this move whatever the stance would pick (0, the bare punch, on a
     // free Matron); consumed when the strike begins.

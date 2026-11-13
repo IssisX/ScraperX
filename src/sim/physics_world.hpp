@@ -1041,6 +1041,12 @@ public:
     MachineCheckpoint checkpoint_{};
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
+    // J-059 #343 P1: checkpoint-restore generation, watched by the injury
+    // view (matron_view.gd) so a restore rewinds her displayed injuries.
+    // Runtime-only: never saved, so a load still moves it — the load
+    // itself restores. Incremented only in restore_from_checkpoint, the
+    // one path every death restore and load_game funnels through.
+    std::uint64_t restores_ = 0;
     bool parachute_deployed_ = false;
     float fall_peak_speed_mps_ = 0.0F;
     float pre_contact_fall_speed_mps_ = 0.0F;

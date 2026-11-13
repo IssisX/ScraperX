@@ -283,6 +283,11 @@ const SCENARIOS := {
 	"keyboard_stack_upper": 26,
 	# The continuous ascent from the game's start at grade through the upper machines to +221 m receiver.
 	"touch_stack": 8,
+	# J-133 (#459): the climb and the ending in one touch run — grade through
+	# the summit and the ending to the Home phase, zero deaths. Joins
+	# _stack (grade to the derrick's upper receiver, 803 m) and
+	# _summit_ending (the ending from where the climber stands there).
+	"touch_stack_ending": 8,
 	# The foreman's radio: his first line as the climber steps into S1's cage.
 	"touch_radio": 8,
 	"touch_photo_id_radio": 8,
@@ -656,6 +661,8 @@ func _run() -> void:
 			ok = await _touch_photo_id_radio()
 		"touch_stack":
 			ok = await _stack(InputRouter.Device.TOUCH)
+		"touch_stack_ending":
+			ok = await _stack_ending(InputRouter.Device.TOUCH)
 		"pad_stack":
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":
