@@ -2,6 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
+  "claude/integrate-autopr-recent": "354525a4588328f60bbb1491f0476ec0269d155f",
   "claude/integrate-digest-alone": "5251bbcbb6c1b6836586cf2a6fd646cbb1649239",
   "claude/integrate-j103": "620e4b4a3c830a7782b11af0f2e7531ee885e865"
  },
@@ -14,6 +15,11 @@
  "issue": 0,
  "job": "J-103",
  "landed": {
+  "claude/integrate-autopr-recent": [
+   "354525a4588328f60bbb1491f0476ec0269d155f",
+   "merged #500",
+   "2026-11-13T15:53:29Z"
+  ],
   "claude/integrate-digest-alone": [
    "5251bbcbb6c1b6836586cf2a6fd646cbb1649239",
    "merged #498",
@@ -27,7 +33,7 @@
  },
  "obligations": [],
  "outcome": "merged",
- "outcome_reason": "claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk",
+ "outcome_reason": "claude/integrate-autopr-recent: merged #500; claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk",
  "owner": "claude",
  "past": [
   {
@@ -36,6 +42,13 @@
    "outcome": "merged",
    "prs": [],
    "why": "claude/integrate-j103: in trunk"
+  },
+  {
+   "at": "2026-11-13T14:33:47Z",
+   "issue": 0,
+   "outcome": "merged",
+   "prs": [],
+   "why": "claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk"
   }
  ],
  "pr": 0,
@@ -43,5 +56,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-13T14:33:47Z"
+ "updated": "2026-11-13T15:53:29Z"
 }

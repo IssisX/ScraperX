@@ -160,7 +160,11 @@
    "what": "ask from Muse on #82"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:32:49Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T21:37:49Z",
    "attempts": 1,
@@ -193,5 +197,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T21:45:56Z"
+ "updated": "2026-11-13T15:53:29Z"
 }

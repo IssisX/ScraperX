@@ -5,11 +5,11 @@
   "fb-bot/integrate-j131": "23b6ac7050a3f2d2519a6345717c4fa17ef09b24"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-12T14:29:46Z",
  "deadline": null,
- "head": "23b6ac7050a3f2d2519a6345717c4fa17ef09b24",
+ "head": "ba0510196e25371e32b243082c71aeabaf7ff595",
  "issue": 457,
  "job": "J-131",
  "landed": {
@@ -57,6 +57,6 @@
   485
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-12T22:53:22Z"
+ "state": "proof",
+ "updated": "2026-11-13T15:53:29Z"
 }

@@ -1,5 +1,5 @@
 {
- "attempt": 6,
+ "attempt": 8,
  "blocked": null,
  "branches": {
   "claude/integrate-j072-board-source": "8b68ebd4834fb3db28f79d9916bf2334d52d95aa",
@@ -13,6 +13,8 @@
   "claude/integrate-j072-reconciler-live": "56617dc53771e4946d1808895cba0f5ff6198ac9",
   "claude/integrate-j072-review-all-findings": "8bebcd7a313132fd83bef76fbff544a6400681e0",
   "claude/integrate-j072-trackers": "21b30001fff6ca527e70e719de24d5d5c7197ad0",
+  "claude/integrate-rate-budget": "566cd4bd28dadedc2fd425630823fae559a25a41",
+  "claude/integrate-system-gaps": "259c886b5cc7b2a6a7275c7fbf7b915926b75d14",
   "claude/j072-handback": "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75"
  },
  "cancelled": null,
@@ -22,7 +24,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75",
+ "head": "c193f317c2fda9391e9abc84ee4dd1c72342f0a8",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -80,6 +82,16 @@
    "21b30001fff6ca527e70e719de24d5d5c7197ad0",
    "merged #382",
    "2026-11-10T15:09:20Z"
+  ],
+  "claude/integrate-rate-budget": [
+   "566cd4bd28dadedc2fd425630823fae559a25a41",
+   "",
+   "2026-11-13T15:53:29Z"
+  ],
+  "claude/integrate-system-gaps": [
+   "259c886b5cc7b2a6a7275c7fbf7b915926b75d14",
+   "merged #502",
+   "2026-11-13T15:53:29Z"
   ],
   "claude/j072-handback": [
    "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75",
@@ -593,7 +605,7 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 379,
+ "pr": 503,
  "pr_done": "merged",
  "prs": [
   359,
@@ -601,9 +613,11 @@
   361,
   362,
   364,
-  379
+  379,
+  506,
+  503
  ],
- "review": "LAND",
- "state": "working",
- "updated": "2026-11-12T21:45:56Z"
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-13T15:53:29Z"
 }

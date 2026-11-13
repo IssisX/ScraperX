@@ -2637,3 +2637,55 @@
 {"ev": "unmatched", "ident": "PR|#500", "job": "", "t": "2026-11-13T14:33:47Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
 {"ev": "needs_you", "job": "", "keys": ["claude-asks:2026-11-13", "gap:2026-11-13T12:53:47Z"], "n": 2, "t": "2026-11-13T14:33:47Z"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-13T14:33:47Z", "tries": 1}
+{"ev": "job", "job": "J-138", "t": "2026-11-13T15:53:29Z"}
+{"branch": "claude/integrate-system-gaps", "ev": "landed", "how": "merged #502", "job": "J-072", "sha": "259c886b5cc7b2a6a7275c7fbf7b915926b75d14", "t": "2026-11-13T15:53:29Z"}
+{"ev": "job_reopened", "job": "J-103", "t": "2026-11-13T15:53:29Z", "was": "merged", "why": "claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk"}
+{"branch": "claude/integrate-autopr-recent", "ev": "landed", "how": "merged #500", "job": "J-103", "sha": "354525a4588328f60bbb1491f0476ec0269d155f", "t": "2026-11-13T15:53:29Z"}
+{"ev": "outcome", "job": "J-103", "outcome": "merged", "t": "2026-11-13T15:53:29Z", "why": "claude/integrate-autopr-recent: merged #500; claude/integrate-digest-alone: merged #498; claude/integrate-j103: in trunk"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-e7eb5cd4", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-2b93245e", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-66ffcec8", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-7816a4d6", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-bd34a8c2", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-74ca3c12", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-45f6d34c", "job": "J-014", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-d0f4c694", "job": "J-040", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-bfc814c0", "job": "J-040", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-335b9b32", "job": "J-040", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-ab7e6745", "job": "J-040", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-53bbff53", "job": "J-040", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-7042d24d", "job": "J-053", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-b8f61f52", "job": "J-059", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-b3b69b1c", "job": "J-059", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-a2ebf6e7", "job": "J-059", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-fbdb626a", "job": "J-059", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-e45394be", "job": "J-080", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-42a54029", "job": "J-080", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-4a8f4538", "job": "J-080", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-e77695b2", "job": "J-100", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "a later post by the asker, no ask", "id": "O-775bf66b", "job": "J-100", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "a later post by the asker, no ask", "id": "O-e6004416", "job": "J-100", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "a later post by the asker, no ask", "id": "O-69a20f29", "job": "J-100", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-0fcf0b49", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-7dfe0855", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-1b50d55c", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-532955c4", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-f90f140a", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-7ba7a585", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-ed7826ef", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "state", "frm": "working", "job": "J-072", "t": "2026-11-13T15:53:29Z", "to": "review"}
+{"ev": "state", "frm": "merged", "job": "J-077", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-100", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-116", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-119", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-125", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-130", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-131", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-133", "t": "2026-11-13T15:53:29Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-137", "t": "2026-11-13T15:53:29Z", "to": "review"}
+{"ev": "state", "frm": "accepted", "job": "J-138", "t": "2026-11-13T15:53:29Z", "to": "working"}
+{"ev": "unmatched", "ident": "BRANCH|switchboard/candidate-501", "job": "", "t": "2026-11-13T15:53:29Z", "why": "unknown branch prefix (proof running)"}
+{"ev": "matched", "ident": "PR|#500", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "matched", "ident": "PR|#501", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "matched", "ident": "PR|#502", "job": "", "t": "2026-11-13T15:53:29Z"}
+{"ev": "pass", "job": "", "jobs": 110, "status": "ok", "t": "2026-11-13T15:53:29Z", "tries": 1}

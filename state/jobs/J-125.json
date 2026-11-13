@@ -5,13 +5,13 @@
   "fb-bot/integrate-j125": "3be444d203594439bf4e9e48f96ce541032c59b8"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6829929805:68"
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "3be444d203594439bf4e9e48f96ce541032c59b8",
+ "head": "c2d8ab7b34082e08213a854df3d444b303361c18",
  "issue": 448,
  "job": "J-125",
  "landed": {
@@ -89,6 +89,6 @@
   481
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-12T22:53:22Z"
+ "state": "proof",
+ "updated": "2026-11-13T15:53:29Z"
 }

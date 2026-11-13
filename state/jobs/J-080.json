@@ -11,7 +11,7 @@
   "6825143629:43"
  ],
  "created": "2026-11-11T12:58:47Z",
- "deadline": "2026-11-13T03:17:00Z",
+ "deadline": null,
  "head": "01d85fc1d406b77968a799f855c6421dd66743f8",
  "issue": 398,
  "job": "J-080",
@@ -144,7 +144,11 @@
    "what": "ask from Muse on #398"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:53:43Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T01:37:46Z",
    "attempts": 1,
@@ -169,7 +173,11 @@
    "what": "ask from Muse on #398"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:53:43Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T02:27:52Z",
    "attempts": 1,
@@ -194,7 +202,11 @@
    "what": "ask from Muse on #398"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:53:43Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T05:17:47Z",
    "attempts": 1,
@@ -229,5 +241,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-13T05:33:57Z"
+ "updated": "2026-11-13T15:53:29Z"
 }

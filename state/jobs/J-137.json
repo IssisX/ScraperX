@@ -1,11 +1,11 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "claude/integrate-j137": "b0c06aae40206496e5123330671a598bf6422cf9"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-12T19:27:38Z",
  "deadline": null,
@@ -51,10 +51,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 0,
+ "pr": 501,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  501
+ ],
  "review": "",
- "state": "working",
- "updated": "2026-11-13T14:33:47Z"
+ "state": "review",
+ "updated": "2026-11-13T15:53:29Z"
 }

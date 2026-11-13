@@ -5,13 +5,13 @@
   "fb-bot/integrate-j119": "9b0a5c550c939e80356be38243018ba2540feccb"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6829928509:68"
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "9b0a5c550c939e80356be38243018ba2540feccb",
+ "head": "4c1c40564dc7e7e7e741337e2cd5c8ab901ab19b",
  "issue": 441,
  "job": "J-119",
  "landed": {
@@ -89,6 +89,6 @@
   480
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "proof",
+ "updated": "2026-11-13T15:53:29Z"
 }

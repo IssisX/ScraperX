@@ -5,11 +5,11 @@
   "fb-bot/integrate-j133": "f1740626b23eb0b78c441e0a063bbad0cd64b262"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-12T14:29:46Z",
  "deadline": null,
- "head": "f1740626b23eb0b78c441e0a063bbad0cd64b262",
+ "head": "12fc83803965b235440505147d82c3fa61e5b2ed",
  "issue": 459,
  "job": "J-133",
  "landed": {
@@ -85,6 +85,6 @@
   488
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-12T23:54:27Z"
+ "state": "proof",
+ "updated": "2026-11-13T15:53:29Z"
 }

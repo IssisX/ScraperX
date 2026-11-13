@@ -5,11 +5,11 @@
   "fb-bot/integrate-j130": "b96563fc6868f1a4338955ffab1575003f019ef0"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-12T14:29:46Z",
  "deadline": null,
- "head": "b96563fc6868f1a4338955ffab1575003f019ef0",
+ "head": "b4ec82ee76a78cdf2931fff01de36a2a538059be",
  "issue": 456,
  "job": "J-130",
  "landed": {
@@ -57,6 +57,6 @@
   484
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-12T22:53:22Z"
+ "state": "proof",
+ "updated": "2026-11-13T15:53:29Z"
 }

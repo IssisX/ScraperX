@@ -3,7 +3,7 @@
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
-  "fb-bot/integrate-protected-j116": "7a7edd5c69421294be39630748619f1adb58661b"
+  "fb-bot/integrate-protected-j116": "09b04270abb3542c94dc2cd49092bda555ce3b1f"
  },
  "cancelled": null,
  "ci": "red: host-build",
@@ -22,9 +22,9 @@
    "2026-11-12T21:45:56Z"
   ],
   "fb-bot/integrate-protected-j116": [
-   "7a7edd5c69421294be39630748619f1adb58661b",
+   "09b04270abb3542c94dc2cd49092bda555ce3b1f",
    "",
-   "2026-11-13T03:14:07Z"
+   "2026-11-13T15:53:29Z"
   ]
  },
  "obligations": [
@@ -96,6 +96,6 @@
   487
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-13T03:14:07Z"
+ "state": "proof",
+ "updated": "2026-11-13T15:53:29Z"
 }

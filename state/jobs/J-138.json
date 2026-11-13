@@ -1,0 +1,26 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {},
+ "cancelled": null,
+ "ci": "green",
+ "commands": [],
+ "created": "2026-11-13T15:53:29Z",
+ "deadline": null,
+ "head": "1552d6a251f4ad606b5fb096cb1cee1098b2987d",
+ "issue": 504,
+ "job": "J-138",
+ "landed": {},
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 507,
+ "pr_done": "",
+ "prs": [
+  507
+ ],
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-13T15:53:29Z"
+}

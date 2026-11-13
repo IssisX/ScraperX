@@ -11,8 +11,8 @@
  "ci": "red: host-build",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-13T03:17:00Z",
- "head": "a9c3143786ba994872cb8e8aa6c7b2b61e69885e",
+ "deadline": null,
+ "head": "5954c264413562d495d6d2e3cc779a0d3c24bb64",
  "issue": 121,
  "job": "J-014",
  "landed": {
@@ -183,7 +183,11 @@
    "what": "`fb-bot/integrate-protected-j014-eguard` is green with no PR: open one (Muse cannot open PRs)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T01:22:49Z",
    "attempts": 1,
@@ -208,7 +212,11 @@
    "what": "ask from Muse on #121"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T02:27:47Z",
    "attempts": 1,
@@ -233,7 +241,11 @@
    "what": "ask from Muse on #121"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T02:32:53Z",
    "attempts": 1,
@@ -258,7 +270,11 @@
    "what": "ask from Muse on #121"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T03:37:49Z",
    "attempts": 1,
@@ -283,7 +299,11 @@
    "what": "ask from Muse on #121"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T03:47:49Z",
    "attempts": 1,
@@ -308,7 +328,11 @@
    "what": "ask from Muse on #121"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T05:17:49Z",
    "attempts": 1,
@@ -333,7 +357,11 @@
    "what": "ask from Muse on #121"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T06:32:52Z",
    "attempts": 1,
@@ -361,7 +389,7 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 491,
+ "pr": 492,
  "pr_done": "",
  "prs": [
   492,
@@ -369,5 +397,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-13T06:34:10Z"
+ "updated": "2026-11-13T15:53:29Z"
 }

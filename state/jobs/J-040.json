@@ -8,7 +8,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-13T03:17:00Z",
+ "deadline": null,
  "head": "ede130b0a7034533ad562c29ffd3347b4e9c3b9b",
  "issue": 228,
  "job": "J-040",
@@ -138,7 +138,11 @@
    "what": "`fb-bot/integrate-protected-j040` proof red: godot-touch (touch-1), native-tests (matron-slices-3), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:38Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T01:22:50Z",
    "attempts": 1,
@@ -163,7 +167,11 @@
    "what": "ask from Muse on #228"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:38Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T02:27:46Z",
    "attempts": 1,
@@ -188,7 +196,11 @@
    "what": "ask from Muse on #228"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:38Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T03:02:49Z",
    "attempts": 1,
@@ -213,7 +225,11 @@
    "what": "ask from Muse on #228"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:38Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T03:47:47Z",
    "attempts": 1,
@@ -238,7 +254,11 @@
    "what": "ask from Muse on #228"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-13T15:50:38Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-13T08:37:46Z",
    "attempts": 1,
@@ -273,5 +293,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-13T08:43:54Z"
+ "updated": "2026-11-13T15:53:29Z"
 }
