@@ -398,6 +398,8 @@ jobs:
       actions: write
     steps:
       - name: Fetch the ask part's file
+        # 11-13 (#350): only a reviews run's own part (a sweep's run has no ask job, so its fetch was an error line)
+        if: inputs.part == 'ask'
         uses: actions/download-artifact@v4
         continue-on-error: true   # none when ask did not run or saved nothing
         with:
@@ -410,6 +412,7 @@ jobs:
           path: ask/etags.json
           key: switchboard-etags-ask-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Fetch the steer part's file
+        if: inputs.part != 'ask'
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
@@ -431,16 +434,22 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           PART: ${{ inputs.part == 'ask' && 'ask' || 'steer' }}   # this run's own part's caches only
+        # 11-13 (#350, sweep 43511901124): a listing GitHub refuses (its rate limit) prunes nothing and fails nothing.
+        # gh printed the refusal's body to stdout, the loop read its lines as ids, and pipefail failed the job after
+        # the state was saved. What is not pruned now is pruned by the next run.
         run: |
           set -euo pipefail
           for part in "$PART"; do
-            gh api "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
-              --jq '.actions_caches[3:][].id' | while read -r id; do
-                gh api -X DELETE "repos/$REPO/actions/caches/$id" > /dev/null || echo "::warning::cache $id not deleted"
-              done
-          done
-          gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
-            --jq '.artifacts[] | select(.name | startswith("switchboard-etags-")) | .id' | while read -r id; do
-              gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null || echo "::warning::artifact $id not deleted"
+            ids=$(gh api "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
+              --jq '.actions_caches[3:][].id') || { echo "::warning::the $part ETag caches were not listed: pruned next run"; ids=""; }
+            for id in $ids; do
+              gh api -X DELETE "repos/$REPO/actions/caches/$id" > /dev/null || echo "::warning::cache $id not deleted"
             done
+          done
+          ids=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | startswith("switchboard-etags-")) | .id') \
+            || { echo "::warning::this run's hand-over artifacts were not listed: each expires in a day"; ids=""; }
+          for id in $ids; do
+            gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null || echo "::warning::artifact $id not deleted"
+          done
 
