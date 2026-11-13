@@ -1310,6 +1310,7 @@ struct Snapshot final {
     Vector3 checkpoint_position{};
     std::uint64_t checkpoint_commit_count = 0;
     std::uint64_t death_count = 0;
+    std::uint64_t restores = 0;  // checkpoint restores (death + load), runtime-only
 
     // The carry. carrying_entity_id is the body on the player's carry point
     // (0 for none), read from the carry constraint's actual presence;

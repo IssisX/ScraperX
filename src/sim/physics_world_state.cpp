@@ -218,6 +218,9 @@ void Simulation::PhysicsWorld::commit_checkpoint(const JPH::BodyInterface &bodie
 // publishing a snapshot that mixes a teleported position with a contact
 // sample that referred to the pre-restore position.
 void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+    // J-059 #343 P1: every restore moves the generation the injury view
+    // watches, so a rewind of her doses rewinds her displayed injuries.
+    ++restores_;
     // Out of the slingshot's harness, and the hands off whatever they hold
     // (a ledge, a climb's holds, a bar, a zipline's trolley), before the body
     // moves: the checkpoint is a standing one. The Matron's hands too, before
@@ -1348,6 +1351,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.checkpoint_position = to_vector3(checkpoint_position_);
     state_.checkpoint_commit_count = checkpoint_commit_count_;
     state_.death_count = death_count_;
+    state_.restores = restores_;
 }
 
 } // namespace scraperx::sim

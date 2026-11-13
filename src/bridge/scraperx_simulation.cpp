@@ -1757,11 +1757,12 @@ godot::Dictionary ScraperXSimulation::get_death_state() const {
 
 godot::Dictionary ScraperXSimulation::get_matron_state() const {
     godot::Dictionary out;
-    fill_matron_state(out, simulation_->matron_state());
+    fill_matron_state(out, simulation_->snapshot(), simulation_->matron_state());
     return out;
 }
 
-void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::MatronSnapshot &state) const {
+void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Snapshot &p,
+                                           const sim::MatronSnapshot &state) const {
     MatronKeys &keys = state_keys_;
     keys.begin();
     out[keys("state")] = static_cast<std::int64_t>(state.state);
@@ -1894,6 +1895,10 @@ void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Ma
     out[keys("blow_low")] = state.blow_low;
     out[keys("riding")] = state.riding;
     out[keys("damage_ns")] = state.damage_ns;
+    // J-059 #343 P1: the checkpoint-restore generation the injury view
+    // watches (matron_view.gd) — a change means the sim rewound her doses,
+    // so the view's maxima cache must reset. Runtime-only, never saved.
+    out[keys("restores")] = static_cast<std::int64_t>(p.restores);
     // J-059 #307: per-region injury (J-044a §D), the feed matron_injury.gd
     // draws in real play: region -> {j_region, j_event}, only regions with
     // a dose; the view's own thresholds turn the dose into a mark.
@@ -1958,7 +1963,7 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
 godot::Array ScraperXSimulation::get_matron_frame() const {
     const sim::MatronSnapshot m = simulation_->matron_state();
     godot::Dictionary state;
-    fill_matron_state(state, m);
+    fill_matron_state(state, simulation_->snapshot(), m);
     godot::Dictionary hold;
     fill_matron_hold(hold, simulation_->snapshot(), m);
     godot::Array out;

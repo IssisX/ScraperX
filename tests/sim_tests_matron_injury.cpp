@@ -351,6 +351,9 @@ void run_restore_persists_injury() {
     require(s.snapshot().checkpoint_commit_count > commits_before,
             "injury: a checkpoint actually commits after the chest blow");
     const auto injured_save = s.save_game();
+    // J-059 #343 P1: the restore generation the injury view watches — a
+    // checkpoint load moves it, so the view resets its maxima cache.
+    const std::uint64_t restores_before = s.snapshot().restores;
     // A fresh Simulation loads the same bytes: the doses must travel in the
     // save, not ride on the live Matron — the same-process load above cannot
     // catch a missing save field, since nothing happens between the save
@@ -358,11 +361,14 @@ void run_restore_persists_injury() {
     Simulation fresh(InitialSpawn::Deck154);
     require(fresh.load_game(injured_save.data(), injured_save.size()), "load");
     for (int i = 0; i < 5; ++i) tick(fresh);
+    require(fresh.snapshot().restores == 1, "injury: a fresh load is its first restore");
     require(std::abs(region(fresh, injury::Region::Chest) - 150.0) < 0.01, "fresh reload keeps chest dose");
     require(std::abs(regions_total(fresh) - fresh.matron_state().damage_ns) < 0.01, "fresh reload reconciles");
     require(s.load_game(injured_save.data(), injured_save.size()),
             "injury: injured checkpoint loads");
     for (int i = 0; i < 5; ++i) tick(s);
+    require(s.snapshot().restores == restores_before + 1,
+            "injury: a checkpoint load moves the restore generation");
     const auto after = s.matron_state();
     require(std::abs(after.damage_ns - 150.0) < 0.01,
             "injury: a checkpoint reload restores the same damage");
@@ -381,6 +387,8 @@ void run_restore_persists_injury() {
     require(s.load_game(injured_save.data(), injured_save.size()),
             "injury: the saved checkpoint loads for the rewind");
     for (int i = 0; i < 5; ++i) tick(s);
+    require(s.snapshot().restores == restores_before + 2,
+            "injury: the rewind load moves the restore generation again");
     const auto rewound = s.matron_state();
     require(std::abs(rewound.damage_ns - 150.0) < 0.01,
             "injury: a rewind restores the saved damage, not the later hits");
