@@ -462,7 +462,9 @@ class TheCacheBoundary(unittest.TestCase):
         # #503's review: a PR from any branch, and a follow-up push that touches no switch file, still get the unit
         # tests; what runs is the head with trunk merged in, as refs/pull/N/merge was; a draft skips the dry run.
         flow = self.flow()
-        self.assertEqual(flow[True]["push"], {"branches-ignore": [rules.TRUNK]})   # no paths filter
+        self.assertEqual(flow[True]["push"], {"branches-ignore": [rules.TRUNK, "switchboard/**",   # no paths filter
+                                                                  switch.INBOX_BRANCH]})
+        self.assertTrue(all(b.startswith("switchboard/") for b in (switch.LEDGER_BRANCH, switch.STATE_BRANCH)))
         job = flow["jobs"]["selftest"]
         self.assertFalse(self.holds_secret(job))
         self.assertEqual(set(job["permissions"].values()), {"read"})
@@ -471,6 +473,7 @@ class TheCacheBoundary(unittest.TestCase):
         self.assertEqual([s.get("if") for s in rest], ["steps.scope.outputs.run == 'true'"] * len(rest))
         self.assertIn("unittest discover -s src/tools/switchboard", rest[1]["run"])
         self.assertIn('elif .[0].draft then "draft"', rest[2]["run"])
+        self.assertIn('[ "$pr" = none ] && [[ "$BRANCH" != */integrate-* ]]', rest[2]["run"])   # no stray dry runs
         import shutil
         import tempfile
         if not (shutil.which("git") and shutil.which("bash")):

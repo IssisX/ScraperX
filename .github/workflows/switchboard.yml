@@ -67,8 +67,10 @@ on:
   # Every branch but trunk, and no paths filter: a PR can come from any branch, and a paths filter sees only the
   # pushed commits, so a follow-up push that touches no switch file would leave the PR's new head untested. The
   # selftest's first step decides instead, from the whole branch against trunk, and ends at once when none changed.
+  # The switchboard's own branches (the ledger, state and merge candidates) and the integrator's inbox PR are never
+  # a change to land: they are left out.
   push:
-    branches-ignore: [ScraperX-Claude]
+    branches-ignore: [ScraperX-Claude, 'switchboard/**', claude/integrator-inbox]
 
 permissions: {}
 
@@ -150,10 +152,10 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: .venv/bin/python -m unittest discover -s src/tools/switchboard -p 'test_*.py' -v
       # Cory 11-12, "only run what changed": the dry run cost 550 to 1,368 calls of the repo's shared hourly
-      # GitHub limit (it starved the live sweep on #476). A draft PR runs only the unit tests above. A push with no
-      # PR yet (the switchboard opens it, never as a draft) or to a ready PR runs the dry run too; a PR marked ready
-      # gets it on its next push. 11-13: a dry run's own budget is 300 calls (switch.py CALL_BUDGET), so both
-      # together cost at most 600.
+      # GitHub limit (it starved the live sweep on #476). A draft PR runs only the unit tests above, and so does a
+      # branch with no PR unless it is an */integrate-* branch (the switchboard opens its PR, never as a draft). A
+      # ready PR runs the dry run too; a PR marked ready gets it on its next push. 11-13: a dry run's own budget is
+      # 300 calls (switch.py CALL_BUDGET), so both together cost at most 600.
       - name: Dry run against the live repo, unless the branch's PR is a draft
         if: steps.scope.outputs.run == 'true'
         env:
@@ -170,6 +172,10 @@ jobs:
           fi
           if [ "$pr" = draft ]; then
             echo "::notice::the branch's PR is a draft: unit tests only; the dry run waits for a push to it once ready"
+            exit 0
+          fi
+          if [ "$pr" = none ] && [[ "$BRANCH" != */integrate-* ]]; then
+            echo "::notice::no PR and not an integrate branch: unit tests only; the dry run waits for a ready PR"
             exit 0
           fi
           .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO"
