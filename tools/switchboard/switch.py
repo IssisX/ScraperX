@@ -73,11 +73,15 @@ def only_wake_left(jobs: list[dict]) -> bool:
         j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
 
 
+BUILD_JOBS = ("host-build", "native-tests", "godot-touch", "android-build")   # the game's build and tests
+
+
 def built_run(jobs: list[dict]) -> bool:
-    """Did this proof run build and test the game: a native-tests or godot-touch job that was not skipped? A push
-    that changes only notes, rules or the switchboard skips them (ci/proof_scope.py) and reads green, so such a
-    run says nothing about trunk's code (RED-TRUNK)."""
-    return any((j.get("name") or "").startswith(FAIL_LOG_JOBS) and j.get("conclusion") != "skipped" for j in jobs)
+    """Did this proof run build or test the game: a host-build, native-tests, godot-touch or android-build job that
+    was not skipped (a failed host-build counts: its tests are skipped because it failed)? A push that changes only
+    notes, rules or the switchboard skips them all (ci/proof_scope.py) and reads green, so such a run says nothing
+    about trunk's code (RED-TRUNK)."""
+    return any((j.get("name") or "").startswith(BUILD_JOBS) and j.get("conclusion") != "skipped" for j in jobs)
 
 
 LEDGER_BRANCH = "switchboard/ledger"
@@ -147,7 +151,9 @@ MAX_ASK_LATE = 10                              # ASK-LATE items per pass; the re
 # RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
 # a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
 TRUNK_RUN_READS = 6
-MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from [^/\s]+/(\S+)")
+# The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
+# the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
+MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
 INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
@@ -2615,9 +2621,14 @@ class Switch:
         kept = dict(state.get("trunk_proof") or {}) if isinstance(state.get("trunk_proof"), dict) else {}
         trunk = sorted((r for r in runs if r.get("head_branch") == rules.TRUNK and r.get("status") == "completed"),
                        key=lambda r: r.get("created_at") or "", reverse=True)
-        for r in trunk[:TRUNK_RUN_READS]:
-            if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= (kept.get("created") or ""):
-                break   # nothing newer than the run kept
+        checked = max(str(kept.get("checked") or ""), str(kept.get("created") or ""))
+        newest, done_all = (trunk[0].get("created_at") or "") if trunk else "", True
+        for i, r in enumerate(trunk):
+            if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
+                break   # nothing newer than the runs already judged
+            if i >= TRUNK_RUN_READS:
+                done_all = False   # the rest wait for the next sweep: nothing past them is marked judged
+                break
             try:
                 if not built_run(self.run_jobs(r["id"])):
                     continue   # the build was skipped: this run proves nothing about trunk's code
@@ -2626,6 +2637,7 @@ class Switch:
                 raise
             except GitHubError as err:
                 self.out(f"NOTE        trunk proof run {r.get('id')}'s jobs were not read ({err_text(err)}): read next sweep")
+                done_all = False
                 break
             sha = r.get("head_sha") or ""
             red = proof.startswith("red")
@@ -2641,9 +2653,12 @@ class Switch:
                     except GitHubError:
                         msg = ""
                     m = MERGE_FROM.match(msg or "")
-                    new["pr"], new["branch"] = (int(m.group(1)), m.group(2)) if m else (0, "")
+                    branch = m.group(2).removeprefix(self.gh.repo.split("/")[0] + "/") if m else ""
+                    new["pr"], new["branch"] = (int(m.group(1)), branch) if m else (0, "")
             kept = new
             break
+        if done_all and newest > checked and kept:   # every run down to the judged ones was read: none is read again
+            kept = dict(kept, checked=newest)
         if not getattr(self.gh, "dry_run", False) and kept and isinstance(getattr(self.gh, "state", None), dict):
             self.gh.state["trunk_proof"] = kept
         self.__dict__["_trunk_proof"] = kept
