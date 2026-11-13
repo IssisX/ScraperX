@@ -122,6 +122,8 @@ AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
 # pass after #498 read all of them and the token's hour ran out (run 43440567620: 0 of 5000 left).
 AUTO_PR_RECENT_ONLY = ("claude/integrate-",)
 AUTO_PR_MAX_AGE = dt.timedelta(days=3)
+PAID_WALL = dt.timedelta(minutes=4)   # an untargeted run starts no new model call past this (Switch.paid_deferred)
+MAX_NO_JOB_CHECKS = 8   # new heads with no Job line checked in one sweep (Switch.no_job_line), about 3 reads each
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -190,8 +192,10 @@ INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "ASK-LATE", "PLAN", "Q
 # only reports (muse_report).
 # Beside these, inbox_class rides the late-job (PLAN) lines whose next step another owner holds.
 DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
-# 11-13: a claude/ PR's FIX, conflict or red waits on the integrator alone, so each wakes it at once, once per head and
-# kind (its key); still so at the next full pass, it is listed once more as STALLED (pr_inbox_items)
+# 11-13 (#503's FIX, #506's conflict: steer saw both, no #282 line ever named them, the inbox part deferred on the call
+# budget, and their class only held): a claude/ PR's FIX, conflict or red waits on the integrator alone, so each wakes
+# it at once, once per head and kind (its key); still stuck at that head at the next full pass, the PR is listed once
+# more as STALLED, once per head (pr_inbox_items)
 OWN_STALL_KINDS = frozenset({"FIX", "CONFLICT", "RED"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
 MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
@@ -642,7 +646,7 @@ def inbox_class(it: InboxItem) -> str:
     if it.kind in ("TO-CLAUDE", "ASK-LATE", "RED-TRUNK"):   # RED-TRUNK: every agent's proof stands on trunk
         return "now"
     if it.dest == "claude" and (it.kind in OWN_STALL_KINDS or it.kind == "STALLED"):
-        return "now"   # 11-13: Claude's own PR is stuck until the integrator acts (#503 FIX, #506 conflict sat)
+        return "now"   # 11-13: Claude's own PR is stuck until the integrator acts (OWN_STALL_KINDS)
     if it.kind in DIGEST_KINDS:
         return "ride"
     if it.kind == "PLAN":
@@ -760,14 +764,18 @@ class Switch:
     # ---------- facts ----------
     def fresh_facts(self, number: int) -> tuple[rules.PrFacts, dict]:
         """pr_facts for one PR with every read GitHub's own answer (no ETag cache, no per-run memo)."""
-        saved = (self._jobs, getattr(self, "_board", None), getattr(self, "_board_issue", None))
+        saved = (self._jobs, getattr(self, "_board", None), getattr(self, "_board_issue", None),
+                 self.__dict__.get("_board_carry"), self.__dict__.get("_board_items"))
         self._jobs, self._board, self._board_issue = None, None, None
+        self.__dict__.pop("_board_carry", None)   # the old board's comments too: bridged verdicts are read from them
         try:
             with self.gh.fresh():
                 pr = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
                 facts, ctx = self.pr_facts(pr)
         finally:
-            self._jobs, self._board, self._board_issue = saved
+            self._jobs, self._board, self._board_issue, self._board_carry, self._board_items = saved
+            if saved[3] is None:
+                self.__dict__.pop("_board_carry", None)
         ctx["fresh"] = True
         return facts, ctx
 
@@ -1270,6 +1278,20 @@ class Switch:
             self._claude = claude_calls.client()
         return self._claude
 
+    def paid_deferred(self, key: str) -> bool:
+        """11-13: one sweep's model calls run one after another inside the run that holds the shared `switchboard`
+        concurrency group, and steer waits for them, so every later sweep waited too (run 43459528814: five reviews,
+        1570 s; 43465457221: one security pass, 744 s; queued sweeps replaced and cancelled meanwhile). An untargeted
+        run (paid_clock set) starts no new paid call once PAID_WALL has passed since it started and one has run: the
+        call is put off to the next sweep with no mark, so its PR is read again then (pr_record keeps it warm). A run
+        for one PR (a verdict comment) is never cut. True when put off."""
+        start = self.__dict__.get("paid_clock")
+        if start is None or not self.__dict__.get("paid_runs") or time.monotonic() - start < PAID_WALL.total_seconds():
+            return False
+        self.out(f"DEFER       {key}: this run has run {int(time.monotonic() - start) // 60} min (the bound is "
+                 f"{int(PAID_WALL.total_seconds()) // 60}) after {self.paid_runs} model call(s); the next sweep makes it")
+        return True
+
     def paid(self, kind: str, job: str, call: str, system: str, content: list, schema: dict, cap: str, key: str):
         """Count tokens, gate on the budget, reserve, call, record the actual cost. None when refused."""
         import claude_calls
@@ -1290,6 +1312,7 @@ class Switch:
             return None
         run = uuid.uuid4().hex[:12]
         self.append(money.record(self.now, run, "reserve", kind, job, worst, f"{key} in={n}"), f"reserve {key}")
+        self.paid_runs = self.__dict__.get("paid_runs", 0) + 1   # paid_deferred's count
         try:
             res = claude_calls.ask_json(self.claude(), spec.model, spec.max_tokens, spec.effort, system, content, schema)
         except claude_calls.ClaudeCallError as err:
@@ -1808,6 +1831,10 @@ class Switch:
         seen = state.setdefault("no_job_at", {})
         if had is None and (seen.get(branch) == sha or at is None or self.now - at > AUTO_PR_MAX_AGE):
             return
+        if had is None:   # 42 recent integrate heads had no Job line on 11-13: a few new ones a sweep, the rest next
+            self._no_job_checks = self.__dict__.get("_no_job_checks", 0) + 1
+            if self._no_job_checks > MAX_NO_JOB_CHECKS:
+                return
         owner = self.gh.repo.split("/")[0]
         prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
         if had is not None or prs:   # new commits on a branch that had a PR: unlanded work no PR can carry
@@ -1839,7 +1866,7 @@ class Switch:
         branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops this
         sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
-        self.auto_pr_failed = ()
+        self.auto_pr_failed, self._no_job_checks = (), 0
         # 11-12: 647 branches, and paged() stops at 500 without saying so, so a finished branch past it never got
         # its PR. Once the plan is live every page is read (past ALL_PAGES it raises). Until then this reads what
         # it always read: the rebuild changes nothing the live switch does while it is in shadow.
@@ -2099,16 +2126,17 @@ class Switch:
 
     def board_carry(self) -> list[dict]:
         """11-13: a board that rolled (board_rollover) names the one it continues (BOARD_FROM). That board's comments
-        from BOARD_CARRY before the new one opened are still read: a Muse verdict or an ask the bridge posted there
-        just before the roll would otherwise vanish from every read. One fixed URL, so the ETag cache answers it free
-        once the old board is closed. [] for a board that names none."""
+        from BOARD_CARRY before the new one opened are still read, for BOARD_CARRY after it: a Muse verdict or an ask
+        the bridge posted there just before the roll would otherwise vanish from every read. One fixed URL, so the
+        ETag cache answers it free once the old board is closed (a merge's fresh read reads it again, fresh_facts).
+        [] for a board that names none."""
         memo = self.__dict__.get("_board_carry")
         if memo is None:
             memo = []
             it = (getattr(self, "_board_items", None) or {}).get(self.board_issue()) or {}
             m = BOARD_FROM.search(it.get("body") or "")
             opened = parse_time(str(it.get("created_at") or ""))
-            if m and opened and int(m.group(1)) != it.get("number"):
+            if m and opened and int(m.group(1)) != it.get("number") and self.now - opened < BOARD_CARRY:
                 memo = self.gh.paged(f"repos/{self.gh.repo}/issues/{int(m.group(1))}/comments"
                                      f"?since={iso_z(opened - BOARD_CARRY)}")
             self.__dict__["_board_carry"] = memo
@@ -2177,7 +2205,8 @@ class Switch:
         opened = parse_time(str(item.get("created_at") or "")) or self.now
         mark = BOARD_MOVED_MARK.format(new=new)
         since = self.gh.paged(f"repos/{self.gh.repo}/issues/{old}/comments?since={iso_z(opened - dt.timedelta(minutes=5))}")
-        if not any(mark in (c.get("body") or "") for c in since if isinstance(c, dict)):
+        if not any(mark in (c.get("body") or "") and (c.get("user") or {}).get("login") == rules.BOT_LOGIN
+                   for c in since if isinstance(c, dict)):   # anyone can type the mark: only the switch's own counts
             self.gh.comment(old, f"Switchboard (board): this board is closed at its cap of {BOARD_CAP} comments "
                                  f"(CLAUDE.md). The live board is #{new}: read its body and post there.\n\n{mark}",
                             f"board: #{old} moved to #{new}")
@@ -2931,8 +2960,8 @@ class Switch:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
                                              f"{hours(now - head_since)} ({proof_link})", owner, run_id=rid))
         if not mine and owner == "claude" and getattr(self, "full_pass", False):
-            # 11-13 (#503's FIX, #506's conflict sat with nobody acting): Claude's own PR still FIX, in conflict or red
-            # at the head an earlier sweep listed it at is listed again, once per head, by the next full pass
+            # 11-13 (OWN_STALL_KINDS): Claude's own PR still FIX, in conflict or red at the head an earlier sweep
+            # listed it at is listed again by the next full pass, once per head (not per kind)
             stalled = [it for it in out if it.kind in OWN_STALL_KINDS and it.dest == "claude" and it.listed(reported)]
             if stalled:
                 out.append(item("STALLED", f"still {', '.join(it.kind for it in stalled)} at this head, a sweep or more "
@@ -3314,21 +3343,22 @@ class Switch:
             elif not api_turn:
                 self.out(f"SECURITY    #{facts.number} changes .github/workflows: the automatic review is its security pass")
                 self.review(facts, ctx, author, security=True)
-            else:
-                self.review(facts, ctx, author, security=security)
-                if self.team.pool:
-                    self.note_assigned(rules.API_REVIEWER)
+            elif self.review(facts, ctx, author, security=security) is not False and self.team.pool:
+                self.note_assigned(rules.API_REVIEWER)   # a review put off (paid_deferred) is not yet assigned
         if rules.needs_eye(facts):
             if self.marked(ctx["comments"], "eye", facts.number, facts.head_sha):
                 self.out(f"LOOKED      #{facts.number} eye already posted for @{facts.head_sha[:8]}")
             else:
                 self.eye(facts, ctx)
 
-    def review(self, facts: rules.PrFacts, ctx: dict, author: str, security: bool = False) -> None:
+    def review(self, facts: rules.PrFacts, ctx: dict, author: str, security: bool = False) -> bool | None:
         """The automatic Claude review of one head. `security`: it is the security pass of a workflow-file PR
-        (J-056), so when it cannot run no other reviewer is asked: no one else can stand in for it."""
+        (J-056), so when it cannot run no other reviewer is asked: no one else can stand in for it. False when it
+        was put off to the next sweep (paid_deferred), else None."""
         import claude_calls
         key = f"review#{facts.number}@{facts.head_sha[:8]}"
+        if self.paid_deferred(key):
+            return False
         self.out(f"REVIEW      #{facts.number} author={author}: automatic Claude review")
         # The diff of the head this review is labeled with, never the PR's head of the moment (J-056): a push between
         # the sweep's read and this one must not put a clean review of one commit under another's mark. Three dots:
@@ -3407,6 +3437,8 @@ class Switch:
     def eye(self, facts: rules.PrFacts, ctx: dict) -> None:
         import claude_calls
         key = f"eye#{facts.number}@{facts.head_sha[:8]}"
+        if self.paid_deferred(key):
+            return
         self.out(f"EYE         #{facts.number}: Claude vision on the {self.looks['artifact_prefix']}* screenshots")
         if self.gh.dry_run:
             self.paid("eye", ctx["job"], "eye", claude_calls.EYE_SYSTEM, [], claude_calls.EYE_SCHEMA, "", key)
@@ -4215,6 +4247,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sw.merge_only = True   # at the floor itself (low() is below it): only merges spend the reserve
             sw.out(f"::warning::RATE FLOOR  {sw.gh.remaining} calls left: the merge path only this run")
     failed = 0
+    if ask and not targeted and not args.dry_run:
+        sw.paid_clock = time.monotonic()   # 11-13: the sweep's model calls are bounded in time (paid_deferred)
     if ask:
         failed += sw.watch_sessions()
     steered: list[Steered] = []

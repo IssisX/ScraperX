@@ -385,6 +385,49 @@ class Roll(unittest.TestCase):
         sw.board_comments()
         self.assertEqual(len([g for g in gh.gets if g.startswith(f"repos/{REPO}/issues/384/comments?since=")]), 1)
 
+    def test_a_merges_fresh_read_reads_the_old_boards_comments_again_never_the_cached_ones(self):
+        gh = RollGH(board())
+        gh.by_issue[384] = [{"id": 5, "body": "verdict", "user": {"login": ti.BOT}}]
+        ti.make(gh).board_rollover()
+        sw = ti.make(gh)
+        sw._jobs = sw._board = None
+        cached = sw.board_comments()   # this run's memo, as the cache file may have answered it
+        self.assertIn(5, [c["id"] for c in cached])
+        get = gh.get
+        gh.get = lambda path, accept="": {"number": 503} if path.endswith("/pulls/503") else get(path, accept)
+        seen = []
+
+        def facts(pr):
+            seen.append((sw.__dict__.get("_board_carry"), gh.fresh_only, [c["id"] for c in sw.board_comments()]))
+            return "facts", {}
+        sw.pr_facts = facts
+        gh.gets.clear()
+        sw.fresh_facts(503)
+        ((memo, fresh, ids),) = seen
+        self.assertEqual((memo, fresh), (None, True))   # the run's carry memo is not used inside the fresh read
+        self.assertIn(5, ids)
+        self.assertEqual(len([g for g in gh.gets if g.startswith(f"repos/{REPO}/issues/384/comments?since=")]), 1)
+        self.assertIs(sw.board_carry(), sw.__dict__["_board_carry"])   # the run's own memo is back after it
+        self.assertIn(5, [c["id"] for c in sw.board_carry()])
+
+    def test_the_old_board_is_read_only_while_the_new_one_is_young(self):
+        gh = RollGH(board())
+        gh.by_issue[384] = [{"id": 5, "body": "verdict", "user": {"login": ti.BOT}}]
+        ti.make(gh).board_rollover()
+        gh.gets.clear()
+        sw = ti.make(gh, ti.NOW + switch.BOARD_CARRY)
+        self.assertEqual(sw.board_carry(), [])
+        self.assertEqual([g for g in gh.gets if "/issues/384/" in g], [])
+
+    def test_a_moved_mark_typed_by_anyone_else_is_not_the_switchs(self):
+        new = {"number": 601, "comments": 0, "title": "Board: live jobs (5)", "created_at": "2026-11-06T19:00:00Z",
+               "body": "# Board: live jobs (5)\n\n" + switch.BOARD_FROM_MARK.format(old=384)}
+        gh = RollGH(board(), new)
+        gh.by_issue[384] = [{"id": 6, "body": switch.BOARD_MOVED_MARK.format(new=601), "user": {"login": "IssisX"},
+                             "created_at": "2026-11-06T19:30:00Z"}]
+        ti.make(gh).board_rollover()
+        self.assertEqual([n for n, _ in gh.posts], [384])
+
     def test_a_title_with_no_number_still_rolls(self):
         gh = RollGH(board(title="Board", body="no heading here"))
         ti.make(gh).board_rollover()

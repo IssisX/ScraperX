@@ -184,6 +184,19 @@ class AutoOpen(unittest.TestCase):
             self.assertEqual(sw.auto_pr_failed, ())
             self.assertFalse(any("workflows/" in g or "pulls?state=all" in g for g in gh.gets), gh.gets)
 
+    def test_new_heads_with_no_job_line_are_checked_a_few_a_sweep(self):
+        names = [f"fb-bot/integrate-j{n:03d}" for n in range(1, switch.MAX_NO_JOB_CHECKS + 3)]
+        gh = FakeGH(branches=[branch(nm, i + 1) for i, nm in enumerate(names)],
+                    commits={sha(i + 1): "no job line" for i in range(len(names))},
+                    runs={sha(i + 1): [green_run(sha(i + 1))] for i in range(len(names))}, jobs={7: GREEN_JOBS})
+        gh.state = {}
+        sw = make(gh)
+        sw.auto_open_prs()
+        self.assertEqual(len(sw.auto_pr_failed), switch.MAX_NO_JOB_CHECKS)
+        sw.auto_open_prs()   # the next sweep: the rest
+        self.assertEqual(len(sw.auto_pr_failed), 2)
+        self.assertEqual(len(gh.state["no_job_at"]), len(names))
+
     def test_missing_job_line_on_a_red_running_or_old_head_is_no_item(self):
         gh, head = green_setup()
         gh.state = {}

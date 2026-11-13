@@ -133,8 +133,9 @@ class Classes(unittest.TestCase):
 
 class OwnPrStalled(unittest.TestCase):
     """11-13: #503 (an open review FIX) and #506 (a merge conflict), both Claude's own system PRs, sat with nobody
-    acting: their items only held, and a first red on a claude/ PR gave none at all. Now each wakes the integrator
-    at once, once per head and kind, and the next full pass lists the PR once more if it is still stuck there."""
+    acting: steer saw both, no #282 line named them (the inbox part deferred on the call budget; their class only
+    held), and a first red on a claude/ PR gave no item at all. Now each wakes the integrator at once, once per head
+    and kind, and the next full pass lists the PR once more (once per head) if it is still stuck there."""
 
     REF = "claude/integrate-cacheout-rate"
 

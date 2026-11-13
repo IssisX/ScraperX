@@ -246,5 +246,49 @@ class WholePass(unittest.TestCase):
         self.assertLessEqual(len(gh2.calls), switch.CALL_BUDGET["fast"], gh2.calls)
 
 
+
+class PaidWall(unittest.TestCase):
+    """11-13: one sweep's model calls ran one after another in the run holding the shared concurrency group (run
+    43459528814: five reviews, 1570 s; 43465457221: one security pass, 744 s), and every later sweep waited on them."""
+
+    def sw(self, clock_ago=None, runs=0):
+        import time
+        gh = ti.FakeGH()
+        sw = ti.make(gh)
+        if clock_ago is not None:
+            sw.paid_clock = time.monotonic() - clock_ago
+        if runs:
+            sw.paid_runs = runs
+        sw.review_failed = lambda *a, **k: self.fail("a review put off is never a failed one")
+        return sw, gh
+
+    def facts(self):
+        s = ti.steered(number=507, ref="claude/integrate-muse-git-channel")
+        return s.facts, dict(s.ctx, title="t", body="b")
+
+    def test_past_the_wall_after_one_call_the_next_review_and_eye_wait_with_no_read_and_no_mark(self):
+        sw, gh = self.sw(clock_ago=switch.PAID_WALL.total_seconds() + 1, runs=1)
+        facts, ctx = self.facts()
+        self.assertIs(sw.review(facts, ctx, "anthropic"), False)
+        self.assertIsNone(sw.eye(facts, ctx))
+        self.assertEqual((gh.gets, gh.posts, gh.writes), ([], [], []))
+        self.assertEqual(len([l for l in sw.lines if l.startswith("DEFER")]), 2, sw.lines)
+
+    def test_the_first_call_always_runs_and_a_run_for_one_pr_is_never_cut(self):
+        for clock_ago, runs in ((switch.PAID_WALL.total_seconds() + 60, 0),   # past the wall, nothing paid yet
+                                (1, 3),                                       # inside the wall
+                                (None, 9)):                                   # a --pr run sets no clock
+            sw, _ = self.sw(clock_ago, runs)
+            self.assertFalse(sw.paid_deferred("review#507@1a2b3c4d"), (clock_ago, runs))
+
+    def test_a_put_off_review_keeps_its_pr_warm(self):
+        sw, gh = self.sw(clock_ago=switch.PAID_WALL.total_seconds() + 1, runs=1)
+        facts, ctx = self.facts()
+        sw.team = ti.TEAM
+        rec = switch.pr_record(sw, {"head": {"sha": facts.head_sha}, "updated_at": "x"}, facts, dict(ctx, comments=[]),
+                               None, ask=True)
+        self.assertFalse(rec["cold"])   # read again by the next sweep, which makes the review
+
+
 if __name__ == "__main__":
     unittest.main()
