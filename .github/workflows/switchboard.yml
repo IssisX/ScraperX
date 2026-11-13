@@ -98,7 +98,8 @@ env:
   SWITCHBOARD_BRIDGE_VERSION: ${{ inputs.bridge_version }}
 
 jobs:
-  # A PR that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
+  # A PR that changes the switch: its unit tests. No live dry run (SYSTEM_PLAN D8, 11-13: it was 44% of the
+  # repo's shared hourly GitHub calls, 1,931 in the hour the limit ran dry; the live sweep is the real check).
   selftest:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
@@ -126,18 +127,6 @@ jobs:
             -r src/tools/switchboard/requirements.txt
       - name: Unit tests of the switch's decisions
         run: .venv/bin/python -m unittest discover -s src/tools/switchboard -p 'test_*.py' -v
-      # Cory 11-12, "only run what changed": the dry run costs 550 to 800 calls of the repo's shared hourly
-      # GitHub limit (it starved the live sweep on #476). A draft PR runs only the unit tests above; the dry
-      # run waits until the PR is ready, then runs on each push to it.
-      - name: Dry run against the live repo
-        if: ${{ !github.event.pull_request.draft }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO"
-          .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO" --part steer --force-digest
 
   # J-072: the switch's ETag cache (ghapi.py; a 304 answer does not count against the hourly limit, and run
   # 42667757904 hit it). The security pass on #360: any job on trunk can save an entry under these keys, and the
