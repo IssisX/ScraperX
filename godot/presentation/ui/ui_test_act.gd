@@ -170,6 +170,11 @@ func _pose(pose: String) -> void:
 
 func _act_pose(pose: String) -> void:
 	await _pose(pose)
+	# The frame helpers (_act_frame_her, _act_frame_box) hold the simulation
+	# still for this shot. The act's _pose lets it go; the base _pose, used
+	# outside the act (_act_running false: J-118's hold, J-137), does not,
+	# and the world stayed frozen with her mid-Lunge 4 m short of him.
+	_main.freeze_sim = false
 	if not is_nan(_act_view_back.x):
 		_main._yaw = _act_view_back.x
 		_main._pitch = _act_view_back.y

@@ -115,8 +115,6 @@ class RecordingGH:
         self.posted.append((number, body))
 
     def get(self, path, accept=""):
-        if "/compare/" in path:   # base_skew before a merge: the head holds all of trunk
-            return {"status": "identical", "ahead_by": 0, "commits": [], "files": []}
         raise AssertionError(f"unexpected read {path}")
 
     def paged(self, path, key=""):

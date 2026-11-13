@@ -32,7 +32,6 @@ agents:
   grok_bot:
     vendor: xai
     names: [PE, Builder]             # PE and ScraperX Builder are Grok Bot (board #340)
-    address: Builder                 # notices open `To Builder:`: its runs read that, never `To PE:` (grok-engineer.md)
     branch_prefixes: [pe/, builder/]
     owner_labels: [owner:pe, owner:builder]
     wake: watch          # reads the repo all the time, not on a schedule (Cory 11-09)
