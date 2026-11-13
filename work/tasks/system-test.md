@@ -31,11 +31,11 @@ Sweep = a live "Switchboard sweep" run (ask, then steer). Inbox = #282. Board = 
   `BLOCK budget-audit-loosened`, exit 2. Control: trunk's rule_check on the same commits, 0 BLOCK (the gap J-139 closes).
 - 6 PASS so far (dup check pending): sweep 43453938239 steer posted `To Grok: plan 4e44e6ea416b` once, comment
   6858074624 on #384, with its marker; Builder's 6858073786 likewise.
-- 7 PASS (observed live, not driven): J-001 waits on Grok's ask (#108 comment 6774721075); #108 carries
+- 7 PASS (observed, not driven): J-001 waits on Grok's ask (#108 comment 6774721075); #108 carries
   `state:waiting`; board #384 line "J-001 #108 held; waiting on Grok's answer ([ask](...), 3 d)".
 - 11 PASS so far: on #282 since #498 landed only waking posts (6856712417, 6858117862; the latter carries the digest
   line under RED-TWICE/FIX/QUEUE-LOW). The digest-only 6854673147 predates the fix.
-- 3 PASS (Muse's branches, live): steer of 43453938239 sent RED-BRANCH once per head for fb-bot/integrate-j080,
+- 3 PASS (observed, Muse's branches; Claude's branch driven, PENDING): steer of 43453938239 sent RED-BRANCH once per head for fb-bot/integrate-j080,
   -j118, -j124, -protected-j040, -j044c-gains2 as CLAUDE_TO_MUSE on #384 with failing tests read.
 - 4 PENDING: candidate built live: `switchboard/candidate-501` = a6d46023 (parents #501 head b0c06aae + trunk
   1956137b), proof 43457224724 dispatched, queued; the merge waits on that proof.
@@ -48,6 +48,16 @@ Sweep = a live "Switchboard sweep" run (ask, then steer). Inbox = #282. Board = 
   branch's first head had none, so this commit carries one (12 tests the auto-open on it).
 - Seen 16:15Z: runs queue long: sweep 43459528814 cache-in queued 7+ min, candidate-501 proof queued 25+ min,
   5 trunk proofs queued, with only 8 jobs running; stale queued runs 37642339310 (10-07), 43098147869 (11-11).
+
+- 4 PASS (observed): sweep 43459528814 steer: `CANDIDATE #501 green: switchboard/candidate-501 @ a6d46023 ... is
+  green (43457224724)`, then `MERGE #501 ... LAND by Codex`; #501 merged 16:45:37Z as a35a3a21. Kept, not rebuilt,
+  across a notes-only trunk move.
+- 8 FAIL (trunk code): that fast sweep's steer spent its 90-call run budget on 15 changed PRs' facts, then
+  `RATE LIMIT` left auto-open, inbox, muse, queue check and pipe health for later, with 4894 of 5000 left this hour
+  (`GITHUB 91 call(s) ... 14 read(s) refused`). Root: a fixed per-run cap, PR facts read first over REST. The fix
+  in flight is the J-072 rate-hourly branch (hourly pace + one GraphQL read of the changed PRs); its own PR is not
+  open yet because this same starvation deferred the auto-open to the next full pass. Re-run 8 once it lands.
+- 6 one notice still (6858074624); no full pass since, so not yet re-checked by a plan pass.
 
 ## Re-run recipes for what is still PENDING (anyone can run these)
 Logs: `gh api repos/IssisX/ScraperX/actions/jobs/<steer or ask job id>/logs`, grep the tag named.
