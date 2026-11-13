@@ -7,7 +7,7 @@ Read through: 1794584485 (2026-11-13 full check)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
   take the HARD game jobs. Until then Claude's game jobs are held in the plan (J-001 J-015 J-084 J-090 J-093 J-096 J-109 J-137,
   J-044c; worktrees kept); Muse keeps working. Done = a deliberate real-world test of every path, not a day of waiting.
-- Cory 11-13: manage it to the end, ONE machine not parts; remove failure modes, never relocate; never stop a helper past
+- Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - Open: #503 cache-out, #506 clocks, #507 Muse git channel (Cory's Muse paste on #504, give after merge), #511 rule_check,
   #510 rate-hourly; helpers (11-13): board rollover+no-Job-line+queue wait+Claude-PR stall alert; #503 FIX+#506 conflict; #507 security FIX
