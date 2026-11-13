@@ -10,7 +10,7 @@ Read through: 1794599051 (2026-11-13 mail+asks)
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
   done = the real test passing. NOW: switchboard out of GitHub calls ~19:30Z; reads fix (xhigh helper, -switchboard-reads). Step 5 built
-  (3f005b57, no PR): open it alone after #527-9 merge; no new steps until one lands and is measured (advisor). Steps 1-4 are PRs #526-#529 (#527 watch: empty-diff PR from a trunk-merge-only head); after #526
+  (3f005b57, no PR): open it alone after #527-9 merge; steps 7, 8 (on step1 branch), 10 building in parallel (helper-high); 9 after #527, 6 after 5. Steps 1-4 are PRs #526-#529 (#527 watch: empty-diff PR from a trunk-merge-only head); after #526
   watch #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day (#520 #522 proofs re-run).
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
@@ -18,7 +18,7 @@ Read through: 1794599051 (2026-11-13 mail+asks)
   alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
 - Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
   ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
-- This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper, one helper at a time. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
+- This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper. Parallel helpers OK (Cory 11-13: fast), max four. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
 - My PR merges and branch deletes are refused by the safety check; never work around it. Direct trunk pushes of tooling and docs work.
