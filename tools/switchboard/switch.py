@@ -355,7 +355,7 @@ def red_jobs(proof: str) -> list[str]:
 
 # J-104: a red notice names the failing tests, read from the failed jobs' logs (Muse's #108 answer: the check
 # annotations name no test inside a red group, so every lane re-ran locally just to learn which one failed).
-FAIL_LOG_JOBS = ("native-tests", "godot-touch")   # the jobs whose logs name their tests
+FAIL_LOG_JOBS = ("native-tests", "godot-touch", "host-build")   # the jobs whose logs name what failed
 MAX_FAIL_LINES = 6       # unique FAIL lines per job in a notice
 MAX_FAIL_JOBS = 8        # job logs read per proof run
 MAX_FAIL_CHARS = 200     # of one FAIL line
@@ -368,6 +368,10 @@ MAX_RUN_LOG_FAILURES = 2  # log reads that fail in one proof run before its othe
 MAX_ERR_CHARS = 200       # of gh's error text in a NOTE line
 NATIVE_FAIL = re.compile(r"\bFAIL: .*")
 TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*")
+# 11-13 (#350): host-build names no test; its failed step's first failing line (a check's FAIL, a compiler or CMake
+# error, a Python check's exception) and the lines after it, as `ASSET_CREDITS FAIL files=363 ... unrecorded=9`
+HOST_FAIL = re.compile(r"\b[A-Z][A-Z0-9_]* FAIL\b|\bFAIL: |\berror: |\bCMake Error\b|\b\w+(?:Error|Exception): ")
+LOG_STAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ?")   # the runner's timestamp on each log line
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 LOG_UNREAD = "log unread"
 # A red notice that went out with a log unread is keyed apart (InboxItem.key): a later sweep that reads the lines posts
@@ -380,13 +384,29 @@ TOKENISH = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]
 
 def fail_lines(log: str, job: str) -> tuple[list[str], int]:
     """A failed job's unique FAIL lines in log order, at most MAX_FAIL_LINES, and how many more there were: `FAIL: `
-    for native-tests, `SCRAPERX_UITEST FAIL` for godot-touch. The runner's timestamp and colour codes are dropped."""
+    for native-tests, `SCRAPERX_UITEST FAIL` for godot-touch, the failed step's lines for host-build (host_fail_lines).
+    The runner's timestamp and colour codes are dropped."""
+    if job.startswith("host-build"):
+        return host_fail_lines(log)
     pattern = TOUCH_FAIL if job.startswith("godot-touch") else NATIVE_FAIL
     found: list[str] = []
     for line in ANSI.sub("", log).splitlines():
         m = pattern.search(line)
         if m and m.group(0).strip() not in found:
             found.append(m.group(0).strip())
+    return found[:MAX_FAIL_LINES], max(0, len(found) - MAX_FAIL_LINES)
+
+
+def host_fail_lines(log: str) -> tuple[list[str], int]:
+    """host-build's failing lines (#350, 11-13): the output of the step that failed (after its header, before the
+    runner's first ##[error] line), unique, from its first HOST_FAIL line on; with none, the step's last line. At most
+    MAX_FAIL_LINES, and how many more there were, as fail_lines."""
+    lines = [LOG_STAMP.sub("", line).strip() for line in ANSI.sub("", log).splitlines()]
+    end = next((i for i, line in enumerate(lines) if line.startswith("##[error]")), len(lines))
+    start = max((i + 1 for i, line in enumerate(lines[:end]) if line.startswith("##[endgroup]")), default=0)
+    step = [line for line in lines[start:end] if line]
+    first = next((i for i, line in enumerate(step) if HOST_FAIL.search(line)), None)
+    found = list(dict.fromkeys(step[first:] if first is not None else step[-1:]))
     return found[:MAX_FAIL_LINES], max(0, len(found) - MAX_FAIL_LINES)
 
 
@@ -814,8 +834,8 @@ class Switch:
         return memo[run_id]
 
     def red_tests(self, run_id) -> tuple[str, ...]:
-        """J-104: the failing tests of one red proof run, for its notice: for each failed native-tests or godot-touch
-        job (at most MAX_FAIL_JOBS), "<job>: <FAIL line>" per unique FAIL line (fail_lines), read from the job's log
+        """J-104: the failing tests of one red proof run, for its notice: for each failed native-tests, godot-touch or
+        host-build job (at most MAX_FAIL_JOBS), "<job>: <FAIL line>" per unique FAIL line (fail_lines), read from the job's log
         through the switch's own client and its timeouts. Read once per run, for both audiences (memo). A log that
         cannot be read never stops the notice: its line says LOG_UNREAD and the NOTE line says why (err_text). After
         MAX_LOG_FAILURES timed-out reads in a sweep no more are tried, so a GitHub that hangs costs the sweep a bounded
