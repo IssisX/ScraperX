@@ -287,6 +287,21 @@ class Keys(unittest.TestCase):
         self.assertEqual(ti.ring(gh)[-1], switch.inbox_key("MERGE-BY-HAND", "#256", HEAD))
         self.assertNotIn(f"{0:016x}", ti.ring(gh))
 
+    def test_old_markers_over_the_cap_never_push_a_posted_key_out(self):
+        # 11-13 (#350): #282's old comments still carry 710 marker keys, more than the ring holds. They were put back
+        # after the ring at every post, so a key posted a few posts earlier fell off the front and its item (J-130's
+        # and J-089's mails) was listed again 72 to 76 min later. The old markers are the oldest keys: cut first.
+        markers = [f"{n:016x}" for n in range(switch.MAX_INBOX_KEYS + 110)]
+        gh = ti.FakeGH(inbox=[{"body": "Switchboard (inbox):\n\n" + switch.INBOX_MARK.format(keys=",".join(markers)),
+                               "user": {"login": ti.BOT}}])
+        self.assertEqual(at(gh, 0).inbox([ti.human_merge(number=256)]), 1)
+        for n in range(8):   # eight more posts, one new item each, each past the hold
+            self.assertEqual(at(gh, 31 * (n + 1)).inbox([ti.human_merge(number=300 + n)]), 1)
+        self.assertEqual(at(gh, 31 * 9).inbox([ti.human_merge(number=256)]), 0, "listed once per head")
+        self.assertEqual(len(ti.ring(gh)), switch.MAX_INBOX_KEYS)
+        self.assertEqual(ti.ring(gh)[-9:], [switch.inbox_key("MERGE-BY-HAND", f"#{n}", HEAD)
+                                            for n in [256] + list(range(300, 308))])
+
     def test_a_dry_run_leaves_the_state_alone(self):
         gh = ti.FakeGH(dry_run=True)
         self.assertEqual(at(gh, 0).inbox([ti.human_merge()]), 1)
