@@ -579,15 +579,17 @@ class InboxItem:
 
 
 def queue_item_record(items: tuple[InboxItem, ...]) -> dict | None:
-    """The QUEUE-LOW item as the sweep state keeps it between counts (J-097); None when the queue was not low."""
-    return {"head": items[0].head, "line": items[0].line} if items else None
+    """The QUEUE-LOW item as the sweep state keeps it between counts (J-097); None when the queue was not low. Its
+    target too (#350, 11-13): the live count's is work/plan.md, and a kept item on another target is another key."""
+    return {"head": items[0].head, "line": items[0].line, "target": items[0].target} if items else None
 
 
 def queue_item_of(record) -> tuple[InboxItem, ...]:
     """The QUEUE-LOW item back from the sweep state; () for none or anything malformed."""
     if not isinstance(record, dict) or not isinstance(record.get("head"), str) or not isinstance(record.get("line"), str):
         return ()
-    return (InboxItem("QUEUE-LOW", muse_queue.QUEUE_FILE, record["head"], record["line"]),)
+    target = record.get("target") if isinstance(record.get("target"), str) else muse_queue.QUEUE_FILE   # an old record
+    return (InboxItem("QUEUE-LOW", target, record["head"], record["line"]),)
 
 
 def inbox_class(it: InboxItem) -> str:
@@ -1698,7 +1700,11 @@ class Switch:
         self.digest_held = tuple(digest[len(carried):][-MAX_DIGEST_HELD:])
         if not getattr(self.gh, "dry_run", False):
             ring = [k for k in box.get("keys") or [] if isinstance(k, str)]
-            box["keys"] = list(dict.fromkeys(ring + reported + [it.key for it in posted]))[-MAX_INBOX_KEYS:]
+            # the old comment markers (inbox_reported reads them back every sweep) are the oldest keys, so they go
+            # first and are cut first: after the ring they pushed its newest keys out once over the cap (#350, 11-13)
+            in_ring = set(ring)
+            old = [k for k in reported if k not in in_ring]
+            box["keys"] = list(dict.fromkeys(old + ring + [it.key for it in posted]))[-MAX_INBOX_KEYS:]
             box["at"] = when
             box["held"] = [digest_record(it) for it in wake[len(shown):][-MAX_INBOX_HELD:]]
         return len(shown) + len(carried)

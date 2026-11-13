@@ -234,6 +234,16 @@ class Sweep(unittest.TestCase):
         self.assertIn("- QUEUE-LOW: 5 unstarted", body)
         self.assertEqual(gh.state["steer"]["timers"]["queue"]["listed"], switch.queue_item_of(item)[0].key)
 
+    def test_a_live_count_kept_for_a_quiet_sweep_keeps_its_key(self):
+        # 11-13 (#350): the live count's item is on work/plan.md, but the one kept for a sweep that does not count came
+        # back on muse.md, a new key: QUEUE-LOW was listed in two posts in a row (#282 6865964430, 6866078211)
+        live = switch.InboxItem("QUEUE-LOW", "work/plan.md", "abc123:J-136,J-083",
+                                "QUEUE-LOW: 2 unstarted Muse jobs in work/plan.md (under 8). Unstarted: J-136, J-083")
+        (kept,) = switch.queue_item_of(switch.queue_item_record((live,)))
+        self.assertEqual(kept.key, live.key)
+        old = {"head": "5:J-500", "line": "QUEUE-LOW: 5 unstarted"}   # a record from before: muse.md, as it was made
+        self.assertEqual(switch.queue_item_of(old)[0].target, switch.muse_queue.QUEUE_FILE)
+
     def test_a_listed_queue_low_costs_a_quiet_sweep_nothing(self):
         item = {"head": "5:J-500", "line": "QUEUE-LOW: 5 unstarted"}
         listed = switch.queue_item_of(item)[0].key
