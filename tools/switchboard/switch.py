@@ -2762,19 +2762,12 @@ class Switch:
             api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
         else:
             api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
-        # J-056: a workflow-file PR merges only on a clean, signed automatic review of its head, so it gets one even
-        # when Codex already reviewed that head and no other review is asked. Every automatic review of such a head is
-        # its security pass, whichever route asked for it (Codex on #297: the API's own turn ran the gameplay prompt).
-        security = facts.touches_workflows
-        signed = security and bool(self.review_key)   # only a mark the switch signed stops a second security pass
-        if api_turn or rules.needs_security_pass(facts):
-            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha, signed=signed):
+        # A workflow-file PR is reviewed like any other: no security pass (SYSTEM_PLAN 4.1, 11-13).
+        if api_turn:
+            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
-            elif not api_turn:
-                self.out(f"SECURITY    #{facts.number} changes .github/workflows: the automatic review is its security pass")
-                self.review(facts, ctx, author, security=True)
             else:
-                self.review(facts, ctx, author, security=security)
+                self.review(facts, ctx, author)
                 if self.team.pool:
                     self.note_assigned(rules.API_REVIEWER)
         if rules.needs_eye(facts):
@@ -3455,7 +3448,7 @@ def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
     if ask and not sw.stale(facts):   # the ask part is done with a head once its review and eye are posted
         author = sw.team.vendor_of_branch(facts.head_ref)
         comments = ctx.get("comments") or []
-        review = rules.needs_review(facts, author, sw.team) or rules.needs_security_pass(facts)
+        review = rules.needs_review(facts, author, sw.team)
         cold = (cold and (not review or sw.marked(comments, "review", facts.number, facts.head_sha))
                 and (not rules.needs_eye(facts) or sw.marked(comments, "eye", facts.number, facts.head_sha)))
     issue = (ctx.get("issue") or {}).get("number") if isinstance(ctx, dict) else None
