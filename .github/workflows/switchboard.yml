@@ -4,7 +4,9 @@ name: Switchboard
 # A sweep the bridge's clock dispatches is named "Switchboard sweep (bridge <BRIDGE_VERSION>)", so the switch can
 # tell a stale or missing live bridge from the repo's (switch.py bridge_version_health).
 run-name: >-
-  ${{ github.event_name == 'workflow_dispatch' && (inputs.provision && 'Switchboard provision' ||
+  ${{ github.event_name == 'workflow_dispatch' && (inputs.part == 'ask' && (inputs.dry_run &&
+  'Switchboard reviews DRY run (takes no action)' || 'Switchboard reviews') ||
+  inputs.provision && 'Switchboard provision' ||
   inputs.dry_run && 'Switchboard DRY run (takes no action)' || inputs.digest && 'Switchboard digest' ||
   inputs.bridge_version && format('Switchboard sweep (bridge {0})', inputs.bridge_version) ||
   'Switchboard sweep') || github.event_name == 'schedule' && (github.event.schedule == '0 12,13 * * *' &&
@@ -60,6 +62,19 @@ on:
         description: The live Muse bridge's version (set by the bridge's clock; leave empty)
         type: string
         default: ""
+      # 11-13: the reviews run on their own (the wake-ask job starts them; see the concurrency group). Empty: a sweep.
+      part:
+        description: Leave empty for a sweep; "ask" runs only the reviews, the eye and the orchestrator (wake-ask sets it)
+        type: string
+        default: ""
+      pr:
+        description: With part=ask, the one PR whose comment woke it (digits; set by wake-ask)
+        type: string
+        default: ""
+      issue:
+        description: With part=ask, the job issue labeled needs:orchestrator (digits; set by wake-ask)
+        type: string
+        default: ""
   # 11-13: the selftest runs on a push, not on a pull_request event. The switchboard opens the claude/integrate-* PRs
   # with the workflow token, and GitHub holds a pull_request run that github-actions[bot] triggers for someone's
   # approval ("action_required" on #503 and #505, a pop-up for Cory), or fails it at the start (#500, #502). A push
@@ -75,12 +90,18 @@ on:
 permissions: {}
 
 concurrency:
+  # 11-13: the reviews run in their own run and group (switchboard-ask). A run keeps its group until its last job
+  # ends, and the ask job reviews one PR after another (one security review took 744 s, five took 1,570 s), so with
+  # ask in the sweep's run the merges, auto-open and the inbox waited behind the reviews and queued sweeps were
+  # replaced. Each group runs one run at a time, and each run restores and saves only its own part's ETag file
+  # (cache-in, cache-out), so each file still has one writer at a time, and only the steer part keeps ledger timers.
   # The one-time provision dispatch gets its own group: in the shared one a newer queued run replaces it.
   # A comment or label event that the jobs below will skip gets a group of its own too (11-03): GitHub keeps
   # one pending run per group and cancels the older one, so idle comment runs, several a minute, were
   # displacing the proof-finished and scheduled runs that do the reviews, the eye and the sweep.
   group: >-
     ${{ github.event_name == 'push' && format('switchboard-selftest-{0}', github.ref) ||
+    inputs.part == 'ask' && 'switchboard-ask' ||
     (inputs.provision && 'switchboard-provision' ||
     (((github.event_name == 'issue_comment' && !(github.event.issue.pull_request &&
     (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
@@ -186,13 +207,14 @@ jobs:
   # restore unpacks the whole archive, absolute paths too. So it is restored here, in a job with no secret, no token
   # scope, no checkout and no step of its own code, and only the one file goes on, as an artifact of this run; ask
   # and steer read it in $RUNNER_TEMP once its MAC checks (ghapi.load_etags). One cache scope: every event but a
-  # push runs on the default branch, trunk, a run on any other ref skips the cache, and the runs are
-  # serialized by the concurrency group, so two states never diverge and fire one cached ledger timer twice.
+  # push runs on the default branch, trunk, a run on any other ref skips the cache. Each part's file goes through
+  # its own runs only (a reviews run, part=ask, restores and saves the ask file; every other run the steer file),
+  # and each part's runs are serialized by its own concurrency group, so no file has two writers at once, its state
+  # never diverges, and a cached ledger timer (the steer part's) never fires twice.
   cache-in:
     if: >-
       github.ref == 'refs/heads/ScraperX-Claude' && github.event_name != 'push' && !inputs.provision && (
-        github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:') ||
-        github.event.label.name == 'needs:orchestrator'
+        github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:')
       ) && (
         github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
           (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
@@ -204,12 +226,14 @@ jobs:
     permissions: {}
     steps:
       - name: Restore the ask part's ETag cache
+        if: inputs.part == 'ask'
         uses: actions/cache/restore@v4
         with:
           path: ask/etags.json
           key: switchboard-etags-ask-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: switchboard-etags-ask-
       - name: Hand on the ask part's file, and nothing else
+        if: inputs.part == 'ask'
         uses: actions/upload-artifact@v4
         with:
           name: switchboard-etags-ask
@@ -218,12 +242,14 @@ jobs:
           retention-days: 1
           overwrite: true
       - name: Restore the steer part's ETag cache
+        if: inputs.part != 'ask'
         uses: actions/cache/restore@v4
         with:
           path: steer/etags.json
           key: switchboard-etags-steer-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: switchboard-etags-steer-
       - name: Hand on the steer part's file, and nothing else
+        if: inputs.part != 'ask'
         uses: actions/upload-artifact@v4
         with:
           name: switchboard-etags-steer
@@ -232,22 +258,66 @@ jobs:
           retention-days: 1
           overwrite: true
 
-  # The paid part: the automatic Claude review, the eye, the orchestrator (off in v0). The only job
-  # holding ANTHROPIC_API_KEY. Its code never merges; contents: write is for the ledger branch.
-  ask:
-    # J-056: it signs the automatic reviews with SWITCHBOARD_REVIEW_KEY, which lives only in this environment
-    # (deploys only from ScraperX-Claude), so no branch's copy of any workflow can sign a forged security pass.
-    environment: switchboard-merge
-    needs: cache-in
-    # always(): a cache-in that failed or was skipped (the provision run) is a cold cache, never a skipped ask
+  # 11-13: the events that ran ask in this run now start the reviews' own run (part=ask) on trunk, which runs beside
+  # the sweep in its own concurrency group. Only this direction: a reviews run starts nothing, so they never loop. A
+  # review it posts is a new comment on the PR, so the next sweep reads that PR (sweep_delta) and merges it.
+  # No secret, no environment, no checkout; the token's one use is the dispatch. The event's PR or issue number
+  # goes on only through env, digits only. A refused dispatch fails the run (the reviews would stop silently),
+  # except GitHub's rate limit, which is a warning: the next sweep starts the reviews again.
+  wake-ask:
     if: >-
-      always() && needs.cache-in.result != 'cancelled' && (github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/ScraperX-Claude' && inputs.part != 'ask' && !inputs.digest && (
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.event.schedule == '3,18,33,48 * * * *') ||
       (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
         (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
          contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
          contains(github.event.comment.body, 'codex-review-receipt'))))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write   # the dispatch of this workflow, and nothing else
+    steps:
+      - name: Start the reviews' own run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          NUMBER: ${{ github.event.issue.number }}
+          DRY: ${{ inputs.dry_run == true && 'true' || 'false' }}
+        run: |
+          set -uo pipefail
+          args=(-f part=ask -f dry_run="$DRY")
+          if [[ "$NUMBER" =~ ^[0-9]+$ ]]; then
+            case "$EVENT" in
+              issue_comment) args+=(-f pr="$NUMBER") ;;
+              issues) args+=(-f issue="$NUMBER") ;;
+            esac
+          fi
+          for try in 1 2 3; do
+            if err=$(gh workflow run switchboard.yml --repo "$REPO" --ref "$TRUNK" "${args[@]}" 2>&1 >/dev/null); then
+              exit 0
+            fi
+            sleep $((try * 10))
+          done
+          if grep -qiE 'rate limit|HTTP 429' <<< "$err"; then
+            echo "::warning::GitHub's rate limit refused the reviews' run; the next sweep starts it"
+            exit 0
+          fi
+          echo "::error::the reviews' run was not started (3 tries): no review is posted until this is fixed"
+          exit 1
+
+  # The paid part: the automatic Claude review, the eye, the orchestrator (off in v0). The only job
+  # holding ANTHROPIC_API_KEY. Its code never merges; contents: write is for the ledger branch.
+  # 11-13: only in a reviews run (part=ask), which wake-ask starts; never in a sweep's run.
+  ask:
+    # J-056: it signs the automatic reviews with SWITCHBOARD_REVIEW_KEY, which lives only in this environment
+    # (deploys only from ScraperX-Claude), so no branch's copy of any workflow can sign a forged security pass.
+    environment: switchboard-merge
+    needs: cache-in
+    # always(): a cache-in that failed is a cold cache, never a skipped ask
+    if: always() && needs.cache-in.result != 'cancelled' && github.event_name == 'workflow_dispatch' && inputs.part == 'ask'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -286,23 +356,16 @@ jobs:
           SWITCHBOARD_ETAG_CACHE: ${{ runner.temp }}/etags/etags.json   # J-072: from cache-in; MAC-checked
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
-          EVENT: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          LABEL: ${{ github.event.label.name }}
           DISPATCH_DRY: ${{ inputs.dry_run }}
-          DISPATCH_DIGEST: ${{ inputs.digest }}
+          ASK_PR: ${{ inputs.pr }}
+          ASK_ISSUE: ${{ inputs.issue }}
         run: |
           set -euo pipefail
+          # 11-13: always a dispatch from wake-ask; the PR or job issue that woke it, digits only, else a whole pass
           args=(--part "$PART" --repo "$REPO" --root src)
-          case "$EVENT" in
-            issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
-            issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
-            schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;
-            workflow_dispatch)
-              if [ "$DISPATCH_DIGEST" = "true" ]; then args+=(--force-digest); fi
-              if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
-          esac
+          if [[ "$ASK_PR" =~ ^[0-9]+$ ]]; then args+=(--pr "$ASK_PR"); fi
+          if [[ "$ASK_ISSUE" =~ ^[0-9]+$ ]]; then args+=(--issue "$ASK_ISSUE" --label needs:orchestrator); fi
+          if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
       - name: Hand the signed ETag file to cache-out (J-072)
         # never from a dry run: it must not consume or advance the sweep state (switch.py saves no file then either)
@@ -349,12 +412,13 @@ jobs:
 
   # The free part: the merge rule, review asks, one owner per issue, the digest. No API key.
   steer:
-    needs: [cache-in, ask]
+    # 11-13: no longer after ask (the reviews run in their own run), so a merge never waits behind a review
+    needs: cache-in
     # J-056 security pass: SWITCHBOARD_MERGE_TOKEN lives only in this environment, which deploys only from
     # ScraperX-Claude, so a branch's copy of this file (a push, or a dispatch on another ref) cannot read it.
     environment: switchboard-merge
     if: >-
-      always() && github.event_name != 'push' && needs.ask.result != 'cancelled' && (
+      always() && github.event_name != 'push' && inputs.part != 'ask' && needs.cache-in.result != 'cancelled' && (
         github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:')
       ) && (
         github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
@@ -483,6 +547,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
+          PART: ${{ inputs.part == 'ask' && 'ask' || 'steer' }}   # this run's own part's caches only
         run: |
           set -uo pipefail
           exec 3>&1   # the step's own output: a warning from inside a $(...) still reaches the log
@@ -495,7 +560,7 @@ jobs:
             [[ "$2" =~ ^[0-9]+$ ]] || return 0
             gh api -X DELETE "repos/$REPO/actions/$1/$2" > /dev/null 2>&1 || echo "::warning::$1 $2 not deleted"
           }
-          for part in ask steer; do
+          for part in "$PART"; do
             for id in $(ids "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
                 '.actions_caches[3:][].id' "the older $part caches" | grep -E '^[0-9]+$'); do
               drop caches "$id"

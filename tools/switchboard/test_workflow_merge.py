@@ -512,6 +512,106 @@ class TheCacheBoundary(unittest.TestCase):
                 self.assertEqual((work / "src/NOTES").exists(), merged)   # trunk merged in only when it runs
 
 
+class TheReviewsRunApart(unittest.TestCase):
+    """11-13: the sweep's run held the shared concurrency group until ask's serial reviews ended (744 s for one
+    security review), so merges, auto-open and the inbox waited and queued sweeps were replaced. The reviews now run
+    in their own run (part=ask) and group, started by wake-ask; each run restores and saves only its own part's file."""
+
+    flow = TheCacheBoundary.flow
+
+    def test_an_ask_run_has_its_own_group_and_name_and_a_sweep_never_runs_ask(self):
+        flow = self.flow()
+        group = flow["concurrency"]["group"]
+        self.assertIn("inputs.part == 'ask' && 'switchboard-ask' ||", group)
+        self.assertLess(group.index("'switchboard-ask'"), group.index("'switchboard-provision'"))
+        name = flow["run-name"]
+        self.assertIn("inputs.part == 'ask' && (inputs.dry_run &&", name)
+        self.assertLess(name.index("'Switchboard reviews'"), name.index("'Switchboard sweep'"))   # never a sweep
+        jobs = flow["jobs"]
+        self.assertIn("inputs.part == 'ask'", jobs["ask"]["if"])
+        self.assertIn("github.event_name == 'workflow_dispatch'", jobs["ask"]["if"])
+        self.assertEqual(jobs["steer"]["needs"], "cache-in")   # a merge never waits behind a review
+        self.assertIn("inputs.part != 'ask'", jobs["steer"]["if"])
+        self.assertIn("needs.cache-in.result != 'cancelled'", jobs["steer"]["if"])
+        self.assertNotIn("needs.ask", str(flow))
+        for k in ("part", "pr", "issue"):
+            self.assertEqual(flow[True]["workflow_dispatch"]["inputs"][k]["type"], "string")
+
+    def test_each_run_restores_saves_and_prunes_only_its_own_part(self):
+        jobs = self.flow()["jobs"]
+        for step in jobs["cache-in"]["steps"]:
+            part = "ask" if "ask part" in step["name"] else "steer"
+            self.assertEqual(step["if"], "inputs.part == 'ask'" if part == "ask" else "inputs.part != 'ask'", step["name"])
+        (prune,) = [s for s in jobs["cache-out"]["steps"] if "run" in s]
+        self.assertEqual(prune["env"]["PART"], "${{ inputs.part == 'ask' && 'ask' || 'steer' }}")
+        self.assertIn('for part in "$PART"; do', prune["run"])
+        self.assertEqual(jobs["cache-out"]["needs"], ["cache-in", "ask", "steer"])
+
+    def test_wake_ask_holds_nothing_but_the_dispatch_and_never_loops(self):
+        flow = self.flow()
+        job = flow["jobs"]["wake-ask"]
+        self.assertFalse(TheCacheBoundary.holds_secret(job))
+        self.assertNotIn("environment", job)
+        self.assertEqual(job["permissions"], {"actions": "write"})
+        self.assertNotIn("needs", job)   # starts with the sweep, never after it
+        self.assertTrue(job["if"].startswith("github.ref == 'refs/heads/ScraperX-Claude' && inputs.part != 'ask' && "))
+        self.assertIn("!inputs.digest", job["if"])
+        (step,) = job["steps"]
+        self.assertNotIn("${{", step["run"])   # event values only through env
+        self.assertIn('gh workflow run switchboard.yml --repo "$REPO" --ref "$TRUNK"', step["run"])
+        self.assertNotIn("uses", step)
+
+    def run_script(self, script: str, env: dict, gh: str) -> tuple[int, str, list[str]]:
+        import shutil
+        import tempfile
+        if not shutil.which("bash"):
+            self.skipTest("bash missing")
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_ = pathlib.Path(tmp)
+            log = bin_ / "log"
+            (bin_ / "gh").write_text(f'#!/bin/bash\necho "gh $*" >> "{log}"\n{gh}\n', encoding="utf-8")
+            (bin_ / "sleep").write_text("#!/bin/bash\n", encoding="utf-8")
+            (bin_ / "python").write_text(f'#!/bin/bash\necho "python $*" >> "{log}"\n', encoding="utf-8")
+            for f in ("gh", "sleep", "python"):
+                (bin_ / f).chmod(0o755)
+            (pathlib.Path(tmp) / ".venv/bin").mkdir(parents=True)
+            shutil.copy(bin_ / "python", pathlib.Path(tmp) / ".venv/bin/python")
+            full = {**os.environ, **env, "PATH": f"{bin_}:{os.environ['PATH']}", "TRUNK": rules.TRUNK, "REPO": "o/r"}
+            got = subprocess.run(["bash", "-c", script], cwd=tmp, env=full, capture_output=True, text=True)
+            calls = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+            return got.returncode, got.stdout, calls
+
+    def test_wake_ask_passes_on_only_a_digit_number_and_a_refused_dispatch_is_red(self):
+        (step,) = self.flow()["jobs"]["wake-ask"]["steps"]
+        code, _, calls = self.run_script(step["run"], {"EVENT": "issue_comment", "NUMBER": "503", "DRY": "false"}, "exit 0")
+        self.assertEqual((code, calls), (0, [f"gh workflow run switchboard.yml --repo o/r --ref {rules.TRUNK} "
+                                             "-f part=ask -f dry_run=false -f pr=503"]))
+        code, _, calls = self.run_script(step["run"], {"EVENT": "issues", "NUMBER": "12", "DRY": "true"}, "exit 0")
+        self.assertTrue(calls[0].endswith("-f part=ask -f dry_run=true -f issue=12"))
+        code, _, calls = self.run_script(step["run"], {"EVENT": "issue_comment", "NUMBER": "1;x", "DRY": "false"}, "exit 0")
+        self.assertTrue(calls[0].endswith("-f part=ask -f dry_run=false"))
+        code, out, calls = self.run_script(step["run"], {"EVENT": "schedule", "NUMBER": "", "DRY": "false"},
+                                           "echo 'HTTP 403: Resource not accessible by integration' >&2; exit 1")
+        self.assertEqual((code, len(calls)), (1, 3))
+        self.assertIn("::error::", out)
+        code, out, calls = self.run_script(step["run"], {"EVENT": "schedule", "NUMBER": "", "DRY": "false"},
+                                           "echo 'HTTP 403: API rate limit exceeded' >&2; exit 1")
+        self.assertEqual((code, len(calls)), (0, 3))
+        self.assertIn("::warning::", out)
+
+    def test_ask_takes_the_woken_number_as_digits_only(self):
+        (step,) = [s for s in self.flow()["jobs"]["ask"]["steps"] if s["name"] == "Run the switch"]
+        base = {"PART": "ask", "DISPATCH_DRY": "false", "ASK_PR": "", "ASK_ISSUE": ""}
+        for extra, tail in (({}, "--part ask --repo o/r --root src"),
+                            ({"ASK_PR": "503"}, "--root src --pr 503"),
+                            ({"ASK_ISSUE": "77"}, "--root src --issue 77 --label needs:orchestrator"),
+                            ({"ASK_PR": "5 --digest", "DISPATCH_DRY": "true"}, "--root src --dry-run")):
+            code, _, calls = self.run_script(step["run"], {**base, **extra}, "exit 0")
+            self.assertEqual(code, 0, extra)
+            self.assertTrue(calls[-1].startswith("python src/tools/switchboard/switch.py --part ask"), calls)
+            self.assertTrue(calls[-1].endswith(tail), (extra, calls[-1]))
+
+
 class TheSecurityPass(unittest.TestCase):
     def ask(self, f):
         sw = make(RecordingGH())

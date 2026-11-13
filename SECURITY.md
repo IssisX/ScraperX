@@ -45,6 +45,10 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   its HMAC (keyed from `SWITCHBOARD_REVIEW_KEY`) verifies; a merge or merge-by-hand is decided on uncached
   reads. An Actions cache restore, or any other step another job can write into, in a job that holds a secret is
   P1.
+- The reviews run apart from the sweep (11-13): `ask` runs only in a `workflow_dispatch` run with `part=ask`,
+  which the `wake-ask` job starts on trunk. `wake-ask` holds no secret, deploys to no environment, checks out
+  nothing, and its token's only scope is `actions: write` for that dispatch. The event's PR or issue number
+  reaches `wake-ask` and `ask` only through env, and only as digits. A reviews run starts no other run.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
   reads them is P0.
