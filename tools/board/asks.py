@@ -71,10 +71,9 @@ _MARKS = r"[ \t>*_+\-]*"   # quote, list and emphasis marks before a line's firs
 # `To <Name>` where a line opens with it (after the marks and at most one signature: `Claude (integrator):`,
 # `**Muse (via email bridge):`); `→ <Name>` and `cc <Name>` anywhere, as before. One group: the name.
 # After the signature a job or thread reference may stand before the address: the bridge posts Muse's mail subject
-# after its header, and a subject opens with its job (`**Muse (via email bridge): J-044 To Claude: ...`), since 11-13
-# tagged ASK or FYI right after it (work/tasks/muse.md: `J-002 ASK To Claude: ...`; untagged, every such ask was lost).
+# after its header, and a subject opens with its job (`**Muse (via email bridge): J-044 To Claude: ...`).
 ASK = re.compile(r"(?:^" + _MARKS + r"(?:(?:" + _SIGNER + r")(?:[ \t]+Bot)?(?:[ \t]*\([^()\n]*\))?[ \t]*:" + _MARKS
-                 + r"(?:(?:J-\d+[a-z]?|#\d+)[ \t]+){0,2}(?:(?:ASK|FYI)[ \t:]+)?"
+                 + r"(?:(?:J-\d+[a-z]?|#\d+)[ \t]+)?"
                  + r")?To|(?:^|[\s*>(])(?:→|cc))\s+(?:the\s+)?(" + TARGETS + r")\b", re.MULTILINE)
 OPENS = re.compile(r"^" + _MARKS + r"To\s+(?:the\s+)?(?:" + TARGETS + r")\b")   # a first line that opens with an address
 # ... and the signature right after it: `(from ChatGPT)`, `: Grok Bot, ...`, `: (Claude, integrator) ...`
@@ -170,14 +169,6 @@ def asks_anyone(body: str) -> bool:
 def jobs_named(body: str) -> set[str]:
     """The job ids in a post's opening (Muse's mail subjects open with their job: `J-059 #343 FIX pushed`)."""
     return set(JOB_ID.findall(body[:300]))
-
-
-def blocking(body: str) -> bool:
-    """Does a post wait on an answer: a question (a `?` outside links and code) or a BLOCKED line? A post with
-    neither only reports (status_ask). The board's "waiting on <Name>'s answer" and the inbox's ASK-LATE read
-    only these (tools/switchboard/switch.py open_asks)."""
-    text = UNQUOTED.sub("", (body or "")[:4000])
-    return "?" in text or bool(BLOCKED.search(text))
 
 
 def status_ask(ask: dict, holder: str, same) -> bool:
