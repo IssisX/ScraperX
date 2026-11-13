@@ -1,7 +1,8 @@
 name: Muse git channel
 # Muse's messages through git, beside the mail bridge (trial, 11-13): tools/switchboard/muse_git.py says why and how.
 #   relay  Muse's new files on fb-bot/mail become comments, once each, under the team login (AGENT_GITHUB_TOKEN).
-#   inbox  New CLAUDE_TO_MUSE notices become files on muse-inbox, the switchboard's branch that Muse fetches.
+#   inbox  New CLAUDE_TO_MUSE notices become files on muse-inbox, the switchboard's branch that Muse fetches, and
+#          each team post asking Muse is relayed once as a switchboard notice (+ wake:muse), so the mail bridge mails it.
 # Not `on: push` of fb-bot/mail: a push runs the workflow file of the pushed commit, and that branch holds only
 # messages, so trunk's code would never run; and a branch's own copy of a workflow must never post as the team.
 # Both branches are read with git (a public fetch), never checked out: their files are data, never run.
@@ -77,7 +78,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write       # push muse-inbox (only that branch: muse_git.py pushes nothing else)
-      issues: read          # the CLAUDE_TO_MUSE notices
+      issues: write         # read the notices; post a relay to Muse and its wake:muse label (forward), nothing else
       pull-requests: read
     steps:
       - name: Check out trunk's code

@@ -45,8 +45,9 @@ An ask to Claude with a question, or that says BLOCKED, stays until one of the a
 Any other later post, on the thread or not, is not an answer; the switchboard's own posts never are. Muse answers
 by mail; the bridge posts those as `**Muse (via email bridge)...`, which counts as Muse.
 
-Muse never reads GitHub: an ask to Muse is listed with RELAY until the
-integrator mails it (`CLAUDE_TO_MUSE:`), then stays listed until Muse answers.
+Muse never reads GitHub: an ask to Muse is listed with RELAY? until the switchboard relays it (11-13,
+tools/switchboard/muse_git.py forward: its relay carries `<!-- muse-git:relayed id=N -->`), then as relayed
+until Muse answers.
 Grok's runs only find comments that START with `To Grok:`; an ask to Grok
 buried inside a longer post is listed with REPOST.
 
@@ -151,6 +152,14 @@ def addressees(body: str) -> set[str]:
     if text.startswith(BRIDGE_POST) or "MUSE_TO_CLAUDE:" in text.split("\n", 1)[0]:
         out.add("Claude")
     return out
+
+
+RELAYED = re.compile(r"<!-- muse-git:relayed id=(\d+) -->")   # muse_git.RELAY_MARK
+
+
+def relayed_ids(comments: list[dict]) -> set[str]:
+    """The comment ids the switchboard has relayed to Muse (muse_git.py forward): read from its own posts only."""
+    return {i for c in comments if c.get("login") == SWITCHBOARD_LOGIN for i in RELAYED.findall(c.get("body") or "")}
 
 
 def acks_only(body: str) -> bool:
@@ -372,11 +381,12 @@ def main() -> int:
         if len(batch) < 100:
             break
     open_asks = []
+    relayed = relayed_ids(comments)
     for c in unanswered(comments, open_threads, start, job_threads=job_threads):
         target = c["target"]
         flag = ""
         if target == "Muse":
-            flag = "RELAY?"
+            flag = "relayed" if c["id"] in relayed else "RELAY?"
         elif target == "Grok" and not c["body"].lstrip().startswith("To Grok:"):
             flag = "REPOST"
         age = (now - c["t"]).total_seconds() / 3600

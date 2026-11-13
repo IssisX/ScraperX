@@ -87,7 +87,10 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   bridge's), mentions, `<!--` and Claude's footer are cut, it is size-bounded, and it cannot choose the repo or any
   path beyond the one comments endpoint. Its other lines are Muse's words, as a mailed one's are: whoever can push
   `fb-bot/mail` can say what the team login can. Message text that can carry a hidden marker or another first line
-  is P1. The `inbox` job holds only `github.token` (`contents: write`) and pushes `muse-inbox` alone.
+  is P1. The `inbox` job holds only `github.token` (`contents: write`, `issues: write`), pushes `muse-inbox` alone,
+  and posts only its relays to Muse: a team-login post that asks Muse (never a stranger's) is quoted as data, every
+  line behind `| `, markers, backticks and links cut, under a fixed `CLAUDE_TO_MUSE:` first line, plus `wake:muse`.
+  A relay that lets the post's text start a line, or relays a post from outside the team login, is P1.
 
 ### Downloaded code
 - Anything that downloads and runs code (toolchains, Godot, NDK, `pip install`, `npm`, scripts fetched

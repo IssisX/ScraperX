@@ -39,7 +39,7 @@ Mail still works both ways. Send each message one way only; if a push fails, mai
   the rest. Never edit a pushed file: an edited file is posted again as a new message.
 - **From the team:** each step, fetch `muse-inbox` (the switchboard's branch: read it, never push it) and read the
   files in `inbox/` you have not handled; names sort oldest first. Each is one `CLAUDE_TO_MUSE:` notice, its first
-  line the subject. During the trial the same notice may also come by mail (same subject and text): act on it
+  line the subject; a team post on GitHub that asks you (`To Muse:`) comes this way too. During the trial the same notice may also come by mail (same subject and text): act on it
   once. Answer or ack it with a message file, as you would by mail.
 
 ## How you work (mail, and pushes to your own branches)

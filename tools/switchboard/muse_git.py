@@ -15,6 +15,10 @@ channel carries the same messages through git. The mail bridge keeps running bes
         starts CLAUDE_TO_MUSE:) is written once as inbox/<time>-<comment id>.md on INBOX_BRANCH (muse-inbox), which
         only this module writes and Muse fetches each step. Its text is shaped by work/tasks/mail-to-muse.md, as
         muse_bridge.gs mailBody_ shapes a mail: no hidden marker, backtick or link, and who sent it first.
+  Team posts to Muse (forward)   A team-login post that asks Muse (`To Muse:`, `cc Muse`: to_muse, as asks.py reads
+        asks) is relayed once as a switchboard CLAUDE_TO_MUSE comment plus the wake:muse label, so the mail bridge's
+        OUT mails it while mail is the fallback, and the same run writes it to the inbox. Once: RELAYED_FILE, plus the
+        relay's hidden mark (RELAY_MARK) read on the issue whenever the state lacks the post.
 
 Why not a workflow `on: push` of fb-bot/mail: GitHub runs a push from the workflow file in the pushed commit, and a
 branch that holds only messages has none, so trunk's code would never run. The workflow (muse-git.yml) runs after
@@ -54,6 +58,9 @@ import urllib.parse
 import urllib.request
 from typing import Callable, Iterable
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "board"))
+import asks  # noqa: E402  tools/board/asks.py: who wrote a post and whom it asks (the one judge's reading)
+
 OUTBOX_BRANCH = "fb-bot/mail"     # Muse's: one file per message, mail/<name>.md
 INBOX_BRANCH = "muse-inbox"       # the switchboard's: inbox/<time>-<comment id>.md, and this module's state/
 BRANCHES = frozenset({OUTBOX_BRANCH, INBOX_BRANCH})   # system branches: the ledger lists neither as a lane
@@ -76,6 +83,12 @@ POST_MARK = "<!-- muse-git:posted key={key} -->"
 POST_KEY = re.compile(r"<!-- muse-git:posted key=(\d{1,20}) -->")
 # A message file: under mail/, one level, a plain name. Anything else on the branch is never read.
 MESSAGE_NAME = re.compile(r"^mail/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.md$")
+MUSE_LABEL = "wake:muse"      # switch.MUSE_LABEL: the mail bridge's OUT mails a labeled issue's new switchboard notices
+RELAY_MARK = "<!-- muse-git:relayed id={id} -->"   # on the switchboard's relay of team post `id` to Muse
+RELAYED = re.compile(r"<!-- muse-git:relayed id=(\d+) -->")
+RELAYED_FILE = "state/relayed.txt"     # the team posts relayed to Muse, by comment id
+MAX_RELAY_TEXT = 50_000                # characters of a team post relayed
+MAX_RELAYED_KEPT = 2000                # relayed ids kept (the listing window is far shorter)
 REC_LINE = "_The mail bridge's record of a mail"   # muse_bridge.gs recordBody_: a hand mail Muse already got by mail
 TEAM_LOGIN = "IssisX"         # every agent's and the owner's login (work/agents.yml verdict_logins), the bridge's too
 BOT_LOGIN = "github-actions[bot]"   # rules.BOT_LOGIN: the switchboard
@@ -150,6 +163,14 @@ class Api:
         if not self._post:
             raise RuntimeError(f"{POST_TOKEN_ENV} is not set")
         return str((self._call("GET", "user", self._post) or {}).get("login") or "")
+
+    def switchboard_comment(self, number: int, body: str) -> dict:
+        """A comment as the switchboard (the workflow's token), for a relay to Muse: the mail bridge mails only the
+        workflow bot's CLAUDE_TO_MUSE comments."""
+        return self._call("POST", f"repos/{self.repo}/issues/{int(number)}/comments", self._read, {"body": body}) or {}
+
+    def label(self, number: int, name: str) -> None:
+        self._call("POST", f"repos/{self.repo}/issues/{int(number)}/labels", self._read, {"labels": [name]})
 
     def comment(self, number: int, body: str) -> dict:
         if not self._post:
@@ -535,28 +556,118 @@ def notice_file(c: dict) -> tuple[str, str]:
     return f"{INBOX_DIR}{stamp(c.get('created_at') or '')}-{cid}.md", text
 
 
+def to_muse(c: dict) -> bool:
+    """A team post that asks Muse (11-13: such a post never reached her, since she reads no GitHub; asks.py only
+    flagged RELAY?): by the team login (never a stranger: the repo is public, and never the switchboard), judged as
+    asks.py judges asks (ASK: a line opening `To Muse`, after a signature, or `→ Muse`, `cc Muse`), not by Muse, not
+    already to her (CLAUDE_TO_MUSE), not an ack, not noise or Codex."""
+    body = c.get("body") or ""
+    if ((c.get("user") or {}).get("login") or "").lower() != TEAM_LOGIN.lower():
+        return False
+    if body.lstrip().startswith(NOTICE_MARKER) or asks.LEDGER_MARK in body or asks.acks_only(body):
+        return False
+    who = asks.author(body)
+    if who in ("Muse", "noise", "Codex"):
+        return False
+    return "Muse" in {m.group(1) for m in asks.ASK.finditer(body[:4000])} - {who}
+
+
+def thread_of(c: dict) -> int:
+    try:
+        return int(str(c.get("issue_url") or "").rsplit("/", 1)[1])
+    except (ValueError, IndexError):
+        return 0
+
+
+def relay_body(c: dict) -> str:
+    """The switchboard's relay of one team post to Muse: first line CLAUDE_TO_MUSE (the mail bridge's OUT mails it,
+    the inbox mirrors it), the post shaped by mail-to-muse.md (no marker, backtick or link) with every line behind a
+    bar, so no line of it starts a line of a switchboard comment, and the hidden mark that keeps it to once."""
+    n, cid, body = thread_of(c), int(c["id"]), c.get("body") or ""
+    who = asks.author(body)
+    jobs = sorted(asks.jobs_named(body))
+    ref = jobs[0] if jobs else f"#{n}"
+    text = harmless(shaped(body))
+    if len(text) > MAX_RELAY_TEXT:
+        text = text[:MAX_RELAY_TEXT] + f"\n[cut: the post is longer; it is comment {cid} on #{n}]"
+    quoted = "\n".join(f"| {line}" if line else "|" for line in text.split("\n"))
+    return (f"{NOTICE_MARKER} {ref} To Muse from {who} on #{n}\n\n"
+            f"{who} wrote to Muse on #{n} (comment {cid}). The post follows as data, each line behind a bar:\n\n"
+            f"{quoted}\n\nAnswer by mail or by a message file naming {ref}, as work/tasks/muse.md says.\n\n"
+            + RELAY_MARK.format(id=cid))
+
+
+def relayed_on(api: Api, number: int, cid: str) -> bool:
+    """Does a switchboard comment on #number already relay comment cid (its mark)? Only the switchboard's count."""
+    got, _ = api.paged(f"repos/{api.repo}/issues/{number}/comments")
+    return any(((x.get("user") or {}).get("login") or "") == BOT_LOGIN and cid in RELAYED.findall(x.get("body") or "")
+               for x in got)
+
+
+def forward(api: Api, targets: Targets, c: dict, dry_run: bool, log: Callable[[str], None]) -> dict | None:
+    """Relays one team post to Muse, once: on its issue (a PR's: its job issue, else the board, as the bridge picks:
+    the bridge's token cannot clear a PR's label), the comment and then the wake:muse label, the order the switch
+    uses (the bridge's J-072 race). Returns the comment posted, None when it was already there (the label is put back,
+    which mails nothing twice: the bridge mails a comment once) or in a dry run."""
+    cid = str(c["id"])
+    number = targets.of(f"#{thread_of(c)}")
+    if relayed_on(api, number, cid):
+        if not dry_run:
+            api.label(number, MUSE_LABEL)
+        log(f"RELAY  comment {cid} was already relayed on #{number}")
+        return None
+    if dry_run:
+        log(f"DRY    would relay comment {cid} to Muse on #{number}")
+        return None
+    got = api.switchboard_comment(number, relay_body(c))
+    api.label(number, MUSE_LABEL)
+    log(f"RELAY  comment {cid} on #{thread_of(c)} relayed to Muse on #{number}")
+    return got
+
+
 def inbox(api: Api, git: Git, posted: Iterable[str], now: dt.datetime, dry_run: bool = False,
           log: Callable[[str], None] = print) -> str:
-    """Writes each new notice to the inbox branch and the posted keys to its state, in one commit, and pushes it.
-    Returns the commit pushed ("" when nothing changed)."""
+    """Relays each new team post to Muse (forward), writes each new notice to the inbox branch and the posted keys to
+    its state, in one commit, and pushes it. Returns the commit pushed ("" when nothing changed)."""
     have = {p for _, _, _, p in git.tree(INBOX_REF, INBOX_DIR)}
     ids = {p.rsplit("-", 1)[-1][:-3] for p in have if p.endswith(".md")}
+    relayed = [x for x in git.show(INBOX_REF, RELAYED_FILE).split() if x.isdigit()]
     mark = parse_time(git.show(INBOX_REF, SINCE_FILE).strip())
     since = (mark - NOTICE_OVERLAP) if mark else now - NOTICE_FIRST
     got, cut = api.paged(f"repos/{api.repo}/issues/comments?sort=updated&direction=asc&since={iso(since)}")
     writes: dict[str, str] = {}
     newest = mark
+    targets = Targets(api)
+    failed = 0
     for c in got:
         at = parse_time(c.get("updated_at") or c.get("created_at") or "")
+        if len(writes) >= MAX_NOTICES:
+            break            # the mark stops before this one, so the next run reads it again
         if is_notice(c) and str(c.get("id")) not in ids:
-            if len(writes) >= MAX_NOTICES:
-                break        # the mark stops before this one, so the next run writes it
             path, text = notice_file(c)
             writes[path] = text
             ids.add(str(c.get("id")))
             log(f"INBOX  {path}: {plain(text.split(chr(10), 1)[0])[:100]}")
+        elif to_muse(c) and str(c.get("id")) not in relayed:
+            try:
+                sent = forward(api, targets, c, dry_run, log)
+            except Exception as e:   # noqa: BLE001  the mark stops before it, so the next run tries it again
+                failed += 1
+                log(f"FAIL   relay of comment {c.get('id')}: {e}")
+                break
+            if sent and sent.get("id") is not None:   # its inbox file now, so the listing never writes it again
+                path, text = notice_file(sent)
+                writes[path] = text
+                ids.add(str(sent["id"]))
+                log(f"INBOX  {path}: {plain(text.split(chr(10), 1)[0])[:100]}")
+            relayed.append(str(c["id"]))
         if at and (newest is None or at > newest):
             newest = at
+    if failed:
+        log("INBOX  a relay failed; the next run retries it from the mark")
+    keep_relayed = sorted(set(relayed), key=int)[-MAX_RELAYED_KEPT:]
+    if keep_relayed and "\n".join(keep_relayed) + "\n" != git.show(INBOX_REF, RELAYED_FILE):
+        writes[RELAYED_FILE] = "\n".join(keep_relayed) + "\n"
     if cut:
         log(f"INBOX  the listing was cut at {MAX_PAGES} pages; the next run reads on from {iso(newest or since)}")
     if newest:
@@ -577,6 +688,8 @@ def inbox(api: Api, git: Git, posted: Iterable[str], now: dt.datetime, dry_run: 
     if sha:
         git.push(sha, INBOX_BRANCH)
         log(f"INBOX  pushed {sha[:12]} to {INBOX_BRANCH}")
+    if failed:   # after the push: what did go through is kept, and the run is red
+        raise RuntimeError(f"{failed} relay(s) to Muse failed; the next run retries")
     return sha
 
 
