@@ -41,3 +41,10 @@ Sweep = a live "Switchboard sweep" run (ask, then steer). Inbox = #282. Board = 
   1956137b), proof 43457224724 dispatched, queued; the merge waits on that proof.
 - 8 PENDING (trunk, before J-072 rate-hourly): ask job 30/30 of its run budget (1 read refused), steer 912/1000,
   4923 left this hour; no GraphQL line yet (that PR is not open).
+- Driven 16:14Z: `claude/integrate-systest-red` @8377c03d (a failing test class added to test_rule_check.py only,
+  never to merge) -> proof 43460678681; expect RED-BRANCH on #282 an hour after it goes red (3). Thread #509 made
+  for the To Muse relay (5), posted once #507 is live (its first run looks back 30 min only).
+- Seen: a claude/integrate-* head with no `Job:` line is skipped in silence every sweep (no inbox line); this
+  branch's first head had none, so this commit carries one (12 tests the auto-open on it).
+- Seen 16:15Z: runs queue long: sweep 43459528814 cache-in queued 7+ min, candidate-501 proof queued 25+ min,
+  5 trunk proofs queued, with only 8 jobs running; stale queued runs 37642339310 (10-07), 43098147869 (11-11).
