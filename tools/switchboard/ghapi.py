@@ -50,20 +50,6 @@ CACHE_MAX_ENTRIES = 8000
 CACHE_MAX_TOTAL = 80_000_000
 CACHE_MAX_AGE_S = 7 * 86400    # an entry no run has read for this long is dropped
 STATUS = re.compile(r"^HTTP/\S+ (\d{3})")
-ESCAPES_FLAG = "--allow-escape-sequences"
-_STAMP = re.compile(r"(?:since|created)=(?:%3E%3D|>=)?\d{4}-\d\d-\d\dT\d\d(?::|%3A)(\d\d)(?::|%3A)(\d\d)Z")
-
-
-def once_only(path: str) -> bool:
-    """A read whose path is never asked again, so its answer is never kept for an ETag (11-13): a listing from a time
-    that is not on the hour (sweep_delta's "since the last sweep" reads: a new path every sweep) or read newest first
-    (its pages shift with each new item). Kept, they filled the file to its cap every hour (a 500 KB comment page a
-    sweep, 25 newest-first pages a pass) and pushed out the entries the hourly full pass reads again, so a live full
-    pass found 128 of its 1,005 reads in the cache, where a dry run on a cache that kept them found 814 of 1,038."""
-    query = path.partition("?")[2]
-    if "direction=desc" in query:
-        return True
-    return any(m.group(1) != "00" or m.group(2) != "00" for m in _STAMP.finditer(query))
 
 
 class GitHubError(RuntimeError):
@@ -78,11 +64,6 @@ class LabelRefused(GitHubError):
 
 class RateLimited(GitHubError):
     """GitHub's rate limit answered, RATE_TRIES times: the item waits for the next sweep."""
-
-
-class OverBudget(RateLimited):
-    """This run's own call budget (GitHub.budget) is spent (11-13): the read waits for the next sweep, exactly as a
-    rate-limited one does, so every part degrades the same way and nothing fails."""
 
 
 class TimedOut(GitHubError):
@@ -115,20 +96,6 @@ def rate_limited(status: int, headers: dict[str, str], detail: str) -> bool:
     return "rate limit exceeded" in detail.lower()
 
 
-_NUM = re.compile(r"/\d+(?=/|$)")
-_SHA = re.compile(r"/[0-9a-f]{7,40}(?=/|$)")
-_REPO = re.compile(r"^/?repos/[^/]+/[^/]+")
-
-
-def call_kind(method: str, path: str) -> str:
-    """One call's place in the GITHUB line's breakdown: its method and path with the repo, numbers, shas and query
-    values taken out ("GET pulls/N/files"), so a creep shows which read grew."""
-    base, _, query = path.partition("?")
-    base = _SHA.sub("/S", _NUM.sub("/N", _REPO.sub("", base))).lstrip("/")
-    keys = sorted({k.split("=")[0] for k in query.split("&") if k} - {"per_page", "page"})
-    return f"{method} {base}" + (f"?{','.join(keys)}" if keys else "")
-
-
 class GitHub:
     def __init__(self, repo: str, dry_run: bool, log=print, runner=None, sleep=None):
         self.repo, self.dry_run, self.log = repo, dry_run, log
@@ -140,11 +107,6 @@ class GitHub:
         self.used: set[str] = set()         # cache keys read or written this run (saved first)
         self.state: dict = {}               # the switch's sweep state (switch.py run_sweep), saved with the cache
         self.calls = self.not_modified = 0
-        self.tally: dict[str, int] = {}     # call_kind -> counted calls (304s not counted): the GITHUB line's breakdown
-        # 11-13: the most counted calls (a 304 is free) this run may make; switch.py run_sweep sets it per pass. Past it
-        # every GET raises OverBudget at once, costing nothing; a write still goes (each is a decision already made).
-        self.budget: int | None = None
-        self.over_budget = 0                # the GETs refused for the budget
         self.fresh_only = False             # fresh(): no answer comes from the cache (the merge facts, J-072)
         self.cache_key = b""                # the cache file's HMAC key (load_etags/save_etags), b"" for none
 
@@ -276,8 +238,7 @@ class GitHub:
         if accept:
             args += ["-H", f"Accept: {accept}"]
         key = f"{path}|{accept}"
-        # another token's answers are never cached, nor a read made once (once_only)
-        cacheable = method == "GET" and not binary and not token and not once_only(path)
+        cacheable = method == "GET" and not binary and not token   # another token's answers are never cached
         cached = self.etags.get(key) if cacheable and not self.fresh_only else None
         if cached:
             args += ["-H", f"If-None-Match: {cached['etag']}"]
@@ -286,20 +247,11 @@ class GitHub:
         data = json.dumps(body).encode("utf-8") if body is not None else None
         attempts = GET_ATTEMPTS if method == "GET" else 1
         rate_tries, attempt, status, detail, timed_out = 0, 0, 0, "", False
-        kind = call_kind(method, path)
-        if method == "GET" and self.budget is not None and self.spent() >= self.budget:
-            self.over_budget += 1
-            if self.over_budget == 1:
-                self.log(f"::warning::BUDGET      this run's {self.budget} counted GitHub calls are spent at {method} {path}: "
-                         "every further read waits for the next sweep")
-            raise OverBudget(method, path, f"this run's budget of {self.budget} calls is spent", 0)
-        escapes = False
         while True:
             attempt += 1
             headers: dict[str, str] = {}
             status = 0
             self.calls += 1
-            self.tally[kind] = self.tally.get(kind, 0) + 1
             try:
                 out = (self.runner or subprocess.run)(args, input=data, capture_output=True, timeout=TIMEOUT_S, env=env)
             except subprocess.TimeoutExpired:
@@ -310,16 +262,6 @@ class GitHub:
                     if out.returncode == 0:
                         return out.stdout
                     detail = out.stderr.decode("utf-8", "replace").strip() or f"exit {out.returncode}, no stderr"
-                    if ESCAPES_FLAG in detail and not escapes:
-                        # 11-13: a log with colour codes. The bytes go to the caller, never a terminal (red_tests keeps
-                        # printable text only, log_text), so ask once more with the flag gh names; any other failure
-                        # of this read is not retried (it failed the same way 3 times a read, every sweep).
-                        escapes = True
-                        args.insert(args.index("-X"), ESCAPES_FLAG)
-                        attempt -= 1
-                        continue
-                    if escapes:
-                        break
                 else:
                     status, headers, text = split_response(out.stdout or b"")
                     if not token:   # another token's call (the merge token) has its own limit: not this run's
@@ -327,7 +269,6 @@ class GitHub:
                     detail = out.stderr.decode("utf-8", "replace").strip()
                     if status == 304 and cached:
                         self.not_modified += 1
-                        self.tally[kind] -= 1
                         self.used.add(key)
                         text = cached["body"]
                         return json.loads(text) if text.strip() else None
@@ -356,10 +297,6 @@ class GitHub:
         if token:
             detail = detail.replace(token, "[token]")
         raise (TimedOut if timed_out else GitHubError)(method, path, detail, status)
-
-    def spent(self) -> int:
-        """The calls this run made that count against the hour's limit (a 304 does not)."""
-        return self.calls - self.not_modified
 
     # reads
     def get(self, path: str, accept: str = "") -> Any:

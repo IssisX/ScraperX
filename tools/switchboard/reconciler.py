@@ -805,7 +805,7 @@ def thread_replies(p: Pass, roster: L.Roster) -> Replies:
     for c in sorted(p.comments, key=lambda c: (c.t, c.id)):
         if c.login == rules.BOT_LOGIN:
             continue
-        who = roster.of_name(c.author)   # an unsigned post (asks.UNSIGNED) is no agent's: nobody's reply
+        who = roster.of_name(c.author)
         if who:
             posts.append((c.t, c.thread, who.agent, c.body))
     return Replies(posts, {c.id: c.body for c in p.comments})

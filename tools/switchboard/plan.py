@@ -180,47 +180,6 @@ def whole(gh, path: str) -> list:
     raise RuntimeError(f"{path}: more than {ALL_PAGES * 100} items, refusing a short count")
 
 
-CLOSED_OVERLAP = dt.timedelta(hours=1)   # a warm read of the merged PRs goes back this far before the last one
-
-
-def merged_prs(gh, trunk: str) -> list:
-    """Every PR merged into trunk, trimmed to what observe() reads (number, merged_at, head sha, the body's first
-    line). It only grows, and the whole closed listing was read every full pass (310 PRs on 11-13, 4 pages, most of
-    them 200s since a close shifts every page; past ALL_PAGES it would raise and stop the plan pass). So with the
-    sweep state (`gh.state`, saved with the signed cache) the list is kept there, and a warm pass reads the closed
-    PRs newest-updated first only back to the last pass's newest, less CLOSED_OVERLAP: a merge always updates its PR,
-    so none is missed. Without the state (tools/board/job_status.py) it is the whole listing, as before."""
-    path = f"repos/{gh.repo}/pulls?state=closed&base={trunk}"
-
-    def slim(p: dict) -> dict:
-        return {"number": p.get("number"), "merged_at": p.get("merged_at"), "updated_at": p.get("updated_at") or "",
-                "head": {"sha": (p.get("head") or {}).get("sha") or ""}, "body": ((p.get("body") or "")[:200])}
-
-    state = gh.state if isinstance(getattr(gh, "state", None), dict) else None
-    kept = (state or {}).get("plan_merged")
-    if state is None or not isinstance(kept, dict) or not isinstance(kept.get("prs"), list) or not kept.get("at"):
-        got = [slim(p) for p in whole(gh, path) if p.get("merged_at")]
-    else:
-        floor = (dt.datetime.fromisoformat(str(kept["at"]).replace("Z", "+00:00")) - CLOSED_OVERLAP)
-        floor_s = floor.strftime("%Y-%m-%dT%H:%M:%SZ")
-        fresh: list = []
-        for page in range(1, ALL_PAGES + 1):
-            batch = gh.get(f"{path}&sort=updated&direction=desc&per_page=100&page={page}") or []
-            fresh += batch
-            if len(batch) < 100 or (batch[-1].get("updated_at") or "") < floor_s:
-                break
-        else:
-            raise RuntimeError(f"{path}: more than {ALL_PAGES * 100} PRs updated since {floor_s}, refusing a short count")
-        by_number = {p.get("number"): p for p in kept["prs"] if isinstance(p, dict)}
-        by_number.update({p.get("number"): slim(p) for p in fresh if p.get("merged_at")})
-        got = list(by_number.values())
-    if state is not None:
-        newest = max((p.get("updated_at") or "" for p in got), default="") or str((kept or {}).get("at") or "")
-        if newest:
-            state["plan_merged"] = {"at": newest, "prs": got}
-    return got
-
-
 def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk: str = "ScraperX-Claude",
             errors: tuple = (Exception,)) -> dict:
     """What the plan is checked against, read through `gh` (switch and tools/board/job_status.py share it).
@@ -235,7 +194,7 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
     issues = whole(gh, f"repos/{repo}/issues?state=open")
     branches = whole(gh, f"repos/{repo}/branches")
     prs = (listing or gh.paged)(f"repos/{repo}/pulls?state=open")
-    closed = merged_prs(gh, trunk)   # only merged PRs are read below (inactive, merged_at)
+    closed = whole(gh, f"repos/{repo}/pulls?state=closed&base={trunk}")
     inactive = {p["head"]["sha"] for p in closed if p.get("merged_at") and (p.get("head") or {}).get("sha")}
     merged_at: dict[str, str] = {}
     for p in closed:
