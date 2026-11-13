@@ -197,6 +197,29 @@ class AutoOpen(unittest.TestCase):
         self.assertEqual(len(sw.auto_pr_failed), 2)
         self.assertEqual(len(gh.state["no_job_at"]), len(names))
 
+    def test_heads_whose_proof_has_not_run_never_hide_a_green_one_after_them(self):
+        n = switch.MAX_NO_JOB_CHECKS
+        names = [f"fb-bot/integrate-a{i:02d}" for i in range(n)] + ["fb-bot/integrate-z-green"]
+        gh = FakeGH(branches=[branch(nm, i + 1) for i, nm in enumerate(names)],
+                    commits={sha(i + 1): "no job line" for i in range(len(names))},
+                    runs={sha(n + 1): [green_run(sha(n + 1))]}, jobs={7: GREEN_JOBS})   # only the last has a proof
+        gh.state = {}
+        sw = make(gh)
+        sw.auto_open_prs()
+        self.assertEqual(sw.auto_pr_failed, ())   # the first sweep's count went on the waiting heads
+        self.assertEqual(len(gh.state["no_job_wait"]), n)
+        sw = make(gh)   # each sweep is a new switch (its per-run memos start empty)
+        sw.auto_open_prs()   # the next sweep: the waiting heads wait on their clock, the green one is read
+        self.assertEqual([it.target for it in sw.auto_pr_failed], ["fb-bot/integrate-z-green"])
+        gh.gets.clear()
+        make(gh).auto_open_prs()
+        self.assertFalse(any("workflows/" in g for g in gh.gets), gh.gets)   # nothing read again inside the hour
+        sw = make(gh)
+        sw.now = NOW + switch.NO_JOB_RECHECK
+        sw.auto_open_prs()
+        self.assertEqual(len([g for g in gh.gets if "workflows/" in g]), n)   # each waiting head once, no PR listing
+        self.assertFalse(any("pulls?state=all" in g for g in gh.gets), gh.gets)
+
     def test_missing_job_line_on_a_red_running_or_old_head_is_no_item(self):
         gh, head = green_setup()
         gh.state = {}
@@ -214,7 +237,14 @@ class AutoOpen(unittest.TestCase):
         gh.jobs = {7: [{"name": "native-tests", "status": "in_progress", "conclusion": None}]}
         sw = make(gh)
         sw.auto_open_prs()
-        self.assertEqual((sw.auto_pr_failed, gh.state["no_job_at"]), ((), {}))   # asked again next sweep
+        self.assertEqual((sw.auto_pr_failed, gh.state["no_job_at"]), ((), {}))   # read again when its proof ends
+        self.assertEqual(gh.state["no_job_wait"]["fb-bot/integrate-j042-windup"]["head"], head)
+        gh.runs[head][0] = dict(gh.runs[head][0], status="completed", conclusion="success")
+        gh.jobs = {7: GREEN_JOBS}
+        sw = make(gh)
+        sw.auto_open_prs(only={"fb-bot/integrate-j042-windup"})   # a fast sweep: its proof just finished
+        self.assertEqual([it.kind for it in sw.auto_pr_failed], ["AUTO-PR-FAILED"])
+        self.assertEqual(gh.state["no_job_wait"], {})
         gh, head = green_setup()
         gh.commits[head] = {"message": "No job line here.", "committer": {"date": "2026-10-27T12:00:00Z"}}
         sw = make(gh)

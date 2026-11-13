@@ -122,8 +122,10 @@ AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
 # pass after #498 read all of them and the token's hour ran out (run 43440567620: 0 of 5000 left).
 AUTO_PR_RECENT_ONLY = ("claude/integrate-",)
 AUTO_PR_MAX_AGE = dt.timedelta(days=3)
-PAID_WALL = dt.timedelta(minutes=4)   # an untargeted run starts no new model call past this (Switch.paid_deferred)
+PAID_WALL = dt.timedelta(minutes=10)   # an untargeted run starts no new model call past this (Switch.paid_deferred):
+                                       # one or two calls a sweep (reviews ran 240 to 744 s on 11-13)
 MAX_NO_JOB_CHECKS = 8   # new heads with no Job line checked in one sweep (Switch.no_job_line), about 3 reads each
+NO_JOB_RECHECK = dt.timedelta(hours=1)   # a no-Job head whose proof was still running is read again after this
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -1820,32 +1822,42 @@ class Switch:
             text = f"the auto-open failed ({why}); the next sweep tries again."
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
-    def no_job_line(self, branch: str, sha: str, at: dt.datetime | None, had, state: dict) -> None:
+    def no_job_line(self, branch: str, sha: str, at: dt.datetime | None, had, state: dict, finished: bool = False) -> None:
         """A head on an auto-open branch whose commit has no `Job:` line: no PR can open for it, so its owner hears.
         New commits on a branch that had a PR (`had`, or a PR GitHub lists): unlanded work past a merged PR is one
         AUTO-PR-FAILED item, asked once per head (prior_pr_at). 11-13 (the system test): a brand-new branch that never
         had a PR was skipped in silence every sweep, green or not. Now its green head is one AUTO-PR-FAILED item too,
-        once per head (state "no_job_at"); a red head is the RED-BRANCH notice's, and one still running or with no
-        proof is asked again next sweep. A head older than AUTO_PR_MAX_AGE costs no read (the old claude/ branches
-        AUTO_PR_RECENT_ONLY names, and any prefix here)."""
-        seen = state.setdefault("no_job_at", {})
+        once per head (state "no_job_at"); a red head is the RED-BRANCH notice's. A head older than AUTO_PR_MAX_AGE
+        costs no read (the old claude/ branches AUTO_PR_RECENT_ONLY names, and any prefix here). At most
+        MAX_NO_JOB_CHECKS heads not seen before are read in one sweep (42 recent heads had no Job line on 11-13); one
+        whose proof is still running or missing waits in "no_job_wait", read again by its own clock (NO_JOB_RECHECK,
+        or at once when its proof just finished: `finished`), outside that count, so waiting heads never use up the
+        count and leave a green one after them unread."""
+        seen, waits = state.setdefault("no_job_at", {}), state.setdefault("no_job_wait", {})
         if had is None and (seen.get(branch) == sha or at is None or self.now - at > AUTO_PR_MAX_AGE):
             return
-        if had is None:   # 42 recent integrate heads had no Job line on 11-13: a few new ones a sweep, the rest next
-            self._no_job_checks = self.__dict__.get("_no_job_checks", 0) + 1
-            if self._no_job_checks > MAX_NO_JOB_CHECKS:
+        wait = waits.get(branch) if isinstance(waits.get(branch), dict) else {}
+        waiting = had is None and wait.get("head") == sha
+        if waiting:
+            last = parse_time(str(wait.get("at") or ""))
+            if not finished and last is not None and self.now - last < NO_JOB_RECHECK:
                 return
-        owner = self.gh.repo.split("/")[0]
-        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
-        if had is not None or prs:   # new commits on a branch that had a PR: unlanded work no PR can carry
-            past = self.unlanded_past(branch, sha, prs) if prs else 0
-            if past:
-                self.auto_pr_failure(branch, sha, "", "", stuck=(
-                    f"commits past merged #{past} are not on trunk and the head commit has no Job: "
-                    f"line, so no PR can open for them. The owner pushes a commit carrying the Job "
-                    f"line (the next sweep opens the PR), or the work is closed out."))
-            state.setdefault("prior_pr_at", {})[branch] = sha   # asked once per head
-            return
+        else:
+            if had is None:
+                self._no_job_checks = self.__dict__.get("_no_job_checks", 0) + 1
+                if self._no_job_checks > MAX_NO_JOB_CHECKS:
+                    return   # read by a later sweep
+            owner = self.gh.repo.split("/")[0]
+            prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+            if had is not None or prs:   # new commits on a branch that had a PR: unlanded work no PR can carry
+                past = self.unlanded_past(branch, sha, prs) if prs else 0
+                if past:
+                    self.auto_pr_failure(branch, sha, "", "", stuck=(
+                        f"commits past merged #{past} are not on trunk and the head commit has no Job: "
+                        f"line, so no PR can open for them. The owner pushes a commit carrying the Job "
+                        f"line (the next sweep opens the PR), or the work is closed out."))
+                state.setdefault("prior_pr_at", {})[branch] = sha   # asked once per head
+                return
         proof, _, _, _ = self.proof(sha)
         if proof == "green":
             self.auto_pr_failure(branch, sha, "", "", stuck=(
@@ -1854,8 +1866,10 @@ class Switch:
                 "is closed out."))
         if proof == "green" or proof.startswith("red"):
             seen[branch] = sha   # once per head
+            waits.pop(branch, None)
         else:
-            self.out(f"SKIP       {branch} @{sha[:8]}: no Job: line and the proof is {proof}; asked again next sweep")
+            waits[branch] = {"head": sha, "at": iso_z(self.now)}
+            self.out(f"SKIP       {branch} @{sha[:8]}: no Job: line and the proof is {proof}; read again when it ends")
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
         """Open PRs for finished fb-bot/integrate-* and claude/integrate-* branches with no PR yet (J-047).
@@ -1875,7 +1889,7 @@ class Switch:
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
             alive = {b["name"] for b in listed}
             self.gh.state.pop("prior_pr", None)   # names only, before 11-13: blind to a new head, so dropped
-            for memo in ("prior_pr_at", "no_job_at"):
+            for memo in ("prior_pr_at", "no_job_at", "no_job_wait"):
                 self.gh.state[memo] = {n: h for n, h in (self.gh.state.get(memo) or {}).items() if n in alive}
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
@@ -1899,7 +1913,7 @@ class Switch:
                 job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
                 at = parse_time(((commit.get("committer") or {}).get("date")) or "")
                 if not job:
-                    self.no_job_line(branch, sha, at, had, state)
+                    self.no_job_line(branch, sha, at, had, state, finished=only is not None)
                     continue
                 if branch.startswith(AUTO_PR_RECENT_ONLY) and (at is None or self.now - at > AUTO_PR_MAX_AGE):
                     continue   # 11-13: 77 old claude/integrate-* branches never had a PR; none is opened, none is read
