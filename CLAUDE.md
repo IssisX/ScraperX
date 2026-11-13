@@ -19,7 +19,7 @@ it to match, never ask him again.
   chores, never game code (11-12). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
   "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
   helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
-- Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
+- Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): an event is named by its link; a time decision
   runs `date`. Hooks refuse them; `time_audit.py` counts slips.
@@ -39,11 +39,11 @@ it to match, never ask him again.
 
 - **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
   faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
-  unclear input gets one simple follow-up on what he means before acting, never on wording (11-12).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names, shas or tech detail unless asked (11-10). Answer first; what happened, why and the fix in everyday words; progress is what is left (11-11).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
+  unclear input gets one simple follow-up on what he means before acting, never on wording.
+- SIMPLE, every message: a few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan: answer it, no warning him off (11-13). What happened, why, the fix; progress is what is left.
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links. For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
-- **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
+- **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
   is or her story, how the game plays: a new stage, ride, move or way she hunts is his plan to OK before any build; never redesign what exists, 11-11). Small is mine: fit, size, tuning, timing in his bars (11-10). No answer in 10 minutes: the pick stands. **Push back**, always (he
   loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
@@ -85,10 +85,10 @@ it to match, never ask him again.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews each
   green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
-  rules within the hour (11-10, an inbox NOTE-REVIEW line); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
+  rules within the hour (11-10, an inbox NOTE-REVIEW); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
   Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
-- **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
+- **Protected changes** (a test's checks, world geometry, the save layout, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
   a BLOCK means it is protected.

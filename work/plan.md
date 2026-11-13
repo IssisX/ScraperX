@@ -96,4 +96,5 @@ J-121 muse #443 at 2026-11-12T17:17Z hold: parked in live issue; reconcile pushe
 J-122 muse #444 at 2026-11-12T17:17Z hold: parked in live issue; reconcile pushed work before release | His footsteps sound like what is under him: plate, grating, timber, concrete, earth, rungs and wet steel
 J-123 muse #445 at 2026-11-12T17:17Z hold: parked in live issue; reconcile pushed work before release | Every machine sounds like itself: find the silent ones, then give each its motor, brake and cable by its real motion
 J-138 claude #504 at 2026-11-13T15:15Z | Muse's git message channel: messages as files on fb-bot/mail and muse-inbox, mail retired after a clean trial
+J-139 claude #508 at 2026-11-13T16:06Z | rule_check blocks save-layout changes and loosened budget limits
 J-044c claude #242 at 2026-11-13T15:17Z hold: paused by Cory 11-13 until the system is done | Fight: J-044 part c, the upper body (claude/integrate-j044c-upper-body)
