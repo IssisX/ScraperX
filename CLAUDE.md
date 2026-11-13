@@ -106,7 +106,7 @@ it to match, never ask him again.
   (11-06), at most four (11-12), each code-editing one in a worktree. Ask Cory before a second session. Effort: integrator
   his call (`get_session`); raise it only when he throttles; jobs start at high and climb the ladder (11-12). A worker whose job landed retires. Stopping a working helper
   is Cory's call: give him its run time, model, effort (11-12).
-- **Context:** 600k window, compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
+- **Context:** no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
   (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact, and say what may be lost.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, threads)
   go to a helper; only its answer comes back; read the function or section a job needs, found via
