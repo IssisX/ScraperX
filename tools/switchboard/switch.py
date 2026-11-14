@@ -7,7 +7,7 @@ head it acts on, or idempotent at GitHub (a merge names the head sha it merges).
 
 Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
-         a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
+         a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the watcher of orchestrator sessions
   steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
          issue, opening PRs for finished fb-bot/ and claude/ integrate-* branches, the 7:00 AM Central digest, and
          after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051; QUEUE-LOW when
@@ -84,7 +84,6 @@ def built_run(jobs: list[dict]) -> bool:
 
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
-STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switchboard/reconciler.py, J-072)
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
@@ -801,11 +800,6 @@ class Switch:
         self._board_issue = board
         return board
 
-    def board_known(self) -> int:
-        """The board with no read, for a fast sweep's part that sends from the full pass's reading (the ledger clock):
-        this run's if it was read, else the last one a sweep found, else BOARD_ISSUE."""
-        return getattr(self, "_board_issue", None) or self._last_board() or BOARD_ISSUE
-
     def _last_board(self) -> int:
         """The last board a sweep found, kept in the sweep state; 0 when it holds none (or anything but a number)."""
         state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
@@ -910,14 +904,6 @@ class Switch:
             out.append(f"and {len(failed) - MAX_FAIL_JOBS} more failed test jobs, their logs not read")
         memo[run_id] = tuple(out)
         return memo[run_id]
-
-    def red_tests_at(self, sha: str) -> tuple[str, ...]:
-        """red_tests of a head's newest proof run (the reconciler's red notice, J-104); () with no run read."""
-        try:
-            runs = self.head_runs(sha)
-        except Exception:   # noqa: BLE001  the notice goes without its tests
-            return ()
-        return self.red_tests(max(runs, key=lambda r: r["created_at"])["id"]) if runs else ()
 
     def run_state_or_none(self, run: dict) -> tuple[str, str, int, str] | None:
         """run_state, or None when GitHub would not answer its jobs read (11-12: intermittent 502s on
@@ -3224,83 +3210,6 @@ class Switch:
                         out[info.filename] = data
         return out
 
-    def orchestrate(self, number: int) -> None:
-        """Design 2.3 step 1, behind `needs:orchestrator` and budget.yml (off in v0)."""
-        import claude_calls
-        issue = self.gh.get(f"repos/{self.gh.repo}/issues/{number}")
-        labels = {l["name"] for l in issue["labels"]}
-        if not {"job", "needs:orchestrator"} <= labels:
-            return
-        comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
-        if self.start_blocked(comments, number):
-            self.out(f"ORCH        #{number} already handled")
-            return
-        b = self.budget
-        job = rules.job_of_title(issue["title"])
-        tag = MARK.format(kind="orchestrator", pr=number, head="-")
-        if not (b.orchestrator_enabled and b.orchestrator_agent_id and b.orchestrator_environment_id):
-            self.out(f"ORCH        #{number}: off in budget.yml (orchestrator.enabled, agent_id, environment_id); not started")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the orchestrator "
-                                    f"is off in `work/budget.yml` until step C defines the hosted agent. Nothing was started.\n\n{tag}")
-            return
-        if not os.environ.get("AGENT_GITHUB_TOKEN") and not self.gh.dry_run:
-            self.out(f"ORCH        #{number}: no AGENT_GITHUB_TOKEN in this job; not started")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the workflow has no "
-                                    f"`AGENT_GITHUB_TOKEN` secret, so the API agent cannot push. Nothing was started.\n\n{tag}")
-            return
-        key = f"orchestrator#{number}"
-        v = self.gate("orchestrator", job, b.orchestrator_session_usd, self.job_cap({"issue": issue}), key)
-        if not v.ok:
-            self.out(f"REFUSED orchestrator #{number}: {v.reason}")
-            return
-        if self.gh.dry_run:
-            self.out(f"DRY  beta.sessions.create for #{number} with a ${b.orchestrator_session_usd} budget ({v.reason})")
-            return
-        client = self.claude()   # before the reserve: no key, no reserve
-        run = uuid.uuid4().hex[:12]
-        self.append(money.record(self.now, run, "reserve", "orchestrator", job, b.orchestrator_session_usd, key), f"reserve {key}")
-        message = (f"Job {job}, GitHub issue #{number} in {self.gh.repo}: {issue['title']}\n\n{(issue.get('body') or '')[:30000]}\n\n"
-                   f"Read work/tasks/api-agent.md first, then the issue's newest comments, then do the job.")
-        try:
-            session = claude_calls.start_session(client, b.orchestrator_agent_id, b.orchestrator_environment_id,
-                                                 f"{job} #{number}", message, b.orchestrator_session_usd,
-                                                 f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
-                                                 rules.TRUNK, b.orchestrator_vault_id,
-                                                 {"switchboard_key": key, "run": run})
-        except claude_calls.SessionStartRejected as err:
-            # A 4xx: the server refused the request, so no session exists and the reserve is released at once.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
-                                     f"{key} start rejected HTTP {err.status}"), f"end {key} (start rejected)")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started. "
-                                    f"`beta.sessions.create` answered HTTP {err.status} ({err.error_class}). No session "
-                                    f"exists, and the reserve is released. Fix the cause, then re-add `needs:orchestrator`."
-                                    f"\n\n{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
-            return
-        except claude_calls.SessionStartUnknown as err:
-            # No usable answer (no connection, or a 5xx): a session may exist. The reserve stands, and the issue
-            # is marked handled so a re-label cannot start a second session beside it; a person looks in the Console.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            heard = f"answered HTTP {err.status}" if err.status else "got no answer"
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` {heard} "
-                                    f"({', '.join(err.classes)}), so a session may exist. The ${b.orchestrator_session_usd} "
-                                    f"reserve stays on the ledger (run `{run}`) and no second session is started. The next "
-                                    f"sweeps look for it by its metadata, and write the reserve off after "
-                                    f"{int(GIVE_UP_AFTER.total_seconds() // 60)} minutes if it never appears.\n\n{tag}\n"
-                                    f"{UNKNOWN_MARK.format(run=run, at=self.now.strftime('%Y-%m-%dT%H:%M:%SZ'))}")
-            return
-        except claude_calls.ClaudeCallError as err:
-            # Refused locally before any request was sent: no session exists.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
-                                     f"{key} start refused locally"), f"end {key} (start refused)")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started: {err}. "
-                                    f"No session exists, and the reserve is released.\n\n"
-                                    f"{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
-            return
-        self.out(f"ORCH        #{number}: session {session} started on run {run}")
-        self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, ""))
-
     def started_comment(self, number: int, session: str, run: str, budget: Decimal, note: str) -> str:
         return (f"Switchboard, {central(self.now)}: orchestrator session `{session}` started{note} with a ${budget} budget. "
                 f"Trace: {CONSOLE_SESSION.format(session=session)}\n\n"
@@ -3875,8 +3784,6 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     if args.issue:
         if steer and args.label.startswith("owner:"):
             sw.owner_labels(args.issue, args.label)
-        if ask:
-            sw.orchestrate(args.issue)
         return 0
     if args.digest or args.force_digest:
         if steer:

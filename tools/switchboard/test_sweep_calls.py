@@ -301,14 +301,16 @@ class Clocks(unittest.TestCase):
         self.assertEqual(gh.state["steer"]["timers"]["red"], [red])
 
     def ledger_timer(self, minutes_ago=1, thread=290):
-        import ledger
-        it = ledger.Item("JOB", f"#{thread}", "", "J-099", None, ledger.Person("Builder", "builder"), "claimed, no PR",
-                         NOW - dt.timedelta(hours=4, minutes=minutes_ago), dt.timedelta(hours=4), "v1", thread)
-        return ledger, it, {"at": iso(NOW - dt.timedelta(minutes=minutes_ago)), "item": ledger.item_json(it)}
+        """A timer of the deleted ledger (ledger.py item_json), as an old cache may still hold one."""
+        it = {"kind": "JOB", "ref": f"#{thread}", "link": "", "job": "J-099", "owner": None,
+              "holder": {"name": "Builder", "agent": "builder"}, "state": "claimed, no PR",
+              "clock": iso(NOW - dt.timedelta(hours=4, minutes=minutes_ago)), "deadline": 14400.0, "version": "v1",
+              "thread": thread, "touched": None, "unmatched": ""}
+        return {"at": iso(NOW - dt.timedelta(minutes=minutes_ago)), "item": it}
 
     def test_a_ripe_ledger_deadline_an_old_cache_holds_posts_nothing_and_its_clock_is_dropped(self):
         # D2: the ledger left the sweep; a ledger timer the cache still holds is never fired, and it is dropped
-        _, _, timer = self.ledger_timer()
+        timer = self.ledger_timer()
         state = last_state(self.prs)
         state["timers"]["ledger"] = [timer]
         gh = CountingGH(self.prs, dry_run=False)
@@ -318,7 +320,7 @@ class Clocks(unittest.TestCase):
         self.assertNotIn("ledger", gh.state["steer"]["timers"])
 
     def test_a_ledger_deadline_not_yet_due_costs_nothing(self):
-        _, _, timer = self.ledger_timer(minutes_ago=-20)
+        timer = self.ledger_timer(minutes_ago=-20)
         state = last_state(self.prs)
         state["timers"]["ledger"] = [timer]
         gh = CountingGH(self.prs)
@@ -377,22 +379,6 @@ class Clocks(unittest.TestCase):
         self.assertEqual(sw._ripen[s.facts.number], NOW + dt.timedelta(hours=2))   # QUIET at 3 hours untouched
 
 
-class LedgerTimers(unittest.TestCase):
-    def test_the_full_pass_keeps_the_next_notice_of_each_item(self):
-        import ledger
-        builder = ledger.Person("Builder", "builder")
-        due_later = ledger.Item("JOB", "#1", "", "", None, builder, "s", NOW - dt.timedelta(hours=1), dt.timedelta(hours=4), "a", 1)
-        past_sent = ledger.Item("JOB", "#2", "", "", None, builder, "s", NOW - dt.timedelta(hours=5), dt.timedelta(hours=4), "b", 2)
-        past_unsent = ledger.Item("JOB", "#3", "", "", None, builder, "s", NOW - dt.timedelta(hours=5), dt.timedelta(hours=4), "c", 3)
-        board = ledger.Item("JOB", "#4", "", "", None, ledger.SWITCHBOARD, "s", NOW - dt.timedelta(hours=1), dt.timedelta(hours=4), "d", 4)
-        got = {t["item"]["ref"]: t["at"] for t in ledger.pending([due_later, past_sent, past_unsent, board], NOW,
-                                                                {past_sent.key(1)})}
-        self.assertEqual(got, {"#1": iso(NOW + dt.timedelta(hours=3)), "#2": iso(NOW + dt.timedelta(hours=3)),
-                               "#3": iso(NOW)})   # #3: owed now (past MAX_NOTICES or a failed post)
-        back = ledger.item_of(ledger.item_json(due_later))
-        self.assertEqual(back, due_later)
-
-
 class WarmFullPass(unittest.TestCase):
     """J-072: a warm full pass answered only 270 of 405 reads with 304; these are the reads that came back 200."""
 
@@ -429,41 +415,6 @@ class WarmFullPass(unittest.TestCase):
         sw.close_superseded(facts, {"body": "Supersedes #43, #44 and #9"})
         self.assertEqual(gh.calls, [f"repos/{REPO}/pulls?state=open", "POST issues/43/comments",
                                     f"PATCH repos/{REPO}/pulls/43"])
-
-    def test_a_newest_first_listing_is_read_only_back_to_what_was_kept(self):
-        import ledger
-        events = [{"id": i, "event": "labeled", "created_at": iso(NOW - dt.timedelta(minutes=i)),
-                   "actor": {"login": "x"}, "issue": {"number": 7, "title": "big"}} for i in range(1, 251)]
-
-        class Pages:
-            repo = REPO
-
-            def __init__(self, items, state=None):
-                self.items, self.calls, self.state = items, 0, state if state is not None else {}
-
-            def get(self, path):
-                self.calls += 1
-                page = int(re.search(r"[?&]page=(\d+)", path).group(1))
-                return self.items[(page - 1) * 100: page * 100]
-
-        when = lambda e: ledger.parse(e.get("created_at"))   # noqa: E731
-        sw = type("S", (), {})()
-        sw.gh = Pages(events)
-        got, _ = ledger.newest_first(sw, "events", f"repos/{REPO}/issues/events", NOW - dt.timedelta(days=2), when,
-                                     ledger.EVENT_KEYS)
-        self.assertEqual((sw.gh.calls, len(got)), (3, 250))
-        self.assertEqual(got[0]["issue"], {"number": 7})   # trimmed to what the ledger reads
-        new = [{"id": 1000 + i, "event": "closed", "created_at": iso(NOW + dt.timedelta(minutes=i)),
-                "actor": {"login": "y"}, "issue": {"number": 8}} for i in range(3)]
-        sw.gh = Pages(list(reversed(new)) + events, {"ledger_events": got})
-        got2, _ = ledger.newest_first(sw, "events", f"repos/{REPO}/issues/events", NOW - dt.timedelta(days=2), when,
-                                      ledger.EVENT_KEYS)
-        self.assertEqual(sw.gh.calls, 1)                    # one page: it reached what was kept
-        self.assertEqual(len(got2), 253)
-        self.assertEqual([e["id"] for e in got2[:3]], [1002, 1001, 1000])
-        late, _ = ledger.newest_first(sw, "events", f"repos/{REPO}/issues/events", NOW + dt.timedelta(minutes=1),
-                                      when, ledger.EVENT_KEYS)
-        self.assertEqual([e["id"] for e in late], [1002, 1001])   # trimmed to the window
 
     def test_the_cache_holds_a_warm_full_passs_reads(self):
         import ghapi
