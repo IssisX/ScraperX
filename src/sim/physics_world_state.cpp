@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstdlib>
 // What the player sees and keeps: the precision sight, affordances, checkpoints, saves, the snapshot.
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
@@ -1329,7 +1331,19 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     {
         const JPH::Quat rot = bodies.GetRotation(player_id_);
         const JPH::Vec3 spin = bodies.GetAngularVelocity(player_id_);
+<<<<<<< ours
         state_.held_by_matron = grip_ != nullptr || hand2_grip_ != nullptr;
+=======
+        state_.held_by_matron = grip_ != nullptr || hand2_grip_ != nullptr || matron_->regripping();
+        {
+            static int gap = 0;
+            const bool g = grip_ == nullptr && hand2_grip_ == nullptr && wrist_ == nullptr && matron_->regripping();
+            if (std::getenv("J001_PROBE")) {
+                if (g) ++gap;
+                else if (gap > 0) { std::fprintf(stderr, "PROBE gap ended after %d ticks\n", gap); gap = 0; }
+            }
+        }
+>>>>>>> theirs
         state_.player_free_rotation = player_free_rot_;
         state_.player_body_length_m = 2.0F * bodies.GetShape(player_id_)->GetLocalBounds().GetExtent().GetY();
         state_.player_rot_x = rot.GetX();
