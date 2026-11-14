@@ -2,9 +2,12 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <memory>
 #include <string>
+
+#include "sim/matron_injury.hpp"
 
 namespace scraperx::sim {
 namespace stock_damage {
@@ -319,6 +322,13 @@ struct MatronSnapshot final {
     std::uint32_t knockdowns = 0;
     double damage_ns = 0.0;
     double player_damage_ns = 0.0;
+    // J-059 #307: the same impulse, split by where it landed (J-044a §D).
+    // Indexed by injury::Region; unclassified is the share no region owns.
+    std::array<double, injury::kRegions> injury_j_region{};
+    std::array<double, injury::kRegions> injury_j_event{};
+    double injury_j_region_unclassified = 0.0;
+    // What each limb has left: arm_l, arm_r, leg_l, leg_r (1 = whole).
+    std::array<double, 4> limb_health{1.0, 1.0, 1.0, 1.0};
     std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
     bool blow_low = false;      // the last blow came at her shins
@@ -1301,6 +1311,7 @@ struct Snapshot final {
     Vector3 checkpoint_position{};
     std::uint64_t checkpoint_commit_count = 0;
     std::uint64_t death_count = 0;
+    std::uint64_t restores = 0;  // checkpoint restores (death + load), runtime-only
 
     // The carry. carrying_entity_id is the body on the player's carry point
     // (0 for none), read from the carry constraint's actual presence;
@@ -1392,6 +1403,24 @@ public:
     // The game's hook rack on the 220 ring, and the hook gun lying on it.
     static constexpr std::uint64_t kHookRackFrameEntityId = 1959;
     static constexpr std::uint64_t kHookGunEntityId = 2970;
+    // J-094 (#412): the probe plate/pan/stop rig, proving ground only.
+    // Ids 2300/2301 are free (kit bodies run 2000-2223). Plate 25 kg, not 50:
+    // at 50 kg him is 526 J vs the 500 J stop; at 25 kg he is 437 J, she 966 J.
+    static constexpr std::uint64_t kProbePlateEntityId = 2300;
+    static constexpr std::uint64_t kProbePanEntityId = 2301;
+    static constexpr double kProbeRigX = 18.0;
+    static constexpr double kProbeRigZ = 8.0;
+    static constexpr double kProbePlateHalfM = 0.75;
+    static constexpr double kProbePlateHalfHeightM = 0.025;
+    static constexpr double kProbePlateMassKg = 25.0;
+    static constexpr double kProbePanHalfM = 0.8;
+    static constexpr double kProbePanHalfHeightM = 0.03;
+    static constexpr double kProbePanMassKg = 10.0;
+    static constexpr double kProbePanTopYM = 0.16;
+    static constexpr double kProbeDropM = 0.35;
+    static constexpr double kProbeStrokeM = 0.05;
+    static constexpr double kProbeStopCapN = 10000.0;
+    static constexpr double kProbeStopCapacityJ = 500.0;
 
     // AS-006, the Counterweight Well. Mechanism-kit ids: band structure from
     // 1000, moving bodies from 2000 (sim/mechanism_kit.hpp).
@@ -1830,6 +1859,10 @@ public:
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).
     void debug_matron_player_blow() noexcept;
+    // Tests only (never bound to the bridge): a player blow of `impulse_ns`
+    // at `at` (the strike's contact point on her capsule surface), so the
+    // region it hits is what the test measures, not the fist in the air.
+    void debug_matron_player_blow_at(Vector3 impulse_ns, Vector3 at, bool low) noexcept;
     // Tests only (never bound to the bridge): the next strike press throws
     // this move whatever the stance would pick (0, the bare punch, on a
     // free Matron); consumed when the strike begins.
@@ -1844,6 +1877,10 @@ public:
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): the corpses gone, as a load
+    // leaves them, so a death restore can be compared against a relaunch
+    // without the corpse shoving the settle.
+    void debug_clear_corpses() noexcept;
     // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
     // pin over `centre`, and the pin pulled (J-100).
     void debug_hang_slab(Vector3 centre) noexcept;
@@ -2016,6 +2053,10 @@ public:
     // nothing.
     [[nodiscard]] std::vector<std::uint8_t> save_game() const;
     [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
+    // Why the last load was refused ("format key", "checkpoint bodies", ...),
+    // empty when it was not refused or nothing has been tried. The app's
+    // warning names it; a native test asserts it.
+    [[nodiscard]] const std::string &save_reject_reason() const noexcept { return save_reject_reason_; }
     // Why the last load_game was refused, where the refusal names itself
     // (so far: "DAMG record size N bytes, this build reads M", a stock
     // damage section written by a build whose record differs); empty for
@@ -2089,6 +2130,7 @@ private:
     std::vector<TestExtraSolid> test_extra_solids_;
     std::uint64_t runs_ended_by_matron_ = 0;
     std::uint64_t tick_index_ = 0;
+    std::string save_reject_reason_;
     double remainder_seconds_ = 0.0;
     double move_input_x_ = 0.0;
     double move_input_z_ = 0.0;

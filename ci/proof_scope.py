@@ -4,7 +4,7 @@
 Cory, 11-04: running full game builds and tests "when there's only been small changes ... is so extremely
 wasteful". Each changed file is mapped to the groups of the proof that read it; a group no changed file
 reaches is skipped, and a skipped job counts as passing for the switchboard and sweep.py. Any doubt (an
-unknown path, a dispatch, a diff that cannot be listed) runs the whole proof.
+unknown path, a dispatch on any ref but an integrate branch, a diff that cannot be listed) runs the whole proof.
 
 The groups (checked 11-04 against CMakeLists.txt, the test sources and the proof workflow):
   native   native-tests, the four CTest shards: scraperx_sim_tests, shared_survival and parkour_flow. They
@@ -18,9 +18,9 @@ host-build runs when any group does (it builds what all three need and checks th
 What reaches what (first match wins; see groups_of):
   nothing          the switchboard, the board tools, the agents' notes and rules (NO_GAME); the design and
                    execution docs (01_*/, 02_*/, 03_EXECUTION/) and any .md outside godot/; tools/ other than
-                   tools/fab/ and tools/matron_probe/ (tools/rule_check runs in the scope job on every push
-                   anyway); src/voice/ (the offline voice generators: what they make is committed under
-                   godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
+                   tools/fab/ and tools/matron_probe/ (tools/rule_check and the switchboard's unit tests run in
+                   the scope job on every push anyway); src/voice/ (the offline voice generators: what they
+                   make is committed under godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
   godot            tools/matron_probe/ (the godot-touch drawn-body gate records with probe.gd and gates on
                    check.py, and host-build's drawn-body guard reads check.py's EXPECTED keys; the probe
                    files are host-side tools, not packaged in the APK, so android does not run)
@@ -34,18 +34,39 @@ What is compared:
   push to ScraperX-Claude    the pushed range, BEFORE..HEAD (every commit of the push)
   push to an integrate branch the branch against trunk, merge-base(trunk, HEAD)..HEAD, so a docs-only push
                              on a branch that also changes game code still proves the game
-  anything else (dispatch)   the whole proof
+  dispatch on an integrate   the same range as that branch's push, so the dispatch proves what the push would
+  branch                     (11-14: every fb-bot/integrate-* head is pushed and then dispatched; the dispatch
+                             cancels the push's run, and used to run every group whatever the head reached)
+  anything else              the whole proof: a dispatch on trunk or on any other ref, any other event
+
+No dispatch input is read: the scope comes from the event, the ref and the git graph only (SECURITY.md).
 
 Writes `game=`, `native=`, `godot=` and `android=` (true|false) to $GITHUB_OUTPUT when it is set; `game` is
 true when any group runs. Prints the decision and why.
+
+One dispatch on trunk is scoped (J-072, 11-14: run 43596588412, the dispatched trunk proof of #551's merge, six
+switchboard files, ran 15 jobs for 24 minutes; its push would have run no game group). After the switchboard merges
+a PR with the workflow token no push run starts, so it dispatches the trunk proof (switch.py merge). That run is
+read as the push of that merge, HEAD^1..HEAD, only when all of this holds: it was dispatched, and not re-run, by
+github-actions[bot]; HEAD is a merge of two commits; and HEAD's author and committer are the ones GitHub writes on
+a workflow-token merge. Nothing a PR or a dispatch can set is read (not the commit message: it carries the PR's
+branch name). A person's dispatch on trunk, any other HEAD (a plain commit, a hand merge, a merge made with the
+merge token, whose push has its own run) or a first parent that cannot be fetched runs the whole proof, which
+playtest-apk and hand checks need. The dispatch names no commit, so one merge's dispatch can read a later merge as
+HEAD: when HEAD^1 is such a merge too, the range starts below every one of them in a row (at most 20; more runs
+the whole proof), so each merge's own change is in the range of whichever run reads it.
 """
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 
 TRUNK = "ScraperX-Claude"
+# The refs the proof's push trigger names beside trunk ('*/integrate-*' in wo000-delivery-spine.yml; its * never
+# crosses a slash). Only these are scoped on a dispatch, and exactly as their push is.
+INTEGRATE_REF = re.compile(r"^refs/heads/[A-Za-z0-9._-]+/integrate-[A-Za-z0-9._-]+$")
 ZERO_SHA = "0" * 40
 
 GROUPS = ("native", "godot", "android")
@@ -55,9 +76,10 @@ GODOT = frozenset({"godot", "android"})
 NATIVE = frozenset({"native"})
 PROBE = frozenset({"godot"})
 
-# Read by no build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
-# proof workflow reads them; the mentions there are comments). The switchboard's own code is tested by
-# switchboard.yml's selftest job, not by the game proof.
+# Read by no game build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
+# game jobs reads them; the mentions there are comments). The switchboard's and the board tools' unit tests run in
+# the proof's scope job on every push (J-072: switchboard.yml's selftest never starts on a PR its bot opens), not in
+# a game job, so they need no group here.
 NO_GAME_PREFIXES = (
     "tools/switchboard/",
     "tools/board/",
@@ -131,10 +153,18 @@ def _shown(paths: list[str]) -> str:
     return ", ".join(paths[:6]) + (f" and {len(paths) - 6} more" if len(paths) > 6 else "")
 
 
+def scoped(event: str, ref: str) -> bool:
+    """Is this run's scope read from its changed files? A push; a dispatch only on an integrate branch, compared
+    as its push is (a dispatch on trunk, or on any other ref, runs the whole proof)."""
+    if event == "push":
+        return True
+    return event == "workflow_dispatch" and bool(INTEGRATE_REF.match(ref))
+
+
 def decide(event: str, ref: str, changed: list[str] | None) -> tuple[frozenset[str], str]:
     """(the groups to run, why). `changed` is None when the changed files could not be listed."""
-    if event != "push":
-        return EVERY, f"event {event!r}: the whole proof"
+    if not scoped(event, ref):
+        return EVERY, f"event {event!r} on {ref!r}: the whole proof"
     if changed is None:
         return EVERY, "the changed files could not be listed: the whole proof"
     if not changed:
@@ -161,7 +191,8 @@ def _git(*args: str) -> str:
 
 
 def changed_files(ref: str, before: str) -> list[str] | None:
-    """The files this push changes, as `decide` compares them; None when they cannot be listed."""
+    """The files this push (or dispatch on an integrate branch) changes, as `decide` compares them; None when they
+    cannot be listed."""
     # The checkout is shallow (depth 1), so each base is fetched; a failed fetch or merge-base means the whole proof.
     try:
         if ref == f"refs/heads/{TRUNK}":
@@ -192,10 +223,77 @@ def outputs(run: frozenset[str]) -> dict[str, str]:
     return out
 
 
+# The trunk proof the switchboard dispatches after a workflow-token merge (tools/switchboard/switch.py merge): the
+# actor of that dispatch, and the author and committer GitHub writes on that merge commit (read on 55ae0ca1, the
+# merge of #551, and 12eef769, of #545). A merge made with the merge token is authored by that token's login.
+WORKFLOW_TOKEN_ACTOR = "github-actions[bot]"
+WORKFLOW_TOKEN_AUTHOR = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+API_MERGE_COMMITTER = "GitHub <noreply@github.com>"
+
+
+TOKEN_MERGE_CHAIN = 20   # the most workflow-token merges in a row that are read as one push; more: the whole proof
+
+
+def token_merge_parent(commit: str) -> str:
+    """The first parent of `commit` when it is a merge of two commits with the author and committer GitHub writes on
+    a workflow-token merge; "" for any other commit. Read from the commit object itself (a shallow checkout shows a
+    commit without its parents); its message is never read."""
+    header = _git("cat-file", "commit", commit).split("\n\n", 1)[0].splitlines()
+
+    def field(name: str) -> list[str]:
+        return [line[len(name) + 1:] for line in header if line.startswith(name + " ")]
+
+    parents, author, committer = field("parent"), field("author"), field("committer")
+    if len(parents) != 2 or not all(re.fullmatch(r"[0-9a-f]{40}", p) for p in parents):
+        return ""
+    if len(author) != 1 or not author[0].startswith(WORKFLOW_TOKEN_AUTHOR + " "):
+        return ""
+    if len(committer) != 1 or not committer[0].startswith(API_MERGE_COMMITTER + " "):
+        return ""
+    return parents[0]
+
+
+def switchboard_merge_base(event: str, ref: str, actor: str, triggering_actor: str) -> str:
+    """The trunk commit the switchboard's merges landed on, when this run is the trunk proof the switchboard
+    dispatches after it merges a PR with the workflow token; "" for every other run, and on any doubt. The actors
+    are the runner's own GITHUB_ACTOR and GITHUB_TRIGGERING_ACTOR (a person's re-run of the bot's run changes the
+    second). The dispatch names no commit, so a merge's own dispatch can read a later merge as HEAD: the base is the
+    first commit down HEAD's first parents that is not a workflow-token merge, and the range base..HEAD holds every
+    such merge in a row, HEAD's included. More than TOKEN_MERGE_CHAIN of them, or a parent that cannot be fetched
+    (the checkout is shallow), is a doubt."""
+    if event != "workflow_dispatch" or ref != f"refs/heads/{TRUNK}":
+        return ""
+    if actor != WORKFLOW_TOKEN_ACTOR or triggering_actor != WORKFLOW_TOKEN_ACTOR:
+        return ""
+    try:
+        base = token_merge_parent("HEAD")
+        if not base:
+            return ""
+        for _ in range(TOKEN_MERGE_CHAIN):
+            _git("fetch", "--quiet", "--depth=1", "origin", base)
+            parent = token_merge_parent(base)
+            if not parent:
+                return base
+            base = parent
+    except (RuntimeError, ValueError) as err:   # ValueError: a commit that is not UTF-8
+        print(f"proof_scope: {err}", file=sys.stderr)
+        return ""
+    print(f"proof_scope: more than {TOKEN_MERGE_CHAIN} workflow-token merges in a row end at HEAD", file=sys.stderr)
+    return ""
+
+
 def main() -> int:
     event = os.environ.get("EVENT", "")
     ref = os.environ.get("REF", "")
-    changed = changed_files(ref, os.environ.get("BEFORE", "")) if event == "push" else None
+    before = os.environ.get("BEFORE", "")
+    actor, triggering_actor = os.environ.get("GITHUB_ACTOR", ""), os.environ.get("GITHUB_TRIGGERING_ACTOR", "")
+    print(f"proof_scope: {event} on {ref}, actor {actor!r}, run started by {triggering_actor!r}")
+    merged_onto = switchboard_merge_base(event, ref, actor, triggering_actor)
+    if merged_onto:
+        print(f"proof_scope: a switchboard merge, dispatched on trunk by the workflow token: scoped as its push, "
+              f"with every such merge in a row below it, {merged_onto}..HEAD")
+        event, before = "push", merged_onto
+    changed = changed_files(ref, before) if scoped(event, ref) else None
     run, why = decide(event, ref, changed)
     values = outputs(run)
     print("proof_scope: " + " ".join(f"{k}={v}" for k, v in values.items()))

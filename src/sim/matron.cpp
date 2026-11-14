@@ -1032,14 +1032,26 @@ void Matron::feel_floor(const float dt) {
     // as walk_toward's drive gate (a step, a beam, a ladder foot with her
     // middle past its edge). Where her middle is over the floor this reads
     // exactly as before.
+    // J-040: while she lies down her middle stays at standing height, so a
+    // ray from her middle meets a weight lying on her body and reads its
+    // fall as "the floor is moving" — a slab on her made her ride. While
+    // lying, her floor ray starts from her lying body's underside (her real
+    // lowest point), a hair above it so the ray begins in open air and not
+    // inside the floor she lies on; only what is under her can make her
+    // ride. The upright rays are unchanged.
+    RVec3 ray_from = at;
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        ray_from = RVec3(at.GetX(), body_box.mMin.GetY() + 0.02F, at.GetZ());
+    }
     const auto floor_hit = [&](const RVec3 &from) {
         return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self);
     };
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     const Vec3 across(std::cos(yaw_), 0.0F, -std::sin(yaw_));
-    if (floor_hit(at) || floor_hit(at + across * kFootSpanM) || floor_hit(at - across * kFootSpanM) ||
-        floor_hit(at + facing * kFootSpanM) || floor_hit(at - facing * kFootSpanM)) {
-        feet_y_ = float(at.GetY()) - reach * hit.mFraction;
+    if (floor_hit(ray_from) || floor_hit(ray_from + across * kFootSpanM) || floor_hit(ray_from - across * kFootSpanM) ||
+        floor_hit(ray_from + facing * kFootSpanM) || floor_hit(ray_from - facing * kFootSpanM)) {
+        feet_y_ = float(ray_from.GetY()) - reach * hit.mFraction;
         // The bay's leaf on its stop under its motor is a walkway: what it
         // gives under her stride is not a floor going.
         floor_vy = hit.mBodyID == bay_leaf_ && bay_open_ ? 0.0F : bodies.GetLinearVelocity(hit.mBodyID).GetY();
@@ -4638,6 +4650,14 @@ void Matron::restore(const Saved &saved) {
     dead_ = saved.dead;
     damage_ns_ = saved.damage_ns;
     player_damage_ns_ = saved.player_damage_ns;
+    // The per-region doses come back as saved (J-059 #343 fix): a restore
+    // overwrites the live doses, it never keeps them, so a reload restores
+    // her as saved (settled call 11-05 #242) and a rewind after later hits
+    // puts the doses back to the checkpoint's, not the later ones.
+    for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+        injury_.doses[i].j_region = saved.injury_j_region[i];
+        injury_.doses[i].j_event = saved.injury_j_event[i];
+    }
     {
         remove_body();
         end_hold(saved.state);
@@ -5088,8 +5108,11 @@ void Matron::take_blow(const float dt) {
     // same way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
     const Mover *held_by = holder();
-    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
-        state_ == State::Down || state_ == State::Emerging) {
+    // J-040 (issue #228): Down and Emerging are no longer a shield. A real
+    // external blow counts in both states; her own contacts are already
+    // excluded by the striker filter (closing >= 0.5 m/s of its own motion
+    // plus contact), so this guard only ever dropped real blows.
+    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof)) {
         blow_quiet_ = kBlowQuietTicks;
         player_blow_tag_ = false;
         clear_player_blow();
@@ -5101,12 +5124,42 @@ void Matron::take_blow(const float dt) {
     const Vec3 change = on_pipe ? velocity - set_velocity_
                                 : Vec3(velocity.GetX() - set_velocity_.GetX(), 0.0F, velocity.GetZ() - set_velocity_.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
+    // A weight falling on her is above her body, not above her middle, and
+    // a blow closes on her body, not on her middle. Lying down her middle
+    // stays at standing height while her body is flat, so a slab on her
+    // lying body sits below her middle and reads as moving away from it:
+    // the old checks never fired for her (J-040). The upright references
+    // are unchanged.
+    RVec3 toward_ref = at;
+    float above_y = float(at.GetY());
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        above_y = body_box.mMax.GetY();
+        toward_ref = RVec3(body_box.GetCenter());
+    }
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
     float environment_ns = 0.0F;
+    // J-059 #343 P1 #2: environment credits deferred to one array, applied
+    // after the blow window opens below, so one strike's ticks share one
+    // j_event window instead of each tick overwriting it.
+    std::array<float, injury::kRegionCount> env_ns{};
     float player_ns = 0.0F;
     Vec3 impulse = Vec3::sZero();
     float above_share = 0.0F;
+    // J-059 #307: the head frame every blow is classified in (eye midpoint
+    // + head forward; body yaw when her eyes are closed, see eyes()).
+    // While she staggers her eyes are closed and eyes() returns the zero
+    // frame: fall back to her body yaw at the same eye height and forward
+    // offset, so blows taken mid-stagger still land in the right region.
+    const Eyes eye = eyes();
+    const Vec3 eye_mid =
+        eye.open ? Vec3(static_cast<float>(eye.at.GetX()), static_cast<float>(eye.at.GetY()),
+                        static_cast<float>(eye.at.GetZ()))
+                 : Vec3(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()) + kEyeAboveCentreM,
+                        static_cast<float>(at.GetZ())) +
+                       facing * kEyeForwardM;
+    const Vec3 eye_fwd = eye.open ? eye.forward : facing;
     for (std::size_t i = 0; i < near_count_; ++i) {
         const Near &n = near_[i];
         if (!bodies.IsAdded(n.body)) {
@@ -5118,7 +5171,7 @@ void Matron::take_blow(const float dt) {
         if (its_change.Length() < 0.1F) {
             continue;   // nothing met it this step
         }
-        Vec3 toward(at - n.at);
+        Vec3 toward(toward_ref - n.at);
         const float apart = toward.Length();
         if (apart < 1.0e-3F) {
             continue;
@@ -5140,12 +5193,22 @@ void Matron::take_blow(const float dt) {
         const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
         impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
-        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > above_y;
         const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
             above_share += overhead_ns / kMassKg;
         }
         environment_ns += std::max(given.Length(), overhead_ns);
+        // J-059 #307: each accepted environment impulse is credited once,
+        // by its centre against her middle: trunk or unclassified, never a
+        // face (J-044a §D). Deferred into env_ns (applied after the window
+        // opens below) so the strike's ticks share one j_event window.
+        env_ns[static_cast<std::size_t>(injury::classify_striker_centre(
+                   Vec3(static_cast<float>(n.at.GetX()), static_cast<float>(n.at.GetY()),
+                        static_cast<float>(n.at.GetZ())),
+                   Vec3(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                        static_cast<float>(at.GetZ())),
+                   eye_fwd))] += std::max(given.Length(), overhead_ns);
         if (blow_quiet_ >= kBlowQuietTicks) {
             // A fresh blow: what kind, from where, and whether she faces it.
             blow_low_ = false;
@@ -5204,6 +5267,16 @@ void Matron::take_blow(const float dt) {
         blow_impulse_ = Vec3::sZero();
         blow_above_ = 0.0F;
         blow_by_player_ = false;
+        // A fresh blow opens a new j_event window: the strike's contact
+        // ticks accumulate into one local impact (J-059 #343 P1 #2).
+        injury_.begin_event();
+    }
+    // The environment half of this blow, credited in the window just
+    // opened (or the one still open), once per region.
+    for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+        if (env_ns[i] > 0.0F) {
+            injury_.credit(static_cast<injury::Region>(i), env_ns[i]);
+        }
     }
     // His own blow, tagged as it landed (player_blow_landed): read with the
     // blow it lands in. In her hold before the rip it frees him whatever its
@@ -5215,6 +5288,18 @@ void Matron::take_blow(const float dt) {
     // Judge each real contact impulse once, not the body's response as a second source.
     damage_ns_ += environment_ns + player_ns;
     player_damage_ns_ += player_ns;
+    if (player_ns > 0.0F) {
+        // J-059 #307: the player's blow lands where his fist contacts her;
+        // the region it hits takes the dose, once (J-044a §D).
+        // player_blow_at_ survives clear_player_blow() (it clears only the
+        // impulse and the low flag), so the point is still here.
+        injury_.credit(injury::classify_contact(
+                           Vec3(static_cast<float>(player_blow_at_.GetX()),
+                                static_cast<float>(player_blow_at_.GetY()),
+                                static_cast<float>(player_blow_at_.GetZ())),
+                           eye_mid, eye_fwd),
+                       player_ns);
+    }
     if (damage_lethal_at_ns(damage_ns_)) {
         dead_ = true;
         state_ = State::Dead;
@@ -5248,6 +5333,12 @@ void Matron::take_blow(const float dt) {
             blow_quiet_ = kBlowQuietTicks;
             pipe_struck(at);
         }
+        return;
+    }
+    if (state_ == State::Down) {
+        // Already down: the blow's damage is counted above, but it neither
+        // staggers her nor re-triggers knock_down(), so the time she lies
+        // there keeps counting down (J-040).
         return;
     }
     // Her balance: her stance, her base, and the step she can take.
@@ -5303,7 +5394,6 @@ void Matron::take_blow(const float dt) {
                                                std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F)) *
                      damage_recovery_scale_for_ns(damage_ns_);
         ++staggers_;
-        rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
         return;
     }
@@ -5359,11 +5449,9 @@ void Matron::knock_down() {
     if (blow_staggered_) {
         // The stagger it began as is this knockdown: counted once.
         --staggers_;
-        rage_ = std::max(0.0F, rage_ - kStaggerRage);
         blow_staggered_ = false;
     }
     ++knockdowns_;
-    rage_ = std::min(1.0F, rage_ + kKnockdownRage);
     blow_quiet_ = kBlowQuietTicks;
     lie_down(fall_x_, fall_z_);
 }
@@ -5720,6 +5808,14 @@ void Matron::refresh_view() {
     view_.knockdowns = knockdowns_;
     view_.damage_ns = damage_ns_;
     view_.player_damage_ns = player_damage_ns_;
+    // J-059 #307: per-region injury + limb health, live, every step.
+    for (std::size_t i = 0; i < injury::kRegions; ++i) {
+        view_.injury_j_region[i] = injury_.doses[i].j_region;
+        view_.injury_j_event[i] = injury_.doses[i].j_event;
+    }
+    view_.injury_j_region_unclassified =
+        injury_.doses[static_cast<std::size_t>(injury::Region::Unclassified)].j_region;
+    view_.limb_health = injury::limb_health(injury_);
     view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
     view_.blow_low = blow_low_;

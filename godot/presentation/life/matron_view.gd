@@ -144,6 +144,7 @@ var _twist_shown := 0.0
 var _twist_v := 0.0
 var _work_s := 0.0
 var _work_counts := Vector3i(-1, -1, -1)
+var _injury_restores := -1  # last restore generation seen; a change rewinds the injury view
 var _gait_mps := 0.0
 var _finger_shown := {}
 var _twist := 0.0
@@ -2382,6 +2383,16 @@ func _pipe_head_down(data: Dictionary, centre: Vector3) -> void:
 
 
 func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, player_position: Vector3) -> void:
+	# A checkpoint restore rewinds her doses (the native's restore counter
+	# moves); the injury layer's maxima cache cannot see that, so it resets
+	# here — before any drawing, even out of range — and the next update()
+	# rebuilds from the restored dictionary. A missing key (an older native,
+	# a fabricated test pose) never resets, so the no-heal checks keep passing.
+	var restores := int(data.get("restores", -1))
+	if _injury_restores >= 0 and restores >= 0 and restores != _injury_restores and _injury != null:
+		_injury.reset()
+	if restores >= 0:
+		_injury_restores = restores
 	var state := int(data["state"])
 	var alive := bool(data["alive"])
 	var released := bool(data["released"])
