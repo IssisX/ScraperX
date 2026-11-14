@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-14 | *"You should always be looking for contradictions. I mean, not wasteful or exhaustively but correct documentation is important"* (after he had to raise stale docs the Fable check had already flagged): a contradiction or stale fact seen while working, or left by a landed change, is fixed that run; no exhaustive hunts. | integrator-hourly, quality floor |
 | 11-14 | *"Google Gemini has new models and carbon is a step above argon and argon has gotten 100% of everything we give it correct. REMEMBER THIS"* (said before on 11-13 and kept only in the notes, which Claude missed): Carbon and Argon are the free outside agents for hard problems, Carbon the stronger. Then: *"carbon is going to be outrageously good and should be used for the most complex complicated and difficult things"*: the hardest work goes to Carbon first. | CLAUDE.md, the hard-work ladder |
 | 11-13 | *"We have continue to stop exceeding limits of things when we don't have to"*: the switchboard ran out of GitHub calls after a batch of PR opens and re-runs; stay under every limit, checking the meter before a batch. | CLAUDE.md, Fundamentals |
 | 11-13 | *"Do the read-only-what-changed fix now - Bro, this is like the fourth or fifth time I've had to tell you to do this"*: the switchboard ran out of GitHub calls re-reading everything each sweep; reading, like building and testing, covers only what changed. | CLAUDE.md, Fundamentals |

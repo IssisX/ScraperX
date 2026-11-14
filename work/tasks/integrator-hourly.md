@@ -11,6 +11,8 @@ How: helpers get the important work and long reads, never chores (11-06); the in
 Fewer, batched calls.
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
+Docs stay true (11-14): a contradiction or stale fact seen while working, or left behind by a change that landed, is
+fixed that run, never listed for later; no hunting through every file for them.
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
