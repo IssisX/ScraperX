@@ -1,6 +1,10 @@
 """A test group is skipped only when no changed file reaches it, and the whole proof runs on any doubt."""
+import os
+import subprocess
+import tempfile
 import unittest
 
+import proof_scope
 from proof_scope import EVERY, NONE, decide, groups_of, outputs, reaches_game
 
 TRUNK = "refs/heads/ScraperX-Claude"
@@ -102,6 +106,94 @@ class ProofScope(unittest.TestCase):
         _, why = decide("push", BRANCH, ["godot/main.tscn"])
         self.assertIn("native skipped", why)
         self.assertIn("godot runs: 1 of 1 changed files reach it (godot/main.tscn)", why)
+
+
+CANDIDATE = "refs/heads/switchboard/candidate-510"
+
+
+class Dispatch(unittest.TestCase):
+    """11-13: every dispatched proof ran all 13 jobs (run 43468415707, the switchboard's merge candidate for #510)."""
+
+    def test_a_candidate_or_integrate_dispatch_runs_only_what_it_reaches(self):
+        for ref in (CANDIDATE, BRANCH, "refs/heads/fb-bot/integrate-protected-j116"):
+            self.assertEqual(decide("workflow_dispatch", ref, ["tests/x.cpp", "work/plan.md"])[0], {"native"}, ref)
+            self.assertEqual(decide("workflow_dispatch", ref, ["work/plan.md"])[0], NONE, ref)
+
+    def test_a_dispatch_on_trunk_or_another_ref_or_with_doubt_runs_everything(self):
+        for ref in (TRUNK, "refs/heads/switchboard/ledger", "refs/heads/claude/wip-j102", "refs/tags/v1",
+                    "refs/heads/claude/integrate-x;rm", "refs/heads/switchboard/candidate"):
+            self.assertEqual(decide("workflow_dispatch", ref, ["work/plan.md"])[0], EVERY, ref)
+        for changed in (None, []):
+            self.assertEqual(decide("workflow_dispatch", CANDIDATE, changed)[0], EVERY)
+        self.assertEqual(decide("schedule", BRANCH, ["work/plan.md"])[0], EVERY)
+
+
+def git(cwd, *args) -> str:
+    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True,
+                          env=dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                                   GIT_COMMITTER_EMAIL="t@t")).stdout.strip()
+
+
+class CandidateRange(unittest.TestCase):
+    """A real shallow checkout of a merge candidate, as actions/checkout leaves it (depth 1)."""
+
+    PR_FILE = "tests/pr.cpp"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = self.tmp.name
+        self.origin, self.work = f"{root}/origin", f"{root}/work"
+        os.mkdir(self.origin)
+        git(self.origin, "init", "-q", "-b", "ScraperX-Claude")
+        git(self.origin, "config", "uploadpack.allowAnySHA1InWant", "true")
+        self.commit("work/plan.md", "base")
+        git(self.origin, "checkout", "-q", "-b", "claude/integrate-x")
+        self.commit(self.PR_FILE, "the PR's own change")
+        git(self.origin, "checkout", "-q", "ScraperX-Claude")
+        self.commit("godot/main.gd", "trunk moved the game")
+        git(self.origin, "checkout", "-q", "-b", "switchboard/candidate-510", "claude/integrate-x")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def commit(self, path, msg):
+        full = os.path.join(self.origin, path)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "a", encoding="utf-8") as fh:
+            fh.write(msg + "\n")
+        git(self.origin, "add", path)
+        git(self.origin, "commit", "-q", "-m", msg)
+
+    def changed(self, merge=True) -> list[str] | None:
+        if merge:
+            git(self.origin, "merge", "-q", "--no-ff", "-m", "candidate", "ScraperX-Claude")
+        git(self.tmp.name, "clone", "-q", "--depth=1", "--branch", "switchboard/candidate-510",
+            f"file://{self.origin}", self.work)
+        was = os.getcwd()
+        os.chdir(self.work)
+        try:
+            return proof_scope.changed_files(CANDIDATE, "")
+        finally:
+            os.chdir(was)
+
+    def test_both_sides_since_the_prs_proof_are_compared(self):
+        got = sorted(self.changed())
+        self.assertEqual(got, ["godot/main.gd", "tests/pr.cpp"])
+        self.assertEqual(decide("workflow_dispatch", CANDIDATE, got)[0], EVERY)   # native from the PR, godot from trunk
+
+    def test_a_candidate_that_is_not_a_merge_runs_everything(self):
+        self.assertIsNone(self.changed(merge=False))
+
+
+
+class CandidateRangeGodot(CandidateRange):
+    """The PR and trunk both moved only Godot files: the native shards are skipped on the candidate."""
+    PR_FILE = "godot/pr.gd"
+
+    def test_both_sides_since_the_prs_proof_are_compared(self):
+        got = sorted(self.changed())
+        self.assertEqual(got, ["godot/main.gd", "godot/pr.gd"])
+        self.assertEqual(decide("workflow_dispatch", CANDIDATE, got)[0], {"godot", "android"})
 
 
 if __name__ == "__main__":

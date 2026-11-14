@@ -1006,14 +1006,26 @@ void Matron::feel_floor(const float dt) {
     // as walk_toward's drive gate (a step, a beam, a ladder foot with her
     // middle past its edge). Where her middle is over the floor this reads
     // exactly as before.
+    // J-040: while she lies down her middle stays at standing height, so a
+    // ray from her middle meets a weight lying on her body and reads its
+    // fall as "the floor is moving" — a slab on her made her ride. While
+    // lying, her floor ray starts from her lying body's underside (her real
+    // lowest point), a hair above it so the ray begins in open air and not
+    // inside the floor she lies on; only what is under her can make her
+    // ride. The upright rays are unchanged.
+    RVec3 ray_from = at;
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        ray_from = RVec3(at.GetX(), body_box.mMin.GetY() + 0.02F, at.GetZ());
+    }
     const auto floor_hit = [&](const RVec3 &from) {
         return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self);
     };
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     const Vec3 across(std::cos(yaw_), 0.0F, -std::sin(yaw_));
-    if (floor_hit(at) || floor_hit(at + across * kFootSpanM) || floor_hit(at - across * kFootSpanM) ||
-        floor_hit(at + facing * kFootSpanM) || floor_hit(at - facing * kFootSpanM)) {
-        feet_y_ = float(at.GetY()) - reach * hit.mFraction;
+    if (floor_hit(ray_from) || floor_hit(ray_from + across * kFootSpanM) || floor_hit(ray_from - across * kFootSpanM) ||
+        floor_hit(ray_from + facing * kFootSpanM) || floor_hit(ray_from - facing * kFootSpanM)) {
+        feet_y_ = float(ray_from.GetY()) - reach * hit.mFraction;
         // The bay's leaf on its stop under its motor is a walkway: what it
         // gives under her stride is not a floor going.
         floor_vy = hit.mBodyID == bay_leaf_ && bay_open_ ? 0.0F : bodies.GetLinearVelocity(hit.mBodyID).GetY();
@@ -4773,8 +4785,11 @@ void Matron::take_blow(const float dt) {
     // same way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
     const Mover *held_by = holder();
-    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
-        state_ == State::Down || state_ == State::Emerging) {
+    // J-040 (issue #228): Down and Emerging are no longer a shield. A real
+    // external blow counts in both states; her own contacts are already
+    // excluded by the striker filter (closing >= 0.5 m/s of its own motion
+    // plus contact), so this guard only ever dropped real blows.
+    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof)) {
         blow_quiet_ = kBlowQuietTicks;
         player_blow_tag_ = false;
         clear_player_blow();
@@ -4786,6 +4801,19 @@ void Matron::take_blow(const float dt) {
     const Vec3 change = on_pipe ? velocity - set_velocity_
                                 : Vec3(velocity.GetX() - set_velocity_.GetX(), 0.0F, velocity.GetZ() - set_velocity_.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
+    // A weight falling on her is above her body, not above her middle, and
+    // a blow closes on her body, not on her middle. Lying down her middle
+    // stays at standing height while her body is flat, so a slab on her
+    // lying body sits below her middle and reads as moving away from it:
+    // the old checks never fired for her (J-040). The upright references
+    // are unchanged.
+    RVec3 toward_ref = at;
+    float above_y = float(at.GetY());
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        above_y = body_box.mMax.GetY();
+        toward_ref = RVec3(body_box.GetCenter());
+    }
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
     float environment_ns = 0.0F;
@@ -4820,7 +4848,7 @@ void Matron::take_blow(const float dt) {
         if (its_change.Length() < 0.1F) {
             continue;   // nothing met it this step
         }
-        Vec3 toward(at - n.at);
+        Vec3 toward(toward_ref - n.at);
         const float apart = toward.Length();
         if (apart < 1.0e-3F) {
             continue;
@@ -4842,7 +4870,7 @@ void Matron::take_blow(const float dt) {
         const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
         impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
-        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > above_y;
         const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
             above_share += overhead_ns / kMassKg;
@@ -4982,6 +5010,12 @@ void Matron::take_blow(const float dt) {
             blow_quiet_ = kBlowQuietTicks;
             pipe_struck(at);
         }
+        return;
+    }
+    if (state_ == State::Down) {
+        // Already down: the blow's damage is counted above, but it neither
+        // staggers her nor re-triggers knock_down(), so the time she lies
+        // there keeps counting down (J-040).
         return;
     }
     // Her balance: her stance, her base, and the step she can take.
