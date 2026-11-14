@@ -2628,7 +2628,13 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     since_heard_s_ = std::min(since_heard_s_ + dt, 3600.0F);
     // Waking evidence keeps aging while sealed, but she needs an opportunity
     // to investigate it once she can move. Neither clock refreshes a position.
-    if (state_ != State::Dormant && state_ != State::Straining && state_ != State::Emerging) {
+    // Nor does the pursuit clock run while the corner pipe has her: that
+    // time she is after the lead already, and a pest's story up it (35-40 s)
+    // would spend her whole window on the way there (J-102). Her other ways
+    // take seconds, and a journey others give her (a test's travel) is not
+    // her chase.
+    if (state_ != State::Dormant && state_ != State::Straining && state_ != State::Emerging &&
+        pipe_way_.status() != MoverStatus::Running) {
         pursuit_s_ = std::min(pursuit_s_ + dt, 3600.0F);
     }
     // On a way of her own, the chase window holds whether or not the
@@ -3254,7 +3260,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 search_budget_s_ = 1.0e9F;
                 search_trip_s_ = 0.0F;
             };
-            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit)) {
+            // By a way of her own the window is her pursuit clock: the time she
+            // could act on the lead, out of her locker and off her ways. The
+            // sound's own age (her locker and her climb in it) is no bar to
+            // that chase (J-102: she topped out on deck 2 with it 54 s old).
+            const bool by_way_window = by_way_held && !wary_;
+            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && !by_way_window && since_heard_s_ > heard_limit)) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
                     // where she lost them, at its top.
