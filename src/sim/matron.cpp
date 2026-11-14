@@ -3731,18 +3731,19 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Claimed: {
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
         // and her hands on it: a lead she has, seen, where it is. A reach
-        // tick without eyes or body on him (J-049) has only her ears: a lead
-        // where he is heard; nothing heard, the lead stays as it was and her
-        // hold has the last place she had him.
+        // tick without eyes or body on him (J-049) has only her ears, and
+        // after she lets go (Release) her eyes and ears: a lead where he is
+        // seen or heard; neither, the lead stays as it was and her hold has
+        // the last place she had him.
         RVec3 had = ev.felt_at;
         if (ev.touch) {
             take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
                       floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
                       noise_heard_, Sense::Touch);
-        } else if (ev.heard()) {
-            had = ev.heard_at;
+        } else if (ev.seen() || ev.heard()) {
+            had = ev.seen() ? ev.seen_at : ev.heard_at;
             take_lead(float(had.GetX()), float(had.GetZ()), floor_at(float(had.GetX()), float(had.GetY()), float(had.GetZ())),
-                      noise_heard_, Sense::Hearing);
+                      noise_heard_, ev.saw || ev.sees_far ? Sense::Sight : ev.seen() ? Sense::Peripheral : Sense::Hearing);
         } else {
             (void)ev.last_place(had);
         }
