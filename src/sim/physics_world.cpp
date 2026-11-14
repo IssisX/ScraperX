@@ -474,7 +474,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     }
 
     // J-042: two more kinds by her deck's north band (loose_stock.hpp), their
-    // bodies after every other's (the upper stock's too); heard like the rest.
+    // bodies after the upper stock's (the hightower stock's come after them);
+    // heard like the rest.
     loose_stock_->lay_matron_kinds();
     for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
@@ -491,6 +492,16 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // J-108 (#427): the bait lift's two platforms, the kit's last bodies, so
     // every body before them keeps its place and older saves line up.
     scraperx::sim::bands::build_bait_lift(*kit_, service_);
+
+    // J-014: the hightower toolboxes (loose_stock.hpp), their table places
+    // after the Matron's kinds, so every earlier piece and body keeps its
+    // place and saves made before them still load; their bodies last of
+    // all. Heard like the rest.
+    loose_stock_->append_hightower();
+    for (const int i : loose_stock_->realize_hightower()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+
     give_matron_stock();
 
     // J-094 (#412): the probe plate/pan/stop rig -- proving ground only.
@@ -585,6 +596,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
         physics_system_.RemoveConstraint(carry_constraint_);
         carry_constraint_ = nullptr;
     }
+    release_hung_slab_for_test();
     drop_hang_arms();
     stow_hook(physics_system_.GetBodyInterface());
     matron_.reset();
@@ -612,6 +624,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     machine_bodies_.clear();
     remove_and_destroy(bodies, tower_id_);
     remove_and_destroy(bodies, player_id_);
+    remove_and_destroy(bodies, hung_slab_);
     remove_and_destroy(bodies, blocked_ledge_canopy_id_);
     remove_and_destroy(bodies, blocked_ledge_id_);
     remove_and_destroy(bodies, moving_ledge_id_);
@@ -1419,6 +1432,34 @@ void Simulation::PhysicsWorld::spin_kit_body_for_test(const std::uint32_t body,
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
     const JPH::BodyID id = kit_->body_id(kit::BodyIndex{body});
     bodies.SetAngularVelocity(id, angular_velocity);
+}
+
+void Simulation::PhysicsWorld::hang_slab_for_test(const JPH::RVec3 centre) {
+    // A 2000 kg plate slab (loose_stock PlateSlab: 2.4 x 0.3 x 1.2 m), hung
+    // still by a pin through its lifting eye. The pin is the test's release.
+    release_hung_slab_for_test();
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    if (!hung_slab_.IsInvalid()) {
+        remove_and_destroy(bodies, hung_slab_);
+        hung_slab_ = {};
+    }
+    hung_slab_ = add_box(bodies, JPH::Vec3(1.2F, 0.15F, 0.6F), centre, JPH::EMotionType::Dynamic,
+                         detail::object_layers::kMoving, 0.5F, 0, JPH::Quat::sIdentity(), 2000.0F);
+    const JPH::RVec3 eye = centre + JPH::RVec3(0.0, 0.17, 0.0);
+    JPH::PointConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mPoint1 = settings.mPoint2 = eye;
+    JPH::BodyLockWrite lock(physics_system_.GetBodyLockInterface(), hung_slab_);
+    hung_slab_pin_ = static_cast<JPH::PointConstraint *>(
+        settings.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+    physics_system_.AddConstraint(hung_slab_pin_.GetPtr());
+}
+
+void Simulation::PhysicsWorld::release_hung_slab_for_test() {
+    if (hung_slab_pin_ != nullptr) {
+        physics_system_.RemoveConstraint(hung_slab_pin_.GetPtr());
+        hung_slab_pin_ = nullptr;
+    }
 }
 
 void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {

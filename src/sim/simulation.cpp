@@ -279,6 +279,10 @@ std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
 
+std::uint32_t Simulation::loose_stock_hightower_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().hightower_begin());
+}
+
 std::uint32_t Simulation::loose_stock_upper_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().upper_begin());
 }
@@ -1373,6 +1377,13 @@ void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) n
 void Simulation::debug_clear_corpses() noexcept {
     physics_world_->clear_corpses_for_test();
 }
+
+void Simulation::debug_hang_slab(const Vector3 centre) noexcept {
+    physics_world_->hang_slab_for_test(
+        JPH::RVec3(static_cast<float>(centre.x), static_cast<float>(centre.y), static_cast<float>(centre.z)));
+}
+
+void Simulation::debug_release_hung_slab() noexcept { physics_world_->release_hung_slab_for_test(); }
 
 double Simulation::debug_support_y(const Vector3 at, const double depth) const noexcept {
     return physics_world_->support_y_for_test(

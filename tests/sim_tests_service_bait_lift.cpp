@@ -253,13 +253,13 @@ void bait_her_alone() {
 // A save as a world before the lift wrote it (measured against a save that
 // trunk's own build wrote: its bytes are this world's with exactly these
 // taken out, every list's other entries the same, but solver noise in the
-// 1e-8s): without the kit's last two bodies (A
-// and B: their entities and states), the last rope (the lift's) and the last
+// 1e-8s): without A and B and the hightower toolboxes (the kit's last five
+// bodies: their entities and states), the last rope (the lift's) and the last
 // two guides' dogs (A's and B's). With `bodies` false, the bodies stay and
 // only the dogs go: a save that matches no world. The layout is
 // Simulation::save_game's: the format key, the tick, the checkpoint's
 // position, crouch, commits, deaths and carried entity, then the lists.
-std::vector<std::uint8_t> before_the_lift(const std::vector<std::uint8_t> &bytes, const bool bodies) {
+std::vector<std::uint8_t> before_the_lift(const Simulation &s, const std::vector<std::uint8_t> &bytes, const bool bodies) {
     using State = scraperx::sim::kit::Kit::BodyState;
     std::vector<std::uint8_t> out;
     std::size_t at = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
@@ -277,13 +277,23 @@ std::vector<std::uint8_t> before_the_lift(const std::vector<std::uint8_t> &bytes
                    bytes.begin() + static_cast<std::ptrdiff_t>(at + 4 + size * kept));
         at += 4 + size * count;
     };
+    // A and B come right before the hightower toolboxes, the save's last
+    // bodies; each toolbox entity is checked.
+    const std::uint32_t hightower_begin = s.loose_stock_hightower_begin();
+    const std::uint32_t toolboxes = s.loose_stock_count() - hightower_begin;
     std::uint32_t entities = 0;
     std::memcpy(&entities, bytes.data() + at, 4);
-    std::uint64_t last[2] = {};
-    std::memcpy(last, bytes.data() + at + 4 + 8 * (std::size_t{entities} - 2), 16);
-    require(last[0] == Simulation::kServiceBaitAEntityId && last[1] == Simulation::kServiceBaitBEntityId,
-            "bait lift, old save: A and B are the save's last bodies");
-    const std::uint32_t drop = bodies ? 2 : 0;
+    std::uint64_t ab[2] = {};
+    std::memcpy(ab, bytes.data() + at + 4 + 8 * (std::size_t{entities} - 2 - toolboxes), 16);
+    require(ab[0] == Simulation::kServiceBaitAEntityId && ab[1] == Simulation::kServiceBaitBEntityId,
+            "bait lift, old save: A and B come right before the toolboxes");
+    for (std::uint32_t i = 0; i < toolboxes; ++i) {
+        std::uint64_t e = 0;
+        std::memcpy(&e, bytes.data() + at + 4 + 8 * (std::size_t{entities} - toolboxes + i), 8);
+        require(e == Simulation::kLooseStockFirstEntity + hightower_begin + i,
+                "bait lift, old save: each toolbox entity is checked");
+    }
+    const std::uint32_t drop = bodies ? 2 + toolboxes : 0;
     list(8, drop);                   // the bodies' entities
     list(sizeof(State), drop);       // their states
     list(4, bodies ? 1 : 0);         // the ropes' anchors: the lift's rope last
@@ -300,7 +310,7 @@ void bait_old_save() {
     Simulation s(InitialSpawn::Deck706);
     settle(s, 1.0);
     const std::vector<std::uint8_t> bytes = s.save_game();
-    const std::vector<std::uint8_t> old = before_the_lift(bytes, true);
+    const std::vector<std::uint8_t> old = before_the_lift(s, bytes, true);
     std::cout << "  bait lift, old save: " << bytes.size() << " bytes now, " << old.size() << " as before the lift\n";
     Simulation loaded(InitialSpawn::Deck706);
     require(loaded.load_game(old.data(), old.size()), "bait lift, old save: a save from before the lift loads");
@@ -310,7 +320,7 @@ void bait_old_save() {
     require(std::abs(lift.bait_a_travel) < 0.01 && std::abs(lift.bait_b_travel) < 0.01,
             "bait lift, old save: loaded, the lift stands as built and stays");
     // Fewer dogs with every body saved matches no world: refused.
-    const std::vector<std::uint8_t> odd = before_the_lift(bytes, false);
+    const std::vector<std::uint8_t> odd = before_the_lift(s, bytes, false);
     Simulation refused(InitialSpawn::Deck706);
     require(!refused.load_game(odd.data(), odd.size()),
             "bait lift, old save: fewer dogs with no fewer bodies is refused");

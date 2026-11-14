@@ -15,14 +15,14 @@ limit grok 1
 limit muse 10
 limit unassigned 1
 J-008 builder #115 | Tower "258 down" leg under determinism math, and the stable tie order (#97)
-J-001 claude #108 kept chatgpt/integrate-j001-swat-budget@50e1bf496782 kept fb-bot/integrate-j001-combined-armplay@b555dd6183ff kept fb-bot/integrate-j001-hold@35b67484fd15 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | Her hold with real arms (5 beats)
+J-001 claude #108 kept chatgpt/integrate-j001-swat-budget@50e1bf496782 kept fb-bot/integrate-j001-combined-armplay@b555dd6183ff kept fb-bot/integrate-j001-hold@35b67484fd15 | Her hold with real arms (5 beats)
 J-015 claude #122 kept fb-bot/integrate-j015-slice1@2f8b1f21d655 kept fb-bot/integrate-j015-wreck-way-on@a280fe6b127c kept fb-bot/integrate-protected-j015-magnet-grips@a949f76fee5c kept fb-bot/integrate-protected-j015-slice1@2ba17f22df23 kept fb-bot/integrate-protected-j015-wreck-way-on@aee6d79d9124 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on (PE 3)
 J-044 muse #242 kept chatgpt/integrate-j044-review-gate-20261109@55b8b3e22548 | Console-quality fighting: physically causal reactions, localized injuries, boxing-grade exchanges
 J-082 claude #400 kept fb-bot/integrate-protected-j082@9d24a3df2d7b hold: parked in live issue; reconcile pushed work before release | Above 340 m every stage is a new physical action, not another board and ladder (rules 52, 53, gap 1)
-J-084 claude #402 kept fb-bot/integrate-j084@56a593ef90c1 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | One scenario plays the whole climb, from the ground to the summit, on the canonical route (rules 56, 27)
-J-090 claude #408 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | Hook her and let the rope decide: his grappling hook bites her body, and mass, footing and the line decide who moves
+J-084 claude #402 kept fb-bot/integrate-j084@56a593ef90c1 | One scenario plays the whole climb, from the ground to the summit, on the canonical route (rules 56, 27)
+J-090 claude #408 | Hook her and let the rope decide: his grappling hook bites her body, and mass, footing and the line decide who moves
 J-093 claude #411 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | J-001's protected follow-ups: the rail reach near miss and the budget's unaccounted list (Claude)
-J-096 claude #414 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | Things bend under weight: planks, boards and gratings flex by real load, spring back, and snap past their limit
+J-096 claude #414 | Things bend under weight: planks, boards and gratings flex by real load, spring back, and snap past their limit
 J-102 claude #421 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | She chases him again (regression)
 J-109 claude #428 kept fb-bot/integrate-j109@7791c2a8830c hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)
 J-137 claude #474 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | She pins in a Lunge about 4 m short of a still climber and never closes
@@ -49,7 +49,7 @@ J-088 muse #406 | Her hands close on what she holds: fingers wrap rungs, rails, 
 J-091 muse #409 hold: parked in live issue; reconcile pushed work before release | Turn her bay trap back on her: lure her onto the leaf at 154 m, trip its drive, dump her a full deck
 J-095 muse #413 hold: parked in live issue; reconcile pushed work before release | Pull the line out from under her: one keeper pin turns the zipline she is riding into a falling cable (Grok idea 2)
 J-099 muse #417 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | Dents: shipping containers, barrels and steel boxes dent by the real impulse that hits them (J-038's second half)
-J-100 muse #418 | She reads a load hung over her and gets out from under it
+J-100 claude #418 | She reads a load hung over her and gets out from under it
 J-112 muse #431 hold: parked in live issue; reconcile pushed work before release | She shoves what he placed off an edge (A3, gap 9)
 J-113 muse #432 hold: parked in live issue; reconcile pushed work before release | Her chart and the microphone: the five touch scenarios pass and consent is asked in game (rule 57, gap 21)
 J-120 muse #442 hold: parked in live issue; reconcile pushed work before release | The crew are proven: native tests for every worker state and the laws they keep
