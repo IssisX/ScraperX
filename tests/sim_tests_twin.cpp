@@ -699,69 +699,51 @@ void pitch_up(Simulation &h, double from_top, double need_y) {
     double max_centre = pitch_reel(h, from_top, need_y, true);
     const double reel_max = max_centre;
     std::cout << "  twin pitch reel: max centre " << reel_max << " m (need " << need_y << " m)\n";
-    // Top out onto the next deck: the hands must take the lip. If the
-    // winch brought them there, the hang is already on; otherwise jump
-    // for it off the line (a dyno) and let the hang catch. The pitch's
-    // height is the max centre over the whole manoeuvre, winch and
-    // top-out together: the winch alone caps where the line runs out
-    // (1.0 m) and the capsule meets the bar, so the jump's apex is part
-    // of the pitch, not a second attempt.
+    // Top out onto the next deck: if the winch brought the hands to the
+    // lip, pull up over it; otherwise launch from the bar the winch ends
+    // on. The pitch's height is the max centre over the whole manoeuvre,
+    // winch and top-out together: the winch alone caps where the line
+    // runs out (1.0 m) and the capsule meets the bar, so the launch's
+    // apex is part of the pitch, not a second attempt.
     {
         auto n = h.snapshot();
         std::cout << "  twin pitch top: centre " << n.player_position.y << " m, trav "
                   << int(n.traversal_state) << ", up " << int(n.up_move) << ", hook " << int(n.hook_state)
                   << '\n';
-        if (n.traversal_state != TraversalState::Hanging) {
-            // J-053 (Claude 2026-11-13): the P4 route — the old dyno with
-            // the two missing inputs supplied. Face the wall and hold the
-            // stick toward it for the whole flight (try_begin_hang catches
-            // a lip only with stick intent of at least 0.3 toward the
-            // facing), let the line go, and jump for the lip. At the
-            // jump's apex, press up again: the dyno's catch is timed to
-            // the dead point. The stick stays held until the pitch ends
-            // (stand() clears it). Checks unchanged.
-            require(h.set_facing(0.0, -1.0), "twin pitch: face the wall for the dyno");
+        if (n.traversal_state == TraversalState::Hanging) {
+            // The winch brought the hands to the lip: let the line go and
+            // pull up over it.
+            require(h.request_hook_release(), "twin pitch: let the line go");
+            require(h.request_up(), "twin pitch: pull up over the lip");
+        } else {
+            // J-053 (2026-11-14): the deck's lip cannot be hung from here, so
+            // the pitch tops out from the bar. The hang's ledge probe needs a
+            // face at the centre's height (probe_ledge), its band puts the
+            // centre 0.45-1.35 m under the lip, and the deck is a 0.3 m slab
+            // with open air under its front edge; the hang's pose (0.41 m off
+            // the edge, 1.05 m under the lip) is where the hook bar is. The
+            // winch ends with the hands on the bar and its launch offered:
+            // face the wall, hold the stick toward it, let the line go and
+            // launch from the bar onto the deck.
+            require(n.traversal_state == TraversalState::Swinging && n.up_move == scraperx::sim::UpMove::Launch,
+                    "twin pitch: the hands are on the bar at the top, its launch offered");
+            require(h.set_facing(0.0, -1.0), "twin pitch: face the wall for the launch");
             (void)h.set_move_input(0.0, -1.0);
-            require(h.request_hook_release(), "twin pitch: let the line go for the dyno");
-            require(h.request_up(), "twin pitch: jump for the lip");
-            bool rose = false;
-            bool pressed_apex = false;
-            bool reached = false;
-            for (int tick = 0; tick < 90 * 5; ++tick) {
-                if (!h.advance_frame(Simulation::kFixedStepSeconds).accepted)
-                    break;
-                const auto m = h.snapshot();
-                if (m.player_position.y > max_centre)
-                    max_centre = m.player_position.y;
-                if (m.player_linear_velocity.y > 0.5)
-                    rose = true;
-                if (rose && !pressed_apex && m.player_linear_velocity.y <= 0.0) {
-                    (void)h.request_up();
-                    pressed_apex = true;
-                }
-                if (m.traversal_state == TraversalState::Hanging || m.player_grounded) {
-                    reached = true;
-                    break;
-                }
-            }
-            require(reached, "twin pitch: the jump reaches the lip or the deck");
-            const auto after = h.snapshot();
-            std::cout << "  twin pitch dyno: centre " << after.player_position.y << " m at "
-                      << after.player_position.x << ',' << after.player_position.z << ", trav "
-                      << int(after.traversal_state) << ", grounded " << after.player_grounded
-                      << ", deaths " << after.death_count << ", apex press "
-                      << (pressed_apex ? "yes" : "no") << '\n';
+            require(h.request_hook_release(), "twin pitch: let the line go for the launch");
+            require(h.request_up(), "twin pitch: launch from the bar");
         }
-        require(h.snapshot().traversal_state == TraversalState::Hanging,
-                "twin pitch: the hands took the lip at the top of the pitch");
-        require(h.request_hook_release(), "twin pitch: let the line go");
-        require(h.request_up(), "twin pitch: pull up over the lip");
         require(advance_until(h, [&](const Snapshot &m) {
                     if (m.player_position.y > max_centre)
                         max_centre = m.player_position.y;
                     return m.player_grounded && m.traversal_state == TraversalState::None;
                 }, 6.0),
                 "twin pitch: up on the next deck");
+        {
+            const auto after = h.snapshot();
+            std::cout << "  twin pitch top-out: centre " << after.player_position.y << " m at "
+                      << after.player_position.x << ',' << after.player_position.z << ", deaths "
+                      << after.death_count << '\n';
+        }
         stand(h);
         const auto m = h.snapshot();
         if (m.player_position.y > max_centre)
