@@ -20,6 +20,13 @@
 // the deliverable; the test fails only on a runnable case that dies,
 // snags, crosses into the second tower, or lands too hard.
 //
+// A climb hold grabbed, or a hang caught, on the way off the edge is
+// released by the real control (request_release) and the descent carries
+// on under the canopy: the parachute is what is measured, and a real
+// player lets go. The release is recorded in the case line (rel=N); the
+// bars are unchanged, and any steel contact the grab itself made still
+// counts against the case.
+//
 // Placement is by debug_launch_player (the only way to stand on 41
 // levels in one exam); the run-off, the canopy, and the descent are all
 // the real controls. The edge is found by probing, not by hardcoded
@@ -38,6 +45,7 @@ namespace {
 using scraperx::sim::InitialSpawn;
 using scraperx::sim::Simulation;
 using scraperx::sim::Snapshot;
+using scraperx::sim::TraversalState;
 using scraperx::sim::Vector3;
 
 struct Face {
@@ -168,6 +176,7 @@ CaseResult run_case(const double level, const Face &face) {
     double land_t = -1.0;
     bool held = false;
     const auto max_ticks = static_cast<std::uint32_t>(kDescentSeconds * Simulation::kTickRateHz);
+    int releases = 0;
     for (std::uint32_t tick = 0; tick < max_ticks; ++tick) {
         (void)s.set_move_input(face.dx, face.dz);
         (void)s.set_facing(face.dx, face.dz);
@@ -179,6 +188,18 @@ CaseResult run_case(const double level, const Face &face) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
         const auto after = s.snapshot();
         if (after.held_by_matron) held = true;
+        // A traversal grabbed mid-descent (a climb hold past the edge, a
+        // hang on a lip) holds the body forever: the loop below gives no
+        // climb or mantle input, so without a release the case can only
+        // time out. Let go by the real control and keep descending; the
+        // release carries a regrab lockout, so he falls clear.
+        if (after.traversal_state == TraversalState::Hanging ||
+            after.traversal_state == TraversalState::Climbing ||
+            after.traversal_state == TraversalState::Swinging) {
+            if (s.request_release()) {
+                ++releases;
+            }
+        }
         if (!after.player_grounded && after.death_count == 0) {
             if (after.hit_closing_mps > 0.0) {
                 ++hit_ticks;
@@ -224,7 +245,7 @@ CaseResult run_case(const double level, const Face &face) {
               << ") impact=" << end.last_impact_speed_mps << " max_hit=" << max_hit << " at=(" << worst_x << ","
               << worst_y << "," << worst_z << ") hits=" << hit_ticks << " t=" << result.time_to_ground_s
               << "s wind=" << wind_peak << " opened=" << (opened ? 1 : 0) << " deaths=" << end.death_count
-              << (held ? " MATRON-HOLD" : "") << (timed_out ? " TIMEOUT" : "") << '\n';
+              << " rel=" << releases << (held ? " MATRON-HOLD" : "") << (timed_out ? " TIMEOUT" : "") << '\n';
     return result;
 }
 
