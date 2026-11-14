@@ -77,6 +77,28 @@ const char *failure_name(const Failure failure) noexcept {
 namespace {
 constexpr float kGravity = 9.81F;
 constexpr float kSoleSupportProbeM = 0.10F;
+// J-063 gait: the reach bands the COM clamp is built from. Hands: the
+// centre stays 1.20 m under a hand at most (revalidate allows 1.55) and
+// 0.55 m over one at most (the audit's shoulder reach, 1.45 m, with the
+// 0.42 m stand-off). Feet: the centre stays 0.45-1.35 m over a foot
+// (revalidate allows 1.40 under; the audit wants the foot under the
+// centre). A swinging wrist or foot peaks at 2.0 m/s, the audit's bound;
+// the swing duration is ceiled, so the realised peak sits under it (1.93
+// m/s for a 0.30 m move). There are no unload/load ramps: a limb takes a
+// rung in the tick its swing ends and leaves its hold in the tick its
+// next swing starts, so the force split steps on a take or a release.
+// The step is safe: the split caps every limb every tick and the budget
+// caps the total, and the body feels only the total. The ramps cost 6
+// ticks a move for a smoothing no audit checks, and at 0.30 m a move the
+// gait needs those ticks to climb at 0.3 m/s.
+constexpr float kHandBandUpM = 1.20F;
+constexpr float kHandBandDownM = 0.55F;
+constexpr float kFootBandLowM = 0.45F;
+constexpr float kFootBandHighM = 1.35F;
+constexpr float kLimbSpeedMps = 2.0F;   // a swinging wrist or foot, peak: the 2.0 m/s bound the audit checks
+constexpr float kHandLateralM = 0.20F;   // hands grip this far either side of the line
+constexpr float kFootLateralM = 0.15F;   // feet stand this far either side
+constexpr float kClimbGripMaxN = 5500.0F;   // Matron::kClimbGripMaxN, her climb grip
 
 // Probes see real steel only: never her, never the player, never a sensor.
 class SteelFilter final : public BodyFilter {
@@ -301,6 +323,23 @@ Vec3 Climber::velocity() const { return physics_.GetBodyInterface().GetLinearVel
 // on motion relative to the support (riding a moving deck costs nothing).
 Vec3 Climber::relative_velocity() const {
     const BodyInterface &bodies = physics_.GetBodyInterface();
+    // J-063: on rungs the support is every limb holding one (a swinging
+    // limb carries nothing, so it is not support): the mean of their point
+    // velocities. On static rungs all zero. The test that charged the
+    // budget on the two hands alone (test_drive_from_both_anchors) is a
+    // protected change with the gait.
+    if (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::RungDown) {
+        Vec3 sum = Vec3::sZero();
+        int n = 0;
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            const Hold &hold = limb_hold(limb);
+            if (!hold.valid() || limb_phase_[limb] == LimbPhase::Swing) continue;
+            if (!bodies.IsAdded(hold.body)) continue;
+            sum += bodies.GetPointVelocity(hold.body, limb_world(limb));
+            ++n;
+        }
+        if (n > 0) return velocity() - sum / float(n);
+    }
     Vec3 support = Vec3::sZero();
     if (foot_.valid() && bodies.IsAdded(foot_.body)) {
         support = bodies.GetPointVelocity(foot_.body, foot_world_);
@@ -702,6 +741,667 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
     }
 }
 
+// --- J-063 four-limb gait: the limbs, their phases and their loads --------
+
+Hold &Climber::limb_hold(const int limb) noexcept {
+    switch (limb) {
+    case 0: return hold_;
+    case 1: return hold2_;
+    case 2: return foot_;
+    default: return foot2_;
+    }
+}
+
+const Hold &Climber::limb_hold(const int limb) const noexcept {
+    switch (limb) {
+    case 0: return hold_;
+    case 1: return hold2_;
+    case 2: return foot_;
+    default: return foot2_;
+    }
+}
+
+RVec3 &Climber::limb_world(const int limb) noexcept {
+    switch (limb) {
+    case 0: return hold_world_;
+    case 1: return hold2_world_;
+    case 2: return foot_world_;
+    default: return foot2_world_;
+    }
+}
+
+const RVec3 &Climber::limb_world(const int limb) const noexcept {
+    switch (limb) {
+    case 0: return hold_world_;
+    case 1: return hold2_world_;
+    case 2: return foot_world_;
+    default: return foot2_world_;
+    }
+}
+
+// The share of the body's weight this limb carries right now: full while
+// attached, none while swinging. There is no unload/load ramp (see the
+// gait comment above kLimbSpeedMps): the split steps on a take or a
+// release, and the per-limb caps plus the budget bound every step.
+float Climber::limb_load_factor(const int limb) const noexcept {
+    return limb_phase_[limb] == LimbPhase::Attached ? 1.0F : 0.0F;
+}
+
+float Climber::limb_cap_n(const int limb) const noexcept {
+    return limb < 2 ? kClimbGripMaxN : limits_.foot_force_n;
+}
+
+void Climber::reset_gait() {
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        limb_phase_[limb] = LimbPhase::Attached;
+        limb_ticks_[limb] = 0;
+        limb_from_[limb] = RVec3::sZero();
+        limb_to_[limb] = RVec3::sZero();
+        limb_swing_ticks_[limb] = 0;
+        limb_view_[limb] = RVec3::sZero();
+        limb_load_[limb] = 0.0F;
+        limb_release_[limb] = false;
+        limb_released_y_[limb] = -1.0e6F;
+    }
+    gait_next_ = 0;
+}
+
+// push_reaction on a named body: the same equal-and-opposite reaction as
+// push_reaction, but on the limb's own hold instead of always the first
+// hand's. Static holds take no reaction (nothing moves).
+void Climber::push_reaction_on(const BodyID body, const Vec3 force, const RVec3 at) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    if (body.IsInvalid() || !bodies.IsAdded(body)) return;
+    if (bodies.GetMotionType(body) != EMotionType::Dynamic) return;
+    bodies.AddForce(body, -force, at);
+    view_.support_reaction_n += force.Length();
+}
+
+// Can a foot reach a rung from here (the rung in the foot band, below the
+// centre)? The grade ladder's bottom rung is 1.45 m up, so from the floor
+// the answer is no: the hands carry her until the centre is high enough.
+bool Climber::foot_can_reach() const {
+    const RVec3 c = center();
+    Hold hold;
+    RVec3 where;
+    return find_rung(float(c.GetY()) - kFootBandHighM, float(c.GetY()) - kFootBandLowM, true, hold, where);
+}
+
+// The COM clamp: the intersection of the attached limbs' reach bands.
+// False when nothing holds her. One authority for the bands drive_rung
+// and the phase-1 to phase-2 transition both read.
+bool Climber::clamp_bands(float &lo, float &hi) const {
+    lo = -1.0e6F;
+    hi = 1.0e6F;
+    bool any = false;
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        if (!limb_hold(limb).valid() || limb_phase_[limb] == LimbPhase::Swing) continue;
+        const float y = float(limb_world(limb).GetY());
+        if (limb < 2) {
+            lo = std::max(lo, y - kHandBandUpM);
+            hi = std::min(hi, y + kHandBandDownM);
+        } else {
+            lo = std::max(lo, y + kFootBandLowM);
+            hi = std::min(hi, y + kFootBandHighM);
+        }
+        any = true;
+    }
+    return any;
+}
+
+// Is the centre inside the clamp (with a 0.05 m margin)? The mount is
+// not done until she is: entering phase 2 while still standing on the
+// deck above the clamp puts her hands past the audit's shoulder reach.
+bool Climber::in_clamp() const {
+    float lo = 0.0F, hi = 0.0F;
+    if (!clamp_bands(lo, hi)) return false;
+    const float y = float(center().GetY());
+    return y >= lo - 0.05F && y <= hi + 0.05F;
+}
+
+// The drive for rung moves: the centre is held inside the intersection of
+// the attached limbs' reach bands (the COM clamp), and the granted force
+// is split per limb by load factor inside the one Budget::take. No
+// target_y_ ramp: the clamp's edge in the direction of travel is the
+// target, and she settles on it.
+void Climber::drive_rung(const float dt, Budget &budget, const bool up) {
+    (void)dt;
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 c = center();
+    float lo = -1.0e6F, hi = 1.0e6F;
+    bool any = clamp_bands(lo, hi);
+    if (!any) {
+        // No limb is attached — but a limb in Swing is moving to a rung,
+        // and the body must travel toward it (over the lip, down to the
+        // rung) or the swing's take fails past its reach and the gait
+        // stalls with the body coasting on its residual velocity: on the
+        // (-10.5) down mount HandL swings to the top rung 1.46 m below a
+        // centre standing on the deck, the take fails its 1.40 m bound,
+        // it falls back and re-swings forever, no limb stays attached,
+        // the drive stays off, and the body coasts 12.86 m until the
+        // hold goes out of reach. Use the swinging limbs' targets as the
+        // band, so the drive keeps the body moving toward the rung
+        // during the swing. Nothing attached and nothing swinging is
+        // still no drive: she falls.
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (limb_phase_[limb] != LimbPhase::Swing) continue;
+            const float y = float(limb_to_[limb].GetY());
+            if (limb < 2) {
+                lo = std::max(lo, y - kHandBandUpM);
+                hi = std::min(hi, y + kHandBandDownM);
+            } else {
+                lo = std::max(lo, y + kFootBandLowM);
+                hi = std::min(hi, y + kFootBandHighM);
+            }
+            any = true;
+        }
+    }
+    float support_top = 0.0F;
+    const bool on_floor = !foot_.valid() && !foot2_.valid() && supported(&support_top);
+    float desired = float(c.GetY());
+    if (!any) {
+        // Nothing holds her: no drive. (She falls; the caller fails the move.)
+        view_.hand_load_n = 0.0F;
+        view_.foot_load_n = 0.0F;
+        for (int limb = 0; limb < kLimbCount; ++limb) limb_load_[limb] = 0.0F;
+        return;
+    }
+    if (on_floor && (!up || foot_can_reach())) {
+        // Standing on a floor with no foot hold: stay at standing height
+        // while the feet take rungs (up, when they can reach) or while she
+        // stands there at all (down, at the dismount).
+        desired = support_top + limits_.center_above_feet();
+    } else {
+        // A limb in Swing carries no load, so it is not in the clamp —
+        // but the body must not travel past where it will stand once
+        // that limb lands, or it dips below its own progress and the
+        // stall fires on the dip. The desired is the post-take edge,
+        // held at the centre when that edge is still beyond her: a limb
+        // in the air cannot pull her toward it, it can only stop her
+        // going past it.
+        float in_lo = -1.0e6F, in_hi = 1.0e6F;
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (limb_phase_[limb] != LimbPhase::Swing || !limb_hold(limb).valid()) continue;
+            const float y = float(limb_to_[limb].GetY());
+            if (limb < 2) {
+                in_lo = std::max(in_lo, y - kHandBandUpM);
+                in_hi = std::min(in_hi, y + kHandBandDownM);
+            } else {
+                in_lo = std::max(in_lo, y + kFootBandLowM);
+                in_hi = std::min(in_hi, y + kFootBandHighM);
+            }
+        }
+        desired = up ? std::max(float(c.GetY()), std::min(hi, in_hi))
+                     : std::min(float(c.GetY()), std::max(lo, in_lo));
+    }
+    desired = std::clamp(desired, lo, hi);
+    // J-063: during the mount (phase 1) the body stays on the deck it
+    // mounts from — the climb starts in phase 2. Without this the drive
+    // pulls the body up as soon as a foot takes a low rung, and by the
+    // time phase 2 starts the feet are off the deck and the support ray
+    // no longer reaches it, so the rung-support audit never sees a
+    // floor-supported tick with a hand holding. The clamp yields when
+    // the feet cannot reach a rung from standing height (a high first
+    // rung, as in the dyno): then the body must rise for the mount. It
+    // also yields when standing height is below the band's low edge (a
+    // gap forced the hands onto high rungs): clamping there would hold
+    // the body below the band and in_clamp() could never become true.
+    if (phase_ == 1 && (!up || foot_can_reach())) {
+        float mount_top = 0.0F;
+        if (supported(&mount_top) && mount_top + limits_.center_above_feet() >= lo) {
+            desired = std::min(desired, mount_top + limits_.center_above_feet());
+        }
+    }
+    // The PD: the same spring-damper as drive(), stiffness 30, critically
+    // damped, target velocity zero — she converges on the clamp's edge and
+    // settles there. One Budget::take for the whole drive.
+    const Vec3 stand = Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) + spec_.out * 0.45F;
+    const Vec3 target(stand.GetX() - spec_.out.GetX() * 0.03F, desired, stand.GetZ() - spec_.out.GetZ() * 0.03F);
+    const Vec3 rel = relative_velocity();
+    const Vec3 error = target - center();
+    const float stiffness = 30.0F;
+    const float damping = 2.0F * std::sqrt(stiffness);
+    const Vec3 accel = error * stiffness + (Vec3::sZero() - rel) * damping;
+    Vec3 want = accel * limits_.mass_kg + Vec3(0.0F, limits_.mass_kg * kGravity, 0.0F);
+    const Vec3 force = budget.take(want);
+    bodies.AddForce(body_, force);
+    // Split the granted force per limb by load factor, capped per limb,
+    // the excess handed back to the limbs still under their caps.
+    const float total = force.Length();
+    float factor[kLimbCount];
+    float factor_sum = 0.0F;
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        factor[limb] = limb_hold(limb).valid() && limb_phase_[limb] != LimbPhase::Swing ? limb_load_factor(limb) : 0.0F;
+        factor_sum += factor[limb];
+    }
+    float share[kLimbCount] = {0.0F, 0.0F, 0.0F, 0.0F};
+    if (total > 1.0e-6F && factor_sum > 1.0e-6F) {
+        for (int limb = 0; limb < kLimbCount; ++limb) share[limb] = total * factor[limb] / factor_sum;
+        for (int pass = 0; pass < kLimbCount; ++pass) {
+            float excess = 0.0F, room = 0.0F;
+            for (int limb = 0; limb < kLimbCount; ++limb) {
+                if (share[limb] > limb_cap_n(limb)) {
+                    excess += share[limb] - limb_cap_n(limb);
+                    share[limb] = limb_cap_n(limb);
+                } else {
+                    room += limb_cap_n(limb) - share[limb];
+                }
+            }
+            if (excess <= 1.0e-6F || room <= 1.0e-6F) break;
+            for (int limb = 0; limb < kLimbCount; ++limb) {
+                if (share[limb] < limb_cap_n(limb)) {
+                    share[limb] += excess * (limb_cap_n(limb) - share[limb]) / room;
+                }
+            }
+        }
+        const Vec3 dir = force / total;
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (share[limb] <= 1.0e-6F) continue;
+            push_reaction_on(limb_hold(limb).body, dir * share[limb], limb_world(limb));
+        }
+    }
+    for (int limb = 0; limb < kLimbCount; ++limb) limb_load_[limb] = share[limb];
+    view_.hand_load_n = share[0] + share[1];
+    view_.foot_load_n = share[2] + share[3];
+}
+
+// Start a limb moving to its target: an attached limb swings straight
+// from its hold (no unload ramp), an unattached limb from its rest point
+// (a hand hangs at her side, a foot from the sole).
+// The swing is a smoothstep at a peak under 2.0 m/s, so its duration
+// follows from the distance: 0.30 m takes 21 ticks, 0.36 m takes 25.
+void Climber::start_limb_swing(const int limb, const RVec3 to) {
+    const RVec3 c = center();
+    const bool hand = limb < 2;
+    // A hand hangs at her side, at the centre's height; a foot rests at
+    // the sole, one centre height under the centre.
+    const RVec3 rest = hand ? RVec3(c.GetX(), c.GetY(), c.GetZ())
+                            : RVec3(c.GetX(), c.GetY() - limits_.center_above_feet(), c.GetZ());
+    limb_from_[limb] = limb_hold(limb).valid() ? limb_world(limb) : rest;
+    limb_to_[limb] = to;
+    limb_view_[limb] = limb_from_[limb];   // the view point is at the swing's start from the first tick, never stale
+    const float dist = float((to - limb_from_[limb]).Length());
+    const int ticks = std::max(6, int(std::ceil(1.5F * dist / kLimbSpeedMps * 90.0F)));
+    limb_swing_ticks_[limb] = std::min(ticks, 150);
+    limb_ticks_[limb] = 0;
+    limb_phase_[limb] = LimbPhase::Swing;   // no unload ramp: the limb leaves its hold on the swing's first tick
+}
+
+// The next rung for a limb, gripped at its lateral offset on the ladder:
+// hands one pitch beyond the other hand (a long reach, then a dyno, past
+// that), feet one pitch beyond the other foot inside the foot band. An
+// unattached limb mounts: a hand takes the other hand's rung, a foot the
+// lowest rung in its band.
+bool Climber::rung_target(const int limb, const bool up, RVec3 &point, bool &dyno) const {
+    dyno = false;
+    const RVec3 c = center();
+    const Vec3 across(-spec_.out.GetZ(), 0.0F, spec_.out.GetX());
+    const bool hand = limb < 2;
+    const float lateral = hand ? kHandLateralM : kFootLateralM;
+    const float sign = (limb == 0 || limb == 2) ? -1.0F : 1.0F;   // right limbs: -across
+    // The rung at this height, gripped at the limb's lateral offset. A rung
+    // across the ladder, short in y; a stile is not a rung.
+    const auto take_at = [&](const float y) -> bool {
+        const RVec3 at = RVec3(spec_.line.GetX(), y, spec_.line.GetZ()) + across * (sign * lateral);
+        Hold hold;
+        RVec3 where;
+        if (!take_hold(at, 0.05F, true, hold, &where)) return false;
+        BodyLockRead lock(physics_.GetBodyLockInterface(), hold.body);
+        AABox bounds;
+        bool bar = false;
+        if (!lock.Succeeded() || !member_bounds(lock.GetBody(), hold.sub, bounds, bar) || bounds.GetSize().GetY() >= 0.2F) return false;
+        point = where;
+        return true;
+    };
+    const int other_limb = hand ? (limb == 0 ? 1 : 0) : (limb == 2 ? 3 : 2);
+    const Hold &other = limb_hold(other_limb);
+    if (!limb_hold(limb).valid()) {
+        // Mount: no hold yet. A hand takes the other hand's rung; a foot
+        // the lowest rung in its band. A limb that let go to unblock the
+        // body mounts only a rung past the one it left, in the direction
+        // of travel — or it mounts the same rung again and the deadlock
+        // returns.
+        if (hand) {
+            if (!other.valid()) return false;
+            const float y = float(limb_world(other_limb).GetY());
+            if (limb_released_y_[limb] > -1.0e5F &&
+                (up ? y < limb_released_y_[limb] + 0.01F : y > limb_released_y_[limb] - 0.01F)) return false;
+            return take_at(y);
+        }
+        Hold found;
+        RVec3 where;
+        float band_lo = float(c.GetY()) - kFootBandHighM;
+        float band_hi = float(c.GetY()) - kFootBandLowM;
+        if (limb_released_y_[limb] > -1.0e5F) {
+            // The margin is 0.10, not 0.01: a rung's take point sits
+            // ~0.04 below its hold's world point, so a 0.01 cap still lets
+            // the same rung back in under its take point.
+            if (up) {
+                band_lo = std::max(band_lo, limb_released_y_[limb] + 0.10F);
+            } else {
+                band_hi = std::min(band_hi, limb_released_y_[limb] - 0.10F);
+            }
+        }
+        if (band_lo > band_hi) return false;
+        if (!find_rung(band_lo, band_hi, true, found, where)) return false;
+        return take_at(float(where.GetY()));
+    }
+    // A gait move: one pitch beyond its own rung. The limbs stay together
+    // on the same rung, as on a ladder — each move is one pitch (0.30 m,
+    // ~21 ticks), not a leapfrog two pitches past the other limb (0.60 m,
+    // 43 ticks), which moved the body for 43 ticks per grip change, past
+    // the audit's 30-tick creep window. The reach is judged against where
+    // the body is going — the clamp's edge in the direction of travel —
+    // not where it is: the swing overlaps the body's rise to that edge,
+    // so the next limb starts while the body is still moving instead of
+    // waiting for it to settle. The take re-checks the band against the
+    // centre as it then stands.
+    const float ref_y = float(limb_world(limb).GetY());
+    const float centre_y = float(c.GetY());
+    float go_y = centre_y;
+    {
+        float lo = 0.0F, hi = 0.0F;
+        if (clamp_bands(lo, hi)) go_y = up ? hi : lo;
+    }
+    // The widest gap the scan joins: hand reach past the shoulder plus
+    // the throw. The long reaches and the dyno never cross more than it.
+    const float widest = limits_.hand_above_center - 0.35F + limits_.dyno_rise_m;
+    Hold found;
+    RVec3 where;
+    if (hand) {
+        // The hand can be at most 1.20 m above the centre it is going to
+        // (its band).
+        const float band_top = go_y + kHandBandUpM;
+        if (up) {
+            const float hi = std::min(band_top, ref_y + 0.65F);
+            if (hi > ref_y + 0.12F && find_rung(ref_y + 0.12F, hi, true, found, where)) {
+                return take_at(float(where.GetY()));
+            }
+            // A long reach past one missing rung, no more: a wider gap is
+            // a dyno's job (a launch), not a swing's.
+            if (band_top > ref_y + 0.65F && find_rung(ref_y + 0.65F, ref_y + 0.72F, true, found, where)) {
+                return take_at(float(where.GetY()));
+            }
+            // The dyno: the lowest rung past the long reach and within the
+            // throw's reach, crossing at most the widest gap the scan
+            // joins (hand reach past the shoulder plus the throw). A wider
+            // gap is no dyno — the gait stalls and fails MissingRung.
+            const float dyno_top = go_y + limits_.hand_above_center + limits_.dyno_rise_m;
+            if (dyno_tries_ < 2 && limb_hold(0).valid() && dyno_top > ref_y + 0.72F &&
+                find_rung(ref_y + 0.72F, dyno_top, true, found, where) &&
+                float(where.GetY()) - ref_y <= widest) {
+                dyno = true;
+                point = where;
+                return true;
+            }
+            return false;
+        }
+        if (find_rung(ref_y - 0.12F, ref_y - 0.65F, false, found, where)) {
+            const float y = float(where.GetY());
+            if (y - go_y > kHandBandUpM || go_y - y > kHandBandDownM) return false;
+            return take_at(y);
+        }
+        // A long reach down past a gap, up to the widest gap the scan
+        // joins. There is no dyno going down. The primary failing already
+        // gates this to a gap; the take checks the physical reach — and
+        // this reach gate is what lets a doomed swing fail here, at the
+        // plan, instead of looping swing-take-fallback while the feet
+        // hold the body up and the stall fires.
+        if (find_rung(ref_y - 0.65F, ref_y - widest, false, found, where)) {
+            const float y = float(where.GetY());
+            const float d = y - go_y;
+            if (d >= -limits_.reach_low - 0.6F && d <= limits_.hand_above_center + 0.15F) return take_at(y);
+        }
+        return false;
+    }
+    // Feet: one pitch beyond the foot's own rung, inside the foot band;
+    // past that, a long step across a gap, within the physical reach —
+    // the hands carry the body while the foot swings, and the body
+    // adjusts to the new foothold after the take.
+    if (up) {
+        if (find_rung(ref_y + 0.12F, ref_y + 0.65F, true, found, where)) {
+            const float y = float(where.GetY());
+            const float under = go_y - y;
+            if (under >= kFootBandLowM && under <= kFootBandHighM) return take_at(y);
+        }
+        if (find_rung(ref_y + 0.65F, ref_y + widest, true, found, where)) {
+            const float y = float(where.GetY());
+            const float d = y - centre_y;
+            if (d >= -limits_.reach_low - 0.6F && d <= limits_.hand_above_center + 0.15F) return take_at(y);
+        }
+        return false;
+    }
+    if (find_rung(ref_y - 0.12F, ref_y - 0.65F, false, found, where)) {
+        const float y = float(where.GetY());
+        const float under = go_y - y;
+        if (under >= kFootBandLowM && under <= kFootBandHighM) return take_at(y);
+    }
+    if (find_rung(ref_y - 0.65F, ref_y - widest, false, found, where)) {
+        const float y = float(where.GetY());
+        const float d = y - centre_y;
+        if (d >= -limits_.reach_low - 0.6F && d <= limits_.hand_above_center + 0.15F) return take_at(y);
+    }
+    return false;
+}
+
+// The gait machine: one limb in motion at a time, in the diagonal order
+// HandL, FootR, HandR, FootL. A limb in motion advances through
+// Unloading -> Swing -> Loading; when none is in motion, the next limb in
+// the order starts for a rung it can reach. A limb whose hold is still
+// valid keeps it through the swing (it carries no load while swinging,
+// but the contact stays counted), and takes the target rung at the
+// swing's end.
+// A limb with no rung it can reach lets go when it is the one holding
+// the body back: without this, a gap below the feet deadlocks — the feet
+// hold the body up (their band sets the clamp's travel edge) while the
+// rung past the gap is past their physical reach from where the body
+// stands. The body then travels on the other three limbs until a rung
+// comes in reach and this one mounts again from its rest point.
+bool Climber::release_blocker(const int limb, const bool up) {
+    if (!limb_hold(limb).valid()) return false;
+    // Never leave the body to fewer than two limbs: the first foot to
+    // let go leaves the second foot as the binding constraint, and the
+    // second must be able to let go too, or the body stalls on it while
+    // the first dangles. Two hands hold her weight (each capped 5500 N
+    // against 2158 N) while the feet travel down on them.
+    int others = 0;
+    for (int other = 0; other < kLimbCount; ++other) {
+        if (other == limb) continue;
+        if (limb_hold(other).valid() && limb_phase_[other] == LimbPhase::Attached) ++others;
+    }
+    if (others < 2) return false;
+    // This limb must be the one setting the clamp's travel edge.
+    float lo = 0.0F, hi = 0.0F;
+    if (!clamp_bands(lo, hi)) return false;
+    const float y = float(limb_world(limb).GetY());
+    const float edge = up ? (limb < 2 ? y + kHandBandDownM : y + kFootBandHighM)
+                          : (limb < 2 ? y - kHandBandUpM : y + kFootBandLowM);
+    // The binding limb is the one setting the clamp's travel edge: the
+    // smallest hi going up, the largest lo going down. A limb whose edge
+    // is on the other side of that edge is not holding the body back.
+    if (up ? edge > hi + 0.01F : edge < lo - 0.01F) return false;
+    // A rung must wait within one widest step past it: at the bottom,
+    // with no rung below, there is nothing to release for — the stall
+    // hands the dismount to phase 4 instead. The far end carries a 0.10
+    // margin: a rung's take point sits ~0.04 below its hold's world
+    // point, and a rung just past widest on the hold's measure is still
+    // a rung the body can reach once it travels down on the other limbs.
+    const float widest = limits_.hand_above_center - 0.35F + limits_.dyno_rise_m;
+    Hold found;
+    RVec3 where;
+    const bool past = up ? find_rung(y + 0.65F, y + widest + 0.10F, true, found, where)
+                         : find_rung(y - 0.65F, y - widest - 0.10F, false, found, where);
+    // Or no rung below at all, but the floor is reachable from a full
+    // hang off the hands: a bottom rung high over the floor (the descent
+    // the scan offers for a drop). The hang puts her soles at the lowest
+    // hand less the hang and her height; the step-off below only reaches
+    // 1.5 m, so this case is only for a floor past that.
+    bool bottom_drop = false;
+    if (!past && !up) {
+        float hand_y = 1.0e6F;
+        for (int h = 0; h < 2; ++h) {
+            if (limb_hold(h).valid()) hand_y = std::min(hand_y, float(limb_world(h).GetY()));
+        }
+        const float soles = float(center().GetY()) - limits_.center_above_feet();
+        bottom_drop = hand_y < 1.0e5F && soles - spec_.goal_top > 1.5F &&
+                      hand_y - limits_.hang_below_hold - limits_.center_above_feet() - spec_.goal_top <= limits_.drop_max_m;
+    }
+    if (!past && !bottom_drop) return false;
+    // The rung it let go of, so the mount only takes a rung past it.
+    limb_released_y_[limb] = y;
+    limb_hold(limb) = Hold{};
+    limb_world(limb) = RVec3::sZero();
+    limb_view_[limb] = RVec3::sZero();
+    limb_phase_[limb] = LimbPhase::Attached;
+    limb_ticks_[limb] = 0;
+    limb_release_[limb] = false;
+    ++view_.releases;
+    gait_next_ = (gait_next_ + 1) % kLimbCount;
+    return true;
+}
+
+void Climber::step_gait(const float dt, Budget &budget, const bool up) {
+    (void)budget;
+    // A limb in motion advances; only one is ever in motion. A swing that
+    // completes starts the next limb in the same tick — the move scan below
+    // runs on a completion too, so no tick is idle between moves. The
+    // release scan does not run on a completion tick: a take and a release
+    // in one tick would count as two hold changes for the rung-support
+    // audit's one-limb-moves rule.
+    bool completed = false;
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        const LimbPhase phase = limb_phase_[limb];
+        if (phase == LimbPhase::Attached) continue;
+        if (phase != LimbPhase::Swing) return;   // Unloading/Loading are never entered: no ramps, so a limb is Attached or Swinging.
+        if (phase == LimbPhase::Swing) {
+            const int total = std::max(1, limb_swing_ticks_[limb]);
+            const float u = std::clamp(float(limb_ticks_[limb] + 1) / float(total), 0.0F, 1.0F);
+            const float s = u * u * (3.0F - 2.0F * u);   // smoothstep
+            limb_view_[limb] = limb_from_[limb] + (limb_to_[limb] - limb_from_[limb]) * s;
+            if (++limb_ticks_[limb] >= total) {
+                if (limb_release_[limb]) {
+                    // A step-off swing ends in a release, not a take: the
+                    // foot stands on the floor point it swung to.
+                    limb_hold(limb) = Hold{};
+                    limb_world(limb) = RVec3::sZero();
+                    limb_view_[limb] = limb_to_[limb];
+                    limb_phase_[limb] = LimbPhase::Attached;
+                    limb_ticks_[limb] = 0;
+                    limb_release_[limb] = false;
+                    ++view_.releases;
+                    completed = true;
+                    break;
+                }
+                // The take: the rung must still be there, at the target,
+                // and inside the band the centre stands in now — the gait
+                // plans against where the body is going, so a swing that
+                // ends before the body got there falls back to the hold
+                // it left instead of gripping out of reach.
+                Hold took;
+                RVec3 where;
+                const float centre_y = float(center().GetY());
+                if (take_hold(limb_to_[limb], 0.05F, true, took, &where)) {
+                    // The take checks the physical reach (revalidate's
+                    // bounds), not the drive's clamp bands: on a down
+                    // swing the body descends toward the feet-set clamp
+                    // edge, so the hand's target rung can sit 0.65 m below
+                    // the centre at the take — past the drive's 0.55 m
+                    // band, but well inside the arm's 1.40 m reach. A rung
+                    // past the physical reach falls back to the hold it
+                    // left instead of failing the move.
+                    const float under = float(where.GetY()) - centre_y;
+                    const bool in_band = under <= limits_.hand_above_center + 0.15F && under >= -limits_.reach_low - 0.6F;
+                    BodyLockRead lock(physics_.GetBodyLockInterface(), took.body);
+                    AABox bounds;
+                    bool bar = false;
+                    if (in_band && lock.Succeeded() && member_bounds(lock.GetBody(), took.sub, bounds, bar) && bounds.GetSize().GetY() < 0.2F) {
+                        limb_hold(limb) = took;
+                        limb_world(limb) = where;
+                        limb_view_[limb] = where;
+                        limb_phase_[limb] = LimbPhase::Attached;   // no load ramp: the limb carries its share from the take tick
+                        limb_ticks_[limb] = 0;
+                        limb_released_y_[limb] = -1.0e6F;
+                        ++view_.grips;
+                        completed = true;
+                        break;
+                    }
+                }
+                // No rung there any more: back on the hold it left (or
+                // unattached, when it never had one).
+                limb_phase_[limb] = LimbPhase::Attached;
+                limb_ticks_[limb] = 0;
+                limb_view_[limb] = limb_hold(limb).valid() ? limb_world(limb) : RVec3::sZero();
+                completed = true;
+                break;
+            }
+            return;
+        }
+    }
+    // A limb that cannot reach a rung and is holding the body back lets
+    // go now, not after the other limbs have run out of moves: the body
+    // cannot travel until it does, and the stall would fire first. This
+    // scan runs before the move scan, so a stuck foot is not starved by
+    // hands that still have rungs below them. It does not run on a
+    // completion tick (see above): the move scan starts the next limb
+    // there instead.
+    if (!completed) {
+        for (int k = 0; k < kLimbCount; ++k) {
+            const int limb = kGaitOrder[(gait_next_ + k) % kLimbCount];
+            if (limb_phase_[limb] != LimbPhase::Attached || !limb_hold(limb).valid()) continue;
+            RVec3 point;
+            bool dyno = false;
+            if (rung_target(limb, up, point, dyno)) continue;
+            if (release_blocker(limb, up)) return;
+        }
+    }
+    // Nothing in motion: the next limb in the gait order moves, if it can.
+    // During the mount (phase 1) a limb moves only to take its first rung:
+    // a limb that already holds stays where it is, or the limbs climb to
+    // higher rungs before the climb starts, the band rises past the body
+    // the mount clamp holds on the deck, and the mount never completes.
+    // Except a hand on a fallback hold: when a gap eats the shoulder
+    // rungs the phase-0 fallback takes the lowest rung, and a hand down
+    // there caps the band below standing height, so the mount never
+    // completes. A hand more than 0.8 m below the shoulder may climb to
+    // the rung it should be on; once it is near the shoulder it stays.
+    for (int k = 0; k < kLimbCount; ++k) {
+        const int limb = kGaitOrder[(gait_next_ + k) % kLimbCount];
+        if (limb_phase_[limb] != LimbPhase::Attached) continue;
+        if (phase_ == 1 && limb_hold(limb).valid()) {
+            const bool fallback_hand = limb < 2 &&
+                float(limb_world(limb).GetY()) < float(center().GetY()) + 1.00F;
+            if (!fallback_hand) continue;
+        }
+        RVec3 point;
+        bool dyno = false;
+        if (!rung_target(limb, up, point, dyno)) continue;
+        if (dyno) {
+            // A gap past her reach: the throw for it. A dyno is a jump —
+            // she lets go with everything but the pulling hand (HandR,
+            // limb 0), and the gait mounts the rest again after the
+            // catch. step_dyno owns the climb until it catches or misses;
+            // it reads only the rung's world point.
+            for (int limb = 1; limb < kLimbCount; ++limb) {
+                limb_hold(limb) = Hold{};
+                limb_world(limb) = RVec3::sZero();
+                limb_view_[limb] = RVec3::sZero();
+                limb_phase_[limb] = LimbPhase::Attached;
+                limb_ticks_[limb] = 0;
+                limb_release_[limb] = false;
+            }
+            dyno_world_ = point;
+            dyno_ = 1;
+            phase_s_ = 0.0F;
+            return;
+        }
+        gait_next_ = (gait_next_ + k + 1) % kLimbCount;
+        start_limb_swing(limb, point);
+        return;
+    }
+    // No limb can move this tick: the caller watches the stall.
+    (void)dt;
+}
+
 bool Climber::floor_under(const RVec3 c, const Vec3 off) const {
     const SteelFilter filter(ignore_);
     const float reach = limits_.center_above_feet() + limits_.step_max_m + 0.05F;   // a step down is floor too
@@ -897,6 +1597,7 @@ float Climber::walk_between(const float dt, const Vec3 feet_goal, const float sp
 
 void Climber::begin(const MoveSpec &spec) {
     release_leg();
+    reset_gait();
     spec_ = spec;
     // Her side of a ladder is the side she starts (up) or ends (down) on.
     if (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::JumpCatch || spec_.kind == MoveKind::RungDown) {
@@ -915,6 +1616,8 @@ void Climber::begin(const MoveSpec &spec) {
     hold_ = Hold{};
     hold2_ = Hold{};
     hold2_world_ = RVec3::sZero();
+    foot2_ = Hold{};
+    foot2_world_ = RVec3::sZero();
     lip_ = Hold{};
     sliding_ = false;
     mantle_after_ = false;
@@ -928,14 +1631,21 @@ void Climber::begin(const MoveSpec &spec) {
 
 void Climber::cancel() {
     release_leg();
+    reset_gait();
     if (hold_.valid()) {
         ++view_.releases;
     }
     hold_ = Hold{};
     hold2_ = Hold{};
     hold2_world_ = RVec3::sZero();
+    foot2_ = Hold{};
+    foot2_world_ = RVec3::sZero();
     view_.holding2 = false;
     view_.hand2 = RVec3::sZero();
+    view_.holding_foot = false;
+    view_.foot = RVec3::sZero();
+    view_.holding_foot2 = false;
+    view_.foot2 = RVec3::sZero();
     status_ = Status::Idle;
     view_.active = false;
     view_.holding = false;
@@ -943,14 +1653,21 @@ void Climber::cancel() {
 
 void Climber::fail(const Failure failure) {
     release_leg();
+    reset_gait();
     if (hold_.valid()) {
         ++view_.releases;
     }
     hold_ = Hold{};
     hold2_ = Hold{};
     hold2_world_ = RVec3::sZero();
+    foot2_ = Hold{};
+    foot2_world_ = RVec3::sZero();
     view_.holding2 = false;
     view_.hand2 = RVec3::sZero();
+    view_.holding_foot = false;
+    view_.foot = RVec3::sZero();
+    view_.holding_foot2 = false;
+    view_.foot2 = RVec3::sZero();
     failure_ = failure;
     status_ = Status::Failed;
     view_.last_failure = failure;
@@ -960,70 +1677,31 @@ void Climber::fail(const Failure failure) {
 
 void Climber::finish() {
     release_leg();
+    reset_gait();
     if (hold_.valid()) {
         ++view_.releases;
     }
     hold_ = Hold{};
     hold2_ = Hold{};
     hold2_world_ = RVec3::sZero();
+    foot2_ = Hold{};
+    foot2_world_ = RVec3::sZero();
     view_.holding2 = false;
     view_.hand2 = RVec3::sZero();
+    view_.holding_foot = false;
+    view_.foot = RVec3::sZero();
+    view_.holding_foot2 = false;
+    view_.foot2 = RVec3::sZero();
     status_ = Status::Done;
     view_.holding = false;
     view_.active = false;
 }
 
-// M5b: the second hand takes, keeps, or releases its grip on the first
-// hold's rung. Same member (body and sub-shape), same general take_hold
-// path the first hold uses, offset along the rung so the two grips are
-// distinct points; revalidated every tick by the same revalidate() the
-// first hold uses. When the first hold moves to another member (the next
-// rung, a lip at the top), the old second grip is released and a new one
-// is taken on the new rung in the same tick, if the rung is long enough
-// for two hands. Force from both anchors is M5c (drive() and
-// relative_velocity()), not this maintenance.
-void Climber::maintain_second_hold() {
-    if (!hold_.valid() || dyno_ != 0) {
-        hold2_ = Hold{};
-        hold2_world_ = RVec3::sZero();
-        return;
-    }
-    if (hold2_.valid()) {
-        if (hold2_.body == hold_.body && hold2_.sub == hold_.sub && revalidate(hold2_, hold2_world_)) {
-            return;   // still the same rung, still valid
-        }
-        hold2_ = Hold{};
-        hold2_world_ = RVec3::sZero();
-    }
-    const Vec3 across(-spec_.out.GetZ(), 0.0F, spec_.out.GetX());
-    if (across.LengthSq() < 1.0e-6F) {
-        return;
-    }
-    const float offset = std::min(0.45F, spec_.bar_half - 0.05F);
-    if (offset < 0.10F) {
-        return;   // rung too short for two hands
-    }
-    for (const float sign : {1.0F, -1.0F}) {
-        Hold cand;
-        RVec3 where;
-        if (!take_hold(hold_world_ + across * (sign * offset), 0.05F, true, cand, &where)) {
-            continue;
-        }
-        if (cand.body != hold_.body || cand.sub != hold_.sub) {
-            continue;   // another member is not the second grip
-        }
-        if ((Vec3(where - hold_world_)).Length() < 0.10F) {
-            continue;   // the first grip twice is not a second grip
-        }
-        hold2_ = cand;
-        hold2_world_ = where;
-        return;
-    }
-}
-
 Climber::Status Climber::step(const float dt) {
     view_.force_n = 0.0F;
     view_.support_reaction_n = 0.0F;
+    view_.hand_load_n = 0.0F;
+    view_.foot_load_n = 0.0F;
     view_.topped = false;
     if (status_ != Status::Running) {
         // A move done (or none begun) and nothing else asked: she stands,
@@ -1049,12 +1727,6 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::RiserUp:
     case MoveKind::RiserDown: break;   // her riser is the Matron's own move (matron_pipe.cpp), never begun here
     }
-    // M5b: second grip, rung climbs only, maintained after the move's own
-    // step and before the view is written. fail()/finish() already cleared
-    // it, so only a still-running rung move can hold one.
-    if (status_ == Status::Running && (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::RungDown)) {
-        maintain_second_hold();
-    }
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
     view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
@@ -1066,7 +1738,36 @@ Climber::Status Climber::step(const float dt) {
     view_.hand = hold_world_;
     view_.holding2 = hold2_.valid();
     view_.hand2 = hold2_world_;
-    view_.airborne = !foot_.valid() && !hold_.valid() && !supported();
+    view_.holding_foot = foot_.valid();
+    view_.foot = foot_world_;
+    view_.holding_foot2 = foot2_.valid();
+    view_.foot2 = foot2_world_;
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        view_.limb_phase[limb] = int(limb_phase_[limb]);
+        view_.limb_load_n[limb] = limb_load_[limb];
+    }
+    if (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::RungDown) {
+        // J-063: on rungs the view points follow the limbs, not the holds
+        // — a swinging wrist or foot is on its swing path, not on the rung
+        // it left. A limb that is not swinging sits on its hold's world
+        // point, so a moving rung carries the view point with it; a limb
+        // holding nothing rests at her side (a hand) or sole (a foot), so
+        // its view point follows the body instead of sitting at the origin.
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (limb_phase_[limb] != LimbPhase::Swing && limb_hold(limb).valid()) {
+                limb_view_[limb] = limb_world(limb);
+            } else if (limb_phase_[limb] != LimbPhase::Swing) {
+                const RVec3 c = center();
+                limb_view_[limb] = limb < 2 ? RVec3(c.GetX(), c.GetY(), c.GetZ())
+                                            : RVec3(c.GetX(), c.GetY() - limits_.center_above_feet(), c.GetZ());
+            }
+        }
+        view_.hand = limb_view_[0];
+        view_.hand2 = limb_view_[1];
+        view_.foot = limb_view_[2];
+        view_.foot2 = limb_view_[3];
+    }
+    view_.airborne = !foot_.valid() && !foot2_.valid() && !hold_.valid() && !supported();
     return status_;
 }
 
@@ -1096,7 +1797,8 @@ Climber::Status Climber::step_walk(const float dt, Budget &budget) {
 }
 
 // --- rungs, up --------------------------------------------------------------
-// Phases: 0 to the foot, 2 hand over hand, 3 over the head (mantle).
+// Phases: 0 walk in and take the first rung, 1 mount the other limbs,
+// 2 the diagonal gait up, 3 over the head (mantle).
 Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     const RVec3 c = center();
     const float feet = float(c.GetY()) - limits_.center_above_feet();
@@ -1110,15 +1812,21 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
             walk(dt, Vec3(stand.GetX(), feet, stand.GetZ()), 1.4F, budget);
             return status_;
         }
+        // The first hand takes the rung nearest shoulder height: a hand on
+        // the lowest rung is past the audit's shoulder reach once the
+        // climb starts. Fall back to the lowest rung in reach.
+        const float shoulder = feet + 1.80F;   // kShoulderUpM, feet to shoulder
         RVec3 where;
-        if (!find_rung(feet + 0.15F, feet + limits_.hand_reach_standing(), true, hold_, where)) {
+        if (!find_rung(shoulder - 0.35F, shoulder + 0.35F, true, hold_, where) &&
+            !find_rung(feet + 0.15F, feet + limits_.hand_reach_standing(), true, hold_, where)) {
             fail(Failure::NoHold);
             return status_;
         }
         hold_world_ = where;
+        limb_view_[0] = where;
         ++view_.grips;
-        phase_ = 2;
-        target_y_ = float(c.GetY());
+        phase_ = 1;
+        phase_s_ = 0.0F;
         stall_s_ = 0.0F;
         best_progress_ = float(c.GetY());
     }
@@ -1128,42 +1836,55 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
     if (dyno_ != 0) {
         return step_dyno(dt, budget);
     }
-    if (!revalidate(hold_, hold_world_)) {
-        fail(Failure::LostHold);
-        return status_;
-    }
-    // The next rung up as soon as one is within reach over the present one.
-    Hold next;
-    RVec3 next_world;
-    const float hold_y = float(hold_world_.GetY());
-    const float top_reach = float(c.GetY()) + limits_.hand_above_center;
-    bool took = false;
-    if (hold_y - float(c.GetY()) < 0.95F && top_reach > hold_y + 0.2F && hold_y < spec_.top_y - 0.05F &&
-        find_rung(hold_y + 0.12F, std::min(top_reach, hold_y + 0.65F), true, next, next_world)) {
-        hold_ = next;
-        hold_world_ = next_world;
-        ++view_.grips;
-        took = true;
-    }
-    if (!took && hold_y < spec_.top_y - 0.05F && float(c.GetY()) >= hold_y - 0.35F - 0.25F &&
-        !find_rung(hold_y + 0.12F, hold_y + 0.65F, true, next, next_world)) {
-        // A gap in the rungs over her: her other hand up as far as it goes
-        // (a long reach), else a throw for the rung past it.
-        if (find_rung(hold_y + 0.65F, top_reach, true, next, next_world)) {
-            hold_ = next;
-            hold_world_ = next_world;
-            ++view_.grips;
-        } else if (find_rung(top_reach, top_reach + limits_.dyno_rise_m, true, next, next_world) && dyno_tries_ < 2) {
-            dyno_hold_ = next;
-            dyno_world_ = next_world;
-            dyno_ = 1;
-            phase_s_ = 0.0F;
-            return step_dyno(dt, budget);
+    // Every limb's hold is revalidated: a rung that moved carries its
+    // world point with it, and a lost one fails the move. A swinging
+    // limb's old rung is transient (the body moves on without it), so it
+    // is not revalidated mid-swing; the take at the swing's end checks
+    // the new rung instead.
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        if (!limb_hold(limb).valid()) continue;
+        if (limb_phase_[limb] == LimbPhase::Swing) continue;
+        if (!revalidate(limb_hold(limb), limb_world(limb))) {
+            fail(Failure::LostHold);
+            return status_;
         }
     }
-    const float hold_now = float(hold_world_.GetY());
+    // Phase 1 mounts the other limbs; phase 2 is the gait proper. The
+    // mount is done when three limbs are attached, none is still swinging
+    // to its first rung, and the centre is inside the clamp: the body is
+    // held by the clamp throughout, and the foot-takes audit needs phase
+    // 2 early.
+    step_gait(dt, budget, true);
+    if (dyno_ != 0) {
+        return step_dyno(dt, budget);
+    }
+    if (phase_ == 1) {
+        // The mount: a limb in motion is the progress, not the centre — the
+        // centre stays on the deck until the limbs are on, so the stall
+        // timer must not fire on a mount that is still moving.
+        bool moving = false;
+        int attached = 0;
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (limb_phase_[limb] != LimbPhase::Attached) moving = true;
+            if (limb_hold(limb).valid() && limb_phase_[limb] == LimbPhase::Attached) ++attached;
+        }
+        if (moving) stall_s_ = 0.0F;
+        // The mount is done when three limbs are Attached and none is
+        // still swinging — a limb in flight to its first rung must land
+        // before the climb starts, or the body drops on the drive while
+        // it is in the air (the rung-support creep: a 36-tick mount swing
+        // landing in phase 2). Three, not four: when a gap spreads the
+        // limbs, or a released limb cannot re-take, the fourth has no
+        // hold to wait for, and waiting for it stalls the mount.
+        if (attached >= 3 && !moving && in_clamp()) {
+            phase_ = 2;
+            phase_s_ = 0.0F;
+        }
+    }
+    // The mantle trigger: the higher hand at the top rung and the body up
+    // to her chest under it.
+    const float hold_now = std::max(float(hold_world_.GetY()), hold2_.valid() ? float(hold2_world_.GetY()) : -1.0e6F);
     const float ceiling = hold_now - 0.35F;   // the hold at her chest, no higher
-    target_y_ = std::min(target_y_ + rate_mps() * dt, ceiling);
     const bool at_top = hold_now >= spec_.top_y - 0.05F;
     if (at_top && float(c.GetY()) >= ceiling - 0.25F) {
         if (!find_lip(-spec_.out, spec_.goal_top, lip_, lip_world_)) {
@@ -1172,18 +1893,24 @@ Climber::Status Climber::step_rung_up(const float dt, Budget &budget) {
         }
         hold_ = lip_;
         hold_world_ = lip_world_;
+        limb_view_[0] = lip_world_;
         ++view_.grips;
         return begin_mantle_from_hang();
     }
     if (float(c.GetY()) > best_progress_ + 0.05F) {
         best_progress_ = float(c.GetY());
         stall_s_ = 0.0F;
+    } else if (float(c.GetY()) < best_progress_ - 0.10F) {
+        // A spike set the ceiling and she has left it behind (a bounce,
+        // a dyno catch, a take that lifted her): the old ceiling is not
+        // progress she has to beat, so re-anchor it here.
+        best_progress_ = float(c.GetY());
+        stall_s_ = 0.0F;
     } else if ((stall_s_ += dt) > 2.5F) {
         fail(at_top ? Failure::Stalled : Failure::MissingRung);
         return status_;
     }
-    const Vec3 target(stand.GetX() - spec_.out.GetX() * 0.03F, target_y_, stand.GetZ() - spec_.out.GetZ() * 0.03F);
-    drive(dt, target, Vec3(0.0F, rate_mps(), 0.0F), 30.0F, budget, true, hold_world_);
+    drive_rung(dt, budget, true);
     return status_;
 }
 
@@ -1213,6 +1940,23 @@ Climber::Status Climber::begin_mantle_from_hang() {
         fail(Failure::BlockedSweep);
         return status_;
     }
+    // J-063: the mantle is a one-hand move (only hold_ = lip, as on trunk).
+    // The gait's other limbs let go here; their holds are cleared, not
+    // left dangling.
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    foot_ = Hold{};
+    foot_world_ = RVec3::sZero();
+    foot2_ = Hold{};
+    foot2_world_ = RVec3::sZero();
+    for (int limb = 1; limb < kLimbCount; ++limb) {
+        limb_phase_[limb] = LimbPhase::Attached;
+        limb_ticks_[limb] = 0;
+        limb_view_[limb] = RVec3::sZero();
+        limb_load_[limb] = 0.0F;
+        limb_release_[limb] = false;
+    }
+    limb_view_[0] = hold_world_;
     phase_ = 3;
     phase_s_ = 0.0F;
     stall_s_ = 0.0F;
@@ -1445,6 +2189,7 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
         if ((v - bodies.GetPointVelocity(h.body, p)).Length() > limits_.catch_arrest_mps) return false;
         hold_ = h;
         hold_world_ = p;
+        limb_view_[0] = p;   // the caught rung is HandR's new view point
         ++view_.grips;
         ++view_.catches;
         dyno_ = 0;
@@ -1476,31 +2221,56 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
     return status_;
 }
 
-// --- rungs, down -------------------------------------------------------------
-// Phases: 0 to the head; 1 over the lip onto the top rung; 2 hand under hand;
-// done when her feet are on the floor below.
+// --- rungs, down ------------------------------------------------------------
+// Phases: 0 walk in and take the top rung, 1 mount the other limbs,
+// 2 the diagonal gait down, 4 the step-off to the floor. There is no
+// let-go-and-fall: the feet step to the floor one at a time and the body
+// comes down on the hands.
 Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
     const RVec3 c = center();
     const float feet = float(c.GetY()) - limits_.center_above_feet();
-    if (phase_ == 3) {
-        // Dropped off the bottom rung: fall to the goal floor and finish on
-        // it, the same landing the drop moves use. Never fall forever.
+    if (phase_ == 4) {
+        // The step-off: the feet swing to the floor one at a time and let
+        // go; the body comes down on the hands. Finish on the goal floor.
+        bool moving = false;
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (limb_phase_[limb] != LimbPhase::Attached) moving = true;
+        }
+        if (moving) {
+            step_gait(dt, budget, false);   // advances the limb in motion; the selection never runs here
+        } else if (foot_.valid() || foot2_.valid()) {
+            const int limb = foot_.valid() ? 2 : 3;
+            const RVec3 from = limb_world(limb);
+            limb_release_[limb] = true;
+            start_limb_swing(limb, RVec3(from.GetX(), spec_.goal_top, from.GetZ()));
+        } else if (limb_hold(0).valid() || limb_hold(1).valid()) {
+            // Both feet are already off (they let go to hang): the hands
+            // let go too and she drops the last of it to the floor. Only
+            // when the drop from the hang is in range.
+            const float soles = float(center().GetY()) - limits_.center_above_feet();
+            if (soles > spec_.goal_top && soles - spec_.goal_top <= limits_.drop_max_m) {
+                for (int h = 0; h < 2; ++h) {
+                    if (!limb_hold(h).valid()) continue;
+                    limb_hold(h) = Hold{};
+                    limb_world(h) = RVec3::sZero();
+                    limb_view_[h] = RVec3::sZero();
+                    limb_phase_[h] = LimbPhase::Attached;
+                    limb_ticks_[h] = 0;
+                    ++view_.releases;
+                }
+            }
+        }
         float support = 0.0F;
-        const bool on = supported(&support);
-        if (on && std::abs(velocity().GetY()) < 0.3F && phase_s_ > 0.1F) {
-            if (std::abs(support - spec_.goal_top) < 0.35F) {
-                finish();
-                return status_;
-            }
-            if (support < spec_.goal_top - 0.35F) {
-                fail(Failure::NotSupported);   // she went past it
-                return status_;
-            }
+        if (phase_s_ > 0.1F && supported(&support) && std::abs(support - spec_.goal_top) < 0.3F &&
+            std::abs(velocity().GetY()) < 0.3F) {
+            finish();
+            return status_;
         }
         if (phase_s_ > 8.0F) {
             fail(Failure::NotSupported);
             return status_;
         }
+        drive_rung(dt, budget, false);
         return status_;
     }
     if (phase_ == 0) {
@@ -1561,89 +2331,74 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
             return status_;
         }
         hold_world_ = where;
+        limb_view_[0] = where;
         ++view_.grips;
         phase_ = 1;
         phase_s_ = 0.0F;
-        target_y_ = float(c.GetY());
         best_progress_ = -float(c.GetY());
     }
-    if (!revalidate(hold_, hold_world_)) {
-        fail(Failure::LostHold);
-        return status_;
+    // Every limb's hold is revalidated, as on the way up.
+    for (int limb = 0; limb < kLimbCount; ++limb) {
+        if (!limb_hold(limb).valid()) continue;
+        if (limb_phase_[limb] == LimbPhase::Swing) continue;
+        if (!revalidate(limb_hold(limb), limb_world(limb))) {
+            fail(Failure::LostHold);
+            return status_;
+        }
     }
-    const Vec3 line_pos = Vec3(spec_.line.GetX(), 0.0F, spec_.line.GetZ()) + spec_.out * 0.42F;
     float support = 0.0F;
     if (phase_ >= 2 && supported(&support) && std::abs(support - spec_.goal_top) < 0.3F && velocity().GetY() > -0.6F) {
         finish();
         return status_;
     }
+    step_gait(dt, budget, false);
+    if (dyno_ != 0) {
+        return step_dyno(dt, budget);
+    }
     if (phase_ == 1) {
-        const float out_d = horizontal(line_pos - c);
-        if (out_d <= 0.15F) {
+        // The mount: the centre is still on the deck, so a limb in motion
+        // is the progress, not the centre. The mount is done at three
+        // limbs Attached.
+        bool moving = false;
+        int attached = 0;
+        for (int limb = 0; limb < kLimbCount; ++limb) {
+            if (limb_phase_[limb] != LimbPhase::Attached) moving = true;
+            if (limb_hold(limb).valid() && limb_phase_[limb] == LimbPhase::Attached) ++attached;
+        }
+        if (moving) stall_s_ = 0.0F;
+        if (attached >= 3 && in_clamp()) {
             phase_ = 2;
-            target_y_ = float(c.GetY());
-        } else {
-            if (phase_s_ > 5.0F) {
-                fail(Failure::Stalled);
-                return status_;
-            }
-            drive(dt, Vec3(line_pos.GetX(), std::max(float(c.GetY()), float(hold_world_.GetY()) + 0.1F), line_pos.GetZ()),
-                  Vec3::sZero(), 18.0F, budget, true, hold_world_);
-            return status_;
-        }
-    }
-    const float hold_y = float(hold_world_.GetY());
-    bool took_lower = false;
-    if (hold_y - float(c.GetY()) > limits_.hand_above_center - 0.2F) {
-        Hold next;
-        RVec3 next_world;
-        if (find_rung(hold_y - 0.12F, hold_y - 0.65F, false, next, next_world)) {
-            hold_ = next;
-            hold_world_ = next_world;
-            ++view_.grips;
-            took_lower = true;
-        } else if (hold_y - float(c.GetY()) > limits_.hang_below_hold - 0.1F &&
-                   find_rung(hold_y - 0.65F, float(c.GetY()) - 0.2F, false, next, next_world)) {
-            // A gap in the rungs under her: from a full hang her other hand
-            // reaches down past it to her hip.
-            hold_ = next;
-            hold_world_ = next_world;
-            ++view_.grips;
-            took_lower = true;
-        }
-    }
-    if (!took_lower) {
-        // No rung under her hands: at a full hang off the bottom rung, a
-        // floor in drop range under her feet is a drop, not a stall — let
-        // go and fall to it, and finish on the goal floor (phase 3).
-        const float hang_centre = hold_y - limits_.hang_below_hold;
-        const float drop = feet - spec_.goal_top;
-        if (float(c.GetY()) <= hang_centre + 0.05F && drop > 0.0F && drop <= limits_.drop_max_m) {
-            if (hold_.valid()) {
-                ++view_.releases;
-                hold_ = Hold{};
-            }
-            hold2_ = Hold{};
-            hold2_world_ = RVec3::sZero();
-            view_.holding2 = false;
-            view_.hand2 = RVec3::sZero();
-            phase_ = 3;
             phase_s_ = 0.0F;
-            return status_;
+            stall_s_ = 0.0F;
         }
     }
-    const float floor = float(hold_world_.GetY()) - limits_.hang_below_hold;
-    target_y_ = std::max(target_y_ - rate_mps() * dt, floor);
     if (-float(c.GetY()) > best_progress_ + 0.05F) {
         best_progress_ = -float(c.GetY());
         stall_s_ = 0.0F;
+    } else if (-float(c.GetY()) < best_progress_ - 0.10F) {
+        // A dip set the floor and she has left it behind (the mount drop
+        // overshot, a take lifted her back up): the old floor is not
+        // progress she has to beat, so re-anchor it here.
+        best_progress_ = -float(c.GetY());
+        stall_s_ = 0.0F;
     } else if ((stall_s_ += dt) > 2.5F) {
-        // No rung under her hands and no floor under her feet: she lets go.
-        fail(Failure::MissingRung);
-        return status_;
+        // Stuck on the way down: at the bottom rung with the floor in
+        // step-off range under her feet, she steps off (phase 4); anywhere
+        // else the rung she needs is missing. A foot that let go to hang
+        // counts as a foot for the step-off: both feet are already off,
+        // and phase 4 drops the body the last of it.
+        const float drop = feet - spec_.goal_top;
+        const bool foot_released = limb_released_y_[2] > -1.0e5F || limb_released_y_[3] > -1.0e5F;
+        if (!supported() && drop > 0.0F && drop <= 1.5F && (foot_.valid() || foot2_.valid() || foot_released)) {
+            phase_ = 4;
+            phase_s_ = 0.0F;
+            stall_s_ = 0.0F;
+        } else {
+            fail(Failure::MissingRung);
+            return status_;
+        }
     }
-    drive(dt, Vec3(line_pos.GetX(), target_y_, line_pos.GetZ()), Vec3(0.0F, -rate_mps(), 0.0F), 30.0F, budget,
-          true, hold_world_);
+    drive_rung(dt, budget, false);
     return status_;
 }
 
@@ -3108,10 +3863,11 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     const float hang_feet = l.bottom - limits.hang_below_hold - limits.center_above_feet();
                     // Her feet at full hang are bottom - 2.35. The executor
                     // finishes a descent her feet cannot reach the floor from
-                    // by dropping off the bottom rung (step_rung_down lets go
-                    // when the floor is in drop range under her feet), so the
-                    // scan offers the descent when her feet reach the floor
-                    // from a hang or the rung is within a drop of it.
+                    // by stepping off the bottom rung (step_rung_down steps
+                    // the feet to the floor when it is in step-off range
+                    // under them), so the scan offers the descent when her
+                    // feet reach the floor from a hang or the rung is within
+                    // a drop of it.
                     const bool foot_reached = hang_feet - fp.top <= 0.4F;
                     const bool drop_ok = (l.bottom - fp.top) <= limits.drop_max_m;
                     const Vec3 hang_c = line + out * 0.42F + Vec3(0, l.top - limits.hang_below_hold + 0.4F, 0);
@@ -3119,7 +3875,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     d.usable = over_ok && hang_ok && foot_ok && corridor_ok && (foot_reached || drop_ok);
                     d.cost = (l.top - l.bottom) / limits.climb_mps + 2.0F + align_pen;
                     d.reason = facts;
-                    if (!foot_reached) d.reason += drop_ok ? "; ends in a drop off the bottom rung" : "; blocked: drop off the bottom rung too far";
+                    if (!foot_reached) d.reason += drop_ok ? "; ends in a step-off from the bottom rung" : "; blocked: drop off the bottom rung too far";
                     if (!hang_ok) d.reason += "; blocked: capsule does not fit going over the head";
                     if (!over_ok) d.reason += "; blocked: capsule does not fit at the lip";
                     if (!foot_ok) d.reason += "; blocked: no room to stand at the foot";

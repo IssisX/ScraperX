@@ -1549,6 +1549,11 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.climb_feet_support = {view.climb_feet_support.GetX(), view.climb_feet_support.GetY(),
                                  view.climb_feet_support.GetZ()};
     result.climb_feet_support_known = view.climb_feet_support_known;
+    result.climb_foot = {view.climb_foot.GetX(), view.climb_foot.GetY(), view.climb_foot.GetZ()};
+    result.climb_foot_known = view.climb_foot_known;
+    result.climb_foot2 = {view.climb_foot2.GetX(), view.climb_foot2.GetY(), view.climb_foot2.GetZ()};
+    result.climb_foot2_known = view.climb_foot2_known;
+    for (int limb = 0; limb < 4; ++limb) result.climb_limb_phase[limb] = view.climb_limb_phase[limb];
     result.contact_supported = view.contact_supported;
     result.contact_feet = {view.contact_feet.GetX(), view.contact_feet.GetY(), view.contact_feet.GetZ()};
     result.contact_feet_body = view.contact_feet_body.GetIndexAndSequenceNumber();

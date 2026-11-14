@@ -6,8 +6,14 @@
 // presentation plants a limb, and rides or lifts her body onto a floor, only
 // on these, so they must be her real floor and her real grip, this tick:
 //  - a second grip only as the climber's validated second hold on a rung
-//    climb: same body and member as the first grip, a distinct point on
-//    that rung, within her reach. Any other second grip is still a FAIL;
+//    climb: the ruled diagonal gait (J-063) steps rung by rung, so the
+//    second hand is on the neighbouring rung, a distinct point 0.10-0.60 m
+//    from the first grip and within her reach — or, while the first hand
+//    swings to the next rung, the only hand holding, in which case the
+//    reach bound is the check and there is no first point to be distinct
+//    from. The M5 same-member rule is superseded: same body and member
+//    is no longer what a real second grip looks like. Any other second
+//    grip is still a FAIL;
 //  - her floor where her soles can be on it (under her middle or her feet's
 //    span, no lower than her legs reach);
 //  - her grip within her reach, and where the mover that has her shows its
@@ -73,10 +79,25 @@ struct MatronContactAudit {
             if (m.climb_feet_support_known && !m.contact_supported) ++invented_feet;
         }
         if (m.contact_hand2_held) {
-            // M5d: a second grip is real only as the climber's second hold
-            // on a rung climb — same body and member as the first grip, a
-            // distinct point on that rung, within her reach. Anything else
-            // exported as a second grip is still the old failure.
+            // A second grip is real as the climber's validated second hold
+            // on a rung climb (matron_contact.cpp exports hold2 only while
+            // it is held, on steel, not swinging): a distinct point
+            // 0.10-0.60 m from the first grip, within her reach. The hands
+            // step rung by rung under the ruled diagonal gait, so the
+            // second grip is on the neighbouring rung, not the same member
+            // — the M5d same-member check counted every alternating hand
+            // as a failed second grip. Anything else exported as a second
+            // grip is still the old failure.
+            // BEFORE (fix head 21e64658, after the (a)+(b) changes): the
+            // leg to 132 fails S6 with second grips 1846 (real rung second
+            // grips 1137) — every alternating hand counted as failed.
+            // AFTER: second grips 0 on the legs run so far — 132: 0 (real
+            // 2983), 143: 0 (real 817), 154: 0 (real 2187), 176.25: 0 (real
+            // 3886). The first version of this change (same-member dropped,
+            // first-grip-held kept) still failed 709 ticks: while the first
+            // hand swings, the second hand is the only hand holding, so the
+            // apart check has no first point — that case is real too, and
+            // the reach bound is its check.
             const bool rung = m.climb_move_active &&
                               (k == MoveKind::RungUp || k == MoveKind::RungDown);
             const double hand2_apart = std::hypot(m.contact_hand2.x - m.contact_hand.x,
@@ -85,10 +106,13 @@ struct MatronContactAudit {
             const double hand2_reach = std::hypot(m.contact_hand2.x - m.position.x,
                                                   m.contact_hand2.y - m.position.y,
                                                   m.contact_hand2.z - m.position.z);
-            const bool valid_second = rung && m.contact_hand_held &&
-                                      m.contact_hand2_body == m.contact_hand_body &&
-                                      m.contact_hand2_sub == m.contact_hand_sub && hand2_apart >= 0.10 &&
-                                      hand2_apart <= 0.60 && hand2_reach <= kReachM;
+            // A lone second grip is real too: under the diagonal gait the
+            // hands alternate, so while the first hand swings to the next
+            // rung the second hand is the only hand holding — the first
+            // grip is not held, and there is no first point to be distinct
+            // from. The reach bound and the rung climb still apply.
+            const bool apart_ok = !m.contact_hand_held || (hand2_apart >= 0.10 && hand2_apart <= 0.60);
+            const bool valid_second = rung && apart_ok && hand2_reach <= kReachM;
             if (valid_second) {
                 ++real_second_grip;
             } else {

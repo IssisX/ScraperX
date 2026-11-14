@@ -24,6 +24,7 @@ using namespace JPH;
 using namespace scraperx::sim;
 using traversal::Climber;
 using traversal::Failure;
+using traversal::Hold;
 using traversal::MoveKind;
 using traversal::MoveSpec;
 
@@ -190,13 +191,24 @@ void test_rungs() {
 }
 
 void test_second_hold() {
-    // M5a: the second hand really grips. On a rung climb the climber must
-    // take a second hold on the SAME rung member as the first hold, through
-    // the general hold path, and report it only while it is held. On trunk
-    // this fails: the second hold is never taken (second_ticks stays 0).
+    // The second hand really grips. On a rung climb the climber must take
+    // a second hold through the general hold path and report it only while
+    // it is held. The ruled diagonal gait (J-063) supersedes the M5
+    // same-member contract: the hands step rung by rung, each hand one
+    // pitch beyond the other's rung, so the second grip is on a rung of the
+    // ladder — the neighbouring rung while stepping — a distinct point
+    // 0.10-0.60 m from the first grip, not the same member twice.
+    // BEFORE (fix head 21e64658): FAIL "second grip on the same rung member
+    // as the first" — the gait holds neighbouring rungs, never the same one.
+    // AFTER: PASS, up second-held ticks 895, down 687.
     ClimbWorld w;
     w.deck(4.0F);
-    w.rungs(0.3F, 3.9F);
+    const std::vector<BodyID> rung_bodies = w.rungs(0.3F, 3.9F);
+    const auto is_rung = [&](const BodyID body) {
+        for (const BodyID rung : rung_bodies)
+            if (rung == body) return true;
+        return false;
+    };
     w.spawn(RVec3(0, 0, 1.0F));
     Climber climber(w.physics, w.her, {w.her, BodyID()});
     climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
@@ -204,8 +216,8 @@ void test_second_hold() {
     const auto up = w.run(climber, 30.0F, [&](int) {
         if (!climber.second_holding()) return;
         ++second_ticks;
-        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
-                "matron climb second hold: second grip on the same rung member as the first");
+        require(is_rung(climber.hold2().body),
+                "matron climb second hold: second grip on a rung of the ladder, not the same member");
         const RVec3 d = climber.view().hand2 - climber.view().hand;
         const double apart = std::hypot(double(d.GetX()), double(d.GetY()), double(d.GetZ()));
         require(apart >= 0.10 && apart <= 0.60,
@@ -228,8 +240,8 @@ void test_second_hold() {
     const auto dn = w.run(climber, 40.0F, [&](int) {
         if (!climber.second_holding()) return;
         ++second_ticks_down;
-        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
-                "matron climb second hold: second grip on the same rung member as the first, going down");
+        require(is_rung(climber.hold2().body),
+                "matron climb second hold: second grip on a rung of the ladder, not the same member, going down");
     });
     (void)w.settle(1.0F);
     std::cout << "  matron climb second hold: down " << int(dn) << " second-held ticks " << second_ticks_down << "\n";
@@ -240,45 +252,243 @@ void test_second_hold() {
               << "\n";
 }
 
-void test_drive_from_both_anchors() {
-    // M5c: when the second grip is held, the rung drive's support is BOTH
-    // grips, not the first alone: the velocity her power budget is charged
-    // on is her velocity against the MEAN of the two grips' point
-    // velocities, and the drive reaction is split half/half between the
-    // two grip points. One budget.take() call still grants the whole
-    // drive, so total force and power are unchanged; on static members
-    // both point velocities are zero and the change is null.
-    // On trunk this fails: relative_velocity() uses the first grip alone,
-    // so it misses half the second grip's point velocity on a member
-    // that moves under her hands.
+// J-063: on the rungs her feet take rungs, not air. Up then down the same
+// ladder, a per-tick audit in phase 2: at least three limbs on rungs while
+// one moves, each hand in reach of its shoulder, each foot on a rung body
+// within its leg's stroke, no body creep away from a grip change (her body
+// follows the grips, never a clock), no tick over 0.20 m, and no let-go drop
+// on the way down. On trunk this fails: the Climber takes no foot hold on
+// the rungs (both hands jump together, the body creeps at 0.6 m/s).
+void test_rung_support() {
     ClimbWorld w;
     w.deck(4.0F);
-    // Kinematic rungs, spinning slowly about their own vertical axis: the
-    // two grips' point velocities differ, so a single-anchor support
-    // velocity is measurably wrong while the mean is exact.
+    const std::vector<BodyID> rung_bodies = w.rungs(0.3F, 3.9F);
+    const auto is_rung = [&](const BodyID body) {
+        for (const BodyID rung : rung_bodies)
+            if (rung == body) return true;
+        return false;
+    };
+    w.spawn(RVec3(0, 0, 1.0F));
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    for (const bool up : {true, false}) {
+        MoveSpec spec = ladder_up(4.0F, 0.3F, 3.9F);
+        if (!up) {
+            spec.kind = MoveKind::RungDown;
+            spec.start = Vec3(0, 4.0F, -1.35F);
+            spec.goal = Vec3(0, 0, -0.5F);
+            spec.goal_top = 0.0F;
+        }
+        climber.begin(spec);
+        int prev_phase = -1;
+        RVec3 prev_centre = w.at();
+        RVec3 prev_view[4] = {};
+        int prev_limb_phase[4] = {};
+        Vec3 prev_vel = Vec3::sZero();
+        BodyID prev_hand, prev_hand2, prev_foot, prev_foot2;
+        SubShapeID prev_hand_sub, prev_hand2_sub, prev_foot_sub, prev_foot2_sub;
+        long last_change = 0;
+        float creep = 0.0F;
+        long foot_takes = 0, foot2_takes = 0, phase2_ticks = 0;
+        float max_vy = 0.0F, max_step = 0.0F;
+        bool supported_while_holding = false;
+        const auto st = w.run(climber, 40.0F, [&](int i) {
+            const auto &view = climber.view();
+            const RVec3 centre = w.at();
+            const Vec3 vel = w.physics.GetBodyInterface().GetLinearVelocity(w.her);
+            const float vy = vel.GetY();
+            const float step = float((centre - prev_centre).Length());
+            max_vy = std::max(max_vy, std::abs(vy));
+            max_step = std::max(max_step, step);
+            const int phase = view.phase;
+            // A hold change is a limb's (body, member) changing, or a grip
+            // taken or released: the anchor sits on static steel, but a
+            // mount take onto the rung the other limb already holds is a
+            // grip change too — it moves the clamp and the body follows it.
+            int moves = 0;
+            const auto moved = [&](const Hold &hold, const BodyID prev_body, const SubShapeID prev_sub) {
+                const bool m = hold.body != prev_body || hold.sub != prev_sub || hold.valid() != !prev_body.IsInvalid();
+                if (m) ++moves;
+                return m;
+            };
+            const bool hand_moved = moved(climber.hold(), prev_hand, prev_hand_sub);
+            const bool hand2_moved = moved(climber.hold2(), prev_hand2, prev_hand2_sub);
+            const bool foot_moved = moved(climber.foot(), prev_foot, prev_foot_sub);
+            const bool foot2_moved = moved(climber.foot2(), prev_foot2, prev_foot2_sub);
+            if (foot_moved && climber.foot().valid() && !prev_foot.IsInvalid()) ++foot_takes;
+            if (foot2_moved && climber.foot2().valid() && !prev_foot2.IsInvalid()) ++foot2_takes;
+            prev_hand = climber.hold().body;
+            prev_hand_sub = climber.hold().sub;
+            prev_hand2 = climber.hold2().body;
+            prev_hand2_sub = climber.hold2().sub;
+            prev_foot = climber.foot().body;
+            prev_foot_sub = climber.foot().sub;
+            prev_foot2 = climber.foot2().body;
+            prev_foot2_sub = climber.foot2().sub;
+            (void)hand_moved;
+            (void)hand2_moved;
+            if (phase == 2) {
+                ++phase2_ticks;
+                if (climber.supported() && view.holding) supported_while_holding = true;
+            }
+            if (climber.status() == Climber::Status::Running && phase == 2 && prev_phase == 2) {
+                const int contacts = (view.holding ? 1 : 0) + (view.holding2 ? 1 : 0) + (view.holding_foot ? 1 : 0) +
+                                     (view.holding_foot2 ? 1 : 0);
+                require(contacts >= 3, "matron rung support: three limbs on rungs while one moves");
+                require(moves <= 1, "matron rung support: one limb moves at a time");
+                const RVec3 shoulder = centre + Vec3(0, Matron::kShoulderUpM - Matron::kStandCentre, 0);
+                if (view.holding) {
+                    require((Vec3(view.hand - shoulder)).Length() <= Matron::kArmReachM + 0.05F,
+                            "matron rung support: each hand on a rung within arm reach");
+                }
+                const float leg_reach = climber.limits().center_above_feet() + climber.limits().leg_travel_m + 0.05F;
+                for (const bool second : {false, true}) {
+                    const bool holding = second ? view.holding_foot2 : view.holding_foot;
+                    const RVec3 point = second ? view.foot2 : view.foot;
+                    const Hold &hold = second ? climber.foot2() : climber.foot();
+                    if (!holding) continue;
+                    require(is_rung(hold.body), "matron rung support: each foot on a rung body");
+                    require(float(point.GetY()) < float(centre.GetY()) &&
+                                (Vec3(point - centre)).Length() <= leg_reach,
+                            "matron rung support: each foot on a rung within its leg's stroke");
+                }
+                require(std::abs(vy) <= 2.0F, "matron rung support: no free-fall speed while limbs hold");
+                require(step <= 0.20F + 0.001F, "matron rung support: no tick moves her more than 0.20 m");
+                // Section 5 falsifiers: a loaded limb's hold point never
+                // jumps in one tick, and a swinging limb moves at bounded
+                // limb speed; her velocity changes only inside what the
+                // budget plus gravity can do in a tick.
+                for (int limb = 0; limb < 4; ++limb) {
+                    const RVec3 point = limb == 0 ? view.hand : limb == 1 ? view.hand2 : limb == 2 ? view.foot : view.foot2;
+                    const float moved = float((point - prev_view[limb]).Length());
+                    // A hold point never jumps — but only a limb holding a
+                    // rung has one; a limb holding nothing rests at her
+                    // side or sole and follows the body.
+                    const bool holding = limb == 0 ? view.holding : limb == 1 ? view.holding2 : limb == 2 ? view.holding_foot : view.holding_foot2;
+                    if (view.limb_phase[limb] == 0 && prev_limb_phase[limb] == 0 && holding) {
+                        require(moved <= 0.003F,
+                                "matron rung support: a loaded limb's hold point never jumps in one tick");
+                    } else if (view.limb_phase[limb] == 2) {
+                        require(moved <= 2.0F / 90.0F + 0.001F,
+                                "matron rung support: a swinging limb moves at bounded limb speed");
+                    }
+                }
+                require(float((vel - prev_vel).Length()) <= 0.52F,
+                        "matron rung support: velocity change inside budget-plus-gravity bound");
+                if (i - last_change > 30) creep += std::abs(float(centre.GetY()) - float(prev_centre.GetY()));
+            }
+            if (moves > 0 && climber.status() == Climber::Status::Running) {
+                require(creep < 0.05F, "matron rung support: her body follows the grips, never a clock");
+                creep = 0.0F;
+                last_change = i;
+            }
+            if (!up) require(phase != 3, "matron rung support: no let-go drop on the way down");
+            prev_phase = phase;
+            prev_centre = centre;
+            for (int limb = 0; limb < 4; ++limb) {
+                prev_view[limb] = limb == 0 ? view.hand : limb == 1 ? view.hand2 : limb == 2 ? view.foot : view.foot2;
+                prev_limb_phase[limb] = view.limb_phase[limb];
+            }
+            prev_vel = vel;
+        });
+        const float settled = w.settle(1.0F);
+        std::cout << "  matron rung support " << (up ? "up" : "down") << ": " << int(st) << " ("
+                  << traversal::failure_name(climber.failure()) << ") phase2 ticks " << phase2_ticks << " foot takes "
+                  << foot_takes << "/" << foot2_takes << " max |vy| " << max_vy << " max step " << max_step << " creep "
+                  << creep << " feet " << settled << "\n";
+        require(st == Climber::Status::Done, "matron rung support: the climb completes");
+        require(up ? std::abs(settled - 4.0F) < 0.05F : std::abs(settled) < 0.05F,
+                "matron rung support: done standing on the goal floor");
+        require(foot_takes >= 4 && foot2_takes >= 4, "matron rung support: each foot takes rungs, rung by rung");
+        require(creep < 0.05F, "matron rung support: her body follows the grips, never a clock");
+        require(supported_while_holding, "matron rung support: feet on the goal floor while a hand still holds");
+    }
+    std::cout << "PASS scraperx_sim matron rung support: feet on rungs, three limbs holding, body follows the grips\n";
+}
+
+void test_drive_from_both_anchors() {
+    // M5c, re-based on the ruled diagonal gait (J-063): when the second grip
+    // is held, the rung drive's support is EVERY limb holding a rung, not
+    // the first grip alone: the velocity her power budget is charged on is
+    // her velocity against the MEAN of the holding limbs' point velocities,
+    // which is what relative_velocity() computes on a rung climb. One
+    // budget.take() call still grants the whole drive, so total force and
+    // power are unchanged.
+    // BEFORE (fix head 21e64658, after the (a) change): FAIL "second grip
+    // held long enough to check" — the climb fails lost_hold at tick 8,
+    // phase 1, no hold ever taken. The M5 setup spins the rungs about
+    // their vertical axis, and the gait revalidates every held rung each
+    // tick by its member bounds, so a rotated rung reads as a lost member
+    // before the second hand ever grips. A spinning member is no longer a
+    // climbable setup under the gait.
+    // The moving-member setup is now vertical oscillation: each rung rides
+    // up and down on its own frequency, so neighbouring rungs carry
+    // different point velocities while the ladder stays put (a rung never
+    // leaves its band, and a pure translation passes revalidation). The
+    // check starts once the oscillation is established (t >= 2 s: at t=0
+    // every rung is instantaneously still, so the first ticks cannot
+    // separate the anchors). The check still separates the old
+    // single-anchor support from the mean: the run prints the worst
+    // single-anchor gap over the checked ticks, and the test requires it
+    // above the 0.02 m/s tolerance, or the check proves nothing.
+    // AFTER: PASS, checked ticks=5, worst single-anchor gap=0.115617 m/s.
+    ClimbWorld w;
+    w.deck(4.0F);
+    // Kinematic rungs, each oscillating vertically on its own frequency:
+    // the two grips' point velocities differ, so a single-anchor support
+    // velocity is measurably wrong while the mean over all holding limbs
+    // is exact. Rung i rides y = y0 + A cos(w_i t), w_i = 2.0 + 0.35 i.
+    std::vector<BodyID> rungs;
     for (float y = 0.3F; y <= 3.9F + 1.0e-3F; y += 0.3F) {
-        const BodyID rung = w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -0.95F), false, EMotionType::Kinematic);
-        w.physics.GetBodyInterface().SetAngularVelocity(rung, Vec3(0.0F, 0.5F, 0.0F));
+        rungs.push_back(w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -0.95F), false, EMotionType::Kinematic));
     }
     w.spawn(RVec3(0, 0, -0.5F));   // already at the ladder's stand point
     Climber climber(w.physics, w.her, {w.her, BodyID()});
     climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
     int checked = 0;
+    double worst_single_gap = 0.0;
     for (int tick = 0; tick < 90 * 10 && checked < 5; ++tick) {
+        // Drive the oscillation: rung i's point velocity is -A w_i sin(w_i t)
+        // straight up, so neighbouring rungs move at different speeds.
+        const double t = double(tick) / 90.0;
+        for (std::size_t i = 0; i < rungs.size(); ++i) {
+            const double wi = 2.0 + 0.35 * double(i);
+            const float v = float(-0.05 * wi * std::sin(wi * t));
+            w.physics.GetBodyInterface().SetLinearVelocity(rungs[i], Vec3(0.0F, v, 0.0F));
+        }
         w.tick(climber);
         if (climber.status() != Climber::Status::Running) break;
         if (!climber.second_holding()) continue;
+        if (tick < 180) continue;   // the oscillation is still building: every rung near still
+        // The mean over every limb holding a rung right now (a swinging
+        // limb carries nothing, so it is not support) — the same limbs
+        // relative_velocity() averages.
+        const auto &view = climber.view();
+        const Hold *holds[4] = {&climber.hold(), &climber.hold2(), &climber.foot(), &climber.foot2()};
+        const RVec3 points[4] = {view.hand, view.hand2, view.foot, view.foot2};
+        Vec3 sum = Vec3::sZero();
+        int n = 0;
+        for (int limb = 0; limb < 4; ++limb) {
+            if (!holds[limb]->valid() || view.limb_phase[limb] == 2) continue;
+            sum += w.physics.GetBodyInterface().GetPointVelocity(holds[limb]->body, points[limb]);
+            ++n;
+        }
+        if (n < 2) continue;   // the check needs two holding limbs to mean over
         const Vec3 body_vel = w.physics.GetBodyInterface().GetLinearVelocity(w.her);
-        const Vec3 pv1 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold().body, climber.view().hand);
-        const Vec3 pv2 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold2().body, climber.view().hand2);
-        const Vec3 expected = body_vel - 0.5F * (pv1 + pv2);
+        const Vec3 expected = body_vel - sum / float(n);
         const Vec3 got = climber.relative_velocity();
         require((got - expected).Length() < 0.02F,
-                "matron climb drive from both anchors: budget charged on the mean of both grips' point velocities");
+                "matron climb drive from both anchors: budget charged on the mean of all holding limbs' point velocities");
+        // The setup must still separate the old single-anchor support from
+        // the mean, or the check above proves nothing.
+        const Vec3 pv1 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold().body, view.hand);
+        worst_single_gap = std::max(worst_single_gap, double((body_vel - pv1 - expected).Length()));
         ++checked;
     }
     require(checked >= 5, "matron climb drive from both anchors: second grip held long enough to check");
-    std::cout << "PASS scraperx_sim matron climb drive from both anchors: checked ticks=" << checked << "\n";
+    require(worst_single_gap > 0.02,
+            "matron climb drive from both anchors: the moving rungs separate the single anchor from the mean");
+    std::cout << "PASS scraperx_sim matron climb drive from both anchors: checked ticks=" << checked
+              << " worst single-anchor gap=" << worst_single_gap << " m/s\n";
 }
 
 void test_rung_failures() {
@@ -2000,6 +2210,7 @@ void run_matron_climb() {
     test_rungs();
     test_second_hold();
     test_drive_from_both_anchors();
+    test_rung_support();
     test_rung_failures();
     test_pole();
     test_capped_launches();
@@ -2745,3 +2956,175 @@ void run_matron_ladders() {
     std::cout << "PASS scraperx_sim matron ladders: " << passed << "/" << tried << ", refused " << refused << "\n";
 }
 SCRAPERX_SLICE("matron-ladders", run_matron_ladders);
+
+// J-063 measurement (Claude, 2026-11-08 07:46): her grade-ladder descent at
+// x=12, z=-123.6 on the real tower, before the fix and again after it. Per
+// frame of the RungDown move: each hand's and foot's distance to its rung,
+// her vertical speed, the count of frames with no limb on a rung, and the
+// force each hold carries. The table prints first; the support rule is
+// required after it, so the BEFORE run prints the table and fails, and the
+// AFTER run prints the table and passes. Main posts both tables on #321.
+//
+// Feet: on trunk the sim takes no foot hold, so the feet are read where they
+// dangle — straight below her centre at her soles — and the distance is to
+// the nearest rung from there. Once the fix lands and the foot holds are
+// exposed through the view, this reads the held foot points instead.
+// Force: the total drive force (climb_force_n) is the hand's load on trunk —
+// the hand carries it all, the feet carry nothing. The per-hold split comes
+// with the foot-hold plumbing.
+void run_matron_grade_ladder() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    (void)s.advance_frame(0.1);
+    const traversal::AffordanceMap &map = s.matron_affordances();
+    const traversal::Ladder *ladder = nullptr;
+    for (const traversal::Ladder &l : map.ladders()) {
+        if (std::abs(l.x - 12.0F) < 0.05F && std::abs(l.z + 123.6F) < 0.05F) ladder = &l;
+    }
+    require(ladder != nullptr, "matron grade ladder: the scan reads a ladder at (12, -123.6)");
+    require(ladder->rungs >= 10 && ladder->pitch > 0.3F && ladder->pitch < 0.4F,
+            "matron grade ladder: the grade ladder is a real ladder of rungs");
+    const traversal::Edge *down = nullptr;
+    for (const traversal::Edge &e : map.edges()) {
+        if (!e.usable || e.kind != MoveKind::RungDown) continue;
+        if (std::abs(e.spec.line.GetX() - ladder->x) < 0.6F && std::abs(e.spec.line.GetZ() - ladder->z) < 0.6F) down = &e;
+    }
+    require(down != nullptr, "matron grade ladder: her scan offers a rung descent on its line");
+    std::cout << "  grade ladder at (12, -123.6): " << ladder->rungs << " rungs " << ladder->bottom << " -> " << ladder->top
+              << " m, pitch " << ladder->pitch << ", along_x " << ladder->along_x << "\n";
+    const float half = ladder->half > 0.05F ? ladder->half : 0.3F;
+    const auto rung_dist = [&](const Vector3 &p) {
+        float k = std::floor((float(p.y) - ladder->bottom) / ladder->pitch + 0.5F);
+        k = std::max(0.0F, std::min(float(ladder->rungs - 1), k));
+        const float ry = ladder->bottom + k * ladder->pitch;
+        double ax, az;
+        if (ladder->along_x) {
+            ax = std::max(double(ladder->x) - half, std::min(double(ladder->x) + half, p.x));
+            az = ladder->z;
+        } else {
+            ax = ladder->x;
+            az = std::max(double(ladder->z) - half, std::min(double(ladder->z) + half, p.z));
+        }
+        return std::hypot(p.x - ax, p.y - ry, p.z - az);
+    };
+    const auto st = down->spec.start;
+    s.debug_place_matron(Vector3{double(st.GetX()), double(st.GetY()), double(st.GetZ())});
+    for (int i = 0; i < 30; ++i) (void)s.advance_frame(1.0 / 60.0);
+    require(s.debug_matron_travel_region(down->to), "matron grade ladder: she has a way down the grade ladder");
+    struct Agg {
+        long frames = 0;
+        double hand_sum = 0.0, hand_max = 0.0, foot_sum = 0.0, foot_max = 0.0;
+        double vy_sum = 0.0, vy_min = 0.0, force_sum = 0.0, force_max = 0.0;
+        long no_limb = 0;
+    };
+    Agg by_phase[5];
+    long rung_frames = 0, drop_frames = 0;
+    double drop_entry_y = 0.0, drop_fall_m = 0.0, drop_peak_vy = 0.0;
+    bool in_drop = false;
+    double worst_step = 0.0, secs = 0.0;
+    std::vector<std::string> moves;
+    auto last = s.matron_state().position;
+    Simulation::MatronJourney j = s.matron_journey();
+    while (j.active && secs < 120.0) {
+        (void)s.advance_frame(1.0 / 60.0);
+        secs += 1.0 / 60.0;
+        const auto snap = s.matron_state();
+        const auto p = snap.position;
+        worst_step = std::max(worst_step, std::hypot(p.x - last.x, p.y - last.y, p.z - last.z));
+        const double vy = (p.y - last.y) * 60.0;
+        last = p;
+        const std::string move = std::string(traversal::move_name(snap.climb_move)) + " ph" + std::to_string(snap.climb_phase);
+        if (moves.empty() || moves.back() != move) moves.push_back(move);
+        const bool on_line = std::abs(p.x - 12.0) < 1.5 && std::abs(p.z + 123.6) < 1.5;
+        if (snap.climb_move != MoveKind::RungDown || !on_line) {
+            j = s.matron_journey();
+            continue;
+        }
+        ++rung_frames;
+        const int ph = std::max(0, std::min(4, snap.climb_phase));
+        Agg &a = by_phase[ph];
+        ++a.frames;
+        // Both hands and both feet, as the climber holds them: a limb in
+        // transit between rungs (Swing) is not measured — its point is
+        // between rungs by design, and the audit's swing bound covers
+        // it. When no limb of a kind is on a rung, the old reading stands
+        // (the first hand, the soles).
+        double hand_d = -1.0;
+        if (snap.climb_limb_phase[0] != 2) hand_d = std::max(hand_d, rung_dist(snap.climb_hand));
+        if (snap.climb_limb_phase[1] != 2 && snap.climb_hand2_known) {
+            hand_d = std::max(hand_d, rung_dist(snap.climb_hand2));
+        }
+        if (hand_d < 0.0) hand_d = rung_dist(snap.climb_hand);
+        const Vector3 foot_point{p.x, p.y - Matron::kStandCentre, p.z};
+        double foot_d = -1.0;
+        if (snap.climb_limb_phase[2] != 2 && snap.climb_foot_known) foot_d = std::max(foot_d, rung_dist(snap.climb_foot));
+        if (snap.climb_limb_phase[3] != 2 && snap.climb_foot2_known) {
+            foot_d = std::max(foot_d, rung_dist(snap.climb_foot2));
+        }
+        if (foot_d < 0.0) foot_d = rung_dist(foot_point);
+        a.hand_sum += hand_d;
+        a.hand_max = std::max(a.hand_max, hand_d);
+        a.foot_sum += foot_d;
+        a.foot_max = std::max(a.foot_max, foot_d);
+        a.vy_sum += vy;
+        a.vy_min = std::min(a.vy_min, vy);
+        a.force_sum += snap.climb_force_n;
+        a.force_max = std::max(a.force_max, snap.climb_force_n);
+        // The floor counts as support (Claude's 6:20 PM ruling, J-063): a
+        // frame where her feet stand on a floor is not a frame with no limb
+        // on a rung, even in phase 0 (the walk-in on the deck) or phase 3
+        // (the step-off). The phase-2 hand/foot distance requires above are
+        // untouched, so this cannot mask a real rung miss; the separate
+        // drop_frames require still catches any let-go drop.
+        if ((ph == 3) || (hand_d > 0.10 && foot_d > 0.10)) {
+            if (!snap.contact_supported) ++a.no_limb;
+        }
+        if (ph == 3) {
+            ++drop_frames;
+            if (!in_drop) {
+                in_drop = true;
+                drop_entry_y = p.y;
+                drop_peak_vy = 0.0;
+            }
+            drop_peak_vy = std::min(drop_peak_vy, vy);
+            drop_fall_m = std::max(drop_fall_m, drop_entry_y - p.y);
+        } else {
+            in_drop = false;
+        }
+        j = s.matron_journey();
+    }
+    const bool arrived = !j.active && j.region == down->to;
+    std::cout << "  grade ladder descent: arrived " << arrived << " in " << secs << " s, " << rung_frames
+              << " rung-down frames, worst step " << worst_step << " m\n";
+    std::cout << "  moves: ";
+    for (const std::string &m : moves) std::cout << m << " ";
+    std::cout << "\n";
+    std::cout << "  | phase | frames | hand dist mean/max m | foot dist mean/max m | vy mean/min m/s | no-limb | "
+                 "force mean/max N |\n";
+    for (int ph = 0; ph < 5; ++ph) {
+        const Agg &a = by_phase[ph];
+        if (a.frames == 0) continue;
+        std::cout << "  | " << ph << " | " << a.frames << " | " << a.hand_sum / double(a.frames) << "/" << a.hand_max << " | "
+                  << a.foot_sum / double(a.frames) << "/" << a.foot_max << " | " << a.vy_sum / double(a.frames) << "/"
+                  << a.vy_min << " | " << a.no_limb << " | " << a.force_sum / double(a.frames) << "/" << a.force_max
+                  << " |\n";
+    }
+    if (drop_frames > 0) {
+        std::cout << "  drop: " << drop_frames << " frames letting go, fell " << drop_fall_m << " m, peak vy " << drop_peak_vy
+                  << " m/s\n";
+    }
+    require(arrived, "matron grade ladder: she gets down the grade ladder");
+    require(rung_frames > 0, "matron grade ladder: the descent is a rung descent on its line");
+    const Agg &two = by_phase[2];
+    require(two.frames > 0, "matron grade ladder: she spends frames on the rungs");
+    require(two.hand_max <= 0.10, "matron grade ladder: each hand on a rung while descending");
+    require(two.foot_max <= 0.10, "matron grade ladder: each foot on a rung while descending");
+    long no_limb = 0;
+    for (const Agg &a : by_phase) no_limb += a.no_limb;
+    require(no_limb == 0, "matron grade ladder: no frame with no limb on a rung");
+    require(drop_frames == 0, "matron grade ladder: no let-go drop at the bottom");
+    require(worst_step <= 0.20, "matron grade ladder: no frame moves her more than 0.20 m");
+    require(two.force_max <= 8000.0, "matron grade ladder: the descent stays inside her force budget");
+    std::cout << "PASS scraperx_sim matron grade ladder descent: hands and feet on rungs, no drop, no empty frame\n";
+}
+SCRAPERX_SELECT("matron-grade-ladder", run_matron_grade_ladder);

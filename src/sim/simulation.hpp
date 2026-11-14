@@ -230,6 +230,11 @@ struct MatronSnapshot final {
     bool climb_hand2_known = false;
     Vector3 climb_feet_support{};
     bool climb_feet_support_known = false;
+    Vector3 climb_foot{};
+    bool climb_foot_known = false;
+    Vector3 climb_foot2{};
+    bool climb_foot2_known = false;
+    int climb_limb_phase[4] = {0, 0, 0, 0};   // 0 Attached, 1 Unloading, 2 Swing, 3 Loading
     // Her contacts as the simulation has them (Matron::View contact_*): her
     // feet's floor, her hand's grip, a second grip, a line under her arms.
     // Bodies and members are Jolt ids (0xffffffff: none).

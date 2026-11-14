@@ -5512,6 +5512,40 @@ void Matron::refresh_view() {
             view_.climb_feet_support_known = false;
         }
     }
+    // J-063: on a rung climb the second hand and the feet come from the
+    // climber's own gait, not from geometry: the left hand is the gait's
+    // HandL point, the feet are the gait's foot points, and the feet
+    // support is the mean of the feet standing on rungs. Other moves keep
+    // the geometric plumbing above. The climb way holds her on a direct
+    // climb; the journey way holds her on a journey leg — either way, when
+    // the climber is actively running a rung move, the gait is the truth,
+    // so the overrides run for any holder way, not only the climb way.
+    if (climber() != nullptr) {
+        const traversal::ClimbView &climb = climber()->view();
+        const bool on_rungs =
+            climb.active && (climb.kind == traversal::MoveKind::RungUp || climb.kind == traversal::MoveKind::RungDown);
+        if (way == &climb_way_ || on_rungs) {
+            for (int limb = 0; limb < 4; ++limb) view_.climb_limb_phase[limb] = climb.limb_phase[limb];
+        }
+        if (on_rungs) {
+            view_.climb_hand2 = climb.hand2;
+            view_.climb_hand2_known = climb.holding2;
+            view_.climb_foot = climb.foot;
+            view_.climb_foot_known = climb.holding_foot;
+            view_.climb_foot2 = climb.foot2;
+            view_.climb_foot2_known = climb.holding_foot2;
+            if (climb.holding_foot && climb.holding_foot2) {
+                view_.climb_feet_support = (climb.foot + climb.foot2) * 0.5F;
+                view_.climb_feet_support_known = true;
+            } else if (climb.holding_foot) {
+                view_.climb_feet_support = climb.foot;
+                view_.climb_feet_support_known = true;
+            } else if (climb.holding_foot2) {
+                view_.climb_feet_support = climb.foot2;
+                view_.climb_feet_support_known = true;
+            }
+        }
+    }
     refresh_contact_view();
     BodyInterface &bodies = physics_.GetBodyInterface();
     for (std::size_t i = 0; i < planks_.size(); ++i) {

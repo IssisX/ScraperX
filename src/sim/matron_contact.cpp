@@ -60,10 +60,17 @@ void Matron::refresh_contact_view() {
     Vec3 local = Vec3::sZero();
     bool held = false;
     if (climber_ != nullptr && climber_->on_steel()) {
-        body = climber_->hold().body;
-        sub = climber_->hold().sub;
-        local = climber_->hold().local;
-        held = true;
+        // A hand in Swing holds nothing: its hold stays valid through the
+        // swing (the gait counts it), but the hand is in transit between
+        // rungs, not on one — the contact truth must say so, or the audit
+        // finds the exported grip off the mover's hand by the swing.
+        // ClimbView.limb_phase: 0 Attached, 1 Unloading, 2 Swing, 3 Loading.
+        if (climber_->view().limb_phase[0] != 2) {
+            body = climber_->hold().body;
+            sub = climber_->hold().sub;
+            local = climber_->hold().local;
+            held = true;
+        }
     } else if (routecraft_.owns_motion() && routecraft_.grip(body, sub, local)) {
         held = true;
     } else if (view_.on_pipe && !pipe_support_.IsInvalid() &&
@@ -96,7 +103,8 @@ void Matron::refresh_contact_view() {
     // steel, no second hold, a body gone from the world — leaves
     // contact_hand2_held false, as before. This is the climb branch of
     // contact truth; the upright fallthrough is untouched.
-    if (climber_ != nullptr && climber_->on_steel() && climber_->hold2().valid()) {
+    if (climber_ != nullptr && climber_->on_steel() && climber_->hold2().valid() &&
+        climber_->view().limb_phase[1] != 2) {
         const auto &second = climber_->hold2();
         if (bodies.IsAdded(second.body)) {
             view_.contact_hand2_held = true;

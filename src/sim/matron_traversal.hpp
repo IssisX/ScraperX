@@ -207,6 +207,24 @@ struct ClimbView {
     // Her second hand's grip (M5): mirrors hold2_ below, nothing else.
     bool holding2 = false;
     JPH::RVec3 hand2 = JPH::RVec3::sZero();
+    // Her feet's grips on the rungs (J-063): mirrors foot_/foot2_ below,
+    // nothing else. The load each limb's anchors carry this tick: the drive
+    // force reacted through the hand anchors and through the foot anchors.
+    bool holding_foot = false;
+    JPH::RVec3 foot = JPH::RVec3::sZero();
+    bool holding_foot2 = false;
+    JPH::RVec3 foot2 = JPH::RVec3::sZero();
+    float hand_load_n = 0.0F;
+    float foot_load_n = 0.0F;
+    // Her four limbs' gait state (J-063): limb 0 HandR (hold_), 1 HandL
+    // (hold2_), 2 FootR (foot_), 3 FootL (foot2_); the hold point and
+    // whether it is held are the hand/hand2/foot/foot2 fields above, in
+    // that same order. Phase: 0 Attached, 1 Unloading, 2 Swing, 3 Loading.
+    // limb_load_n is the drive force reacted through that limb's anchors
+    // this tick (0 in Swing); the point is the limb's current view point
+    // (the swing path while it moves).
+    int limb_phase[4] = {0, 0, 0, 0};
+    float limb_load_n[4] = {0.0F, 0.0F, 0.0F, 0.0F};
     // This tick a top-out has her up: her middle over the floor it was going
     // for, her soles within the clearance it pulled them to over the lip. Only
     // her weight is left to come onto her feet (its own Done waits for that).
@@ -267,6 +285,21 @@ public:
     [[nodiscard]] const Hold &hold2() const noexcept { return hold2_; }
     [[nodiscard]] JPH::RVec3 hold2_world() const noexcept { return hold2_world_; }
     [[nodiscard]] bool second_holding() const noexcept { return hold2_.valid(); }
+    // Her feet's grips on the rungs (J-063 contract): a hold taken by each
+    // foot, on a rung member, through the general hold-taking path,
+    // revalidated every tick by the same revalidate() the hand holds use,
+    // and released the moment it stops being that, or the move ends, fails,
+    // or is cancelled, or a dyno starts. What this contract guarantees is
+    // grip state and truthful reporting, never a pose: a foot hold that has
+    // not been taken and revalidated this way must never move her foot.
+    // The planted leg of a jump or dyno is foot_ as before; foot2_ is the
+    // other foot, used only by the rung moves.
+    [[nodiscard]] const Hold &foot() const noexcept { return foot_; }
+    [[nodiscard]] const Hold &foot2() const noexcept { return foot2_; }
+    [[nodiscard]] JPH::RVec3 foot_world() const noexcept { return foot_world_; }
+    [[nodiscard]] JPH::RVec3 foot2_world() const noexcept { return foot2_world_; }
+    [[nodiscard]] bool foot_holding() const noexcept { return foot_.valid(); }
+    [[nodiscard]] bool foot2_holding() const noexcept { return foot2_.valid(); }
     // Her velocity against what she pushes on (the hold at its anchor, else
     // the floor under her): the velocity her power budget is charged on.
     [[nodiscard]] JPH::Vec3 relative_velocity() const;
@@ -289,14 +322,33 @@ private:
     void fail(Failure failure);
     void finish();
     bool take_hold(JPH::RVec3 near, float radius, bool bar_only, Hold &out, JPH::RVec3 *where = nullptr) const;
-    // M5b: keep the second grip on the first hold's rung member, or take it
-    // there, or release it. Rung climbs only; never a pose, never a
-    // different member, never during a dyno throw.
-    void maintain_second_hold();
     bool find_rung(float from_y, float to_y, bool upward, Hold &out, JPH::RVec3 &where) const;
     bool find_lip(JPH::Vec3 toward, float near_y, Hold &out, JPH::RVec3 &where) const;
     void drive(float dt, JPH::Vec3 target_centre, JPH::Vec3 target_velocity, float stiffness, Budget &budget,
                bool carry_weight, JPH::RVec3 at_hold);
+    // J-063 four-limb gait on rungs (limbs 0 HandR, 1 HandL, 2 FootR,
+    // 3 FootL, in the order hold_, hold2_, foot_, foot2_; the gait cycles
+    // HandL, FootR, HandR, FootL). One limb moves at a time; the rest
+    // carry her. The drive's target is the edge of the clamp the attached
+    // limbs' reach bands allow, in the direction she travels — never a
+    // clock. A limb in Swing carries nothing; its hold stays on the rung
+    // it left until the take at the swing's end.
+    void reset_gait();
+    void drive_rung(float dt, Budget &budget, bool up);
+    void push_reaction_on(JPH::BodyID body, JPH::Vec3 force, JPH::RVec3 at);
+    void step_gait(float dt, Budget &budget, bool up);
+    void start_limb_swing(int limb, JPH::RVec3 to);
+    [[nodiscard]] bool release_blocker(int limb, bool up);
+    [[nodiscard]] bool rung_target(int limb, bool up, JPH::RVec3 &point, bool &dyno) const;
+    [[nodiscard]] Hold &limb_hold(int limb) noexcept;
+    [[nodiscard]] const Hold &limb_hold(int limb) const noexcept;
+    [[nodiscard]] JPH::RVec3 &limb_world(int limb) noexcept;
+    [[nodiscard]] const JPH::RVec3 &limb_world(int limb) const noexcept;
+    [[nodiscard]] float limb_load_factor(int limb) const noexcept;
+    [[nodiscard]] float limb_cap_n(int limb) const noexcept;
+    [[nodiscard]] bool foot_can_reach() const;
+    [[nodiscard]] bool clamp_bands(float &lo, float &hi) const;
+    [[nodiscard]] bool in_clamp() const;
     // may_drop: how far below her feet a floor ahead still counts (a step down she means).
     void walk(float dt, JPH::Vec3 feet_goal, float speed, Budget &budget, float may_drop = 0.0F);
     [[nodiscard]] bool floor_under(JPH::RVec3 c, JPH::Vec3 off) const;
@@ -351,6 +403,29 @@ private:
     Status step_dyno(float dt, Budget &budget);
     Hold foot_;
     JPH::RVec3 foot_world_ = JPH::RVec3::sZero();
+    Hold foot2_;   // J-063 second foot; invalid unless it meets the contract above
+    JPH::RVec3 foot2_world_ = JPH::RVec3::sZero();
+    // J-063 gait state, limbs 0 HandR, 1 HandL, 2 FootR, 3 FootL.
+    enum class LimbPhase : std::uint8_t { Attached = 0, Unloading = 1, Swing = 2, Loading = 3 };
+    static constexpr int kLimbCount = 4;
+    static constexpr int kGaitOrder[kLimbCount] = {1, 2, 0, 3};   // HandL, FootR, HandR, FootL
+    LimbPhase limb_phase_[kLimbCount] = {LimbPhase::Attached, LimbPhase::Attached, LimbPhase::Attached,
+                                         LimbPhase::Attached};
+    int limb_ticks_[kLimbCount] = {0, 0, 0, 0};
+    JPH::RVec3 limb_from_[kLimbCount] = {};
+    JPH::RVec3 limb_to_[kLimbCount] = {};
+    int limb_swing_ticks_[kLimbCount] = {0, 0, 0, 0};
+    JPH::RVec3 limb_view_[kLimbCount] = {};
+    float limb_load_[kLimbCount] = {0.0F, 0.0F, 0.0F, 0.0F};
+    // A limb whose swing ends in a release, not a take: the phase-4 step-off
+    // swings a foot to a floor point and lets the rung go there.
+    bool limb_release_[kLimbCount] = {false, false, false, false};
+    // The rung a limb let go of to unblock the body (release_blocker):
+    // it may only mount a rung past that one, in the direction of travel,
+    // or it mounts the same rung again and the deadlock returns.
+    // -1.0e6F means it never released one.
+    float limb_released_y_[kLimbCount] = {-1.0e6F, -1.0e6F, -1.0e6F, -1.0e6F};
+    int gait_next_ = 0;         // index into kGaitOrder
     float leg_start_m_ = 0.0F;
     float leg_target_y_ = 0.0F;
     int leg_push_ticks_ = 0;

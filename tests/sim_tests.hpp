@@ -888,6 +888,7 @@ void run_matron_climb_scan();
 void run_matron_tower_proof();
 void run_ladder_bar_sort();   // J-008: the ladder-bar sort is a strict total order
 void run_matron_ladders();
+void run_matron_grade_ladder();   // J-063: the grade-ladder descent, measured per tick
 void run_matron_chain();
 void run_matron_towers();
 void run_matron_board_walls();

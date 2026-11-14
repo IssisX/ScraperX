@@ -805,8 +805,9 @@ public:
     // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, solid
     // from grade to 154, a 0.35 m flange reaching x 15.25 under every deck).
     // Too thick for the climber's hands; hers wrap it. Her line runs down its
-    // west side clear of every flange (her 0.30 m against their x 15.25), so
-    // the steel she climbs is steel she meets: she is on her own layer, with
+    // west side, her body depth plus a small clearance off its face (the
+    // flanges stand proud of it, so at decks she slides along their faces),
+    // so the steel she climbs is steel she meets: she is on her own layer, with
     // gravity, and only her hands hold her (matron_pipe.cpp). From a deck she
     // takes the north rail's top (kPipeRailTopM over the deck at kPipeRailZ),
     // lifts herself over it and out to her line, and takes the riser; at 154,
@@ -824,12 +825,22 @@ public:
     // opens her hands: her legs alone slow her (kPipeSlideAccel, her squeeze
     // against her weight) until they meet the flange under her and she slams
     // onto it, stunned a while by how hard, alive; then she goes on.
-    static constexpr float kPipeLineX = 14.85F;
+    static constexpr float kPipeCentreX = 15.8F;
+    static constexpr float kPipeCentreZ = -134.2F;
+    // Her line off the riser's west face: her body depth (her capsule radius)
+    // plus a small clearance to the steel — never her arm length. Her chest is
+    // pulled in toward the face, her elbows bend, her hands stay where they
+    // are on it. (Was 14.85: 0.60 m off the face, her arm's length out;
+    // J-063 measured torso_gap 0.321 m against the 0.20 m bar.) The flanges
+    // stand 0.20 m proud of the riser, so at decks her capsule meets their
+    // faces 0.10 m before her line does: she slides along them, she does not
+    // shrink past them.
+    static constexpr float kPipeRiserHalfM = 0.35F;      // the riser is 0.7 m square
+    static constexpr float kPipeFaceClearanceM = 0.10F;  // air between her torso and the steel
+    static constexpr float kPipeLineX = kPipeCentreX - kPipeRiserHalfM - (kRadius + kPipeFaceClearanceM);
     static constexpr float kPipeLineZ = -133.75F;
     static constexpr float kPipeDeckX = 14.85F;    // where she stands at the rail to go over it
     static constexpr float kPipeDeckZ = -132.55F;
-    static constexpr float kPipeCentreX = 15.8F;
-    static constexpr float kPipeCentreZ = -134.2F;
     static constexpr float kPipeRailZ = -133.0F;
     static constexpr float kPipeRailTopM = 1.09F;  // the north rail's top over its deck
     static constexpr float kPipeSqueezeN = 4500.0F;
@@ -862,7 +873,8 @@ public:
     [[nodiscard]] bool pipe_serves(float next);
     // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
     // her shins, this far over her soles, level toward its axis, within her
-    // legs' reach (her line is 0.6 m off the riser's west face).
+    // legs' reach (her line is 0.40 m off the riser's west face in x, 0.41 m
+    // to its nearest corner).
     static constexpr float kBraceShinM = 0.45F;
     static constexpr float kBraceReachM = 1.0F;
     // Her real arm on her pipe (rule 37: her hands reach each hold), as her
@@ -1245,6 +1257,20 @@ public:
         // known is false when it is only her level's floor point.
         JPH::RVec3 climb_feet_support = JPH::RVec3::sZero();
         bool climb_feet_support_known = false;
+        // Her feet's own holds on the rungs (J-063): the Climber's foot
+        // points, one per foot, when the climb way runs a rung move. The
+        // rig keeps posing the feet from climb_feet_support; these are the
+        // per-foot truth the grade-ladder audit reads. Known is false
+        // unless the foot holds a rung this tick.
+        JPH::RVec3 climb_foot = JPH::RVec3::sZero();
+        bool climb_foot_known = false;
+        JPH::RVec3 climb_foot2 = JPH::RVec3::sZero();
+        bool climb_foot2_known = false;
+        // Her four limbs' gait phases (J-063): 0 Attached, 1 Unloading,
+        // 2 Swing, 3 Loading, from the climber's ClimbView. A swinging
+        // limb is in transit between rungs, not on one; the grade-ladder
+        // audit reads this to measure only the limbs holding a rung.
+        int climb_limb_phase[4] = {0, 0, 0, 0};
         // The move that owns the pose, even while a jump or drop has no hold.
         traversal::MoveKind climb_move = traversal::MoveKind::Walk;
         int climb_phase = 0;
