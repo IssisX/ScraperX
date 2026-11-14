@@ -140,8 +140,11 @@ def git(cwd, *args) -> str:
 
 
 class DispatchedCheckout(unittest.TestCase):
-    """The whole step, main(), in a real shallow checkout as actions/checkout leaves it (depth 1): an integrate
-    branch that changed one native test, on a trunk that has since moved the Godot project."""
+    """The whole step, main(), with real git in a real clone: an integrate branch that changed one native test, on
+    top of a trunk whose last commit moved the Godot project. The clone is whole and the branch sits on trunk's tip,
+    so the merge-base is the trunk commit the step fetches, whatever a shallow fetch deepens (git 2.43 and CI's 2.56
+    differ there; CI's own depth-1 checkout is proven by every integrate run's rule check, which needs the same
+    merge-base)."""
 
     NATIVE_ONLY = {"game": "true", "native": "true", "godot": "false", "android": "false"}
     EVERYTHING = {"game": "true", "native": "true", "godot": "true", "android": "true"}
@@ -152,10 +155,9 @@ class DispatchedCheckout(unittest.TestCase):
         os.mkdir(self.origin)
         git(self.origin, "init", "-q", "-b", "ScraperX-Claude")
         self.commit("work/plan.md", "base")
+        self.commit("godot/main.gd", "trunk moved the game")
         git(self.origin, "checkout", "-q", "-b", "claude/integrate-x")
         self.commit("tests/pr.cpp", "the branch's own change")
-        git(self.origin, "checkout", "-q", "ScraperX-Claude")
-        self.commit("godot/main.gd", "trunk moved the game")
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -169,26 +171,28 @@ class DispatchedCheckout(unittest.TestCase):
         git(self.origin, "commit", "-q", "-m", msg)
 
     def step(self, event, ref, branch="claude/integrate-x", extra=None) -> dict[str, str]:
-        """What the scope step writes to $GITHUB_OUTPUT for this event, on a fresh depth-1 checkout of `branch`."""
+        """What the scope step writes to $GITHUB_OUTPUT for this event, in a fresh clone of `branch`. What it printed
+        is kept in self.said, for a failure's message."""
         work = tempfile.mkdtemp(dir=self.tmp.name)
-        git(self.tmp.name, "clone", "-q", "--depth=1", "--branch", branch, f"file://{self.origin}", work)
+        git(self.tmp.name, "clone", "-q", "--branch", branch, f"file://{self.origin}", work)
         out = os.path.join(work, "github_output")
         env = dict({"EVENT": event, "REF": ref, "BEFORE": "", "GITHUB_OUTPUT": out}, **(extra or {}))
         was = os.getcwd()
         os.chdir(work)
         try:
-            with mock.patch.dict(os.environ, env), contextlib.redirect_stdout(io.StringIO()), \
-                    contextlib.redirect_stderr(io.StringIO()):
+            said = io.StringIO()
+            with mock.patch.dict(os.environ, env), contextlib.redirect_stdout(said), contextlib.redirect_stderr(said):
                 self.assertEqual(proof_scope.main(), 0)
         finally:
             os.chdir(was)
+            self.said = said.getvalue()
         with open(out, encoding="utf-8") as fh:
             return dict(line.strip().split("=", 1) for line in fh if line.strip())
 
     def test_a_dispatch_on_an_integrate_branch_is_scoped_as_its_push(self):
         pushed = self.step("push", BRANCH)
-        self.assertEqual(pushed, self.NATIVE_ONLY)   # trunk's godot change since the branch point is not the branch's
-        self.assertEqual(self.step("workflow_dispatch", BRANCH), pushed)
+        self.assertEqual(pushed, self.NATIVE_ONLY, self.said)   # trunk's own godot commit is not the branch's change
+        self.assertEqual(self.step("workflow_dispatch", BRANCH), pushed, self.said)
 
     def test_a_dispatch_on_trunk_runs_everything(self):
         self.assertEqual(self.step("workflow_dispatch", TRUNK, branch="ScraperX-Claude"), self.EVERYTHING)
@@ -207,7 +211,7 @@ class DispatchedCheckout(unittest.TestCase):
         asks = {"INPUT_SCOPE": "none", "SCOPE": "none", "GROUPS": "", "BEFORE": "HEAD"}
         self.assertEqual(self.step("workflow_dispatch", TRUNK, branch="ScraperX-Claude", extra=asks), self.EVERYTHING)
         self.assertEqual(self.step("workflow_dispatch", "refs/heads/claude/wip-x", extra=asks), self.EVERYTHING)
-        self.assertEqual(self.step("workflow_dispatch", BRANCH, extra=asks), self.NATIVE_ONLY)
+        self.assertEqual(self.step("workflow_dispatch", BRANCH, extra=asks), self.NATIVE_ONLY, self.said)
 
     def test_a_branch_with_no_way_back_to_trunk_runs_everything(self):
         git(self.origin, "checkout", "-q", "--orphan", "claude/integrate-lost")
