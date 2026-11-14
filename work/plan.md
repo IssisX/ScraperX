@@ -41,9 +41,9 @@ J-054 muse #293 | The Counterweight Crossing: a service cradle tipped by weight
 J-055 muse #294 | The Blast Door Standoff: brace a steel door against her and wedge it
 J-060 claude #320 | Fight contact truth: every hit is a real limb contact, both bodies react
 J-076 muse #391 | Loud machines draw her: every moving machine is heard by its measured energy (A7)
-J-083 muse #401 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | He works the machines with his hands: a forklift lever he grabs and moves (D4, gap 20)
+J-083 muse #401 | He works the machines with his hands: a forklift lever he grabs and moves (D4, gap 20)
 J-086 muse #404 hold: parked in live issue; reconcile pushed work before release | She pulls him off a ladder by the ankle, proven on every ladder kind in play (rule 35, gap 3)
-J-087 muse #405 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | Story radio cues fire in play: the foreman's lines reach him where they belong (B3, gap 12)
+J-087 muse #405 | Story radio cues fire in play: the foreman's lines reach him where they belong (B3, gap 12)
 J-088 muse #406 | Her hands close on what she holds: fingers wrap rungs, rails, his ankle; the pipe warning in CI (A6, gap 19)
 J-091 muse #409 | Turn her bay trap back on her: lure her onto the leaf at 154 m, trip its drive, dump her a full deck
 J-095 muse #413 | Pull the line out from under her: one keeper pin turns the zipline she is riding into a falling cable (Grok idea 2)
