@@ -1715,14 +1715,16 @@ public:
     [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
     // Where each loose-stock group begins in the table (loose_stock.hpp):
     // the crane steel, the machine weights, the Matron's throwables, the
-    // east/west stock, and the upper stock, so a test can reach a group
-    // without assuming it is the last.
+    // east/west stock, the Matron's kinds, the upper stock, and the
+    // hightower stock, so a test can reach a group without assuming it is
+    // the last.
     [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
-    // J-042's two kinds by her band, laid last of all (after the east/west stock).
+    // J-042's two kinds by her band, laid after the east/west stock (the hightower stock comes after them).
     [[nodiscard]] std::uint32_t loose_stock_matron_kinds_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_hightower_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_upper_begin() const noexcept;
     // J-038 slice 1: a stock body's dent record, empty when undamaged.
     [[nodiscard]] stock_damage::DamageState stock_damage(std::uint64_t entity) const noexcept;

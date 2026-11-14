@@ -182,11 +182,14 @@ void run_loose_stock() {
     const int dress_end = static_cast<int>(s.loose_stock_crane_steel_begin());
     const int east_west_begin = static_cast<int>(s.loose_stock_east_west_begin());
     // The east/west stock ends where J-042's two kinds by her band begin
-    // (laid last of all, on her deck; not tower spots).
+    // (on her deck; not tower spots), and the hightower stock begins after
+    // the kinds (also tower spots, laid last of all).
     const int east_west_end = static_cast<int>(s.loose_stock_matron_kinds_begin());
+    const int hightower_begin = static_cast<int>(s.loose_stock_hightower_begin());
     // The tower's spots end where the yard crane's steel begins (and the
-    // machines' weights after it, and the Matron's throwables after them).
-    const int towered = dress_end + (east_west_end - east_west_begin);
+    // machines' weights after it, and the Matron's throwables after them),
+    // plus the hightower stock laid last of all, after the Matron's kinds.
+    const int towered = dress_end + (east_west_end - east_west_begin) + (pieces - hightower_begin);
     std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
     require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece
@@ -252,8 +255,8 @@ void run_loose_stock() {
             prev = body;
         }
         std::cout << "  stock: " << (pieces - east_west_begin)
-                  << " trailing pieces (east/west, then upper), entity ids " << east_west_begin << ".."
-                  << (pieces - 1) << ", built in table order\n";
+                  << " trailing pieces (east/west, then upper, then hightower), entity ids " << east_west_begin
+                  << ".." << (pieces - 1) << ", built in table order\n";
     }
     // Tower pieces per dress_tower ring, before settling. Rings are the stack
     // rings 11..143 m and the upper rings 176.25..396.25 m, as in
@@ -288,6 +291,23 @@ void run_loose_stock() {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }
+            const double y = placed[static_cast<std::size_t>(i)].y;
+            bool hit = false;
+            for (std::size_t r = 0; r < rings.size(); ++r) {
+                if (y >= rings[r] && y < rings[r] + 3.0) {
+                    ++per_ring[r];
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit) {
+                ++unassigned;
+            }
+        }
+        // J-014: the hightower stock takes its table places after the
+        // Matron's kinds, so it is not in the range above; it is tower
+        // spots all the same, and gated the same way.
+        for (int i = hightower_begin; i < pieces; ++i) {
             const double y = placed[static_cast<std::size_t>(i)].y;
             bool hit = false;
             for (std::size_t r = 0; r < rings.size(); ++r) {

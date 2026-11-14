@@ -852,9 +852,17 @@ const SLAB_AWAY := Vector2(0.0, 1.0)
 
 func _slab_trap_touch(device: int) -> bool:
 	var stock: PackedInt32Array = _native().get_loose_stock()
-	if stock.size() < 3 or stock[stock.size() - 2] != 10:
+	if stock.size() < 3:
 		return _fail("the loose stock's last piece is not the cell's plate slab")
-	var slab := int(stock[stock.size() - 3])
+	# The hightower toolboxes trail the slab: skip the trailing Toolbox
+	# pieces (kind 16), then the last piece before them is the cell's
+	# plate slab (kind 10). Each piece is body, kind, variant.
+	var last := stock.size() / 3 - 1
+	while last > 0 and stock[last * 3 + 1] == 16:
+		last -= 1
+	if stock[last * 3 + 1] != 10:
+		return _fail("the loose stock's last piece is not the cell's plate slab")
+	var slab := int(stock[last * 3])
 	var hung: Vector3 = _native().get_kit_body_transform(slab).origin
 	if not await _wake_matron(device):
 		return false

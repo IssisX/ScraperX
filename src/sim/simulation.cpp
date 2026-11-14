@@ -279,6 +279,10 @@ std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
 
+std::uint32_t Simulation::loose_stock_hightower_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().hightower_begin());
+}
+
 std::uint32_t Simulation::loose_stock_upper_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().upper_begin());
 }
