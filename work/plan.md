@@ -10,7 +10,7 @@
 # No lane was cut to fit a limit: the counts are the real unlanded work.
 # Muse 10 (integrator, 11-12): no new Muse start until its open count is under 10; nothing in flight is cut.
 limit builder 1
-limit claude 4
+limit claude 6
 limit grok 1
 limit muse 10
 limit unassigned 1
@@ -23,7 +23,7 @@ J-084 claude #402 kept fb-bot/integrate-j084@56a593ef90c1 | One scenario plays t
 J-090 claude #408 | Hook her and let the rope decide: his grappling hook bites her body, and mass, footing and the line decide who moves
 J-093 claude #411 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | J-001's protected follow-ups: the rail reach near miss and the budget's unaccounted list (Claude)
 J-096 claude #414 | Things bend under weight: planks, boards and gratings flex by real load, spring back, and snap past their limit
-J-102 claude #421 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | She chases him again (regression)
+J-102 claude #421 | She chases him again (regression)
 J-109 claude #428 kept fb-bot/integrate-j109@7791c2a8830c hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)
 J-049 muse #278 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her mind runs on evidence: hiding from her truly works (rule 29, gap 4)
 J-053 claude #82 | The Void Crossing: parachute from the 750 m deck to the second tower
