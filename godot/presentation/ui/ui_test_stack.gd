@@ -1,5 +1,12 @@
 extends "res://presentation/ui/ui_test_service.gd"
 
+# The radio, by path, not by its global class name: this file is part of the
+# ui_test_driver.gd chain, which a fresh checkout parses before the global
+# class cache exists, so a bare ForemanRadio.new() fails the whole chain
+# there (CI: "Could not resolve class ui_test_look.gd") while passing on a
+# warm worktree. main.gd loads it the same way.
+const ForemanRadioScript := preload("res://presentation/life/foreman_radio.gd")
+
 # UI scenarios: checkpoints, the title, the teeter, the roll, the trapeze,
 # saves, and the whole Stack on touch. (Part of the ui_test_driver.gd chain.)
 
@@ -313,7 +320,7 @@ func _radio_heard(needle: String) -> bool:
 # her stage out of Pest says the line once, and no later rise, fall, or
 # re-rise says it again.
 func _radio_stage_drive() -> bool:
-	var probe := ForemanRadio.new()
+	var probe := ForemanRadioScript.new()
 	var ctx := {"y": 0.0, "support": 0, "matron_released": false,
 		"matron_stage": 0, "beam_seated": false}
 	probe.update(0.016, ctx)
