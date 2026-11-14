@@ -1516,6 +1516,8 @@ void Simulation::debug_set_step_hook(DebugStepHook hook, void *context) noexcept
     step_hook_context_ = context;
 }
 
+void Simulation::debug_matron_off() { physics_world_->matron().switch_off_for_test(); }
+
 double Simulation::debug_matron_gravity_factor() const noexcept {
     const Matron &matron = physics_world_->matron();
     return physics_world_->physics_system().GetBodyInterfaceNoLock().GetGravityFactor(matron.body());
