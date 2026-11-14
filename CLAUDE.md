@@ -32,7 +32,7 @@ it to match, never ask him again.
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Claude picks each helper's
   effort and tells him in one line; he changes it if he wants (11-13).
-- Every time comes from the clock reading on his message, `date`, or the record (a post's time); never memory (11-14).
+- Every time comes from the clock reading on his message, `date`, or the record (a post); never memory (11-14).
 
 ## Test only what a change reaches
 
