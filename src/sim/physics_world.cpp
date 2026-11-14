@@ -203,6 +203,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         JPH::Vec3(0.0F, 0.5F * kPlayerHalfHeight, 0.0F), JPH::Quat::sIdentity(),
         new JPH::CapsuleShape(0.5F * kPlayerHalfHeight - kPlayerRadius, kPlayerRadius));
     grip_region_shape_ = new JPH::BoxShape(kGripSearchHalf);
+    grip_region_shape_bar_ = new JPH::BoxShape(kBarSearchHalf);
     // A climber's moves are swept with a body 5 cm slimmer than the
     // capsule: a body on its holds already touches the rungs it climbs.
     climb_sweep_shape_ =
@@ -478,7 +479,57 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
+    // J-092 (#410): the slab trap's service cell on her deck (slab_cell.hpp):
+    // its slab the table's last piece, then its trigger and the cord's
+    // handle, after every other body, so older saves line up.
+    loose_stock_->lay_hung_slab();
+    {
+        const kit::BodyIndex slab = loose_stock_->body(loose_stock_->hung_slab_begin());
+        track(slab, ImpactSound::HeavySteel);
+        slab_cell_.build(*kit_, slab);
+    }
+    // J-108 (#427): the bait lift's two platforms, the kit's last bodies, so
+    // every body before them keeps its place and older saves line up.
+    scraperx::sim::bands::build_bait_lift(*kit_, service_);
     give_matron_stock();
+
+    // J-094 (#412): the probe plate/pan/stop rig -- proving ground only.
+    // A 25 kg grating plate drops 0.35 m onto a 10 kg pan over a brake stop
+    // (guide governor, 10 kN cap, 50 mm stroke; 120 N guide friction holds
+    // the 98 N pan at rest). The plate is parked 3 m east; the test
+    // teleports it per case. The governor is
+    // a speed regulator: at 10 m/s it regulates descent down the whole
+    // stroke (empty plate bottomed at 3.5 kN peak); at 0.08 m/s it brakes,
+    // so the stack stops where its energy runs out. The pan creeps after
+    // the arrest, so hold/shear reads the dynamic stop point.
+    if (scraperx::sim::is_proving_spawn(initial_spawn)) {
+        kit::Part plate_part;
+        plate_part.half = JPH::Vec3(static_cast<float>(Simulation::kProbePlateHalfM),
+                                    static_cast<float>(Simulation::kProbePlateHalfHeightM),
+                                    static_cast<float>(Simulation::kProbePlateHalfM));
+        plate_part.material = kit::Material::Steel;
+        kit_->add_body(Simulation::kProbePlateEntityId, {plate_part},
+                       JPH::RVec3(Simulation::kProbeRigX + 3.0,
+                                  Simulation::kProbePlateHalfHeightM, Simulation::kProbeRigZ),
+                       JPH::Quat::sIdentity(),
+                       static_cast<float>(Simulation::kProbePlateMassKg), 0.9F);
+        kit::Part pan_part;
+        pan_part.half = JPH::Vec3(static_cast<float>(Simulation::kProbePanHalfM),
+                                  static_cast<float>(Simulation::kProbePanHalfHeightM),
+                                  static_cast<float>(Simulation::kProbePanHalfM));
+        pan_part.material = kit::Material::Steel;
+        const kit::BodyIndex pan_body = kit_->add_body(
+            Simulation::kProbePanEntityId, {pan_part},
+            JPH::RVec3(Simulation::kProbeRigX,
+                       Simulation::kProbePanTopYM - Simulation::kProbePanHalfHeightM,
+                       Simulation::kProbeRigZ),
+            JPH::Quat::sIdentity(), static_cast<float>(Simulation::kProbePanMassKg), 0.9F);
+        const kit::GuideIndex pan_guide = kit_->add_guide(
+            pan_body, JPH::Vec3::sAxisY(),
+            static_cast<float>(-Simulation::kProbeStrokeM), 0.0F, 0.08F,
+            static_cast<float>(Simulation::kProbeStopCapN), 5.0F);
+        kit_->set_guide_friction(pan_guide, 120.0F);
+    }
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
@@ -614,6 +665,111 @@ int Simulation::PhysicsWorld::active_forklift() const noexcept {
         }
     }
     return -1;
+}
+
+void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, const std::uint64_t entity,
+                                                  const LooseStock::Kind kind, const JPH::RVec3 pos,
+                                                  const JPH::Quat rot, const JPH::Vec3 vel,
+                                                  const JPH::Vec3 ang, const float mass,
+                                                  const bool park_parent) noexcept {
+    const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
+    const float piece_mass = mass / static_cast<float>(geometry.count);
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    // The pieces' own mass centre, in the body's frame: they weigh the
+    // same, so it is the mean of their offsets. The orbital term below
+    // is measured from it (see there).
+    JPH::Vec3 pieces_centre = JPH::Vec3::sZero();
+    for (std::uint8_t k = 0; k < geometry.count; ++k) {
+        const stock_damage::BreakPiece &piece = geometry.pieces[k];
+        pieces_centre += JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
+    }
+    if (geometry.count > 0) {
+        pieces_centre /= static_cast<float>(geometry.count);
+    }
+    // The parent's centre of mass, for the test read only. Read
+    // before parking.
+    const JPH::RVec3 parent_com = bodies.GetCenterOfMassPosition(kit_->body_id(body));
+    // Record the spawn's inputs for the test read: the parent's motion
+    // at the break is otherwise unobservable once it is parked.
+    last_break_parent_ = {{static_cast<double>(vel.GetX()), static_cast<double>(vel.GetY()),
+                           static_cast<double>(vel.GetZ())},
+                          {static_cast<double>(ang.GetX()), static_cast<double>(ang.GetY()),
+                           static_cast<double>(ang.GetZ())},
+                          {parent_com.GetX(), parent_com.GetY(), parent_com.GetZ()}};
+    if (park_parent) {
+        kit_->park(body);
+    }
+    for (std::uint8_t k = 0; k < geometry.count; ++k) {
+        const stock_damage::BreakPiece &piece = geometry.pieces[k];
+        const JPH::Vec3 offset = rot * JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
+        const JPH::Vec3 scatter = rot * JPH::Vec3(piece.scatter_x, piece.scatter_y, piece.scatter_z);
+        const JPH::RVec3 at(pos.GetX() + offset.GetX(), pos.GetY() + offset.GetY(),
+                            pos.GetZ() + offset.GetZ());
+        const kit::BodyIndex existing =
+            kit_->body_for_entity(stock_damage::piece_entity_for(entity, k));
+        kit::BodyIndex piece_body;
+        if (existing.valid()) {
+            // A piece body already holds this entity: a save taken
+            // before the break parked it on load, and breaking the
+            // restored crate again reuses it instead of making a
+            // second body with the same entity.
+            piece_body = existing;
+            kit_->unpark(piece_body);
+            bodies.SetPositionAndRotation(kit_->body_id(piece_body), at, rot,
+                                          JPH::EActivation::DontActivate);
+        } else {
+            piece_body = kit_->add_body(
+                stock_damage::piece_entity_for(entity, k),
+                {kit::Part{JPH::Vec3(piece.half_x, piece.half_y, piece.half_z), JPH::Vec3::sZero(),
+                           JPH::Quat::sIdentity(), kit::Material::Timber, kit::Part::Shape::Box,
+                           piece_mass}},
+                at, rot, piece_mass, 0.9F);
+        }
+        const JPH::BodyID piece_id = kit_->body_id(piece_body);
+        // The parent's centre-of-mass velocity, plus the orbital
+        // velocity the piece's place gives it in a rotating crate (or
+        // the break eats the orbital angular momentum: 18.432 kg·m²/s
+        // for a 160 kg crate at 1 rad/s about Y, eight pieces at
+        // ±0.24 m), plus its scatter. The orbital term is measured from
+        // the pieces' own mass centre: not the body's origin, which
+        // for a SkidCrate sits on the ground 0.56 m below the box's
+        // middle, and not the parent's centre of mass, which the
+        // runners pull down to 0.513125 m (15 kg at 0.06 m, 145 kg at
+        // 0.56 m) while the eight equal pieces centre on 0.56 m. Either
+        // gives
+        // every piece the same extra ang x offset, travel made from
+        // spin: 22.5 N·s at 3 rad/s from the parent's centre of mass.
+        // Measured from their own mass centre the orbital terms cancel
+        // over the eight equal pieces, and the scatter sums to zero, so
+        // the pieces' linear momentum is exactly the parent's (mass x
+        // vel). Their angular momentum about their own mass centre is
+        // that of the eight blocks turning as one at ang. The blocks
+        // are uniform, so that is not exactly the parent's own: its
+        // runners, bands and posts carry inertia the blocks do not.
+        const JPH::Vec3 from_centre =
+            rot * (JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z) - pieces_centre);
+        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(from_centre) + scatter);
+        bodies.SetAngularVelocity(piece_id, ang);
+        // A free load, not a handle: the pieces are unsupported loose
+        // bodies, and the carrying limits, swing damping and yaw
+        // stabilization all read carried_load_mass(). Registered as a
+        // handle they read 0, as if a hinge held them — the same Load
+        // registration LooseStock::create_body() gives the intact stock.
+        kit_->set_carry(piece_body, kit::CarryKind::Load, JPH::Vec3(0.0F, piece.half_y, 0.0F));
+        // The ledger only hears bodies it tracks, and it tracks the
+        // stock once at construction: a piece born here is deaf until
+        // it is registered. Track it once with its timber sound and
+        // mass, after its velocity is set so the spawn itself does not
+        // read as a hit; a reused parked piece is already tracked, so
+        // resynchronize its observation instead of registering it twice.
+        if (existing.valid()) {
+            impacts_->resync_body(stock_damage::piece_entity_for(entity, k));
+        } else {
+            impacts_->track(piece_id, stock_damage::piece_entity_for(entity, k),
+                            LooseStock::sound(kind), piece_mass);
+        }
+        kit_->allow_sleeping(piece_body);
+    }
 }
 
 void Simulation::PhysicsWorld::step(const StepCommands &requested,
@@ -863,28 +1019,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // room's own sound is not).
     bay_->pre_step(delta_seconds);
     matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
-    // The world's hoists as the kit holds them (matron.hpp set_hoists): every
-    // body on a vertical guide a catch holds, and what frees each catch.
-    {
-        std::vector<Matron::HoistFeed> hoists;
-        for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
-            Matron::HoistFeed f;
-            f.car = kit_->body_id(h.car);
-            f.axis_y = h.axis.GetY();
-            f.min_travel = h.min_travel;
-            f.max_travel = h.max_travel;
-            f.travel = h.travel;
-            f.held = h.held;
-            for (const kit::Kit::HoistPin &p : h.pins) {
-                f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
-            }
-            for (const kit::BodyIndex w : h.weights) {
-                f.weights.push_back(kit_->body_id(w));
-            }
-            hoists.push_back(std::move(f));
-        }
-        matron_->set_hoists(std::move(hoists));
-    }
+    // The world's hoists as the kit holds them (matron.hpp set_hoists).
+    feed_matron_hoists();
     // Out of her locker, she looks the tower over once (her climbs are what
     // she finds).
     if (matron_->wants_routes()) {
@@ -955,6 +1091,53 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);
+    // J-038 slice 1: stock dents and breaks, from this tick's measured
+    // velocity changes and pre-solve contact hints (stock_damage.hpp).
+    // Only containers, drums and crates are in scope; tower and
+    // structure machines are never stock, so never observed.
+    {
+        const std::vector<stock_damage::ContactHint> hints = contact_listener_.stock_hints();
+        const std::vector<LooseStock::Placement> &placed = loose_stock_->placed();
+        for (int i = 0; i < loose_stock_->count(); ++i) {
+            const LooseStock::Kind kind = placed[static_cast<std::size_t>(i)].kind;
+            if (kind != LooseStock::Kind::Container && kind != LooseStock::Kind::Drum &&
+                kind != LooseStock::Kind::Crate && kind != LooseStock::Kind::SkidCrate) {
+                continue;
+            }
+            const kit::BodyIndex body = loose_stock_->body(i);
+            if (!kit_->body_enabled(body)) {
+                continue;  // parked: already broken, nothing to measure
+            }
+            const JPH::BodyID id = kit_->body_id(body);
+            const JPH::Vec3 vel = bodies.GetLinearVelocity(id);
+            const JPH::RVec3 pos = bodies.GetPosition(id);
+            const JPH::Quat rot = bodies.GetRotation(id);
+            stock_damage_.observe(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i), kind,
+                                  kit_->body_mass(body), vel.GetX(), vel.GetY(), vel.GetZ(),
+                                  static_cast<float>(pos.GetX()), static_cast<float>(pos.GetY()),
+                                  static_cast<float>(pos.GetZ()), rot.GetX(), rot.GetY(), rot.GetZ(), rot.GetW(),
+                                  hints);
+        }
+        // A break decided this tick executes after all observations,
+        // so spawning pieces cannot disturb the tick's measurements.
+        // The pieces are newborn bodies, not a per-tick drive: their
+        // velocities are creation state. Their orbital terms and their
+        // scatter each sum to zero, so the break keeps the intact
+        // body's linear momentum (spawn_break_pieces).
+        // They are deliberately NOT added to Matron's throwables:
+        // that list is build-time, and appending pieces would change
+        // her mischief selection without a ruling.
+        for (const stock_damage::BreakAction &action : stock_damage_.take_actions()) {
+            const kit::BodyIndex body = loose_stock_->body(static_cast<int>(action.stock_index));
+            if (!kit_->body_enabled(body)) {
+                continue;  // already parked: a body breaks once
+            }
+            const JPH::BodyID id = kit_->body_id(body);
+            spawn_break_pieces(body, action.entity, action.kind, bodies.GetPosition(id),
+                               bodies.GetRotation(id), bodies.GetLinearVelocity(id),
+                               bodies.GetAngularVelocity(id), kit_->body_mass(body));
+        }
+    }
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->post_step(delta_seconds);
     }
@@ -1078,20 +1261,25 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // Her hands on the player (matron.hpp, her hands): at every stage, she
     // takes hold.
-    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_),
-                                        traversal_state_ == TraversalState::Climbing)) {
+    if (!died_this_tick && matron_->caught(traversal_state_ == TraversalState::Climbing)) {
         // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
         // what follows is physics. A ladder offers no immunity: her hand has
         // to reach the ankle and overcome the same finite grip as any load.
         if (matron_->grab_ready()) {
             matron_->count_catch();
-            matron_->begin_grab(bodies.GetPosition(player_id_));
+            matron_->begin_grab();
         } else if (matron_->shoves() && matron_->shove_ready()) {
             // While her hands cannot take hold (a grab's cooldown),
             // short of fully changed: a pest's shove away from her,
-            // a dangerous one's at the rim. Not a catch.
-            matron_->count_shove();
-            shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
+            // a dangerous one's at the rim. Not a catch. A shove is a
+            // physical hit: it lands only when he is within reach NOW.
+            // caught() measures reach to the sensed position, which can
+            // be a memory up to 0.5 s old; a player who has moved out of
+            // reach since must not be shoved (Codex P1 on #367).
+            if (matron_->shove_reach_now(traversal_state_ == TraversalState::Climbing)) {
+                matron_->count_shove();
+                shove_player(bodies, matron_->shove_direction());
+            }
         }
     }
     // A blow (the listener's hit_closing: his own run taken off) hard enough
@@ -1209,6 +1397,28 @@ void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body
     bodies.SetPositionAndRotation(id, at, bodies.GetRotation(id), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(id, velocity, JPH::Vec3::sZero());
     impacts_->resync_body(kit_->body_entity(kit::BodyIndex{body}));
+    // J-038 slice 1 rework: a zero-velocity launch is a placement,
+    // not a throw — the body is put down at rest, and its settle is
+    // excluded, so being put down never dents it. A launch with
+    // velocity is a throw: its landing is a real hit and dents by
+    // the bands.
+    if (velocity == JPH::Vec3::sZero()) {
+        const std::uint64_t entity = kit_->body_entity(kit::BodyIndex{body});
+        if (kit::is_stock_entity(entity)) {
+            stock_damage_.note_placed(entity);
+        }
+    }
+}
+
+// A spin without a throw: the body's angular velocity set, its linear
+// velocity untouched, so a break can be read for the orbital term its
+// pieces must carry. No impact resync: the ledger tracks linear
+// velocity, which a spin does not change.
+void Simulation::PhysicsWorld::spin_kit_body_for_test(const std::uint32_t body,
+                                                      const JPH::Vec3 angular_velocity) {
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    const JPH::BodyID id = kit_->body_id(kit::BodyIndex{body});
+    bodies.SetAngularVelocity(id, angular_velocity);
 }
 
 void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {
@@ -1476,6 +1686,16 @@ void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {
                       JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
             }
         }
+        if (level == kStackLevelCount) {
+            // J-043 (#241): the hang rail under the 154 deck's north band,
+            // along the crossing from the bay to the shaft edge (see
+            // kHangRail* in physics_world_tuning.hpp). A static frame body
+            // like the deck slabs, top flush with the soffit.
+            const float half_len = 0.5F * (kHangRailNorthZ - kHangRailSouthZ);
+            frame(JPH::Vec3(0.5F * kHangRailSection, 0.5F * kHangRailSection, half_len),
+                  JPH::RVec3(kHangRailX, kHangRailTopY - 0.5F * kHangRailSection,
+                             0.5F * (kHangRailNorthZ + kHangRailSouthZ)));
+        }
     }
 
     // Columns: corners and edge mid-spans, one run per story.
@@ -1624,11 +1844,42 @@ void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
     physics_system_.GetBodyInterface().SetPosition(matron_->body(), at, JPH::EActivation::Activate);
 }
 
+// The world's hoists as the kit holds them (matron.hpp set_hoists): every
+// body on a vertical guide a catch holds, and what frees each catch; and the
+// platforms declared floors at their stops (Kit::set_platform).
+void Simulation::PhysicsWorld::feed_matron_hoists() {
+    std::vector<Matron::HoistFeed> hoists;
+    for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
+        Matron::HoistFeed f;
+        f.car = kit_->body_id(h.car);
+        f.axis_y = h.axis.GetY();
+        f.min_travel = h.min_travel;
+        f.max_travel = h.max_travel;
+        f.travel = h.travel;
+        f.held = h.held;
+        f.caught = h.caught;
+        f.platform = h.platform;
+        for (const kit::Kit::HoistPin &p : h.pins) {
+            f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
+        }
+        for (const kit::BodyIndex w : h.weights) {
+            f.weights.push_back(kit_->body_id(w));
+        }
+        hoists.push_back(std::move(f));
+    }
+    matron_->set_hoists(std::move(hoists));
+}
+
 const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {
     if (!matron_affordances_scanned_) {
+        // Her view of the platforms at rest is the kit's as it stands now,
+        // even when asked before her first step.
+        feed_matron_hoists();
         // The whole tower, grade to the crown (bounds generous on every side).
         const JPH::AABox tower = physics_system_.GetBounds();   // the whole world, whatever is in it
-        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()});
+        // And the platforms resting at a stop as she looks (J-108): floor where they stand.
+        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()}, {},
+                                 matron_->platforms_at_rest());
         matron_affordances_scanned_ = true;
         matron_->set_routes(&matron_affordances_);
     }
@@ -1640,7 +1891,10 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
     if (max_nodes < 0) {
         // A probe: 0 no floor within a step, 1 floor but her capsule does not fit, 2 she stands there.
         const traversal::Limits limits{};
-        const traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
+        // The hook avoids him exactly as her real walk does (the same
+        // walk_ignore rule), so the tests exercise the real path (J-049,
+        // Claude's 14:19 FIX on #383): the sensed place, only while fresh.
+        const traversal::Ignore ignore = matron_->walk_ignore();
         JPH::RayCastResult hit;
         const JPH::RVec3 top(from.GetX(), from.GetY() + limits.step_max_m + 0.05F, from.GetZ());
         const float depth = 2.0F * limits.step_max_m + 0.1F;
@@ -1653,7 +1907,8 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
         (void)to;
         return p.empty() ? 1 : 2;
     }
-    return traversal::grid_walk(physics_system_, traversal::Ignore{matron_->body(), player_id_, matron_->moving_layer()}, traversal::Limits{}, from,
+    traversal::Ignore ignore = matron_->walk_ignore();
+    return traversal::grid_walk(physics_system_, ignore, traversal::Limits{}, from,
                                 to, margin, 0.4F, max_nodes)
         .size();
 }

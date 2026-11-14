@@ -7,10 +7,12 @@ head it acts on, or idempotent at GitHub (a merge names the head sha it merges).
 
 Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
-         a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
+         a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the watcher of orchestrator sessions
   steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
-         issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
-         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051),
+         issue, opening PRs for finished fb-bot/ and claude/ integrate-* branches, the 7:00 AM Central digest, and
+         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051; QUEUE-LOW when
+         work/tasks/muse.md holds under 8 really-unstarted jobs, J-097; a Muse "J-NNN started" or bare ack, and the
+         one re-run of a proof red only in setup, ride as a digest line on the next comment that wakes, J-103),
          and the Muse mail pipe's health check (a PIPE ALARM on the board, once per incident)
 
 Usage:
@@ -50,6 +52,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import budget as money  # noqa: E402
 import rules  # noqa: E402
 import ghapi  # noqa: E402
+import muse_queue  # noqa: E402
+import plan as collab_plan  # noqa: E402
+import machine  # noqa: E402
+import mail_reader  # noqa: E402
+import work_reader  # noqa: E402
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -62,9 +69,21 @@ def only_wake_left(jobs: list[dict]) -> bool:
     """True when the proof's one unfinished job is the one waking this sweep: every proof job is done."""
     return any(j["name"] == WAKE_JOB for j in jobs) and all(
         j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
+
+
+BUILD_JOBS = ("host-build", "native-tests", "godot-touch", "android-build")   # the game's build and tests
+
+
+def built_run(jobs: list[dict]) -> bool:
+    """Did this proof run build or test the game: a host-build, native-tests, godot-touch or android-build job that
+    was not skipped (a failed host-build counts: its tests are skipped because it failed)? A push that changes only
+    notes, rules or the switchboard skips them all (ci/proof_scope.py) and reads green, so such a run says nothing
+    about trunk's code (RED-TRUNK)."""
+    return any((j.get("name") or "").startswith(BUILD_JOBS) and j.get("conclusion") != "skipped" for j in jobs)
+
+
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
-STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switchboard/reconciler.py, J-072)
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
@@ -73,14 +92,26 @@ MUSE_LABEL = "wake:muse"
 # names none and no sweep has found one (#340 opened 11-09, when #107 closed).
 BOARD_LABEL = "board"
 BOARD_ISSUE = 340
+# J-072 (#350): the board rolls itself (Switch.board_roll). The board went past its 100-comment cap three times (the
+# last at 235) waiting for a human to roll it. At BOARD_ROLL_AT comments a sweep opens the next board (labeled, the old
+# body, a BOARD_FROM mark naming the old one) and takes the label off the old one; a later sweep closes the old one
+# (work/CONTEXT.md: closing #340 mid-sweep let that sweep post on a closed board).
+BOARD_ROLL_AT = 90
+BOARD_FROM_MARK = "<!-- switchboard:board-from #{old} -->"
+BOARD_FROM = re.compile(r"^<!-- switchboard:board-from #(\d+) -->$", re.MULTILINE)
+BOARD_CONTINUES = re.compile(r"^_Continues #\d+[^\n]*_\n?", re.MULTILINE)
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
 MAX_ARTIFACT_BYTES = 60_000_000
 MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
-MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
-AUTO_PR_PREFIX = "fb-bot/integrate-"   # fb-bot/integrate-protected-* matches too; claude/* never does
+MAX_AUTO_PRS = 10                  # PRs the auto-open opens in one sweep (J-047): Muse's lane limit (SYSTEM_PLAN 9)
+# The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
+# helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
+AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
+AUTO_PR_OLD = dt.timedelta(days=7)   # #350: a head this old, its AUTO-PR-FAILED listed once, is never listed again
+MAX_AUTO_PR_OLD = 500                # such heads kept in the sweep state ("auto_pr_old")
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -92,14 +123,97 @@ INBOX_KEYS = re.compile(r"^<!-- switchboard:inbox keys=([0-9a-f,]*) -->$", re.MU
 INBOX_BRANCH_PREFIXES = ("fb-bot/integrate-", "claude/integrate-")
 INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a LAND this long was so at the sweep before
 INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
+INBOX_FIX_STUCK = dt.timedelta(hours=6)        # FIX with no new head this long, past the reconciler's send and re-send
+                                               # (11-12: #389 and #396 each sat a day on a Codex FIX)
+MERGEABLE_READS = 3                            # reads of a PR whose mergeability GitHub is still computing, after the first
+MERGEABLE_WAIT_S = 3.0                         # seconds before each
 INBOX_BRANCH_RED = dt.timedelta(hours=1)       # a red integrate branch with no PR this long
 INBOX_RUNS_WINDOW = dt.timedelta(hours=24)     # proof runs read per sweep, as tools/board/sweep.py's branch window
-RED_RUN_KEYS = ("id", "head_branch", "head_sha", "status", "conclusion", "created_at", "updated_at", "html_url")
+RED_RUN_KEYS = ("id", "head_branch", "head_sha", "status", "conclusion", "created_at", "updated_at", "html_url",
+                "run_attempt")
 QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-hours
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
-MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
+MAX_INBOX_KEYS = 600                           # keys kept in the sweep state's inbox ring (gh.state["inbox"])
+# 11-13 (Cory's "A", #282 measure): every inbox comment is a full wake of the integrator, priced by its context, not
+# by the message. So asks wake at once, the integrator's own work lines post at most once per INBOX_HOLD, and
+# reports ride the next post that wakes, never a post alone (6854673147). The keys left the comment
+# for the sweep state: the relay to the session cuts a comment near 4,000 characters, and the keys were most of it.
+INBOX_HOLD = dt.timedelta(minutes=30)
+INBOX_MAX_CHARS = 3500                         # a comment's whole text, under the relay's cut with room to spare
+# a late job's next step owed by these reaches the integrator. #350: "switchboard" too: a step the switch owes itself
+# and has not taken (J-049's proof read, J-072's PR open) is the integrator's to fix, and else reached nobody
+PLAN_WAKES = frozenset({"claude", "integrator", "switchboard"})
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
+MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
+# Shadow only prints, and one pass is about 245 reads on a cold cache (11-12, measured: 90 job threads, 60
+# compares, 60 proof reads, the listings), a third of a full pass's own. So in shadow it runs in the full pass of
+# every sixth hour, four times a day, and only with twice the rate floor left. Live, it runs every full pass.
+PLAN_SHADOW_EVERY_H = 6
+# RED-TRUNK (11-13: trunk's full proof was red about a day, J-129's doubled order key 1100, and nobody owned it: the
+# notes-only pushes after it skip the build, so trunk's newest run read green). Trunk's proof is its newest run that
+# RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
+# a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
+TRUNK_RUN_READS = 6
+# The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
+# the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
+MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+# J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
+# comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
+# post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
+# only reports (muse_report).
+# Beside these, inbox_class rides the late-job (PLAN) lines whose next step another owner holds.
+DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
+MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
+MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
+                                               # are dropped and named in the run's log (keep_held)
+MAX_INBOX_HELD = 200                           # wake items held between sweeps (gh.state["inbox"]["held"]), likewise
+MAX_RERUN_HEADS = 200                          # heads re-run, kept between sweeps (timers["rerun"]): one re-run per head
+# A Muse bridge title that is only "J-NNN started" (J-040 take_blow started: one name may sit between), or a bare ack.
+MUSE_STARTED = re.compile(r"^(?:MUSE_TO_CLAUDE:\s*)?J-\d{3,}[a-z]?(?:\s+(?!not\b|never\b)[A-Za-z0-9_][\w.-]*)?\s+started[.!]?$",
+                          re.IGNORECASE)
+# Muse's acks of a notice read "J-078 #396 re-ack" (11-11): a job, up to three words, then the ack.
+MUSE_ACK = re.compile(r"^(?:MUSE_TO_CLAUDE:\s*)?(?:J-\d{3,}[a-z]?(?:\s+(?!not\b)[#\w.-]+){0,3}\s*[:,-]?\s*)?(?:re-?)?"
+                      r"(?:ack(?:ed|nowledged)?|got it|received|noted|ok(?:ay)?|roger|will do|thanks?|thank you)[.!]?$",
+                      re.IGNORECASE)
+ACK_ID = re.compile(r"/ack\s+O-[0-9a-f]+", re.IGNORECASE)   # the reconciler's obligation id in an ack: no sha
+# What still wakes at once in a started or ack post (#422): a question, a sha, a red or failure, a finding, "taken".
+# 11-13 (#282 measure): "to claude" left it: Muse opens every mail body "To Claude:", so it woke every started post.
+MUSE_WAKES = re.compile(r"\?|\b(?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b|\btaken\b|\bred\b|\bfail\w*|"
+                        r"\bblock\w*|\bstuck\b|\bfinding\w*|\bfound\b|\bbug\w*|\berror\w*|\bbroke\w*|\bcannot\b|"
+                        r"\bcan't\b|\bproposal\b|\bneeds? (?:your|a)\b", re.IGNORECASE)
+# 11-13: a Muse mail is a report (it rides the digest) only when its title says so and nothing in it asks; anything
+# else wakes at once. The title: tagged FYI, or a routine word (pushed, in work, done, status, parked, ...), or a LAND
+# review verdict. Tagged ASK, or a `To <Name>:` in the title (work/tasks/muse.md's ask subject), always wakes.
+MUSE_TAG = re.compile(r"(?:^|[\s:(\[])(ASK|FYI)(?=$|[\s:,.)\]-])")
+MUSE_ASK_SUBJECT = re.compile(r"\bTo [A-Z][\w-]*:")
+# The routine word must be the title's headline, in its first clause or opening its last ("J-009 #377 FIX — ack"):
+# "J-082 sha — lane touched it, pushed now" answers an ask (it wakes); "J-078 pushed @ ddceb919 — ..." reports a push.
+MUSE_REPORT_TITLE = re.compile(r"\b(?:started|re-?ack(?:ed)?|ack(?:ed|nowledged)?|in work|in progress|pushed|"
+                               r"dispatched|done|status|parked|passed|green|landed|merged|running|resumed)\b",
+                               re.IGNORECASE)
+TITLE_CLAUSE = re.compile(r"\s+[—–-]+\s+|:\s")
+MUSE_LAND_TITLE = re.compile(r"\breview of #\d+ @ [0-9a-f]{7,40}:?\s*LAND\**$")
+# What turns a report into an ask: a question mark (outside quoted lines and links), a relay to another agent, or a
+# word that asks for a ruling, a call, an answer, help, a stop, a resend or Cory.
+MUSE_ASKS = re.compile(
+    r"\?|\bTo (?!Claude\b)[A-Z][\w-]*:|"
+    r"\b(?:not|never)\s+(?:yet\s+)?(?:started|pushed|done|landed|merged|passed|green|running)\b|"
+    r"\b(?:need|needs|needed|want|wants|waiting on|wait for|waits for|awaiting|asking for|ask for|asks for)\s+"
+    r"(?:your|you|a|an|claude|cory|the integrator)\b|"
+    r"(?<!per )(?<!on )(?<!after )(?<!under )\byour (?:call|ruling|answer|decision|ok|okay|go|pick|view)\b"
+    r"(?!\s*(?:\)|,|\.|;|$|-|—))|"
+    r"\b(?:ruling needed|rule on|decide|decision needed|which (?:way|one|option)|or split|waiver|question\w*|please|"
+    r"approve|approval|propos\w*|blocked|blocker|stop|stopped|halt\w*|resend|re-send|taken|handover|yours|deviat\w*|"
+    r"cory|stale|wrong|unclear|unsure|not sure)\b", re.IGNORECASE)
+# A routine start or ack that names its own test plan ("failing test first") reports no failure.
+FAILING_FIRST = re.compile(r"\bfailing[- ](?:first|tests?)\b", re.IGNORECASE)
+MAILED_FOOTER = re.compile(r"^_Mailed .*_$", re.MULTILINE)
+LINK = re.compile(r"https?://\S+")
+# A proof job's setup steps (wo000-delivery-spine.yml): the runner's own, the checkout, the cache restores, the package,
+# NDK, SDK, Godot and render-prerequisite installs, Java. Every build, test and verify step is named otherwise.
+SETUP_STEP = re.compile(r"^(?:Set up job|Check ?out|Restore|Install|Configure)\b")
 MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
@@ -112,15 +226,31 @@ MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a b
 PIPE_HEADER = "Claude (integrator): PIPE ALARM:"
 PIPE_MARK = "<!-- switchboard:pipe-alarm kinds={kinds} -->"
 PIPE_KINDS = re.compile(r"^<!-- switchboard:pipe-alarm kinds=([a-z,]*) -->$", re.MULTILINE)
+# #350: the all-clear when a tripped pipe is healthy again. It starts CLAUDE_TO_MUSE: (the bridge mails only that); its
+# mark keeps it from counting as an ask to Muse (inbound_quiet, the fast sweep's pipe trigger)
+PIPE_OK_HEAD = "CLAUDE_TO_MUSE: PIPE OK on #{board}:"
+PIPE_OK_MARK = "<!-- switchboard:pipe-ok -->"
 PIPE_WAKE_STUCK = dt.timedelta(minutes=20)    # a wake:muse label this old: the bridge's outbound is stuck (it runs every 5 min)
 PIPE_INBOUND_QUIET = dt.timedelta(hours=24)   # no bridge post this long while asks went to Muse: its inbound is stuck
 PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound incident is read; older, it alarms again
+# #350 (run 43587341746: 12 h with no Muse push and no mail either way, 13 Muse lanes late, and nothing woke anyone;
+# inbound_quiet needs a CLAUDE_TO_MUSE ask in its day). While a Muse lane is in flight, this long with no fb-bot push
+# and no bridge post is one QUIET item to the integrator, at most once per MUSE_QUIET_AGAIN while it lasts.
+MUSE_QUIET = dt.timedelta(hours=1)        # Cory 11-14: Muse posts about every half hour; 6 h was far too long
+MUSE_QUIET_AGAIN = dt.timedelta(hours=2)
+# #350 (J-124, J-078): a TO-CLAUDE ask that names a job stays open in the sweep state until a later Claude comment or
+# mail names the job, and is listed again at most once per ASK_AGAIN while it is open. At most MAX_OPEN_ASKS kept.
+ASK_AGAIN = dt.timedelta(hours=1)          # Cory 11-14: an ask to Claude is answered within the hour
+MAX_OPEN_ASKS = 50
+ASK_FIELDS = ("job", "target", "at", "listed", "said", "url")   # one open ask in the sweep state, every field a string
+JOB_NAMED = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")   # machine.JOB_ID
 BRIDGE_POST = "**Muse (via email bridge)"     # the first line of every inbound bridge post
 LEDGER_NOTICE = "<!-- switchboard:ledger keys="   # the hidden marker of a ledger notice (ledger.py NOTICE_MARK)
 # J-072: the live bridge's version. muse_bridge.gs's BRIDGE_VERSION is bridge_version() of its own text; its clock
 # sends it, and switchboard.yml names the run with it. A live bridge that is not trunk's, or names none, alarms once.
 BRIDGE_FILE = "tools/switchboard/muse_bridge.gs"
 SWITCHBOARD_WORKFLOW = "switchboard.yml"
+REVIEWS_RUN = "Switchboard reviews"   # switchboard.yml's run name for a part=ask run (SYSTEM_PLAN 6, wake_reviews)
 BRIDGE_VERSION_LINE = re.compile(r"^var BRIDGE_VERSION = '([0-9a-f]*)';", re.MULTILINE)
 BRIDGE_RUN = re.compile(r"^Switchboard sweep \(bridge ([0-9a-f]{12})\)$")
 BRIDGE_SEEN = dt.timedelta(minutes=25)    # the clock dispatches every 10 min: two missed in a row is no clock
@@ -241,6 +371,23 @@ def no_verdict(text: str) -> str:
     return VERDICT_TRIGGER.sub(" -", text)
 
 
+def board_next(old: dict) -> tuple[str, str]:
+    """The next board's (title, body) from the old one's listing item (board_roll): "Board: live jobs (5)" becomes
+    "(6)" (a title with no number gets " (2)"); the body is the old one's as it stands, its "# " heading (if it starts
+    with one) the new title, an earlier roll's mark and line taken out, and a line and BOARD_FROM mark naming the
+    board it continues put under the heading."""
+    number, title = old["number"], str(old.get("title") or "Board: live jobs").rstrip()
+    m = re.search(r"\((\d+)\)$", title)
+    new_title = f"{title[:m.start()].rstrip()} ({int(m.group(1)) + 1})" if m else f"{title} (2)"
+    body = BOARD_FROM.sub("", BOARD_CONTINUES.sub("", str(old.get("body") or ""))).lstrip("\n")
+    head = ""
+    if body.startswith("# "):   # the old heading names the old board: the new one's own name
+        head, body = f"# {new_title}\n\n", body.partition("\n")[2].lstrip("\n")
+    note = (f"_Continues #{number}, rolled by the switchboard at {old.get('comments')} comments; its comments stay "
+            f"there._\n{BOARD_FROM_MARK.format(old=number)}\n\n")
+    return new_title, head + note + body
+
+
 def hours(span: dt.timedelta) -> str:
     return f"{span.total_seconds() / 3600:.1f} h"
 
@@ -249,10 +396,159 @@ def red_jobs(proof: str) -> list[str]:
     return proof[len("red: "):].split(", ") if proof.startswith("red: ") else []
 
 
+# J-104: a red notice names the failing tests, read from the failed jobs' logs (Muse's #108 answer: the check
+# annotations name no test inside a red group, so every lane re-ran locally just to learn which one failed).
+FAIL_LOG_JOBS = ("native-tests", "godot-touch", "host-build")   # the jobs whose logs name what failed
+MAX_FAIL_LINES = 6       # unique FAIL lines per job in a notice
+MAX_FAIL_JOBS = 8        # job logs read per proof run
+MAX_FAIL_CHARS = 200     # of one FAIL line
+# A log read that fails never stops reads of other runs' logs. Only a timeout (ghapi.TimedOut: a GitHub that hangs,
+# up to GET_ATTEMPTS x TIMEOUT_S each) counts against the sweep; any other failure (an answer: a 4xx at once, else
+# three quick tries) counts against its own run only. Before (11-11): any two failures in a sweep, on one old run,
+# left every later notice "log unread" with no read tried.
+MAX_LOG_FAILURES = 2      # log reads that time out in one sweep before no more are tried
+MAX_RUN_LOG_FAILURES = 2  # log reads that fail in one proof run before its other jobs' logs are not tried
+MAX_ERR_CHARS = 200       # of gh's error text in a NOTE line
+NATIVE_FAIL = re.compile(r"\bFAIL: .*")
+TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*")
+# 11-13 (#350): host-build names no test; its failed step's first failing line (a check's FAIL, a compiler or CMake
+# error, a Python check's exception) and the lines after it, as `ASSET_CREDITS FAIL files=363 ... unrecorded=9`
+HOST_FAIL = re.compile(r"\b[A-Z][A-Z0-9_]* FAIL\b|\bFAIL: |\berror: |\bCMake Error\b|\b\w+(?:Error|Exception): ")
+LOG_STAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ?")   # the runner's timestamp on each log line
+ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+LOG_UNREAD = "log unread"
+# A red notice that went out with a log unread is keyed apart (InboxItem.key): a later sweep that reads the lines posts
+# the notice once more, with them, under the plain key. So once per head and per reading, never more than twice.
+UNREAD_KEY = "+unread"
+READ_NOW = "the failing tests, read now (their logs were unread at the first notice)"
+URL_QUERY = re.compile(r"(https?://[^\s?#\"']+)[?#][^\s\"']*")   # a signed blob URL's query is a credential
+TOKENISH = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]{10,})")
+
+
+def fail_lines(log: str, job: str) -> tuple[list[str], int]:
+    """A failed job's unique FAIL lines in log order, at most MAX_FAIL_LINES, and how many more there were: `FAIL: `
+    for native-tests, `SCRAPERX_UITEST FAIL` for godot-touch, the failed step's lines for host-build (host_fail_lines).
+    The runner's timestamp and colour codes are dropped."""
+    if job.startswith("host-build"):
+        return host_fail_lines(log)
+    pattern = TOUCH_FAIL if job.startswith("godot-touch") else NATIVE_FAIL
+    found: list[str] = []
+    for line in ANSI.sub("", log).splitlines():
+        m = pattern.search(line)
+        if m and m.group(0).strip() not in found:
+            found.append(m.group(0).strip())
+    return found[:MAX_FAIL_LINES], max(0, len(found) - MAX_FAIL_LINES)
+
+
+def host_fail_lines(log: str) -> tuple[list[str], int]:
+    """host-build's failing lines (#350, 11-13): the output of the step that failed (after its header, before the
+    runner's first ##[error] line), unique, from its first HOST_FAIL line on; with none, the step's last line. At most
+    MAX_FAIL_LINES, and how many more there were, as fail_lines."""
+    lines = [LOG_STAMP.sub("", line).strip() for line in ANSI.sub("", log).splitlines()]
+    end = next((i for i, line in enumerate(lines) if line.startswith("##[error]")), len(lines))
+    start = max((i + 1 for i, line in enumerate(lines[:end]) if line.startswith("##[endgroup]")), default=0)
+    step = [line for line in lines[start:end] if line]
+    first = next((i for i, line in enumerate(step) if HOST_FAIL.search(line)), None)
+    found = list(dict.fromkeys(step[first:] if first is not None else step[-1:]))
+    return found[:MAX_FAIL_LINES], max(0, len(found) - MAX_FAIL_LINES)
+
+
+def log_text(text: str, limit: int = MAX_FAIL_CHARS) -> str:
+    """A log line in a notice: the branch's own code wrote it, so no backtick, @, angle bracket (no marker this
+    switchboard reads), control character or verdict trigger, bounded."""
+    clean = "".join(ch for ch in text.replace("`", "'") if ch.isprintable() and ch not in "@<>")
+    clean = no_verdict(clean)
+    return clean if len(clean) <= limit else clean[:limit - 3] + "..."
+
+
+def err_text(err: Exception) -> str:
+    """Why a read failed, for a NOTE line: the exception's kind, its HTTP status when known, and gh's error text on
+    one line, with no URL query or token-shaped text, at most MAX_ERR_CHARS."""
+    detail = " ".join(str(getattr(err, "detail", "") or err).split())
+    detail = TOKENISH.sub("[token]", URL_QUERY.sub(r"\1?[cut]", detail))
+    status = getattr(err, "status", 0)
+    return f"{type(err).__name__}{f' HTTP {status}' if status else ''}: {log_text(detail, MAX_ERR_CHARS) or '-'}"
+
+
+def setup_only(jobs: list[dict]) -> str:
+    """J-103: where a red proof failed, when every counted job that failed did so in a setup step (SETUP_STEP: the
+    package, NDK or render-prerequisite install, a cache restore, the checkout), so an outage of the runners' mirrors,
+    not the change; "" when any failed in a build, test or verify step, or failed with no failed step named. A job
+    cancelled beside it (a matrix sibling) neither counts nor stops it."""
+    where: list[str] = []
+    for j in jobs:
+        if j.get("name") in NOT_COUNTED or j.get("conclusion") in ("success", "skipped", "cancelled"):
+            continue
+        bad = [st.get("name") or "" for st in j.get("steps") or [] if st.get("conclusion") == "failure"]
+        if j.get("conclusion") != "failure" or not bad or not all(SETUP_STEP.match(n) for n in bad):
+            return ""
+        where.append(f"{j.get('name')}: {bad[0]}")
+    return "; ".join(where)
+
+
+def muse_routine(first: str, body: str) -> str:
+    """J-103: "STARTED" for a Muse bridge post whose title is only "J-NNN started", "ACK" for a bare ack, "" for
+    anything else. A post holding a question, a sha, a red, a finding or "taken" is never routine: it wakes at once."""
+    if not first.startswith(BRIDGE_POST):
+        return ""
+    title = first[len(BRIDGE_POST):].lstrip(":").strip()
+    title = title[:-2].strip() if title.endswith("**") else title
+    kind = "STARTED" if MUSE_STARTED.match(title) else "ACK" if MUSE_ACK.match(title) else ""
+    if kind:
+        return "" if MUSE_WAKES.search(FAILING_FIRST.sub(" ", ACK_ID.sub("", body))) else kind
+    return "FYI" if muse_report(title, body) else ""
+
+
+def ask_said(kind: str, first: str) -> str:
+    """An ask's first line as an inbox line shows it: bounded, no mention, nothing that wakes the switchboard."""
+    said = first if kind == "TO-CLAUDE" else "Muse: " + first[len(BRIDGE_POST):].strip(": *")
+    return no_verdict(plain(said[:100]))
+
+
+def thread_job(thread: dict | None) -> str:
+    """The job an open issue or PR is (#350): a PR's `Job: J-NNN` line, an issue's title; "" for neither."""
+    if not isinstance(thread, dict):
+        return ""
+    if thread.get("pull_request") is not None:
+        return rules.job_of_pr(thread.get("body") or "")
+    return rules.job_of_title(thread.get("title") or "")
+
+
+def same_job(job: str, named) -> bool:
+    """Does an id in `named` name `job` (#350)? The same id, or one is the other's base (J-044c and J-044): a
+    split's answer answers its base's ask, and the base's answers the split's."""
+    def base(j: str) -> str:
+        return j.rstrip("abcdefghijklmnopqrstuvwxyz")
+    return any(n and (n == job or n == base(job) or base(n) == job) for n in named)
+
+
+def unquoted(body: str) -> str:
+    """A mail's own words: no quoted (`>`) line, no link (a query's `?` is no question), no ack id, no bridge footer."""
+    own = "\n".join(line for line in body.split("\n") if not line.lstrip().startswith(">"))
+    return LINK.sub(" ", ACK_ID.sub(" ", MAILED_FOOTER.sub("", own)))
+
+
+def muse_report(title: str, body: str) -> bool:
+    """11-13: a Muse mail that only reports (FYI): its title is tagged FYI or reads as a routine report, the title
+    holds no ASK tag and no `To <Name>:` ask, and neither the title nor the body asks (MUSE_ASKS). Unsure is an ask:
+    an untagged title with no routine word wakes, and so does any question mark."""
+    tag = MUSE_TAG.findall(title)
+    if "ASK" in tag or MUSE_ASK_SUBJECT.search(title):
+        return False
+    clauses = TITLE_CLAUSE.split(title)
+    if "FYI" not in tag and not MUSE_REPORT_TITLE.search(clauses[0]) \
+            and not MUSE_REPORT_TITLE.match(clauses[-1].strip()) and not MUSE_LAND_TITLE.search(title):
+        return False
+    return not MUSE_ASKS.search(title) and not MUSE_ASKS.search(unquoted(body))
+
+
 def http_status(detail: str) -> int:
     """The HTTP status in gh's error text ("gh: Not Found (HTTP 404)"), 0 when it names none."""
     m = re.search(r"\bHTTP (\d{3})\b", detail)
     return int(m.group(1)) if m else 0
+
+
+TOKEN_REFUSED = "GitHub refused the merge token"   # MergeTokenRefused's first words: such a HUMAN-MERGE is never cold
 
 
 class MergeTokenRefused(RuntimeError):
@@ -313,28 +609,162 @@ class InboxItem:
     line: str     # the inbox line, without the leading "- "
     dest: str = "claude"   # who it goes to: "muse", "claude", or "both" (J-052)
     finding: str = ""      # for a FIX: the finding's first 600 chars and its link, for Muse's comment
+    tests: tuple[str, ...] = ()   # for a red: "<job>: <FAIL line>" per failing test (J-104), already log_text
+    # for a red whose logs this audience may want: its proof run, so muse() reads them only once it knows the item
+    # is not sent yet (its keys are on the board and the job issues, read after the items are built)
+    run_id: int | None = dataclasses.field(default=None, compare=False)
+    since: str = dataclasses.field(default="", compare=False)   # when it was first held, unposted (11-13)
+
+    @property
+    def unread(self) -> str:
+        """UNREAD_KEY when a failing test job's log went unread, else "": that notice is keyed apart, so a later sweep
+        that reads the lines posts them once under the plain key (J-104)."""
+        return UNREAD_KEY if any(t.endswith(f": {LOG_UNREAD}") for t in self.tests) else ""
 
     @property
     def key(self) -> str:
-        return inbox_key(self.kind, self.target, self.head)
+        return inbox_key(self.kind + self.unread, self.target, self.head)
+
+    def listed(self, seen, prefix: str = "") -> bool:
+        """Listed before: under its own key, or under the plain key (the lines went out already, or the notice went out
+        before UNREAD_KEY existed), so a log unread now never sends a notice again."""
+        return inbox_key(prefix + self.kind + self.unread, self.target, self.head) in seen \
+            or inbox_key(prefix + self.kind, self.target, self.head) in seen
+
+    def read_now(self, reported, prefix: str = "") -> "InboxItem":
+        """This item, its line saying READ_NOW when its tests read and an earlier notice at this head went out with
+        a log unread (that notice's key is in `reported`)."""
+        if self.tests and not self.unread and inbox_key(prefix + self.kind + UNREAD_KEY, self.target, self.head) \
+                in reported:
+            return dataclasses.replace(self, line=f"{self.line}; {READ_NOW}")
+        return self
 
     @property
     def muse_key(self) -> str:
-        return inbox_key("muse-" + self.kind, self.target, self.head)
+        return inbox_key("muse-" + self.kind + self.unread, self.target, self.head)
 
 
-def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) -> str:
-    """The inbox comment: the header line first, one line per item, the keys in a hidden marker last."""
-    lines = [INBOX_HEADER, "", f"{len(items)} new for the integrator at {when} (each is listed once per head):", ""]
-    lines += [f"- {it.line}" for it in items]
+def queue_item_record(items: tuple[InboxItem, ...]) -> dict | None:
+    """The QUEUE-LOW item as the sweep state keeps it between counts (J-097); None when the queue was not low. Its
+    target too (#350, 11-13): the live count's is work/plan.md, and a kept item on another target is another key."""
+    return {"head": items[0].head, "line": items[0].line, "target": items[0].target} if items else None
+
+
+def queue_item_of(record) -> tuple[InboxItem, ...]:
+    """The QUEUE-LOW item back from the sweep state; () for none or anything malformed."""
+    if not isinstance(record, dict) or not isinstance(record.get("head"), str) or not isinstance(record.get("line"), str):
+        return ()
+    target = record.get("target") if isinstance(record.get("target"), str) else muse_queue.QUEUE_FILE   # an old record
+    return (InboxItem("QUEUE-LOW", target, record["head"], record["line"]),)
+
+
+def inbox_class(it: InboxItem) -> str:
+    """11-13: how an item reaches the integrator. "now": an ask, posted at once (TO-CLAUDE: every non-Muse ask, and
+    every Muse mail muse_report cannot call a report). "ride": a report, never a post alone (DIGEST_KINDS, a late
+    job whose next step another owner holds). "hold": the integrator's own work,
+    posted at most once per INBOX_HOLD, or sooner riding an ask. Any kind not named here holds, so a new kind is
+    never only a digest entry."""
+    if it.kind in ("TO-CLAUDE", "RED-TRUNK"):   # RED-TRUNK: every agent's proof stands on trunk
+        return "now"
+    if it.kind in DIGEST_KINDS:
+        return "ride"
+    if it.kind == "PLAN":
+        return "hold" if it.dest in PLAN_WAKES else "ride"
+    return "hold"   # Muse's FIX-STUCK and RED-TWICE too: a fix failed twice is the integrator's to route (CLAUDE.md)
+
+
+def digest_record(it: InboxItem) -> dict:
+    """A held entry as the sweep state keeps it between sweeps (J-103; 11-13: any class, with its dest, its failing
+    tests and when it was first held)."""
+    rec = {"kind": it.kind, "target": it.target, "head": it.head, "line": it.line}
+    if it.dest != "claude":
+        rec["dest"] = it.dest
+    if it.tests:
+        rec["tests"] = list(it.tests)
+    if it.since:
+        rec["since"] = it.since
+    return rec
+
+
+def held_of(records, classes: frozenset[str]) -> tuple[InboxItem, ...]:
+    """Held entries back from the sweep state, only those whose class is in `classes`; anything malformed is dropped."""
+    out = []
+    for r in records if isinstance(records, list) else []:
+        if not (isinstance(r, dict) and r.get("kind") in INBOX_ORDER and all(isinstance(r.get(k), str)
+                                                                             for k in ("target", "head", "line"))):
+            continue
+        dest, tests, since = r.get("dest", "claude"), r.get("tests") or [], r.get("since", "")
+        if not (isinstance(dest, str) and isinstance(since, str) and isinstance(tests, list)
+                and all(isinstance(t, str) for t in tests)):
+            continue
+        it = InboxItem(r["kind"], r["target"], r["head"], r["line"], dest, tests=tuple(tests), since=since)
+        if inbox_class(it) in classes:
+            out.append(it)
+    return tuple(out)
+
+
+def digest_of(records) -> tuple[InboxItem, ...]:
+    """The held digest entries back from the sweep state: reports only; anything else or malformed is dropped."""
+    return held_of(records, frozenset({"ride"}))
+
+
+def item_text(it: InboxItem, room: int) -> str:
+    """One item's lines in an inbox comment, within `room` characters: its failing tests are cut first (the proof
+    link in its line names them all), then the line itself (11-13: the relay cuts a long comment)."""
+    head = f"- {it.line}"
+    tests = [f"  - {untrusted(t, MAX_FAIL_CHARS + 40)}" for t in it.tests]
+    for n in range(len(tests), -1, -1):
+        more = [f"  - ({len(tests) - n} more failing lines on its proof)"] if n < len(tests) else []
+        text = "\n".join([head] + tests[:n] + more)
+        if len(text) <= room:
+            return text
+    return head[:max(0, room - 3)] + "..."
+
+
+def inbox_body(items: list[InboxItem], held: int, when: str,
+               digest: list[InboxItem] = (), digest_left: int = 0) -> str:
+    """The inbox comment: the header line first, one line per item, then the digest's one line (J-103). 11-13: no
+    keys in it any more (the sweep state holds them)."""
+    lines = [INBOX_HEADER, "", f"{len(items)} new for the integrator at {when} (each is listed once per head):" if items
+             else f"Nothing to decide at {when}: the digest of what did not wake you:", ""]
+    lines += [item_text(it, INBOX_MAX_CHARS) for it in items]
     if held:
-        lines.append(f"- ({held} more next sweep)")
-    body = "\n".join(lines).replace("@", "")   # nothing in an inbox comment can mention anyone
-    return f"{body}\n\n{INBOX_MARK.format(keys=','.join(keys))}"
+        lines.append(f"- ({held} more held for the next post)")
+    if digest:
+        lines.append("- digest, nothing to decide: " + "; ".join(it.line for it in digest)
+                     + (f" (and {digest_left} more next time)" if digest_left else ""))
+    return "\n".join(lines).replace("@", "")   # nothing in an inbox comment can mention anyone
+
+
+def fit_inbox(wake: list[InboxItem], digest: list[InboxItem], when: str
+              ) -> tuple[list[InboxItem], list[InboxItem], str]:
+    """11-13: the items and digest entries one comment carries, in order, while its whole text stays within
+    INBOX_MAX_CHARS (and MAX_INBOX_LINES, MAX_DIGEST_ITEMS); the rest stay held. The first wake item always goes,
+    its failing tests cut to fit (item_text). Returns (shown, carried, body)."""
+    def body(shown, carried):
+        return inbox_body(shown, len(wake) - len(shown), when, carried, len(digest) - len(carried))
+    shown: list[InboxItem] = []
+    for it in wake[:MAX_INBOX_LINES]:
+        if shown and len(body(shown + [it], [])) > INBOX_MAX_CHARS:
+            break
+        shown.append(it)
+    if shown and len(body(shown, [])) > INBOX_MAX_CHARS:   # one item, too long whole: its tests are cut to fit
+        room = INBOX_MAX_CHARS - len(body([], [])) - 1
+        shown = [dataclasses.replace(shown[0], line=item_text(shown[0], room)[2:], tests=())]
+    carried: list[InboxItem] = []
+    for it in digest[:MAX_DIGEST_ITEMS]:
+        if len(body(shown, carried + [it])) > INBOX_MAX_CHARS:
+            break
+        carried.append(it)
+    return shown, carried, body(shown, carried)
 
 
 class Switch:
+    defer_logs = False   # muse() builds its items with no log read, then reads the logs of the unsent ones (J-104)
     auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
+    queue_items: tuple[InboxItem, ...] = ()      # this sweep's QUEUE-LOW item, for the inbox (J-097)
+    digest_held: tuple[InboxItem, ...] = ()      # digest entries no inbox comment has carried yet (J-103), in the state
+    rerun_heads: frozenset[str] = frozenset()    # heads re-run by an earlier sweep (J-103), from the state
     merge_token: str = ""                        # SWITCHBOARD_MERGE_TOKEN, set by main() in the steer job only (J-056)
     review_key: str = ""                         # SWITCHBOARD_REVIEW_KEY, set by main() in the ask and steer jobs (J-056)
 
@@ -386,6 +816,8 @@ class Switch:
                 raise
             got, why = [], f"the open issues labeled `{BOARD_LABEL}` could not be read ({plain(str(err)[:160])})"
         found = sorted(self._issue_numbers(got))
+        self._board_listing = {it["number"]: it for it in (got if isinstance(got, list) else [])   # board_roll's
+                               if isinstance(it, dict) and it.get("number") in found} or None   # count, no new read
         last = 0 if fresh else self._last_board()
         if found:
             board = found[-1]
@@ -402,11 +834,6 @@ class Switch:
             self._board_warn(f"{why} and no sweep has found one: using the fallback, #{board}")
         self._board_issue = board
         return board
-
-    def board_known(self) -> int:
-        """The board with no read, for a fast sweep's part that sends from the full pass's reading (the ledger clock):
-        this run's if it was read, else the last one a sweep found, else BOARD_ISSUE."""
-        return getattr(self, "_board_issue", None) or self._last_board() or BOARD_ISSUE
 
     def _last_board(self) -> int:
         """The last board a sweep found, kept in the sweep state; 0 when it holds none (or anything but a number)."""
@@ -435,11 +862,137 @@ class Switch:
         label = urllib.parse.quote(BOARD_LABEL, safe="")
         got = self.gh.get(f"repos/{self.gh.repo}/issues?labels={label}&state=closed&sort=created&direction=desc"
                           "&per_page=30")   # one page: the newest closed ones
-        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS)) - {self.board_issue()}
+        live = self.board_issue()
+        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS) | set(self.rolled_boards())) - {live}
         return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
 
+    # ---------- the board roll (J-072, #350) ----------
+    def rolled_boards(self) -> list[int]:
+        """The boards board_roll moved away from: they lose the label, so old_boards' closed listing misses them,
+        and their muse and plan marks must still count. The live board's BOARD_FROM mark (no state needed) and the
+        sweep state's roll record (the board before, and the ones before it)."""
+        item = (getattr(self, "_board_listing", None) or {}).get(getattr(self, "_board_issue", None)) or {}
+        m = BOARD_FROM.search(str(item.get("body") or ""))
+        rec = self._roll_record() or {}
+        return ([int(m.group(1))] if m else []) + ([rec["old"]] + rec["past"] if rec else [])
+
+    def _roll_record(self) -> dict | None:
+        """The sweep state's last roll, {old, new, closed, past}, or None when it holds none (or anything else)."""
+        rec = self.gh.state.get("board_roll") if isinstance(getattr(self.gh, "state", None), dict) else None
+        if not isinstance(rec, dict) or not all(type(rec.get(k)) is int and rec[k] > 0 for k in ("old", "new")):
+            return None
+        past = rec.get("past") if isinstance(rec.get("past"), list) else []
+        past = [n for n in past if type(n) is int and n > 0]
+        return {"old": rec["old"], "new": rec["new"], "closed": rec.get("closed") is True, "past": past}
+
+    def board_roll(self) -> None:
+        """#350: the switch rolls the board at BOARD_ROLL_AT comments, in steps a later sweep can finish. Each step
+        is decided from GitHub's listing of the open `board` issues, the read board_issue already made this run
+        (none made: only a recorded close can run), so a normal pass costs no call:
+        1. a roll an EARLIER sweep recorded: the old board is closed (never by the sweep that rolled, CONTEXT.md;
+           checked on GitHub first, _board_close);
+        2. the newest labeled board names (BOARD_FROM) another still labeled: a sweep died after opening it, so the
+           label comes off the old one, then the notices and the record (no second board is opened);
+        3. the live board names one no longer labeled and the state has no record of it: a sweep died after the
+           label came off, so only the record is written (the next sweep closes it);
+        4. one labeled board at BOARD_ROLL_AT comments or more: the next one is opened (labeled, board_next), then
+           step 2 runs at once.
+        Two labeled boards neither names stay as they are (board_issue's WARN). A dry run prints and records nothing."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
+        rec = self._roll_record()
+        if rec and not rec["closed"]:   # an earlier sweep's: a record is made only below, and this runs once a sweep
+            self._board_close(rec, state)
+            return
+        listing = getattr(self, "_board_listing", None)
+        if not listing:
+            return
+        live = max(listing)
+        item = listing[live]
+        m = BOARD_FROM.search(str(item.get("body") or ""))
+        src = int(m.group(1)) if m else 0
+        if src and src != live and src in listing:
+            self._board_unlabel(listing[src], live)
+            return
+        if src and src != live and not (rec and rec["old"] == src):
+            self._board_record(src, live, rec)
+            self.out(f"BOARD       #{live} continues #{src}, which no longer carries `{BOARD_LABEL}`: recorded; "
+                     "the next sweep closes it")
+            return
+        count = item.get("comments")
+        if len(listing) > 1 or type(count) is not int or count < BOARD_ROLL_AT:
+            return
+        title, body = board_next(item)
+        got = self.gh.write("POST", f"repos/{self.gh.repo}/issues", {"title": title, "body": body,
+                                                                      "labels": [BOARD_LABEL]},
+                            f"board: #{live} has {count} comments (roll at {BOARD_ROLL_AT}): open {title!r}")
+        new = got.get("number") if isinstance(got, dict) else None
+        if type(new) is not int or new <= 0:
+            self.out(f"BOARD       #{live} has {count} comments (roll at {BOARD_ROLL_AT}): " +
+                     ("would open the next board, take the label off this one, and close it next sweep (dry run)"
+                      if self.gh.dry_run else "no issue number came back; the next sweep looks again"))
+            return
+        self.out(f"BOARD       #{live} has {count} comments (roll at {BOARD_ROLL_AT}): opened #{new}")
+        self._board_unlabel(item, new)
+
+    def _board_close(self, rec: dict, state: dict | None) -> None:
+        """Roll step 1: close the board an earlier sweep rolled away from. The number comes from the sweep state or a
+        board body's mark, so it is checked on GitHub first (one read): never a pull request (the inbox), never an
+        issue that carries the board label again or is not older than the board it rolled to (a WARN, and the
+        record is done). A `wake:muse` still on it holds the close (the bridge reads only open issues, so a notice
+        the rolling sweep posted there would never be mailed); the next sweep looks again."""
+        old, new = rec["old"], rec["new"]
+        got = self.gh.get(f"repos/{self.gh.repo}/issues/{old}") if old < new else {}
+        got = got if isinstance(got, dict) else {}
+        names = {lb.get("name") for lb in got.get("labels") or [] if isinstance(lb, dict)}
+        why = (f"it is not older than #{new}" if old >= new else "it is a pull request" if "pull_request" in got
+               else f"it carries `{BOARD_LABEL}` again" if BOARD_LABEL in names else "")
+        if not why and MUSE_LABEL in names:
+            self.out(f"BOARD       #{old} stays open for now: `{MUSE_LABEL}` is still on it (a notice not mailed yet)")
+            return
+        if why:
+            self.out(f"WARN        board: #{old} (rolled to #{new}) is not closed: {why}")
+        elif got.get("state") != "closed":
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{old}", {"state": "closed", "state_reason": "completed"},
+                          f"board: close #{old}, rolled to #{new} by an earlier sweep")
+            self.out(f"BOARD       #{old} closed (rolled to #{new} by an earlier sweep)")
+        if not self.gh.dry_run and state is not None:
+            state["board_roll"] = dict(rec, closed=True)
+
+    def _board_unlabel(self, old: dict, new: int) -> None:
+        """Roll step 2: the label off the old board (already off: done), the record, then one line on the new board
+        and one inbox line."""
+        number = old["number"]
+        try:
+            label = urllib.parse.quote(BOARD_LABEL, safe="")
+            self.gh.write("DELETE", f"repos/{self.gh.repo}/issues/{number}/labels/{label}", None,
+                          f"board: take `{BOARD_LABEL}` off #{number}, rolled to #{new}")
+        except GitHubError as err:
+            if err.status != 404 and "HTTP 404" not in err.detail:
+                raise
+        self._board_record(number, new, self._roll_record())
+        count = old.get("comments")
+        self.gh.comment(new, f"Switchboard (board): this board continues #{number}, which reached {count} comments "
+                             f"(it rolls at {BOARD_ROLL_AT}); #{number} closes at the next sweep and its comments "
+                             "stay there.",
+                        f"board: #{new} names #{number}")
+        self.gh.comment(INBOX_PR, f"Switchboard (board): the board rolled from #{number} ({count} comments) to "
+                                  f"#{new}; #{number} closes at the next sweep. The new body is the old one's, its "
+                                  "heading renamed: any number in its text is the integrator's to edit.",
+                        f"inbox: the board rolled to #{new}")
+        self.out(f"BOARD       #{number} rolled to #{new}: label off; it closes at the next sweep")
+
+    def _board_record(self, old: int, new: int, rec: dict | None) -> None:
+        """The roll's record in the sweep state (the next sweep closes `old`), and the fallback board moved to the new
+        one (board_issue uses it when the listing fails). Never in a dry run."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
+        if self.gh.dry_run or state is None:
+            return
+        past = ([rec["old"]] + rec["past"] if rec and rec["old"] != old else (rec or {}).get("past") or [])
+        state["board_roll"] = {"old": old, "new": new, "closed": False, "past": past[:MAX_OLD_BOARDS]}
+        state["board"] = new
+
     def jobs(self) -> dict[str, dict]:
-        """Open issues labeled `job`, by J-NNN."""
+        """PR-review lookup, as before. The plan audit separately finds bare J-NNN issues."""
         if self._jobs is None:
             self._jobs = {}
             for it in self.gh.paged(f"repos/{self.gh.repo}/issues?labels=job&state=open"):
@@ -449,31 +1002,111 @@ class Switch:
 
     def proof(self, sha: str) -> tuple[str, str, int, str]:
         """The newest proof run on this commit: (state, url, run id)."""
-        runs = self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?head_sha={sha}&per_page=5")["workflow_runs"]
+        runs = self.head_runs(sha)
         if not runs:
             return "none", "", 0, ""
         return self.run_state(max(runs, key=lambda r: r["created_at"]))
 
+    def head_runs(self, sha: str) -> list[dict]:
+        """The proof runs on one commit, read once per run (J-103: the re-run's once-per-head check reuses the read).
+        Inside gh.fresh() (fresh_facts, before a merge) GitHub is read again, never the memo."""
+        memo = self.__dict__.setdefault("_head_runs", {})
+        if sha not in memo or getattr(self.gh, "fresh_only", False):
+            memo[sha] = self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?head_sha={sha}"
+                                    "&per_page=5")["workflow_runs"]
+        return memo[sha]
+
+    def run_jobs(self, run_id: int) -> list[dict]:
+        """One proof run's jobs with their steps, read once per run (J-103: the setup-only check reuses the read).
+        Inside gh.fresh() GitHub is read again, never the memo."""
+        memo = self.__dict__.setdefault("_run_jobs", {})
+        if run_id not in memo or getattr(self.gh, "fresh_only", False):
+            memo[run_id] = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{run_id}/jobs?per_page=50")["jobs"]
+        return memo[run_id]
+
+    def red_tests(self, run_id) -> tuple[str, ...]:
+        """J-104: the failing tests of one red proof run, for its notice: for each failed native-tests, godot-touch or
+        host-build job (at most MAX_FAIL_JOBS), "<job>: <FAIL line>" per unique FAIL line (fail_lines), read from the job's log
+        through the switch's own client and its timeouts. Read once per run, for both audiences (memo). A log that
+        cannot be read never stops the notice: its line says LOG_UNREAD and the NOTE line says why (err_text). After
+        MAX_LOG_FAILURES timed-out reads in a sweep no more are tried, so a GitHub that hangs costs the sweep a bounded
+        wait; any other failure stops only its own run's reads, after MAX_RUN_LOG_FAILURES."""
+        memo = self.__dict__.setdefault("_red_tests", {})
+        if run_id in memo:
+            return memo[run_id]
+        out: list[str] = []
+        try:
+            jobs = self.run_jobs(run_id) if isinstance(run_id, int) else []
+        except Exception:   # noqa: BLE001  the notice goes without its tests
+            jobs = []
+        failed = [j for j in jobs if (j.get("name") or "").startswith(FAIL_LOG_JOBS)
+                  and j.get("conclusion") not in ("success", "skipped", "cancelled", None)]
+        failures = 0   # this run's failed reads
+        for j in failed[:MAX_FAIL_JOBS]:
+            name = log_text(j.get("name") or "?", 60)
+            if self.__dict__.get("_log_timeouts", 0) >= MAX_LOG_FAILURES or failures >= MAX_RUN_LOG_FAILURES:
+                out.append(f"{name}: {LOG_UNREAD}")
+                continue
+            try:
+                log = self.gh.get_bytes(f"repos/{self.gh.repo}/actions/jobs/{int(j['id'])}/logs")
+                text = log.decode("utf-8", "replace") if isinstance(log, (bytes, bytearray)) else str(log or "")
+            except Exception as err:   # noqa: BLE001  a refused, missing or timed-out log: the notice still goes
+                failures += 1
+                if isinstance(err, ghapi.TimedOut):
+                    self._log_timeouts = self.__dict__.get("_log_timeouts", 0) + 1
+                self.out(f"NOTE        the log of {name} in proof run {run_id} was not read ({err_text(err)})")
+                out.append(f"{name}: {LOG_UNREAD}")
+                continue
+            lines, more = fail_lines(text, j.get("name") or "")
+            out += [f"{name}: {log_text(line)}" for line in lines] or [f"{name}: no FAIL line in its log"]
+            if more:
+                out.append(f"{name}: and {more} more FAIL lines")
+        if len(failed) > MAX_FAIL_JOBS:
+            out.append(f"and {len(failed) - MAX_FAIL_JOBS} more failed test jobs, their logs not read")
+        memo[run_id] = tuple(out)
+        return memo[run_id]
+
+    def run_state_or_none(self, run: dict) -> tuple[str, str, int, str] | None:
+        """run_state, or None when GitHub would not answer its jobs read (11-12: intermittent 502s on
+        actions/runs/*/jobs). Only for a side read that the next sweep can make again; a rate limit still raises."""
+        try:
+            return self.run_state(run)
+        except RateLimited:
+            raise
+        except GitHubError as err:
+            self.out(f"NOTE        proof run {run.get('id')}'s jobs were not read ({err_text(err)}): read again next sweep")
+            return None
+
     def run_state(self, run: dict) -> tuple[str, str, int, str]:
         """One proof run, judged by its jobs: (state, url, run id, finished at)."""
-        jobs = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{run['id']}/jobs?per_page=50")["jobs"]
+        jobs = self.run_jobs(run["id"])
         if run["status"] != "completed" and not only_wake_left(jobs):
             return "running", run["html_url"], run["id"], ""
         failed = [j["name"] for j in jobs if j["name"] not in NOT_COUNTED and j["conclusion"] not in ("success", "skipped")]
         return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"], run["id"], run.get("updated_at") or ""
 
-    def verdicts(self, number: int) -> tuple[list[rules.Verdict], list[dict]]:
+    def verdicts(self, number: int, job: str | None = None) -> tuple[list[rules.Verdict], list[dict]]:
+        """The PR's verdicts and its comments. With `job` (the PR's job, "" for none), the eye's FIX is read again
+        under today's look sets (rules.eye_relook, 11-12 #453)."""
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
         reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
+        looks = (getattr(self, "looks", None) or {}).get("sets") if job is not None else None
         out = []
         for c in comments:
             body = c.get("body") or ""
             v = rules.parse_verdict(body, c["created_at"], c["user"]["login"], self.team) or \
-                rules.parse_codex_state(body, c.get("updated_at") or c["created_at"], c["user"]["login"])
+                rules.parse_codex_state(body, c.get("updated_at") or c["created_at"], c["user"]["login"]) or \
+                rules.parse_codex_receipt(body, c["created_at"], c["user"]["login"])
             # J-056: an automatic review whose MAC checks for this PR, the whole head it names and its verdict.
             if v and rules.is_api_review(v) and signed_for(body, self.review_key, self.gh.repo, number, v.sha,
                                                            signed_verdict(v)):
                 v = dataclasses.replace(v, signed=True)
+            if v and looks and v.kind == "eye" and v.verdict == "FIX":
+                again = rules.eye_relook(v, body, looks, job or "", self.jobs())
+                if again.verdict != v.verdict:
+                    self.out(f"RELOOK      #{number} the eye's FIX @{v.sha[:8]} is a LAND under today's "
+                             "work/looks/sets.yml: every set it failed is now another open job's known defect")
+                v = again
             if v:
                 out.append(v)
         for r in reviews:
@@ -541,10 +1174,8 @@ class Switch:
         full = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
         commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")
         proof, url, run_id, proof_done_at = self.proof(sha)
-        verdicts, comments = self.verdicts(number)
-        job = rules.job_of_pr(pr.get("body")) or \
-            rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(number, "")
-        issue = self.jobs().get(job)
+        job, issue = self.job_issue(pr)
+        verdicts, comments = self.verdicts(number, job)
         # Muse's mailed verdicts land on the job issue or the board (the bridge cannot comment on a PR).
         off_pr = self.board_comments() + (self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
                                           if issue else [])
@@ -564,6 +1195,12 @@ class Switch:
                # the head is a branch of this repo, not a fork's: only then is the team token ever used for it
                "own_head": (((pr.get("head") or {}).get("repo") or {}).get("full_name") or "") == self.gh.repo}
         return facts, ctx
+
+    def job_issue(self, pr: dict) -> tuple[str, dict | None]:
+        """A PR's job and its open job issue (None for none), as pr_facts reads them; sweep_delta compares the issue."""
+        job = rules.job_of_pr(pr.get("body")) or \
+            rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(pr["number"], "")
+        return job, self.jobs().get(job)
 
     def target_prs(self, only_pr: int, only_sha: str) -> list[dict]:
         """The open PRs the switch acts on: never the integrator's inbox PR (J-051)."""
@@ -746,9 +1383,14 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         token, key = bool(self.merge_token), bool(self.review_key)
         d = rules.merge_decision(facts, author, self.team, token, key)
-        if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
-            time.sleep(3)   # the first read starts GitHub's computation; read once more
-            facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
+        for _ in range(MERGEABLE_READS):
+            if d.action != "WAIT" or d.reasons != ("GitHub is still computing mergeability",):
+                break
+            # the first read starts GitHub's computation. Trunk moves every few minutes (notes commits), which resets it,
+            # so one read 3 s later was often still null (11-12, #453 in a dry run): read again, GitHub's own answer
+            time.sleep(MERGEABLE_WAIT_S)
+            with self.gh.fresh():
+                facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
             d = rules.merge_decision(facts, author, self.team, token, key)
         if d.action in ("MERGE", "HUMAN-MERGE") and not ctx.get("fresh"):
             # J-072, the security pass on #360: the sweep's reads may be answered from the ETag cache, whose file
@@ -856,14 +1498,24 @@ class Switch:
 
     def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
         """It is still Codex's turn on this head (rules.codex_turn): wait for it rather than ask or pay for a
-        second review (J-031). Past the wait, the review goes on as if Codex were not there."""
+        second review (J-031). Past the wait, the review goes on as if Codex were not there.
+        J-072 (plan step 7): while Codex is expected and has not been asked on the head, it is still its turn, however
+        long ago the proof went green; once asked, its clock runs from the ask. A review Codex runs unasked (it is
+        never asked then) keeps the old clock, so a stuck running state cannot hold the head for ever."""
         if rules.codex_failed(ctx.get("comments") or [], facts.head_sha):
             return False   # Codex could not review this head (its usage limit): no wait
         now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
         expected = self.codex_counts(self.team.vendor_of_branch(facts.head_ref), ctx)
-        since = [ctx.get("proof_done_at") or "", self.codex_asked(facts, ctx)]
-        if expected:
-            since.append(ctx.get("created_at") or "")   # a PR the switch just opened was green long before
+        asked = self.codex_asked(facts, ctx)
+        if expected and asked:
+            since = [asked]   # the start clock runs from the ask, not from when the proof went green
+        elif expected and not rules.codex_in_flight(ctx.get("comments") or [], self.codex_reactions(facts, ctx),
+                                                    facts.head_sha):
+            return True   # not asked yet: the steer part asks it first; no paid review before that
+        else:
+            since = [ctx.get("proof_done_at") or "", asked]
+            if expected:
+                since.append(ctx.get("created_at") or "")   # a PR the switch just opened was green long before
         if not rules.codex_turn(since, True, expected, now):
             return False   # past every wait: no reaction read
         if rules.codex_turn(since, False, expected, now):
@@ -975,7 +1627,7 @@ class Switch:
         except GitHubError as err:
             code = http_status(err.detail)
             if workflows and code in MERGE_TOKEN_REFUSED:
-                raise MergeTokenRefused(f"GitHub refused the merge token (HTTP {code}): {MERGE_TOKEN_ENV} needs "
+                raise MergeTokenRefused(f"{TOKEN_REFUSED} (HTTP {code}): {MERGE_TOKEN_ENV} needs "
                                         f"{MERGE_TOKEN_NEEDS} on {self.gh.repo}") from None
             raise
         if not self.gh.dry_run and not (got or {}).get("merged"):
@@ -996,29 +1648,33 @@ class Switch:
         return ""
 
     # ---------- auto-open (J-047) ----------
-    def prior_pr(self, branch: str) -> bool:
-        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch. A yes never turns
-        into a no, so it is kept in the sweep state (J-072: a PR listing answers 200 even with its ETag, so the warm
-        full pass spent 45 of its 72 counted calls asking again about branches that had a PR long ago)."""
+    def prior_pr(self, branch: str, sha: str) -> bool:
+        """Has this head of this branch ever been a PR's head (open, closed or merged)? The head filter names the
+        branch; a PR counts only at its own head, so a branch reused past a merged or closed PR gets a new one
+        (SYSTEM_PLAN item 2). A yes never turns into a no, so it is kept in the sweep state as "branch@sha" (J-072:
+        a PR listing answers 200 even with its ETag, so the warm full pass spent 45 of its 72 counted calls asking
+        again about branches that had a PR long ago)."""
         state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
         known = state.setdefault("prior_pr", [])
-        if branch in known:
+        key = f"{branch}@{sha}"
+        if key in known:
             return True
         owner = self.gh.repo.split("/")[0]
-        had = bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
+        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}")
+        had = any((p.get("head") or {}).get("sha") == sha for p in prs or [])
         if had:
-            known.append(branch)
+            known.append(key)
         return had
 
-    def open_pr(self, branch: str, sha: str, job: str, message: str) -> str:
-        """Open the PR for a finished branch: title is the commit subject, body starts with the Job line.
-        Returns "" when opened (or in a dry run), else why not."""
+    def open_pr(self, branch: str, sha: str, job: str, message: str, title: str = "") -> str:
+        """Open the PR for a finished branch: title is `title`, else the commit subject; body starts with the Job
+        line. Returns "" when opened (or in a dry run), else why not."""
         subject, _, rest = message.partition("\n")
         body = f"Job: {job}\n\nOpened by the switchboard from {branch} @ {sha}"
         if rest.strip():
             body += f"\n\n{rest.strip()}"
         got = self.gh.write("POST", f"repos/{self.gh.repo}/pulls",
-                            {"title": subject, "head": branch, "base": rules.TRUNK, "body": body},
+                            {"title": title or subject, "head": branch, "base": rules.TRUNK, "body": body},
                             f"open PR for {branch} @{sha[:8]} (job {job})")
         if self.gh.dry_run:
             self.out(f"DRY  open PR for {branch} @{sha[:8]} (job {job})")
@@ -1041,25 +1697,58 @@ class Switch:
                     f"the PR by hand. This sweep's auto-open stopped here.")
         else:
             text = f"the auto-open failed ({why}); the next sweep tries again."
+        state = getattr(self.gh, "state", None)
+        if isinstance(state, dict) and f"{branch}@{sha}" in (state.get("auto_pr_old") or []):
+            return   # #350: an old head listed once already; the open is still tried, only the listing is not
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
-    def auto_open_prs(self, only: set[str] | None = None) -> int:
-        """Open PRs for finished fb-bot/integrate-* branches with no PR yet (J-047).
+    def auto_pr_aged(self, key: str, committed: str) -> None:
+        """#350 (60 of 69 inbox lines in six posts were AUTO-PR-FAILED lines for heads from weeks before, each re-listed
+        once the inbox's ring had lost its key): a head older than AUTO_PR_OLD whose AUTO-PR-FAILED item the inbox has
+        listed is recorded in the sweep state ("auto_pr_old", at most MAX_AUTO_PR_OLD, the heads still live), and is
+        never listed again. Its PR is still opened when it can be (a plan line given later)."""
+        state = getattr(self.gh, "state", None)
+        at = parse_time(committed)
+        if (not isinstance(state, dict) or at is None or self.now - at <= AUTO_PR_OLD
+                or getattr(self.gh, "dry_run", False)):
+            return
+        old = [k for k in state.get("auto_pr_old") or [] if isinstance(k, str)]
+        if key not in old:
+            state["auto_pr_old"] = (old + [key])[-MAX_AUTO_PR_OLD:]
 
-        A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
-        that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
-        whose head already had a PR (open, closed or merged) is never opened again. Every failure on a
-        branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops this
-        sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
+    def auto_open_prs(self, only: set[str] | None = None) -> int:
+        """Open PRs for finished fb-bot/integrate-* and claude/integrate-* heads with no PR yet (J-047).
+
+        SYSTEM_PLAN item 2: the job is the head commit's `Job: J-NNN` line, else the branch name's
+        (plan.job_of_branch); a head whose subject starts "Merge" is titled "J-NNN: <the plan line's title>". A head
+        opens when the proof on it is green, the plan has a line for its job, the line has no `hold:`, the plan does
+        not list the head as `kept`, and no PR ever had this head (a branch past its merged or closed PR opens
+        again). A held job or a kept head opens nothing. A green head with no job, or a job the plan has no line
+        for, is one AUTO-PR-FAILED item per head. At most MAX_AUTO_PRS per sweep, in branch-name order. Every
+        failure on a branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops
+        this sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
-        listed = self.gh.paged(f"repos/{self.gh.repo}/branches")
-        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
-            alive = {b["name"] for b in listed}
-            self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
+        # 11-12: 647 branches, and paged() stops at 500 without saying so, so a finished branch past it never got
+        # its PR. Once the plan is live every page is read (past ALL_PAGES it raises). Until then this reads what
+        # it always read: the rebuild changes nothing the live switch does while it is in shadow.
+        path = f"repos/{self.gh.repo}/branches"
+        listed = collab_plan.whole(self.gh, path) if self.plan_mode() == "live" else self.gh.paged(path)
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget heads gone or moved
+            current = {f"{b['name']}@{b['commit']['sha']}" for b in listed}
+            state["prior_pr"] = [k for k in state.get("prior_pr") or [] if k in current]
+            state["auto_pr_old"] = [k for k in state.get("auto_pr_old") or [] if k in current][-MAX_AUTO_PR_OLD:]
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
+        model = self.read_plan()
+        lines = model.by_job()
+        kept = {(ref, ksha) for ln in model.lines for ref, ksha in ln.kept}
+        # a no-plan-job item is made once per head: until the inbox lists it (its ring, inbox_box), not just once made,
+        # so a sweep whose inbox never ran (a fast or quiet one) loses nothing
+        box = state.get("inbox") if isinstance(state.get("inbox"), dict) else {}
+        listed_keys = {k for k in box.get("keys") or [] if isinstance(k, str)}
         open_refs = {p["head"]["ref"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
         opened = 0
         for b in sorted(branches, key=lambda x: x["name"]):
@@ -1068,19 +1757,47 @@ class Switch:
             branch, sha, job = b["name"], b["commit"]["sha"], ""
             if branch in open_refs:
                 continue
+            key = f"{branch}@{sha}"
             try:
-                if self.prior_pr(branch):
+                if key in (state.get("prior_pr") or []):
                     self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
-                message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
-                job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
-                if not job:
+                if any(ref == branch and sha.startswith(ksha) for ref, ksha in kept):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: the plan keeps this head as a record")
+                    continue
+                commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]
+                message = commit["message"]
+                job = rules.job_of_pr(message) or collab_plan.job_of_branch(branch)   # the Job: line, else the name
+                line = lines.get(collab_plan.plan_job(job, lines)) if job else None
+                if inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                    self.auto_pr_aged(key, (commit.get("committer") or {}).get("date") or "")
+                    if line is None:
+                        continue
+                if line is None and key in (state.get("auto_pr_old") or []):
+                    continue
+                if line is not None and line.hold:
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): the plan holds {line.job}")
+                    continue
+                if self.prior_pr(branch, sha):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
                     continue
                 proof, url, _, _ = self.proof(sha)
                 if proof != "green":
-                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): proof is {proof}")
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job or 'no job'}): proof is {proof}")
                     continue
-                why = self.open_pr(branch, sha, job, message)
+                if line is None:
+                    why = (f"{job} has no line in work/plan.md" if job else
+                           "its head commit has no `Job: J-NNN` line and its name no job")
+                    self.out(f"NOTE  {branch} @{sha[:8]} is green with no PR: {why}; nothing opened")
+                    where = f"{untrusted(branch)} head {sha[:8]}" + (f", {job}" if job else "")
+                    self.auto_pr_failed += (InboxItem(
+                        "AUTO-PR-FAILED", branch, sha,
+                        f"AUTO-PR-FAILED {where}: green with no PR, and {why}, so the switch opens none. The "
+                        f"integrator gives the job a plan line (the next sweep opens it) or opens the PR by hand."),)
+                    continue
+                subject = message.partition("\n")[0]
+                why = self.open_pr(branch, sha, job, message,
+                                   f"{job}: {line.title}" if subject.startswith("Merge") else "")
                 if why:
                     self.auto_pr_failure(branch, sha, job, why)
                     continue
@@ -1099,27 +1816,109 @@ class Switch:
         return opened
 
     # ---------- the integrator inbox (J-051) ----------
-    def inbox(self, steered: list[Steered]) -> int:
-        """After a full steer sweep, one comment on the inbox PR listing what needs the integrator and was not
-        listed before. Each item's key (kind, PR or branch, head sha) goes in the comment's hidden marker, which
-        carries the earlier keys forward too: a key is listed once, a new head is a new key. Nothing new, no
-        comment. Returns how many items were posted (or printed, in a dry run)."""
+    def inbox_box(self) -> dict:
+        """11-13: the inbox's own part of the sweep state, saved with the signed cache (ghapi.save_etags): "keys",
+        every key listed (the ring, MAX_INBOX_KEYS), "at", the last post, and "held", wake items not posted yet."""
+        state = getattr(self.gh, "state", None)
+        if not isinstance(state, dict):
+            state = self.gh.state = {}
+        box = state.get("inbox")
+        if not isinstance(box, dict):
+            box = state["inbox"] = {}
+        return box
+
+    def inbox_due(self, held: list[InboxItem], digest: list[InboxItem], last: dt.datetime | None) -> bool:
+        """11-13: does a comment go now? An ask: at once. Else only INBOX_HOLD after the last post, and only for the
+        integrator's own work held. The digest never makes a post: every #282 comment wakes the subscribed
+        integrator, so a digest-only post ("Nothing to decide", 6854673147) woke it for nothing. Its entries ride
+        the next post that carries a wake item, as many as fit, the rest the one after (`digest` is kept in the
+        signature for the callers)."""
+        if any(inbox_class(it) == "now" for it in held):
+            return True
+        if last is not None and self.now - last < INBOX_HOLD:
+            return False
+        return bool(held)
+
+    def inbox_clock(self) -> bool:
+        """11-13: a quiet sweep's question: is a held wake item due by its clock alone (the digest never is)? Reads no GitHub."""
+        box = self.inbox_box()
+        return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"}))), list(self.digest_held),
+                              parse_time(str(box.get("at") or "")))
+
+    def inbox(self, steered: list[Steered], flush: bool = False) -> int:
+        """After a sweep, at most one comment on the inbox PR listing what needs the integrator and was not listed
+        before. An item's key (kind, PR or branch, head sha) is listed once; a new head is a new key. 11-13: the keys
+        live in the sweep state's ring (inbox_box), no longer in the comment (inbox_reported still reads the old
+        markers). Each item has a class (inbox_class): an ask posts at once; the integrator's own work posts at most
+        once per INBOX_HOLD, riding any ask sooner; a report (J-103's digest) never posts alone, not even with
+        `flush`: it rides the next post that carries a wake item (inbox_due). What waits is held in the state, never
+        dropped: a comment carries what fits under INBOX_MAX_CHARS (fit_inbox) and the rest waits for the next. `flush` posts the wake items held now. Returns how
+        many items were posted (or printed, in a dry run), digest entries included."""
+        box = self.inbox_box()
         reported = self.inbox_reported()
-        seen = set(reported)
+        posted_before = frozenset(reported)
+        when = iso_z(self.now)
+        heads = {f"#{s.facts.number}": s.facts.head_sha for s in steered}
+        held: dict[tuple, InboxItem] = {}   # (kind, target, head): one item, however its tests read
+        for it in held_of(box.get("held"), frozenset({"now", "hold"})):
+            # a PR read this sweep at a newer head: this head's items are moot, the new head's come below
+            if not it.listed(posted_before) and heads.get(it.target, it.head) == it.head:
+                held.setdefault((it.kind, it.target, it.head), it)
+        # held items count as listed for the reads: no log is read again for one, unless its log went unread
+        seen = set(reported) | {it.key for it in held.values()}
         new: list[InboxItem] = []
-        for it in self.inbox_items(steered, frozenset(reported)):
-            if it.key not in seen:
-                seen.add(it.key)
-                new.append(it)
-        if not new:
-            self.out("INBOX       nothing new")
+        for it in self.inbox_items(steered, frozenset(seen)):
+            if not it.line or it.listed(seen):
+                continue
+            seen.add(it.key)
+            it = dataclasses.replace(it.read_now(posted_before), since=when)
+            prev = held.get((it.kind, it.target, it.head))
+            if prev is not None:   # held with its log unread, read now: the read copy replaces it, its clock kept
+                if prev.unread and not it.unread:
+                    held[(it.kind, it.target, it.head)] = dataclasses.replace(it, since=prev.since)
+                continue
+            new.append(it)
+            if inbox_class(it) != "ride":
+                held[(it.kind, it.target, it.head)] = it
+        wake = sorted(held.values(), key=lambda it: (inbox_class(it) != "now", INBOX_ORDER.index(it.kind)))
+        rides: dict[str, InboxItem] = {}
+        for it in list(self.digest_held) + [it for it in new if inbox_class(it) == "ride"]:
+            if it.key not in reported:
+                rides.setdefault(it.key, it if it.since else dataclasses.replace(it, since=when))
+        digest = list(rides.values())
+        self.inbox_keys = set(reported)   # J-097: what the inbox holds after this call (run_sweep's queue clock)
+        last = parse_time(str(box.get("at") or ""))
+        self.digest_held = self.keep_held(digest, MAX_DIGEST_HELD, "digest")
+        if not getattr(self.gh, "dry_run", False):   # kept until a comment carries it, even if the post fails
+            box["held"] = [digest_record(it) for it in self.keep_held(wake, MAX_INBOX_HELD, "wake")]
+        if not wake or not (flush or self.inbox_due(wake, digest, last)):   # a digest alone never posts
+            self.out("INBOX       nothing new" + (f"; {len(wake)} held for the next post (the hold)" if wake else "")
+                     + (f"; {len(digest)} held for the digest (J-103)" if digest else ""))
             return 0
-        shown = new[:MAX_INBOX_LINES]
-        keys = (reported + [it.key for it in shown])[-MAX_INBOX_KEYS:]
-        body = inbox_body(shown, len(new) - len(shown), keys, central(self.now))
+        shown, carried, body = fit_inbox(wake, digest, central(self.now))
+        posted = wake[:len(shown)] + digest[:len(carried)]   # the items as held: their keys, whatever fit_inbox cut
         self.out(body)
-        self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s) on #{INBOX_PR}")
-        return len(shown)
+        self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s)"
+                                        + (f" and {len(carried)} digest entries" if carried else "") + f" on #{INBOX_PR}")
+        self.inbox_keys |= {it.key for it in posted}
+        self.digest_held = tuple(digest[len(carried):][-MAX_DIGEST_HELD:])
+        if not getattr(self.gh, "dry_run", False):
+            ring = [k for k in box.get("keys") or [] if isinstance(k, str)]
+            # the old comment markers (inbox_reported reads them back every sweep) are the oldest keys, so they go
+            # first and are cut first: after the ring they pushed its newest keys out once over the cap (#350, 11-13)
+            in_ring = set(ring)
+            old = [k for k in reported if k not in in_ring]
+            box["keys"] = list(dict.fromkeys(old + ring + [it.key for it in posted]))[-MAX_INBOX_KEYS:]
+            box["at"] = when
+            box["held"] = [digest_record(it) for it in wake[len(shown):][-MAX_INBOX_HELD:]]
+        return len(shown) + len(carried)
+
+    def keep_held(self, items: list[InboxItem], cap: int, what: str) -> tuple[InboxItem, ...]:
+        """The newest `cap` held items; any dropped are named in the run's log, never lost silently."""
+        if len(items) > cap:
+            self.out(f"NOTE        inbox: {len(items) - cap} {what} item(s) over the cap of {cap} dropped, the oldest: "
+                     + plain("; ".join(it.line[:80] for it in items[:len(items) - cap][:3])))
+        return tuple(items[-cap:])
 
     def muse_keys(self, comments: list[dict]) -> list[str]:
         """The muse-<KIND> keys in the switch's own muse markers on these comments, oldest first."""
@@ -1140,7 +1939,11 @@ class Switch:
         reported: set[str] = set()
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
-        items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        self.defer_logs = True   # the keys sent are known only below: no log is read before they are (J-104)
+        try:
+            items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        finally:
+            self.defer_logs = False
         homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}   # 0: no job issue, so the board
         board = self.board_issue() if items else 0
         wheres = {homes.get(it.target) or board for it in items}
@@ -1152,9 +1955,13 @@ class Switch:
                 reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
         seen, new = set(reported), []
         for it in items:
-            if it.muse_key not in seen:
+            if it.run_id is not None and not it.tests:
+                if inbox_key("muse-" + it.kind, it.target, it.head) in seen:
+                    continue   # sent with its tests (or before UNREAD_KEY): its logs are not read again
+                it = dataclasses.replace(it, tests=self.red_tests(it.run_id))
+            if not it.listed(seen, "muse-"):
                 seen.add(it.muse_key)
-                new.append(it)
+                new.append(it.read_now(seen, "muse-"))
         if not new:
             self.out("MUSE        nothing new")
             return 0
@@ -1176,6 +1983,7 @@ class Switch:
             for it in group:
                 lines.append(f"- {it.line}")
                 lines += [f"  {line}" for line in it.finding.split("\n")] if it.finding else []
+                lines += [f"  {t}" for t in it.tests]
             body = re.sub(r"@(?=\w)", "", "\n".join(lines))   # mentions would ping; "@ <sha>" is not one
             marked = f"{body}\n\n{MUSE_MARK.format(keys=','.join(it.muse_key for it in group))}"
             self.out(marked)
@@ -1285,7 +2093,40 @@ class Switch:
                               "One alarm per incident; the switch prints the state every sweep.", "",
                               PIPE_MARK.format(kinds=",".join(new))] + marks)
             self.gh.comment(board, body, f"pipe alarm ({', '.join(new)}) on #{board}")
+        self.pipe_all_clear(board, [k for k, on in (("version", version), ("outbound", stuck), ("inbound", quiet)) if on],
+                            getattr(self, "pipe_last_post", None))
         return found
+
+    def pipe_all_clear(self, board: int, kinds: list[str], last_post: dt.datetime | None) -> None:
+        """#350 (Muse believed the bridge down for 36 h after it recovered: an alarm had no all-clear). The sweep state
+        keeps each finding kind the pipe tripped on and when (gh.state["pipe_trip"]); the first pass that finds none
+        posts one PIPE OK on the board, labeled wake:muse so the bridge mails it, and only then clears it (a failed
+        write posts it again next pass). An inbound trip ends only on a bridge post newer than it (`last_post`, the
+        newest one inbound_quiet read): its finding also ends when the day's asks age out, which proves nothing. A dry
+        run writes no state. Reads nothing; two writes, only on recovery."""
+        state = getattr(self.gh, "state", None)
+        if not isinstance(state, dict) or getattr(self.gh, "dry_run", False):
+            return
+        box = state.get("pipe_trip") if isinstance(state.get("pipe_trip"), dict) else {}
+        trips = {k: t for k, v in box.items() if isinstance(k, str) and (t := parse_time(str(v or ""))) is not None}
+        if kinds:
+            state["pipe_trip"] = {k: iso_z(t) for k, t in {**{k: self.now for k in kinds}, **trips}.items()}
+            return
+        if not trips:
+            return
+        if "inbound" in trips and (last_post is None or last_post <= trips["inbound"]):
+            self.out("PIPE        no finding now, but no bridge post since the inbound alarm: no all-clear yet")
+            return
+        since = min(trips.values())
+        body = "\n".join([f"{PIPE_OK_HEAD.format(board=board)} the Muse mail bridge works again ({central(self.now)}).",
+                          "", f"The PIPE ALARM raised {central(since)} is over: this pass found none of its findings "
+                          "(the switch checks the bridge every full sweep). Nothing to do, no reply needed.", "",
+                          PIPE_OK_MARK])
+        self.gh.comment(board, body, f"pipe all-clear on #{board}")
+        self.gh.write("POST", f"repos/{self.gh.repo}/issues/{board}/labels", {"labels": [MUSE_LABEL]},
+                      f"label #{board} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+        self.out(f"PIPE OK     the alarm raised {central(since)} is over: all-clear posted on #{board}")
+        state.pop("pipe_trip", None)
 
     def pipe_ripen(self, at: dt.datetime) -> None:
         """J-072: the next time a clock alone changes pipe_health's findings; a fast sweep runs it then."""
@@ -1380,11 +2221,11 @@ class Switch:
             body = (c.get("body") or "").lstrip()
             if body.startswith(BRIDGE_POST):
                 posts.append(at)
-            elif body.startswith("CLAUDE_TO_MUSE:"):
+            elif body.startswith("CLAUDE_TO_MUSE:") and PIPE_OK_MARK not in body:   # an all-clear asks nothing
                 newest_ask = max(at, newest_ask or at)
                 if at >= start:
                     asks += 1
-        last_post = max(posts) if posts else None
+        last_post = self.pipe_last_post = max(posts) if posts else None   # #350: pipe_all_clear reads it
         if last_post is not None and newest_ask is not None and newest_ask > last_post:
             self.pipe_ripen(last_post + PIPE_INBOUND_QUIET + dt.timedelta(seconds=1))   # quiet a day after the last post
         if not asks or (last_post is not None and last_post >= start):
@@ -1395,11 +2236,12 @@ class Switch:
         return asks, last_post, fresh
 
     def inbox_reported(self) -> list[str]:
-        """The keys in the switch's own inbox markers, oldest first. Only the inbox PR's newest 200 comments are
-        read: the newest marker carries every earlier key forward. A marker by any other login never counts."""
+        """The keys listed before, oldest first: the sweep state's ring (11-13), then the keys in the switch's own
+        inbox markers, which comments carried until 11-13. Only the inbox PR's newest 200 comments are read: the
+        newest marker carries every earlier key forward. A marker by any other login never counts."""
+        keys = [k for k in self.inbox_box().get("keys") or [] if isinstance(k, str)]
         count = int((self.gh.get(f"repos/{self.gh.repo}/issues/{INBOX_PR}") or {}).get("comments") or 0)
         last = max(1, -(-count // 100))
-        keys: list[str] = []
         for page in range(max(1, last - 1), last + 1):
             for c in self.gh.get(f"repos/{self.gh.repo}/issues/{INBOX_PR}/comments?per_page=100&page={page}") or []:
                 if c["user"]["login"] == rules.BOT_LOGIN:
@@ -1425,21 +2267,323 @@ class Switch:
         for s in steered:
             items += self.pr_inbox_items(s, runs, reported, prefix)
         items += self.branch_inbox_items(runs, reported, prefix)
+        if not prefix:
+            items += getattr(self, "plan_items", ())
+            items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
+        if ripe is None:
+            audience = ("muse", "both") if prefix else ("claude", "both")
+            items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
         if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
+
+    def plan_mode(self) -> str:
+        """work/switchboard.yml `plan`: shadow (compute and print, write nothing), live, or off."""
+        if not hasattr(self, "root"):
+            return "off"  # isolated merge-rule tests have no checkout
+        try:
+            import yaml
+            config = yaml.safe_load((self.root / "work/switchboard.yml").read_text(encoding="utf-8")) or {}
+            return config.get("plan") if config.get("plan") in ("shadow", "live") else "off"
+        except (OSError, ValueError):
+            return "off"
+
+    def read_plan(self) -> "collab_plan.Plan":
+        path = self.root / "work/plan.md"
+        try:
+            model = collab_plan.parse(path.read_text(encoding="utf-8"))
+        except OSError as err:
+            raise RuntimeError(f"read collaboration plan {path}: {err}") from err
+        if model.errors:
+            raise RuntimeError("invalid collaboration plan: " + "; ".join(model.errors[:5]))
+        return model
+
+    def plan_reads(self, model: "collab_plan.Plan") -> dict:
+        """collab_plan.observe, once per run: the one read of what the plan is checked against."""
+        memo = self.__dict__.get("_plan_reads")
+        if memo is None:
+            memo = collab_plan.observe(self.gh, model, self.now, self.out, listing=self.listing,
+                                       trunk=rules.TRUNK, errors=(GitHubError,))
+            self.__dict__["_plan_reads"] = memo
+        return memo
+
+    def plan_table(self, steered=()) -> tuple:
+        """(the plan, its reads, the mail, every job's row): the job machine's table, computed once per run from the
+        plan and the evidence (machine.py). Reads only."""
+        memo = self.__dict__.get("_plan_table")
+        if memo is None:
+            model = self.read_plan()
+            reads = self.plan_reads(model)
+            works = work_reader.read(self, model, reads, list(steered))
+            notes = self.plan_notice_comments(model, reads)   # the switch's own notices: never lost to a read window
+            mail = mail_reader.read(self, model, reads, also=notes)   # posts and notices from one comment set
+            mail = dataclasses.replace(mail, receipts={**machine.recorded_receipts(notes), **mail.receipts})
+            rows = machine.table(model, machine.collect(model, reads, works=works, mail=mail,
+                                                        planned_at=reads.get("planned_at"), asks=self.ask_jobs()))
+            memo = self.__dict__["_plan_table"] = (model, reads, mail, rows)
+        return memo
+
+    def plan_notice_comments(self, model, reads) -> list[dict]:
+        """The comments that can hold the switch's plan marks: the live board's, and, only while the live board
+        holds no mark of an owner's present version, the closed boards' too (a board closes at 100 comments; a
+        notice sent on the last one is still sent, and is not sent again; the receipt filed beside it is read with
+        it, as mail_reader reads these comments too)."""
+        memo = self.__dict__.get("_plan_notes")
+        if memo is None:
+            memo = list(self.board_comments())
+            vers = machine.versions(model)
+            sent = {(n.owner, n.ver) for n in machine.sent_notices(memo)}
+            marked = (machine.MAIL_OWNERS | machine.SELF_TOLD) & {ln.owner for ln in model.lines}
+            if any((o, vers[o]) not in sent for o in marked):
+                for old in self.old_boards():
+                    memo += self.bounded_comments(old, MAX_OLD_BOARD_PAGES)
+            self.__dict__["_plan_notes"] = memo
+        return memo
+
+    def plan_check(self, steered=()) -> None:
+        """The job machine's pass. Shadow: every job's state, the late ones, and the views (labels, notices, the
+        board section) are computed and printed, and nothing is written; an error here is a printed note, never a
+        failed sweep. Live: the late jobs go to the integrator's inbox once each, the plan notice goes to a mail
+        owner once per order version, the labels and the board's job section are made to match."""
+        self.plan_items = ()
+        mode = self.plan_mode()
+        if mode == "off":
+            return
+        try:
+            self.plan_pass(mode, steered)
+        except Exception as err:   # noqa: BLE001
+            if mode == "live":
+                if isinstance(err, (GitHubError, RuntimeError, KeyError, ValueError)):
+                    raise
+                raise RuntimeError(f"plan: {type(err).__name__}: {err}") from err
+            self.out(f"NOTE        plan (shadow): not computed this pass ({type(err).__name__}: {plain(str(err)[:200])})")
+
+    def plan_pass(self, mode: str, steered=()) -> None:
+        model, reads, mail, rows = self.plan_table(steered)
+        late = machine.alarms(rows, self.now)
+        lanes = ", ".join(f"{o} {n}/{limit}" for o, (n, limit) in machine.wip(model, rows).items() if n)
+        self.out(f"PLAN        {len(model.lines)} jobs, {len(late)} late, lanes in flight: {lanes or 'none'}, mode={mode}")
+        for state in machine.STATES:
+            jobs = [r.job for r in rows if r.state == state]
+            if jobs:
+                self.out(f"PLAN-STATE  {state:<12} {len(jobs):>3}  {plain(', '.join(jobs[:40]))}")
+        lines = machine.alarm_lines(rows, self.now)
+        for line in lines[:MAX_PLAN_LINES]:
+            self.out(f"PLAN-LATE   {plain(line[:400])}")
+        aliases = {key: frozenset(a.get("owner_labels") or ())
+                   for key, a in ((load_yaml(self.root / "work/agents.yml") or {}).get("agents") or {}).items()}
+        changes = machine.labels(model, reads["issues"], aliases)
+        for number, add, remove in changes[:MAX_PLAN_LINES]:
+            self.out(f"PLAN-LABEL  #{number} add {', '.join(add) or '-'}; remove {', '.join(remove) or '-'}")
+        titles = machine.bad_titles(model, reads["issues"])[:MAX_PLAN_LINES]
+        for job, number, title in titles:
+            self.out(f"PLAN-TITLE  {job} #{number} {plain(untrusted(title, 120))}: not `{job} ` first")
+        notices, receipts = [], []
+        notes = self.plan_notice_comments(model, reads)
+        vers = machine.versions(model)
+        owners = {ln.owner for ln in model.lines}
+        seen = [o for o in sorted(machine.SELF_TOLD & owners)   # each job's clock needs its line's first-seen time
+                if not any(n.ver == vers[o] for n in machine.marks(mail, o))]
+        for owner in seen:
+            self.out(f"PLAN-SEEN   {owner} plan {vers[owner]}" + ("" if mode == "live" else " (shadow: not written)"))
+        for owner in sorted(machine.MAIL_OWNERS & owners):
+            ver = vers[owner]
+            sent = machine.notice_at(mail, owner, ver)
+            answer = machine.receipt_post(mail, ver, sent) if sent else None
+            if answer and (owner, ver) not in mail.receipts:
+                receipts.append((owner, ver, answer))
+            # #350: a told job waiting on an open ask is late on Claude's clock, not on the receipt's
+            unread = sent and any(r.owner == owner and r.owes == owner and r.state == "told" and r.late(self.now)
+                                  for r in rows)
+            again = machine.NOTICE_AGAIN.format(owner=owner, ver=ver)
+            if sent and not (unread and not any(again in (c.get("body") or "") and
+                                                (c.get("user") or {}).get("login") == rules.BOT_LOGIN for c in notes)):
+                continue
+            text = machine.notice(model, rows, owner, ver, machine.notice_jobs(notes, owner), again=bool(sent))
+            notices.append((owner, ver, text, bool(sent)))
+            self.out(f"PLAN-NOTICE {owner} plan {ver}{' (again)' if sent else ''}" +
+                     ("" if mode == "live" else " (shadow: not sent)"))
+            self.out(text)
+        board = machine.board(model, rows, self.now)
+        if mode != "live":
+            return
+        # 11-13: dest is who owes the next step; only the integrator's own wake it (inbox_class), the rest ride
+        self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
+                                for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
+        self.plan_items += self.muse_quiet(rows, reads, steered)   # #350: after the cut, so late lines never crowd it out
+        # #350: a job issue the mail bridge cannot find by its title, once per title (its head); the integrator renames it
+        self.plan_items += tuple(InboxItem(
+            "PLAN", f"#{number}", hashlib.sha256(title.encode()).hexdigest()[:16],
+            f"PLAN {job}: #{number} is titled {no_verdict(untrusted(title, 120))}, not `{job} ` first (the id, "
+            f"then a space), so the mail bridge files {job}'s mail on the board, not on #{number}: rename #{number}",
+            "integrator")
+            for job, number, title in titles)
+        for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
+            c = machine.notice_comment(notes, owner, ver)
+            if c and c.get("id"):
+                mark = machine.RECEIPT_MARK.format(owner=owner, ver=ver, at=iso_z(answer.at), comment=answer.id)
+                self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{c['id']}",
+                              {"body": f"{c.get('body') or ''}\n{mark}"}, f"plan: record {owner}'s receipt of plan {ver}")
+        for owner, ver, text, resend in notices:
+            self.send_plan_notice(model, mail, owner, ver, text, resend, reads.get("planned_at"))
+        for owner in seen:
+            mark = machine.NOTICE_MARK.format(owner=owner, ver=vers[owner], jobs=machine.mark_jobs(
+                model, mail, owner, self.now, reads.get("planned_at")))
+            self.gh.comment(self.board_issue(), f"{machine.SELF_HEAD.format(ver=vers[owner], owner=owner)}\n\n{mark}",
+                            f"plan: record plan {vers[owner]} for {owner} on #{self.board_issue()}")
+        for number, add, remove in changes[:MAX_PLAN_LABELS]:
+            if add:
+                self.gh.write("POST", f"repos/{self.gh.repo}/issues/{number}/labels", {"labels": list(add)},
+                              f"plan: label #{number} {', '.join(add)}")
+            for name in remove:
+                from urllib.parse import quote
+                self.gh.write("DELETE", f"repos/{self.gh.repo}/issues/{number}/labels/{quote(name, safe='')}", None,
+                              f"plan: take {name} off #{number}")
+        self.write_plan_board(board)
+
+    def send_plan_notice(self, model, mail, owner: str, ver: str, text: str, resend: bool, planned_at=None) -> None:
+        """One plan notice to a mail owner, on the board, the way muse() sends: the comment, then the wake:muse
+        label, then the marker (so a failed label leaves no marker and the next pass sends it again). The marker
+        carries each job's line hash and when it was first told and acknowledged (machine.mark_jobs)."""
+        where = self.board_issue()
+        jobs = machine.mark_jobs(model, mail, owner, self.now, planned_at)
+        mark = (machine.NOTICE_AGAIN.format(owner=owner, ver=ver) if resend else
+                machine.NOTICE_MARK.format(owner=owner, ver=ver, jobs=jobs))
+        resp = self.gh.comment(where, text, f"plan: notice of plan {ver} to {owner} on #{where}")
+        self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
+                      f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+        cid = (resp if isinstance(resp, dict) else {}).get("id")
+        if cid is not None:
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": f"{text}\n\n{mark}"},
+                          f"plan: mark the notice of plan {ver} delivered")
+
+    def write_plan_board(self, text: str) -> None:
+        """The board body's job section, between its own markers; the rest of the body is left as it is."""
+        number = self.board_issue()
+        with self.gh.fresh():
+            body = (self.gh.get(f"repos/{self.gh.repo}/issues/{number}") or {}).get("body") or ""
+        new = machine.splice(body, text)
+        if new is None:
+            self.out(f"ERROR       plan: #{number}'s body has broken plan markers; not written (fix them by hand)")
+        elif new != body:
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{number}", {"body": new},
+                          f"plan: rewrite #{number}'s job section")
+
+    def queue_text(self) -> str:
+        """Trunk's work/tasks/muse.md, read once per run from this checkout; "" (an empty queue) when it cannot be."""
+        if getattr(self, "_queue_text", None) is None:
+            try:
+                self._queue_text = (self.root / muse_queue.QUEUE_FILE).read_text(encoding="utf-8")
+            except OSError as err:
+                self.out(f"NOTE        {muse_queue.QUEUE_FILE} could not be read ({type(err).__name__}): counted as empty")
+                self._queue_text = ""
+        return self._queue_text
+
+    def queue_source(self) -> str:
+        """A digest of the queue's own text (work/plan.md when the plan is live, else muse.md): a change counts again."""
+        try:
+            text = (self.root / "work/plan.md").read_text(encoding="utf-8") if self.plan_mode() == "live" \
+                else self.queue_text()
+        except OSError:
+            text = ""
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+    def queue_started(self, delta: "SweepDelta", new_pr: bool, last: dict | None = None) -> bool:
+        """J-097: could this fast sweep's changes have started a queued job? A bridged post (or any mail), a new PR, or
+        a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own.
+        J-072 (11-13): with the last count's unstarted jobs (`last`, run_sweep's queue timer) and the queue text
+        unchanged, only those jobs can lower the count: a proof run on a branch naming one, a bridged post naming one
+        (or naming no job), or a new PR. Counted on every Muse push and post, it was 225 of a fast sweep's 501 calls.
+        Not seen here: a push to a wip- branch (no proof run) with no mail; the full pass counts it, up to an hour late."""
+        waiting = (last or {}).get("waiting")
+        if isinstance(waiting, list) and (last or {}).get("source") == self.queue_source():
+            names = {str(j).lower().replace("-", "") for j in waiting}
+            mail = delta.mail or set()
+            return (new_pr or any(j in b.lower() for b in delta.active for j in names)
+                    or "*" in mail or bool(mail & set(waiting)))
+        if delta.pipe or new_pr:
+            return True
+        if self.plan_mode() == "live":   # the queue is Muse's lines of work/plan.md, not muse.md's old block
+            jobs = {ln.job.lower().replace("-", "") for ln in self.read_plan().lines if ln.owner == "muse"}
+        else:
+            jobs = {f"j{q.num}" for q in muse_queue.queue_lines(self.queue_text())}
+        return any(j in b.lower() for b in delta.active for j in jobs)
+
+    def queue_check(self, text: str | None = None) -> tuple[InboxItem, ...]:
+        """QUEUE-LOW (J-097, Cory 11-11: "you should be making sure muse DOES NOT RUN LOW ON QUEUE at any point"):
+        fewer than muse_queue.LOW_UNDER really-unstarted jobs in work/tasks/muse.md's Unstarted block (muse_queue's
+        rules, read with this run's client). The item's head is the count and the unstarted jobs, so it is listed once
+        per change, and a queue refilled and run low again is listed again. Sets and returns queue_items."""
+        # A live plan is the only route for new work: the count comes from the job machine's table. An explicit
+        # text argument remains for the pre-cutover queue parser's regression tests.
+        if text is None and self.plan_mode() == "live":
+            model, _, _, rows = self.plan_table()
+            waiting = [r.job for r in rows if r.owner == "muse" and r.state in ("planned", "told", "acknowledged")]
+            self.queue_items, self.queue_waiting = (), sorted(waiting)
+            if len(waiting) < muse_queue.LOW_UNDER:
+                line = (f"QUEUE-LOW: {len(waiting)} unstarted Muse jobs in work/plan.md (under {muse_queue.LOW_UNDER}). "
+                        f"Unstarted: {', '.join(waiting) or 'none'}")
+                self.queue_items = (InboxItem("QUEUE-LOW", "work/plan.md",
+                                              model.fingerprint() + ":" + ",".join(waiting), line),)
+            return self.queue_items
+        text = self.queue_text() if text is None else text
+        self.queue_items = ()
+        report = muse_queue.check(self.gh, text, self.now)
+        ok = report.unstarted
+        n = len(ok)
+        self.queue_waiting = sorted(v.line.job for v in ok)
+        for note in report.notes:
+            self.out(f"NOTE        queue check: {plain(note[:200])}")
+        self.out(f"QUEUE       {n} of {len(report.verdicts)} queued job(s) unstarted (QUEUE-LOW under {muse_queue.LOW_UNDER})")
+        if n >= muse_queue.LOW_UNDER:
+            return self.queue_items
+        jobs = sorted(v.line.job for v in ok)
+        taken = [f"{v.line.job} {v.verdict}" for v in report.verdicts if v.verdict != "OK"]
+        line = (f"QUEUE-LOW: {n} unstarted in `{muse_queue.QUEUE_FILE}` (under {muse_queue.LOW_UNDER}): refill to "
+                f"{muse_queue.REFILL_TO}. Unstarted: {', '.join(jobs) or 'none'}"
+                + (f"; taken: {', '.join(taken)}" if taken else ""))
+        self.queue_items = (InboxItem("QUEUE-LOW", muse_queue.QUEUE_FILE, f"{n}:{','.join(jobs)}", line),)
+        return self.queue_items
 
     def ask_inbox_items(self, reported: frozenset[str]) -> list[InboxItem]:
         """TO-CLAUDE (J-052): an ask to the integrator in a comment on an open thread, once per comment id.
         The first line holds `To Claude` or `proposal`, or is the bridge's `**Muse (via email bridge):
         <subject>**`: every Muse mail is to Claude, so every one wakes it. Every agent posts as IssisX, so the author is read
         from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
-        start with `<!-- codex`."""
-        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
-        open_threads = {int(i["number"]) for i in
-                        self.listing(f"repos/{self.gh.repo}/issues?state=open")}
+        start with `<!-- codex`. #350: an ask that names a job is listed again, once per ASK_AGAIN, while no Claude
+        post has named the job since (open_asks)."""
         out: list[InboxItem] = []
+        for c, number, kind, first in self.asks_seen():
+            cid = str(c["id"])
+            if inbox_key(kind, f"#{number}", cid) in reported:
+                continue
+            out.append(InboxItem(kind, f"#{number}", cid, f"{kind} #{number} {ask_said(kind, first)} "
+                                                          f"{c.get('html_url') or ''}"))
+        for cid, rec in self.open_asks().items():
+            last = parse_time(rec["listed"])
+            if last is not None and self.now - last < ASK_AGAIN:
+                continue
+            head = f"{cid}@{iso_z(self.now)}"   # a new key per listing; the first listing keeps the bare id
+            if inbox_key("TO-CLAUDE", rec["target"], head) in reported:
+                continue
+            age = self.now - (parse_time(rec["at"]) or self.now)
+            out.append(InboxItem("TO-CLAUDE", rec["target"], head,
+                                 f"TO-CLAUDE {rec['target']} still open after {hours(age)}: no Claude comment or mail "
+                                 f"has named {rec['job']} since. {rec['said']} {rec['url']}"))
+            rec["listed"] = iso_z(self.now)
+        return out
+
+    def asks_seen(self) -> list[tuple[dict, int, str, str]]:
+        """The asks to the integrator in the inbox's comment window, as (comment, thread, kind, first line): kind
+        TO-CLAUDE, or a routine Muse post's digest kind (muse_routine). Read once per run (#350: open_asks too)."""
+        memo = self.__dict__.get("_asks_seen")
+        if memo is not None:
+            return memo
+        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+        threads = {int(i["number"]): i for i in self.listing(f"repos/{self.gh.repo}/issues?state=open")}
+        self.__dict__["_ask_threads"] = threads
+        out: list[tuple[dict, int, str, str]] = []
         for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
             if (c.get("updated_at") or c.get("created_at") or "") < since:   # the hour's floor read a little more
                 continue
@@ -1455,14 +2599,13 @@ class Switch:
                 continue
             if body.lstrip().startswith("CLAUDE_TO_MUSE:"):   # Claude's own mail to Muse, as the bridge records it
                 continue
-            cid = c.get("id")
-            if cid is None:
+            if c.get("id") is None:
                 continue
             try:
                 number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
             except (ValueError, IndexError):
                 continue
-            if number not in open_threads:
+            if number not in threads:
                 continue
             first = (body.split("\n", 1)[0] or "").strip()
             low = first.lower()
@@ -1471,13 +2614,132 @@ class Switch:
             # ("cause 2 needs your ruling", 11-10) unread all night.
             if "to claude" not in low and "proposal" not in low and not first.startswith(BRIDGE_POST):
                 continue
-            key = inbox_key("TO-CLAUDE", f"#{number}", str(cid))
-            if key in reported:
-                continue
-            out.append(InboxItem("TO-CLAUDE", f"#{number}", str(cid),
-                                 f"TO-CLAUDE #{number} {no_verdict(plain(first[:100]))} "
-                                 f"{c.get('html_url') or ''}"))
+            # J-103: a bridged "J-NNN started" or a bare ack is digested, never posted alone (muse_routine); a question,
+            # a sha, a red, a finding or "taken" in it still wakes as TO-CLAUDE. queue_check counts STARTED either way.
+            out.append((c, number, muse_routine(first, body) or "TO-CLAUDE", first))
+        self.__dict__["_asks_seen"] = out
         return out
+
+    def open_asks(self) -> dict[str, dict]:
+        """#350 (J-124 waited 37 h on a ruling, J-078 42 h on a landing path, each listed once and then forgotten):
+        comment id -> the TO-CLAUDE asks from a team login that name a job (the subject's, else the job whose issue
+        or PR the thread is) and that no later Claude post has answered: a comment from a team login, never the
+        switch's own, that carries Claude's footer, opens `Claude (integrator)` or is a hand mail to Muse
+        (`CLAUDE_TO_MUSE:`), and that names the job or sits on the job's own thread. One post naming several jobs
+        answers each of them. Kept in the sweep state (the inbox's
+        box), past the comment window, at most MAX_OPEN_ASKS, the newest. An ask that names no job is listed once,
+        as before. No read of its own: the inbox's comment window and open-thread listing, once per run."""
+        memo = self.__dict__.get("_open_asks")
+        if memo is not None:
+            return memo
+        box = self.inbox_box()
+        stored = box.get("asks") if isinstance(box.get("asks"), dict) else {}
+        kept = {str(k): v for k, v in stored.items()
+                if isinstance(v, dict) and all(isinstance(v.get(f), str) for f in ASK_FIELDS)
+                and parse_time(v["at"]) is not None}
+        seen = self.asks_seen()
+        threads = self.__dict__.get("_ask_threads") or {}
+        logins = {login.lower() for login in self.team.verdict_logins}
+        for c, number, kind, first in seen:
+            cid = str(c["id"])
+            at = parse_time(c.get("created_at") or "")
+            job = (machine.JOB_ID.findall(first) or [thread_job(threads.get(number))])[0]
+            # only a team login's ask is kept: anyone can comment on the public repo, and a kept ask moves a job's
+            # step to Claude; a stranger's is still listed once, as before
+            if kind != "TO-CLAUDE" or cid in kept or not job or at is None or \
+                    ((c.get("user") or {}).get("login") or "").lower() not in logins:
+                continue
+            kept[cid] = {"job": job, "target": f"#{number}", "at": iso_z(at), "listed": iso_z(self.now),
+                         "said": ask_said(kind, first), "url": str(c.get("html_url") or "")}
+        team = logins - {rules.BOT_LOGIN.lower()}
+        for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
+            body = (c.get("body") or "").lstrip()
+            at = parse_time(c.get("created_at") or "")
+            if at is None or ((c.get("user") or {}).get("login") or "").lower() not in team or not (
+                    body.startswith(("CLAUDE_TO_MUSE:", "Claude (integrator)")) or "Generated by [Claude Code]" in body):
+                continue
+            try:
+                number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
+            except (ValueError, IndexError):
+                number = 0
+            named = set(machine.JOB_ID.findall(body)) | {thread_job(threads.get(number))}
+            for cid, rec in list(kept.items()):
+                if at > (parse_time(rec["at"]) or at) and same_job(rec["job"], named):
+                    self.out(f"ASK         {rec['target']} {rec['job']}: answered by {c.get('html_url') or c.get('id')}")
+                    del kept[cid]
+        kept = dict(sorted(kept.items(), key=lambda kv: kv[1]["at"])[-MAX_OPEN_ASKS:])
+        if not getattr(self.gh, "dry_run", False):
+            box["asks"] = kept
+        self.__dict__["_open_asks"] = kept
+        return kept
+
+    def ask_jobs(self) -> dict[str, tuple[dt.datetime, str]]:
+        """job -> (when, link) of its oldest open ask (open_asks), for the job machine. A read that fails leaves the
+        machine without them this pass; the plan part goes on."""
+        try:
+            asks = self.open_asks()
+        except GitHubError as err:
+            self.out(f"NOTE        open asks not read this pass ({plain(str(err)[:160])})")
+            return {}
+        out: dict[str, tuple[dt.datetime, str]] = {}
+        for rec in asks.values():
+            at = parse_time(rec["at"])
+            if at is not None and (rec["job"] not in out or at < out[rec["job"]][0]):
+                out[rec["job"]] = (at, rec["url"] or rec["target"])
+        return out
+
+    def muse_heard(self, reads: dict, steered=()) -> dt.datetime | None:
+        """#350: the newest sign of Muse on GitHub that a full pass reads anyway: a head commit on its branches
+        with no PR (the plan's compares) or on its open PRs (the steered PRs' facts), and a bridge post from a team
+        login (the inbox's comment window). None when none of them shows one."""
+        def muses(ref: str) -> bool:
+            return any(machine.owns(o, ref) for o in machine.MAIL_OWNERS)
+        head_at = reads.get("head_at") or {}
+        times = [head_at[collab_plan.branch_sha(b)] for b in reads.get("branches") or []
+                 if muses(collab_plan.branch_name(b)) and collab_plan.branch_sha(b) in head_at]
+        times += [t for s in steered if muses(s.facts.head_ref)
+                  and (t := parse_time(s.facts.head_committed_at or "")) is not None]
+        team = {login.lower() for login in self.team.verdict_logins}
+        times += [t for c in self.comments_since(self.now - INBOX_RUNS_WINDOW)
+                  if (c.get("body") or "").lstrip().startswith(BRIDGE_POST)
+                  and ((c.get("user") or {}).get("login") or "").lower() in team
+                  and (t := parse_time(c.get("created_at") or "")) is not None]
+        return max(times, default=None)
+
+    def muse_quiet(self, rows, reads: dict, steered=()) -> tuple[InboxItem, ...]:
+        """#350: one QUIET item to the integrator (class "hold": it wakes, never digest-only) while a Muse lane is in
+        flight and nothing of Muse's (muse_heard) is newer than MUSE_QUIET; at most once per MUSE_QUIET_AGAIN while
+        the silence lasts (its head is the incident's stamp, the inbox box's quiet_at), and again once Muse is heard
+        and then goes quiet again. Needs no CLAUDE_TO_MUSE ask (inbound_quiet does) and makes no read of its own; a
+        read that fails drops only this item."""
+        box = self.inbox_box()
+        write = not getattr(self.gh, "dry_run", False)
+        lanes = [r for r in rows if r.owner in machine.MAIL_OWNERS and machine.flying(r)]
+        try:
+            heard = self.muse_heard(reads, steered) if lanes else None
+        except GitHubError as err:
+            self.out(f"NOTE        Muse quiet check not made this pass ({plain(str(err)[:160])})")
+            return ()
+        if not lanes or (heard is not None and self.now - heard < MUSE_QUIET):
+            if write:
+                box.pop("quiet_at", None)
+            return ()
+        # the incident's stamp is the item's head: every silent pass returns it and the inbox's ring lists it once,
+        # so an inbox part that fails this pass loses nothing; a day on, a new stamp lists it again
+        stamp = parse_time(str(box.get("quiet_at") or ""))
+        if stamp is None or self.now - stamp >= MUSE_QUIET_AGAIN:
+            stamp = self.now
+            if write:
+                box["quiet_at"] = iso_z(stamp)
+        late = [r.job for r in lanes if r.owes == r.owner and r.late(self.now)]   # an ask's clock is Claude's
+        jobs = ", ".join(r.job for r in lanes[:8]) + (", ..." if len(lanes) > 8 else "")
+        span = hours(self.now - heard) if heard is not None else \
+            f"at least {hours(INBOX_RUNS_WINDOW)} (none in the window read)"
+        self.out(f"QUIET       Muse: no push and no bridge post for {span}, {len(lanes)} lane(s) in flight")
+        return (InboxItem("QUIET", "muse", iso_z(stamp),
+                          f"QUIET Muse: no fb-bot push and no bridge post for {span} while {len(lanes)} Muse lane(s) "
+                          f"are in flight ({jobs}), {len(late)} of them late. Muse may be down or holding: mail "
+                          f"Muse, or check the bridge."),)
 
     def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
         """One PR's items, for one audience (J-052): prefix "" is the integrator's, "muse-" is Muse's.
@@ -1494,8 +2756,14 @@ class Switch:
                  f"head {f.head_sha[:8]}" + (f", {ctx['job']}" if ctx.get("job") else ""))
         proof_link = f"[proof]({ctx['proof_url']})" if ctx.get("proof_url") else "proof"
 
-        def item(kind: str, text: str, dest: str = "claude", finding: str = "") -> InboxItem:
-            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding)
+        def item(kind: str, text: str, dest: str = "claude", finding: str = "", run_id=None) -> InboxItem:
+            # J-104: a red item names its failing tests, its logs read only when this audience has not had it yet
+            fresh = run_id is not None and inbox_key(prefix + kind, target, f.head_sha) not in reported
+            wanted = dest in ("muse", "both") if mine else dest in ("claude", "both")
+            read = fresh and wanted
+            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding,
+                             self.red_tests(run_id) if read and not self.defer_logs else (),
+                             run_id=run_id if read else None)
 
         def kept(it: InboxItem) -> bool:
             return it.dest in ("muse", "both") if mine else it.dest in ("claude", "both")
@@ -1520,6 +2788,18 @@ class Switch:
                                 "both" if owner == "muse" else "claude"))
         if d.action == "FIX" and owner:
             out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
+            # 11-12 (#389, #396): the FIX item goes once per head and the reconciler re-sends it once, so a FIX whose
+            # owner never moved sat a day with nobody told. No new head for INBOX_FIX_STUCK: the integrator hears it,
+            # naming the owner, and so does Muse on its own PR.
+            on_head = [parse_time(r["created_at"]) for r in runs
+                       if r.get("head_branch") == f.head_ref and r.get("head_sha") == f.head_sha]
+            since = min(on_head) if on_head else parse_time(f.head_committed_at)
+            if since:
+                self.ripen(f.number, since + INBOX_FIX_STUCK)
+            if since and now - since >= INBOX_FIX_STUCK:
+                name = self.team.agent_name.get(owner, owner)
+                out.append(item("FIX-STUCK", f"{plain('; '.join(d.reasons))}, and no new head from its owner "
+                                             f"{name} for {hours(now - since)}", "both" if owner == "muse" else "claude"))
         api_note = [v for v in f.verdicts if v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
                     and rules.names_head(v, f.head_sha)]
         if api_note and f.proof == "green" and rules.needs_review(f, author, self.team):
@@ -1536,28 +2816,41 @@ class Switch:
                for c in ctx.get("comments") or []) and rules.needs_review(f, author, self.team):
             out.append(item("CODEX-ASK", f"post codex review with an at-sign in front on #{f.number} as IssisX: the "
                                          "switchboard's own mention does not wake Codex (J-072)"))
+        rerun = None
         if d.action == "FIX-CI":
+            runs_here = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
+            this = next((r for r in runs_here if r.get("id") == ctx.get("run_id") and r.get("head_sha") == f.head_sha), None)
+            # J-103: red only in setup (the runners' mirrors), not yet re-run on this head: re-run once, no red item yet
+            rerun = self.outage_rerun(target, where, this) if this else None
+            if rerun:
+                out.append(rerun)
+        if d.action == "FIX-CI" and not rerun:
             jobs = red_jobs(f.proof)
             both = "both" if owner == "muse" else "claude"
-            runs_here = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
+            rid = (this or {}).get("id") or ctx.get("run_id")   # the head's red proof run, whose logs name its tests
             ids = [r["id"] for r in runs_here]
+            attempt = int((this or {}).get("run_attempt") or 1)
             if inbox_key(prefix + "RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
                 out.append(InboxItem("RED-TWICE", target, f.head_sha, "", both))
+            elif attempt >= 2:   # J-103: red again on a re-run of the same head (the switch's one re-run, or a person's)
+                out.append(item("RED-TWICE", f"{plain(', '.join(jobs))} failed again on attempt {attempt} of the same "
+                                             f"proof run ({proof_link})", both, run_id=rid))
             elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(runs_here):
-                before = self.run_state(runs_here[ids.index(ctx["run_id"]) + 1])[0]
-                failed = [j for j in jobs if j in red_jobs(before)]
+                before = self.run_state_or_none(runs_here[ids.index(ctx["run_id"]) + 1])
+                failed = [j for j in jobs if j in red_jobs(before[0])] if before else []   # unread: next sweep
                 if failed:
-                    out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})", both))
+                    out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})",
+                                    both, run_id=rid))
             if owner == "muse":
-                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse"))
+                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse", run_id=rid))
             on_head = [parse_time(r["created_at"]) for r in runs_here if r.get("head_sha") == f.head_sha]
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if head_since:
                 self.ripen(f.number, head_since + INBOX_RED_STUCK)
             if head_since and now - head_since >= INBOX_RED_STUCK and owner:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
-                                             f"{hours(now - head_since)} ({proof_link})", owner))
-        if not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
+                                             f"{hours(now - head_since)} ({proof_link})", owner, run_id=rid))
+        if not rerun and not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
             action = ("FIX-CI" if f.proof.startswith("red") else
                       "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
                       "DISPATCH" if f.proof == "none" else "")
@@ -1567,6 +2860,54 @@ class Switch:
             if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner:
                 out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}", owner))
         return [it for it in out if kept(it)]
+
+    def outage_rerun(self, target: str, where: str, run: dict) -> InboxItem | None:
+        """J-103 (#422): a completed red proof run on an integrate branch whose every failed job failed in a setup step
+        (setup_only) is re-run as a whole run, once per head, and its RERUN entry rides in the inbox digest; None when
+        it is not one, or this head was re-run already (by an earlier sweep, timers["rerun"], or by anyone: a run on
+        the head past attempt 1). A build or test step red is never re-run. A refused re-run leaves the red as it was.
+        Called for both audiences in one sweep: the second call gets the first one's answer and writes nothing."""
+        head, rid = run.get("head_sha") or "", run.get("id")
+        memo = self.__dict__.setdefault("_reran", {})
+        if (target, head) in memo:
+            return memo[(target, head)]
+        memo[(target, head)] = None
+        if (run.get("status") != "completed" or run.get("conclusion") != "failure" or not isinstance(rid, int)
+                or int(run.get("run_attempt") or 1) >= 2 or not head or head in self.rerun_heads
+                or not (run.get("head_branch") or "").startswith(INBOX_BRANCH_PREFIXES)):
+            return None
+        try:
+            steps = setup_only(self.run_jobs(rid))
+            if not steps or any(int(r.get("run_attempt") or 1) >= 2 for r in self.head_runs(head)):
+                return None
+        except RateLimited:
+            raise
+        except GitHubError as err:   # 11-12: one jobs read GitHub answered 502 never ends the inbox part
+            self.out(f"NOTE        proof run {rid}'s jobs were not read ({err_text(err)}): no re-run this sweep")
+            return None
+        try:
+            self.gh.write("POST", f"repos/{self.gh.repo}/actions/runs/{rid}/rerun", None,
+                          f"re-run proof run {rid} on {head[:8]}: red only in setup ({plain(steps)[:120]})")
+        except GitHubError as err:
+            self.out(f"NOTE        re-run of proof run {rid} refused ({plain(err.detail[:160])}): its red stands")
+            return None
+        self.__dict__.setdefault("reran_now", []).append(head)
+        url = run.get("html_url") or ""
+        # job and step names come from the branch's own workflow file: one bounded code span that reads as no verdict
+        memo[(target, head)] = InboxItem("RERUN", target, head, f"RERUN {where}: proof red only in setup "
+                                                                f"({untrusted(no_verdict(steps), 300)}), re-run once "
+                                                                f"([proof]({url}))")
+        return memo[(target, head)]
+
+    def mark_reruns(self, steered: list[Steered]) -> None:
+        """J-103: a PR whose proof this sweep re-ran is running again: the ledger and the reconciler, which read
+        `steered` after the inbox, see it so and send no red notice of their own for the outage."""
+        memo = self.__dict__.get("_reran") or {}
+        for s in steered:
+            if memo.get((f"#{s.facts.number}", s.facts.head_sha)):
+                s.facts = dataclasses.replace(s.facts, proof="running")
+                s.decision = rules.merge_decision(s.facts, self.team.vendor_of_branch(s.facts.head_ref), self.team,
+                                                  bool(self.merge_token), bool(self.review_key))
 
     def ripen(self, number: int, at: dt.datetime) -> None:
         """J-072: the next time a clock alone changes this PR's inbox items (a fast sweep reads a cold PR again then).
@@ -1586,6 +2927,9 @@ class Switch:
                 text = no_verdict(plain((c.get("body") or "").strip()[:MAX_MUSE_FINDING]))
                 link = c.get("html_url") or ""
                 return f"{text}\n{link}" if link else text
+        if rules.is_codex_app(v):   # 11-12: the state comment holds no finding; they are inline threads, so say where
+            return (f"Codex's findings are unresolved review threads on the diff; fix them, or answer and resolve each: "
+                    f"https://github.com/{self.gh.repo}/pull/{f.number}/files")
         return ""
 
     def branch_inbox_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
@@ -1623,22 +2967,120 @@ class Switch:
                 read += 1
                 try:
                     now_head = self.gh.get(f"repos/{self.gh.repo}/branches/{quote(name, safe='/')}")["commit"]["sha"]
+                    state = self.run_state(run) if now_head == head else None
+                except RateLimited:
+                    raise
                 except GitHubError as err:
-                    if "HTTP 404" not in err.detail:
-                        raise
-                    now_head = ""   # deleted since its proof ran
-                checked[(name, head)] = (now_head, self.run_state(run) if now_head == head else None)
+                    if "HTTP 404" in err.detail:
+                        now_head, state = "", None   # deleted since its proof ran
+                    else:   # 11-12: a 502 on one branch's read never ends the inbox part; the next sweep reads it
+                        self.out(f"NOTE        {untrusted(name)}: its head or proof jobs were not read ({err_text(err)}); "
+                                 "the next sweep reads it")
+                        pending[name] = {k: run.get(k) for k in RED_RUN_KEYS}
+                        continue
+                checked[(name, head)] = (now_head, state)
             now_head, state = checked[(name, head)]
             if now_head != head or state is None:   # gone, or a newer head: its own proof decides
                 continue
-            proof, url, _, done_at = state
+            proof, url, rid, done_at = state
             done = parse_time(done_at) or done
             if proof.startswith("red") and (self.now - done) >= INBOX_BRANCH_RED:
+                # J-103: red only in setup and not yet re-run on this head: re-run once instead (its digest entry is the
+                # integrator's alone); red again on the re-run is RED-BRANCH an hour later, as before
+                rerun = self.outage_rerun(name, f"{untrusted(name)} head {head[:8]}", run)
+                if rerun:
+                    out.append(rerun)
+                    continue
+                dest = owner_of(name)
+                wanted = (mine and dest in ("muse", "both")) or (not mine and dest in ("claude", "both"))
                 out.append(InboxItem("RED-BRANCH", name, head,
                                      f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
                                      f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))",
-                                     owner_of(name)))
+                                     dest, tests=self.red_tests(rid) if wanted and not self.defer_logs else (),
+                                     run_id=rid if wanted else None))
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
+
+    def trunk_proof(self, runs: list[dict]) -> dict:
+        """Trunk's proof as the sweep state keeps it: {"sha", "run", "url", "state", "at", "first_red", "pr",
+        "branch"}, from the newest trunk run in `runs` that ran the build (built_run), read newest first back to the
+        run kept (at most TRUNK_RUN_READS jobs reads). A run that skipped the build (a notes-only push,
+        ci/proof_scope.py) never replaces it, so a red stays until a green full proof. `first_red`: the head of the
+        first red run of this red streak, and `pr`/`branch`: the PR whose merge it is (its merge message), whose
+        owner is paged. Once per run; {} when no full trunk run has been seen."""
+        memo = self.__dict__.get("_trunk_proof")
+        if memo is not None:
+            return memo
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        kept = dict(state.get("trunk_proof") or {}) if isinstance(state.get("trunk_proof"), dict) else {}
+        trunk = sorted((r for r in runs if r.get("head_branch") == rules.TRUNK and r.get("status") == "completed"),
+                       key=lambda r: r.get("created_at") or "", reverse=True)
+        checked = max(str(kept.get("checked") or ""), str(kept.get("created") or ""))
+        newest, done_all = (trunk[0].get("created_at") or "") if trunk else "", True
+        for i, r in enumerate(trunk):
+            if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
+                break   # nothing newer than the runs already judged
+            if i >= TRUNK_RUN_READS:
+                done_all = False   # the rest wait for the next sweep: nothing past them is marked judged
+                break
+            try:
+                if not built_run(self.run_jobs(r["id"])):
+                    continue   # the build was skipped: this run proves nothing about trunk's code
+                proof, url, rid, done = self.run_state(r)
+            except RateLimited:
+                raise
+            except GitHubError as err:
+                self.out(f"NOTE        trunk proof run {r.get('id')}'s jobs were not read ({err_text(err)}): read next sweep")
+                done_all = False
+                break
+            sha = r.get("head_sha") or ""
+            red = proof.startswith("red")
+            first = (kept.get("first_red") or sha) if red and str(kept.get("state", "")).startswith("red") else sha
+            new = {"sha": sha, "run": rid, "url": url, "state": proof, "at": done, "created": r.get("created_at") or ""}
+            if red:
+                new["first_red"] = first
+                if first == kept.get("first_red") and kept.get("pr") is not None:
+                    new["pr"], new["branch"] = kept.get("pr"), kept.get("branch") or ""
+                else:   # the commit that broke it: trunk's commits are PR merges, so its message names the branch
+                    try:
+                        msg = (self.gh.get(f"repos/{self.gh.repo}/commits/{first}") or {}).get("commit", {}).get("message", "")
+                    except GitHubError:
+                        msg = ""
+                    m = MERGE_FROM.match(msg or "")
+                    branch = m.group(2).removeprefix(self.gh.repo.split("/")[0] + "/") if m else ""
+                    new["pr"], new["branch"] = (int(m.group(1)), branch) if m else (0, "")
+            kept = new
+            break
+        if done_all and newest > checked and kept:   # every run down to the judged ones was read: none is read again
+            kept = dict(kept, checked=newest)
+        if not getattr(self.gh, "dry_run", False) and kept and isinstance(getattr(self.gh, "state", None), dict):
+            self.gh.state["trunk_proof"] = kept
+        self.__dict__["_trunk_proof"] = kept
+        return kept
+
+    def trunk_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
+        """RED-TRUNK: trunk's full proof is red (trunk_proof). One item per red streak (its first red head), at once
+        (inbox_class "now"), to the integrator, and to Muse too when the PR whose merge first went red was hers
+        (its fb-bot/ branch): the owner of the commit that broke it. The owner fixes; with no green fix head in 60 min a
+        helper reverts that merge in its own PR. No merge freeze: the fix lands by the normal rule."""
+        t = self.trunk_proof(runs)
+        if not str(t.get("state", "")).startswith("red"):
+            return []
+        first = t.get("first_red") or t.get("sha") or ""
+        branch = t.get("branch") or ""
+        dest = "both" if owner_of(branch) == "muse" else "claude"   # Claude's own trunk pushes, too: the integrator
+        owner = "Muse" if dest == "both" else "Claude"
+        by = f"; first red at {first[:8]}, the merge of #{t['pr']} ({untrusted(branch)})" if t.get("pr") else \
+            f"; first red at {first[:8]}"
+        undo = f"`git revert -m 1 {first[:8]}`" if t.get("pr") else f"`git revert {first[:8]}`"
+        since = parse_time(str(t.get("at") or "")) or self.now
+        wanted = dest in ("muse", "both") if prefix == "muse-" else True
+        return [InboxItem("RED-TRUNK", rules.TRUNK, first,
+                          f"RED-TRUNK trunk's full proof is red on {plain(', '.join(red_jobs(t['state'])))} "
+                          f"({hours(self.now - since)}){by}; owner {owner}. {owner} fixes it; no green fix head in "
+                          f"60 min, a helper reverts it ({undo}, its own PR). No merge freeze: the fix lands by the "
+                          f"normal rule ([proof]({t.get('url') or ''}))", dest,
+                          tests=self.red_tests(t.get("run")) if wanted and not getattr(self, "defer_logs", False) else (),
+                          run_id=t.get("run") if wanted else None)]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments. With no job issue, the board's
@@ -1766,30 +3208,87 @@ class Switch:
                 self.owner_labels(it["number"], "")
 
     # ---------- ask (paid) ----------
+    def api_turn(self, facts: rules.PrFacts, ctx: dict, author: str, say: bool = True) -> bool:
+        """Is this head's next review the automatic one (its mark not yet checked)? One decision for ask_pr, which
+        runs it, and wake_reviews, which starts the run that does (SYSTEM_PLAN 6). `say`: print the Codex wait."""
+        if not rules.needs_review(facts, author, self.team):
+            return False
+        if self.codex_pending(facts, ctx):
+            if say:
+                self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no automatic review yet")
+            return False
+        if self.team.pool:
+            return self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
+        return rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
+
+    def eye_ok(self, ctx: dict) -> bool:
+        """May the eye run today: the worst case of one call fits under every cap (as api_ok for the review)."""
+        spec = self.budget.calls["eye"]
+        worst = money.worst_case(self.budget, "eye", spec.max_input_tokens)
+        return money.check(self.budget, self.entries(), self.now, ctx["job"], worst, self.job_cap(ctx)).ok
+
+    def reviews_due(self, seen: Steered) -> str:
+        """What a reviews run would do for this PR as steer left it: "the automatic review" or "the eye" when it is
+        its turn on the head, it is not posted yet and the budget lets it run (a refused call posts nothing, so a
+        run for it would do nothing); "" otherwise. A head merged in this sweep needs neither."""
+        facts, ctx = seen.facts, seen.ctx
+        if seen.decision.action == "MERGE" or self.stale(facts):
+            return ""
+        author = self.team.vendor_of_branch(facts.head_ref)
+        # the pool leaves the API out of its rotation when api_ok refuses (pooled_reviewer)
+        if self.api_turn(facts, ctx, author, say=False) and (self.team.pool or self.api_ok(ctx)) and \
+                not self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
+            return "the automatic review"
+        if rules.needs_eye(facts) and not self.marked(ctx["comments"], "eye", facts.number, facts.head_sha) and \
+                self.eye_ok(ctx):
+            return "the eye"
+        return ""
+
+    def wake_reviews(self, steered: list[Steered]) -> None:
+        """SYSTEM_PLAN 6 (11-13): a sweep's run has no ask job, so a merge never waits behind a review. When a head
+        this sweep read waits for the automatic review or the eye, steer starts one "Switchboard reviews" run
+        (switchboard.yml part=ask, its own concurrency group), which runs ask alone; the review's comment wakes the
+        usual sweep, which merges. One dispatch a sweep, at the first head due; none in a dry run; none while a
+        reviews run is queued or running (one read of the run list). A refused dispatch is a WAKE-REVIEWS line, never
+        a failed sweep: the next sweep that reads the head tries again, and the fallback clock asks the next reviewer."""
+        if self.gh.dry_run or getattr(self, "merge_only", False):
+            return
+        try:
+            due = next(((s, what) for s in steered for what in (self.reviews_due(s),) if what), None)
+            if due is None:
+                return
+            seen, what = due
+            n, head = seen.facts.number, seen.facts.head_sha[:8]
+            try:
+                runs = (self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{SWITCHBOARD_WORKFLOW}/runs"
+                                    f"?event=workflow_dispatch&branch={rules.TRUNK}&per_page=20&exclude_pull_requests=true")
+                        or {}).get("workflow_runs") or []
+            except GitHubError as err:   # not known: start one anyway (GitHub keeps one pending run in the group)
+                self.out(f"NOTE        the run list was not read ({err.detail[:120]}): the reviews run is started anyway")
+                runs = []
+            busy = [r for r in runs if r.get("display_title") == REVIEWS_RUN and r.get("status") != "completed"]
+            if busy:
+                self.out(f"WAKE-REVIEWS #{n} waits for {what} @{head}: reviews run {busy[0].get('id')} is "
+                         f"{busy[0].get('status')}; none started")
+                return
+            self.gh.write("POST", f"repos/{self.gh.repo}/actions/workflows/{SWITCHBOARD_WORKFLOW}/dispatches",
+                          {"ref": rules.TRUNK, "inputs": {"part": "ask"}},
+                          f"start the reviews run: #{n} waits for {what} @{head}")
+            self.out(f"WAKE-REVIEWS #{n} waits for {what} @{head}: the reviews run is started")
+        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+            self.out(f"WAKE-REVIEWS no reviews run started: {type(err).__name__}: {err}")
+
     def ask_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
-            self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no automatic review yet")
-            api_turn = False
-        elif self.team.pool:
-            api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
-        else:
-            api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
-        # J-056: a workflow-file PR merges only on a clean, signed automatic review of its head, so it gets one even
-        # when Codex already reviewed that head and no other review is asked. Every automatic review of such a head is
-        # its security pass, whichever route asked for it (Codex on #297: the API's own turn ran the gameplay prompt).
-        security = facts.touches_workflows
-        signed = security and bool(self.review_key)   # only a mark the switch signed stops a second security pass
-        if api_turn or rules.needs_security_pass(facts):
-            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha, signed=signed):
+        api_turn = self.api_turn(facts, ctx, author)
+        # A workflow-file PR is reviewed like any other: no security pass (SYSTEM_PLAN 4.1, 11-13).
+        if api_turn:
+            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
-            elif not api_turn:
-                self.out(f"SECURITY    #{facts.number} changes .github/workflows: the automatic review is its security pass")
-                self.review(facts, ctx, author, security=True)
             else:
-                self.review(facts, ctx, author, security=security)
+                self.review(facts, ctx, author)
                 if self.team.pool:
                     self.note_assigned(rules.API_REVIEWER)
         if rules.needs_eye(facts):
@@ -1937,83 +3436,6 @@ class Switch:
                     if data[:8] == b"\x89PNG\r\n\x1a\n":
                         out[info.filename] = data
         return out
-
-    def orchestrate(self, number: int) -> None:
-        """Design 2.3 step 1, behind `needs:orchestrator` and budget.yml (off in v0)."""
-        import claude_calls
-        issue = self.gh.get(f"repos/{self.gh.repo}/issues/{number}")
-        labels = {l["name"] for l in issue["labels"]}
-        if not {"job", "needs:orchestrator"} <= labels:
-            return
-        comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
-        if self.start_blocked(comments, number):
-            self.out(f"ORCH        #{number} already handled")
-            return
-        b = self.budget
-        job = rules.job_of_title(issue["title"])
-        tag = MARK.format(kind="orchestrator", pr=number, head="-")
-        if not (b.orchestrator_enabled and b.orchestrator_agent_id and b.orchestrator_environment_id):
-            self.out(f"ORCH        #{number}: off in budget.yml (orchestrator.enabled, agent_id, environment_id); not started")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the orchestrator "
-                                    f"is off in `work/budget.yml` until step C defines the hosted agent. Nothing was started.\n\n{tag}")
-            return
-        if not os.environ.get("AGENT_GITHUB_TOKEN") and not self.gh.dry_run:
-            self.out(f"ORCH        #{number}: no AGENT_GITHUB_TOKEN in this job; not started")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the workflow has no "
-                                    f"`AGENT_GITHUB_TOKEN` secret, so the API agent cannot push. Nothing was started.\n\n{tag}")
-            return
-        key = f"orchestrator#{number}"
-        v = self.gate("orchestrator", job, b.orchestrator_session_usd, self.job_cap({"issue": issue}), key)
-        if not v.ok:
-            self.out(f"REFUSED orchestrator #{number}: {v.reason}")
-            return
-        if self.gh.dry_run:
-            self.out(f"DRY  beta.sessions.create for #{number} with a ${b.orchestrator_session_usd} budget ({v.reason})")
-            return
-        client = self.claude()   # before the reserve: no key, no reserve
-        run = uuid.uuid4().hex[:12]
-        self.append(money.record(self.now, run, "reserve", "orchestrator", job, b.orchestrator_session_usd, key), f"reserve {key}")
-        message = (f"Job {job}, GitHub issue #{number} in {self.gh.repo}: {issue['title']}\n\n{(issue.get('body') or '')[:30000]}\n\n"
-                   f"Read work/tasks/api-agent.md first, then the issue's newest comments, then do the job.")
-        try:
-            session = claude_calls.start_session(client, b.orchestrator_agent_id, b.orchestrator_environment_id,
-                                                 f"{job} #{number}", message, b.orchestrator_session_usd,
-                                                 f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
-                                                 rules.TRUNK, b.orchestrator_vault_id,
-                                                 {"switchboard_key": key, "run": run})
-        except claude_calls.SessionStartRejected as err:
-            # A 4xx: the server refused the request, so no session exists and the reserve is released at once.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
-                                     f"{key} start rejected HTTP {err.status}"), f"end {key} (start rejected)")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started. "
-                                    f"`beta.sessions.create` answered HTTP {err.status} ({err.error_class}). No session "
-                                    f"exists, and the reserve is released. Fix the cause, then re-add `needs:orchestrator`."
-                                    f"\n\n{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
-            return
-        except claude_calls.SessionStartUnknown as err:
-            # No usable answer (no connection, or a 5xx): a session may exist. The reserve stands, and the issue
-            # is marked handled so a re-label cannot start a second session beside it; a person looks in the Console.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            heard = f"answered HTTP {err.status}" if err.status else "got no answer"
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` {heard} "
-                                    f"({', '.join(err.classes)}), so a session may exist. The ${b.orchestrator_session_usd} "
-                                    f"reserve stays on the ledger (run `{run}`) and no second session is started. The next "
-                                    f"sweeps look for it by its metadata, and write the reserve off after "
-                                    f"{int(GIVE_UP_AFTER.total_seconds() // 60)} minutes if it never appears.\n\n{tag}\n"
-                                    f"{UNKNOWN_MARK.format(run=run, at=self.now.strftime('%Y-%m-%dT%H:%M:%SZ'))}")
-            return
-        except claude_calls.ClaudeCallError as err:
-            # Refused locally before any request was sent: no session exists.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
-                                     f"{key} start refused locally"), f"end {key} (start refused)")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started: {err}. "
-                                    f"No session exists, and the reserve is released.\n\n"
-                                    f"{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
-            return
-        self.out(f"ORCH        #{number}: session {session} started on run {run}")
-        self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, ""))
 
     def started_comment(self, number: int, session: str, run: str, budget: Decimal, note: str) -> str:
         return (f"Switchboard, {central(self.now)}: orchestrator session `{session}` started{note} with a ${budget} budget. "
@@ -2230,6 +3652,15 @@ class Switch:
             issue = got
         self.gh.comment(issue["number"], body, f"digest for {today} on #{issue['number']}")
 
+    def blocked_lines(self) -> list[str]:
+        """The digest's blocked jobs. With `plan: live`, the job machine's `blocked` state (a job it comes `after`
+        is not closed), so the hand-set state:blocked label can come off; otherwise that label, as before."""
+        if self.plan_mode() == "live":
+            return [f"#{r.issue} {r.job}: {r.title[:62]} is blocked on {r.why}"
+                    for r in self.plan_table()[3] if r.state == "blocked"]
+        return [f"#{it['number']} {it['title'][:70]} is blocked" for it in self.jobs().values()
+                if any(lab["name"] == "state:blocked" for lab in it["labels"])]
+
     def digest_text(self, today: str) -> str:
         since = self.now - dt.timedelta(hours=24)
         closed = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=closed&base={rules.TRUNK}&sort=updated&direction=desc")[:100]
@@ -2251,9 +3682,7 @@ class Switch:
                     who = pick.agent if pick.route == "ask" else ""
                 if who and who != rules.API_REVIEWER:
                     asked.append(f"#{facts.number} waits on a review from {who}")
-        for it in self.jobs().values():
-            if any(l["name"] == "state:blocked" for l in it["labels"]):
-                waiting.append(f"#{it['number']} {it['title'][:70]} is blocked")
+        waiting += self.blocked_lines()
         entries = self.entries()
         paused = [e.note for e in entries if e.phase == "refused" and e.ts >= since]
         s = money.spent(entries, self.now, "")
@@ -2366,14 +3795,20 @@ def rate_probe(sw: "Switch") -> None:
             sw.out(f"RATE        {AGENT_TOKEN_ENV}: its rate could not be read ({http_status(err.detail) or 'no status'})")
 
 
-# A full pass at least this often: the ledger's reading, the reconciler, owner labels. Every clock is checked each
-# sweep (the timers), so this only bounds how late the ledger finds a new input: its shortest deadline is ACT, 2 h,
-# counted from the input's own time, so a find within the hour still sends on time. (J-072: was 30 minutes.)
+# A full pass at least this often: every PR read, owner labels. Every clock is checked each sweep (the timers).
+# (J-072: was 30 minutes. D2: the ledger and the reconciler no longer run in it.)
 FULL_EVERY = dt.timedelta(minutes=60)
 SWEEP_OVERLAP = dt.timedelta(minutes=3)   # each delta read starts this long before the last sweep's stamp
 PROOF_SPAN = dt.timedelta(hours=6)        # proof runs created this long before the stamp can finish after it
-COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")
-FULL_PARTS = frozenset({"ledger", "prs", "the reconciler", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
+# J-072 (11-13): HUMAN-MERGE waits on a person or a new review, never a clock: a review, a Muse LAND by mail, a label
+# or a push all show in the delta (sweep_delta). Read every sweep it cost about 28 uncached calls a PR (fresh_facts).
+COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP", "HUMAN-MERGE")
+RUN_PAGES_CAP = ghapi.MAX_PAGES * 100     # a proof-run listing this long may have lost rows: read everything
+RUNNING = ("in_progress", "queued")       # a proof run not finished yet (running_runs); one listing each
+# What the switch loads from its trunk checkout and decides by (its code, agents, look sets, budget, switchboard.yml):
+# a change re-reads every PR once (trunk_inputs). Trunk's head itself moves 12 to 27 times an hour (notes commits).
+TRUNK_INPUTS = ("tools/switchboard/*.py", "tools/board/*.py", "work/*.yml", "work/looks/**/*")
+FULL_PARTS = frozenset({"prs", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
 
 
 COMMENT_LISTING_CAP = ghapi.MAX_PAGES * 100   # a paged listing never returns more (ghapi.paged)
@@ -2400,47 +3835,117 @@ class SweepDelta:
     prs: set[int]                 # the open PRs to read this sweep
     comments: int                 # comments posted since the last sweep
     finished: set[str]            # branches whose proof run finished since the last sweep
-    finished_auto: set[str]       # of those, the auto-open's (fb-bot/integrate-*)
+    finished_auto: set[str]       # of those, the auto-open's (AUTO_PR_PREFIX)
     threads: set[int] = dataclasses.field(default_factory=set)    # every issue or PR something touched (the ledger's)
     active: set[str] = dataclasses.field(default_factory=set)     # branches with a proof run started or finished
     pipe: bool = False            # a CLAUDE_TO_MUSE ask or a bridge post: pipe health reads again
+    mail: set[str] | None = None  # the jobs (J-NNN) Muse's bridged posts name, "*" for one naming none (queue_started)
 
 
-def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
-    """What changed since the last sweep, in two reads (J-072): the proof runs and the comments since its stamp.
+def trunk_inputs(root: pathlib.Path) -> str:
+    """A digest of TRUNK_INPUTS in this checkout (J-072, 11-13): the code and config every decision is made by.
+    Tests are left out. Reads no GitHub."""
+    h = hashlib.sha256()
+    files = sorted({f for pattern in TRUNK_INPUTS for f in root.glob(pattern)
+                    if f.is_file() and not f.name.startswith("test_")})
+    for f in files:
+        h.update(str(f.relative_to(root)).encode("utf-8") + b"\0")
+        try:
+            h.update(f.read_bytes())
+        except OSError:
+            h.update(b"unreadable")
+        h.update(b"\0")
+    return h.hexdigest()[:16]
+
+
+def sweep_inputs(sw) -> str:
+    """trunk_inputs, and whether the merge token and the review key are set: a HUMAN-MERGE waits on those too."""
+    return f"{trunk_inputs(sw.root)}:{int(bool(getattr(sw, 'merge_token', '')))}{int(bool(getattr(sw, 'review_key', '')))}"
+
+
+def running_runs(sw) -> dict[str, str] | None:
+    """The proof runs not finished now, {run id: branch}, one listing per RUNNING status (J-072, 11-13). A re-run
+    keeps its first created_at (43109809366: created 11-11, re-run 11-13), so the delta's created listing never sees
+    it finish: the next sweep finds it gone from here. None when a listing failed or may have lost rows."""
+    out: dict[str, str] = {}
+    try:
+        for status in RUNNING:
+            got = sw.gh.paged(f"repos/{sw.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?status={status}",
+                              "workflow_runs")
+            if len(got) >= RUN_PAGES_CAP:
+                return None
+            out.update({str(r["id"]): r.get("head_branch") or "" for r in got
+                        if isinstance(r, dict) and r.get("status") in RUNNING and "id" in r})
+    except RateLimited:
+        raise
+    except GitHubError as err:
+        sw.out(f"NOTE        the running proof runs were not read ({err_text(err)}): every PR is read")
+        return None
+    return out
+
+
+def issue_needs(issue: dict | None) -> list[str]:
+    """The `needs:` labels of a job issue, the only ones pr_facts takes from it (wake:muse comes and goes)."""
+    return sorted(str(l.get("name")) for l in (issue or {}).get("labels") or []
+                  if isinstance(l, dict) and str(l.get("name") or "").startswith("needs:"))
+
+
+def sweep_delta(sw, prs: list[dict], state: dict, running: dict[str, str] | None = None) -> SweepDelta:
+    """What changed since the last sweep (J-072): the proof runs created in the span and those running now
+    (`running`, read by run_sweep before this), the comments since its stamp, and the open job issues.
     A PR is read when it is new, its head or updated_at moved (a push, label, review or PR comment), a proof run
-    on its branch finished, a comment landed on it, on its job issue or names it, or its last decision was not
-    COLD (a clock-driven wait: Codex, the review fallback, a merge). The PR listing is the sweep's own."""
+    on its branch finished (a re-run too: it was running at the last sweep and is not now), a comment landed on
+    it, on its job issue or names it (a bridged LAND on the job issue or the board), its job issue or that issue's
+    needs: labels changed, the open jobs changed while it holds the eye's FIX (rules.eye_relook), the switch's
+    trunk inputs or its tokens changed (sweep_inputs), or its last decision was not COLD (a clock-driven wait: Codex, the review
+    fallback, a merge). With no baseline, or a listing that may have lost rows, every PR is read."""
     since = parse_time(state["stamp"]) - SWEEP_OVERLAP
     now = sw.now
     repo = sw.gh.repo
-    got = sw.gh.get(f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{iso_z(since - PROOF_SPAN)}"
-                    "&per_page=100") or {}
-    runs = got.get("workflow_runs") or []
+    # paged (11-13): 145 proof runs in the span, so one page of 100 always hit the bail-out below and every fast
+    # sweep read every PR (24 of 24)
+    runs = sw.gh.paged(f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{iso_z(since - PROOF_SPAN)}",
+                       "workflow_runs")
     finished = {r.get("head_branch") or "" for r in runs if r.get("status") == "completed"
                 and (parse_time(r.get("updated_at") or "") or since) >= since}
+    was_running = state.get("running") if isinstance(state.get("running"), dict) else None
+    if running is not None and was_running is not None:
+        finished |= {str(b) for k, b in was_running.items() if k not in running}
     comments = sw.gh.get(f"repos/{repo}/issues/comments?since={iso_z(since)}&per_page=100") or []
     nums = {p["number"] for p in prs}
     recs = state.get("prs") or {}
     auto = {b for b in finished if b.startswith(AUTO_PR_PREFIX)}
     active = finished | {r.get("head_branch") or "" for r in runs if (parse_time(r.get("created_at") or "") or since) >= since}
-    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST)) for c in comments)
+    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST))
+               and PIPE_OK_MARK not in (c.get("body") or "") for c in comments)   # #350: the all-clear asks nothing
+    mail: set[str] = set()
+    for c in comments:
+        body = (c.get("body") or "").lstrip()
+        if body.startswith(BRIDGE_POST):
+            mail |= set(re.findall(r"\bJ-\d{3,}[a-z]?\b", body.split("\n", 1)[0])) or {"*"}   # J-044b too
     threads: set[int] = set()
     for c in comments:
         try:
             threads.add(int((c.get("issue_url") or "").rsplit("/", 1)[1]))
         except (ValueError, IndexError):
             continue
-    if len(runs) >= 100 or len(comments) >= 100:   # more than one page: read everything rather than guess
-        return SweepDelta(set(nums), len(comments), finished, auto, threads | set(nums), active, True)
+    if len(comments) >= 100:   # a page of comments or more: a mail may be in the rows not read, so the queue counts
+        mail.add("*")
+    if (len(runs) >= RUN_PAGES_CAP or len(comments) >= 100 or running is None or was_running is None
+            or state.get("inputs") != sweep_inputs(sw)):   # a listing may have lost rows, or no baseline
+        return SweepDelta(set(nums), len(comments), finished, auto, threads | set(nums), active, True, mail)
+    relook = sorted(sw.jobs()) != state.get("jobs")   # a job opened or closed: an eye FIX may read as a LAND now
     changed: set[int] = set()
     for p in prs:
         rec = recs.get(str(p["number"]))
         ripen = parse_time(str(rec.get("ripen") or "")) if isinstance(rec, dict) else None
+        _, issue = sw.job_issue(p)
         if (not isinstance(rec, dict) or rec.get("head") != (p.get("head") or {}).get("sha")
                 or rec.get("updated") != p.get("updated_at") or not rec.get("cold")
                 or (ripen is not None and ripen <= now)   # an inbox clock (NOT-MERGED, RED-STUCK, QUIET) ripened
-                or (p.get("head") or {}).get("ref") in finished):
+                or (p.get("head") or {}).get("ref") in finished
+                or rec.get("job_issue") != (issue or {}).get("number") or (rec.get("needs") or []) != issue_needs(issue)
+                or (relook and rec.get("eye_fix"))):
             changed.add(p["number"])
     by_issue: dict[int, set[int]] = {}
     for k, rec in recs.items():
@@ -2451,24 +3956,31 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
             thread = int((c.get("issue_url") or "").rsplit("/", 1)[1])
         except (ValueError, IndexError):
             continue
-        hit = {thread} | by_issue.get(thread, set()) | {int(r) for r in re.findall(r"#(\d{1,6})\b", (c.get("body") or "")[:600])}
+        hit = {thread}
+        # 11-13: the switch's own posts off a PR's thread (its merged notes on #350 re-read all six of that job's
+        # drafts) change no PR's facts; any other comment there still reads its PRs
+        if (c.get("user") or {}).get("login") != rules.BOT_LOGIN or (c.get("body") or "").lstrip().startswith(BRIDGE_POST):
+            hit |= by_issue.get(thread, set()) | {int(r) for r in re.findall(r"#(\d{1,6})\b", (c.get("body") or "")[:600])}
         changed |= hit & nums
-    return SweepDelta(changed, len(comments), finished, auto, threads | changed, active, pipe)
+    return SweepDelta(changed, len(comments), finished, auto, threads | changed, active, pipe, mail)
 
 
 def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
-    """What the next sweep compares (sweep_delta): the head, updated_at, the job issue, and whether only a new
-    head or comment can change this PR (cold)."""
-    cold = seen is None or seen.decision.action in COLD_ACTIONS
+    """What the next sweep compares (sweep_delta): the head, updated_at, the job issue and its needs: labels, whether
+    it holds the eye's FIX, and whether only a new head or comment can change this PR (cold)."""
+    cold = seen is None or (seen.decision.action in COLD_ACTIONS   # a refused merge token is tried again next sweep
+                            and not any(str(r).startswith(TOKEN_REFUSED) for r in seen.decision.reasons))
     if ask and not sw.stale(facts):   # the ask part is done with a head once its review and eye are posted
         author = sw.team.vendor_of_branch(facts.head_ref)
         comments = ctx.get("comments") or []
-        review = rules.needs_review(facts, author, sw.team) or rules.needs_security_pass(facts)
+        review = rules.needs_review(facts, author, sw.team)
         cold = (cold and (not review or sw.marked(comments, "review", facts.number, facts.head_sha))
                 and (not rules.needs_eye(facts) or sw.marked(comments, "eye", facts.number, facts.head_sha)))
-    issue = (ctx.get("issue") or {}).get("number") if isinstance(ctx, dict) else None
-    return {"head": (pr.get("head") or {}).get("sha"), "updated": pr.get("updated_at"), "job_issue": issue,
-            "cold": bool(cold)}
+    issue = (ctx.get("issue") or {}) if isinstance(ctx, dict) else {}
+    eye_fix = any(v.kind == "eye" and v.verdict == "FIX" and v.author_login == rules.BOT_LOGIN
+                  for v in getattr(facts, "verdicts", ()))
+    return {"head": (pr.get("head") or {}).get("sha"), "updated": pr.get("updated_at"), "job_issue": issue.get("number"),
+            "needs": issue_needs(issue), "eye_fix": eye_fix, "cold": bool(cold)}
 
 
 def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | None = None) -> int:
@@ -2500,8 +4012,6 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     if args.issue:
         if steer and args.label.startswith("owner:"):
             sw.owner_labels(args.issue, args.label)
-        if ask:
-            sw.orchestrate(args.issue)
         return 0
     if args.digest or args.force_digest:
         if steer:
@@ -2524,7 +4034,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     state = sw.gh.state.get(part_key) if isinstance(sw.gh.state, dict) else None
     full = targeted or not sweep_state_ok(state) or now - parse_time(state["full_at"]) >= FULL_EVERY
     # J-072 (ChatGPT on #360): a part that failed or was skipped is due again at the next sweep, never at the next
-    # hour. A full-pass part (the ledger needs every PR read) makes the next sweep a full pass.
+    # hour. A full-pass part (it needs every PR read) makes the next sweep a full pass.
     retry = set((state or {}).get("retry") or []) if not full else set()
     if retry & FULL_PARTS:
         sw.out(f"RETRY       {', '.join(sorted(retry & FULL_PARTS))} did not finish last sweep: a full pass now")
@@ -2536,21 +4046,14 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     item_errors: list[str] = []
     deferred: list[str] = []
     prs = sw.target_prs(args.pr, args.sha)
-    delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state)
-    if delta is not None and steer and not targeted:
-        import ledger as board_ledger   # a ripe ledger deadline on an item that changed: the ledger reads it all
-        seen = state.get("dirty") or {}
-        dirty_now = {"threads": sorted(set(seen.get("threads") or []) | delta.threads),
-                     "branches": sorted(set(seen.get("branches") or []) | delta.active)}
-        if any(board_ledger.touched_by(t, dirty_now)
-               for t in board_ledger.ripe((state.get("timers") or {}).get("ledger") or [], now)):
-            sw.out("RIPE        a ledger deadline on an item that changed since the full pass: a full pass now")
-            delta, full = None, True
+    # J-072 (11-13): the proof runs not finished now, every sweep (the full pass too), so the next one sees a re-run end
+    running = None if targeted else running_runs(sw)
+    delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state, running)
     if steer and not targeted and not sw.merge_only and full:
         sw.sweep_owner_labels()
     if delta is not None:
         sw.out(f"FAST SWEEP  {len(delta.prs)} of {len(prs)} PR(s) changed since {central(parse_time(state['stamp']))}; "
-               f"the full pass (the ledger's reading, the reconciler, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
+               f"the full pass (every PR read, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
     records: dict[str, dict] = dict((state or {}).get("prs") or {}) if delta is not None else {}
     read = 0
     for pr in prs:
@@ -2578,12 +4081,15 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     if read >= 2 and len(item_errors) == read:
         failed += 1   # no PR could be read: the sweep did not finish
         sw.out(f"ERROR       every one of the {read} PRs read failed: the sweep did not finish")
+    if steer and not ask:   # SYSTEM_PLAN 6: the reviews run apart; a head waiting for one starts it (never in a dry run)
+        sw.wake_reviews(steered)
     quiet = delta is not None and not delta.prs and not delta.comments and not delta.finished and \
         not retry & {"inbox", "muse"}
     timers: dict = dict((state or {}).get("timers") or {}) if sweep_state_ok(state) else {}   # kept until replaced
+    timers.pop("ledger", None)   # D2: the ledger left the sweep; an old cache's clock for it is dropped
     dirty: dict = dict((state or {}).get("dirty") or {}) if delta is not None else {}
     not_done: set[str] = set()   # the parts that failed or were skipped: retried at the next sweep
-    if delta is not None:   # what changed since the full pass: a cached ledger notice about it is not sent blind
+    if delta is not None:   # what changed since the full pass
         dirty = {"threads": sorted(set(dirty.get("threads") or []) | delta.threads),
                  "branches": sorted(set(dirty.get("branches") or []) | delta.active)}
 
@@ -2604,25 +4110,81 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
         return None
 
+    # The job machine's pass runs on the full pass only (a fast sweep keeps its read count). Live, it runs here:
+    # the inbox below lists its late jobs and the queue check counts from its table. In shadow it only prints,
+    # so it runs at the very end of this function, after every live part.
+    plan_due = bool(steer and not targeted and delta is None)
+    if plan_due and sw.plan_mode() == "live":
+        part("plan", lambda: sw.plan_check(steered))
+
     if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
         part("auto-open", lambda: sw.auto_open_prs(None if delta is None else delta.finished_auto))
     red_ripe = [r for r in timers.get("red") or []
                 if (parse_time(str(r.get("updated_at") or "")) or now) + INBOX_BRANCH_RED <= now]
+    # J-097: Muse's queue is counted on every full pass and on every fast sweep that saw something that can start a
+    # job (a bridged Muse post, a new PR, a proof run on a branch naming a queued job); a sweep with none of those
+    # costs no call (the J-072 budgets). timers["queue"] keeps the last count's item and the key last seen in the
+    # inbox, so a QUEUE-LOW not yet listed wakes even a quiet sweep's inbox.
+    queue_timer = dict(timers.get("queue")) if isinstance(timers.get("queue"), dict) else {}
+    queue_key, inbox_ran = "", False
+    if steer and not targeted:
+        new_pr = delta is not None and any(str(p["number"]) not in (state.get("prs") or {}) for p in prs)
+        count_now = delta is None or sw.queue_started(delta, new_pr, queue_timer)
+        if count_now:
+            sw.queue_waiting = None
+            part("queue check", sw.queue_check)
+        if "queue check" in not_done or not count_now:
+            sw.queue_items = queue_item_of(queue_timer.get("item"))   # not counted now: the last count stands
+        else:   # J-072 (11-13): the count's unstarted jobs and queue text, what the next fast sweep's trigger compares
+            queue_timer = {"item": queue_item_record(sw.queue_items), "listed": queue_timer.get("listed") or ""}
+            if isinstance(getattr(sw, "queue_waiting", None), list):
+                queue_timer.update(waiting=sw.queue_waiting, source=sw.queue_source())
+        queue_key = sw.queue_items[0].key if sw.queue_items else ""
+    queue_due = bool(queue_key) and queue_key != queue_timer.get("listed")
+    # J-103: the digest entries no inbox comment carried yet, and the heads already re-run, from the last sweep
+    reran_before = [h for h in timers.get("rerun") or [] if isinstance(h, str)]
+    if steer and not targeted:
+        sw.digest_held = digest_of(timers.get("digest"))
+        sw.rerun_heads = frozenset(reran_before)
     if steer and not targeted and not quiet:   # the inbox reads a whole sweep, so a run for one PR posts none
+        inbox_ran = True
+        # 11-13: no hourly flush any more, and the digest never posts alone (inbox_due), so a full pass wakes no one
         part("inbox", lambda: sw.inbox(steered))
         part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
         if not not_done & {"inbox", "muse"}:   # a failed read found no red run: the old ones are kept
             timers["red"] = list(getattr(sw, "red_pending", {}).values())
-    elif steer and not targeted and red_ripe:   # J-072: a quiet sweep, but a red branch's hour is up: just those
-        sw.out(f"RIPE        RED-BRANCH clock: {', '.join(sorted(r.get('head_branch') or '?' for r in red_ripe))}")
+    elif steer and not targeted and (red_ripe or queue_due or sw.inbox_clock()):   # J-072: a quiet sweep, but a clock is
+        if red_ripe:                                                                 # up: just those (11-13: or the inbox's)
+            sw.out(f"RIPE        RED-BRANCH clock: {', '.join(sorted(r.get('head_branch') or '?' for r in red_ripe))}")
+        if queue_due:
+            sw.out("RIPE        QUEUE-LOW: the queue changed and its item is not in the inbox yet")
+        if not red_ripe and not queue_due:
+            sw.out("RIPE        inbox: held items are due (an ask or the hold's end)")
         sw.ripe_runs = red_ripe
+        inbox_ran = True
         part("inbox", lambda: sw.inbox(steered))
-        part("muse", lambda: sw.muse(steered))
+        if red_ripe:
+            part("muse", lambda: sw.muse(steered))
         sw.ripe_runs = None
-        if not not_done & {"inbox", "muse"}:
+        if red_ripe and not not_done & {"inbox", "muse"}:
             fired = {r.get("id") for r in red_ripe}
             timers["red"] = [r for r in timers.get("red") or [] if r.get("id") not in fired] + \
                 list(getattr(sw, "red_pending", {}).values())
+    if steer and not targeted:
+        sw.mark_reruns(steered)   # J-103
+        if not queue_key or (inbox_ran and "inbox" not in not_done and queue_key in getattr(sw, "inbox_keys", set())):
+            queue_timer["listed"] = queue_key
+        if queue_timer.get("item") or queue_timer.get("listed") or "waiting" in queue_timer:
+            timers["queue"] = queue_timer
+        else:
+            timers.pop("queue", None)
+        reran = list(dict.fromkeys(reran_before + list(getattr(sw, "reran_now", []))))[-MAX_RERUN_HEADS:]
+        held = [digest_record(it) for it in sw.digest_held]
+        for name, value in (("rerun", reran), ("digest", held)):
+            if value:
+                timers[name] = value
+            else:
+                timers.pop(name, None)
     pipe_state = dict(timers.get("pipe") or {})
     bridge_env = os.environ.get(BRIDGE_VERSION_ENV, "").strip()
     if steer and not targeted and delta is None:
@@ -2647,61 +4209,11 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                       "version_at": iso_z(until) if until else None, "live": getattr(sw, "bridge_live", ""),
                       "wake": getattr(sw, "wake_numbers", None)}
     timers["pipe"] = pipe_state
+    if steer and not targeted and not sw.merge_only:   # #350: after every part that reads or posts on the board
+        part("board roll", sw.board_roll)
 
-    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, on the board
-        import ledger as board_ledger
-        import reconciler   # J-072: `notices: v2` beside a live reconciler: the ledger writes its section, posts nothing
-        led = board_ledger.sweep(sw, steered, sw.board_issue(), MUSE_LABEL, PROOF_WORKFLOW,
-                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now),
-                                 reconciler.ledger_notifies(sw.root))
-        timers["ledger"] = list(getattr(led, "pending", None) or [])
-
-    def ledger_clock() -> None:   # J-072: the ledger deadlines that ripened since the full pass, sent from the cache
-        import ledger as board_ledger
-        import reconciler
-        import yaml
-        if not reconciler.ledger_notifies(sw.root):   # `notices: v2`: a cached ledger notice is never fired
-            timers["ledger"] = []
-            return
-        ripe = board_ledger.ripe(timers.get("ledger") or [], now)
-        if not ripe:
-            return
-        if any(board_ledger.touched_by(t, dirty) for t in ripe):   # its item changed: the next sweep is a full pass
-            sw.out("RIPE        ledger deadline on an item that changed since the full pass: a full pass next sweep")
-            not_done.add("ledger")
-            return
-        roster = board_ledger.Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
-        sw.out(f"RIPE        ledger clock: {len(ripe)} deadline(s), sent from the full pass's reading")
-        # the board's number is read only when a notice goes on the board itself; one on a job thread costs no read
-        board = sw.board_issue() if board_ledger.fires_on_board(ripe, roster) else sw.board_known()
-        posted = board_ledger.fire(sw.gh, ripe, roster, now, board, sw.out, MUSE_LABEL)
-        timers["ledger"] = board_ledger.advance(timers.get("ledger") or [], posted, now)
-
-    if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
-        part("ledger", ledger_part, subprocess.SubprocessError)
-        # J-072: the reconciler (work/switchboard.yml `reconciler: live` or `shadow`; absent is off) is a part like the
-        # ledger (ChatGPT, comment 6752048443): a raise or a dropped pass fails the sweep, a rate-limit backoff is left
-        # for the next sweep, and either is due again then. Its own reads (about 58) wait under the floor.
-        def reconciler_part() -> None:
-            import reconciler
-            res = reconciler.sweep(sw, steered, sw.board_issue(), PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH},
-                                   {INBOX_PR})
-            status = getattr(res, "status", "")
-            if status == "gave-up":
-                raise RuntimeError("the pass was dropped: the state branch kept moving")
-            if status == "backoff":
-                skipped.append("the reconciler")
-                not_done.add("the reconciler")
-                sw.out("RATE LIMIT  the reconciler: backed off, left for the next sweep")
-
-        if not args.dry_run:
-            part("the reconciler", reconciler_part, Exception)
-    if steer and not targeted and delta is not None:
-        part("ledger clock", ledger_clock, subprocess.SubprocessError)
-    if steer and not targeted and delta is None and not args.dry_run and "the reconciler" in skipped:
-        not_done.add("the reconciler")
     if delta is None and (item_errors or deferred):
-        not_done.add("prs")   # the ledger read those PRs as missing: a full pass again
+        not_done.add("prs")   # those PRs were not read: a full pass again
     if not_done:
         sw.out(f"RETRY       next sweep: {', '.join(sorted(not_done))}")
     if steer and not (args.pr or args.sha):
@@ -2718,11 +4230,26 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         sw.gh.state[part_key] = {"stamp": iso_z(now), "full_at": iso_z(now) if delta is None else state["full_at"],
                                  "prs": {k: v for k, v in records.items() if k in open_now},
                                  "timers": timers, "retry": sorted(not_done),
-                                 "dirty": {} if delta is None and "ledger" not in not_done else dirty}
+                                 "dirty": {} if delta is None else dirty,
+                                 # J-072 (11-13): the baselines sweep_delta compares; a failed read keeps the last one
+                                 "running": running if running is not None else (state or {}).get("running"),
+                                 "inputs": sweep_inputs(sw),
+                                 "jobs": sorted(sw._jobs) if isinstance(getattr(sw, "_jobs", None), dict)
+                                 else (state or {}).get("jobs")}
     write_summary(summary, "Item errors (the sweep finished; each is retried next sweep)",
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
                                                          if deferred else []))
+    if plan_due and sw.plan_mode() == "shadow" and now.hour % PLAN_SHADOW_EVERY_H == 0:
+        # Shadow: after every live part, the heartbeat and the sweep state. No live part waits for its reads, and
+        # nothing in it fails the sweep, is retried, or changes what the next sweep does.
+        if isinstance(sw.gh.remaining, int) and sw.gh.remaining < 2 * floor():
+            sw.out("NOTE        plan (shadow): left out this pass, less than twice the rate floor is left")
+        else:
+            try:
+                sw.plan_check(steered)
+            except Exception as err:   # noqa: BLE001  plan_check keeps its own errors in shadow; this is the last guard
+                sw.out(f"NOTE        plan (shadow): not computed this pass ({type(err).__name__})")
     return 2 if failed else 0
 
 

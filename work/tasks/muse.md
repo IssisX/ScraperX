@@ -4,7 +4,7 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 
 ## Where things are
 - **Issues #3 and #87 are retired.** Stop watching them; never post there.
-- **The board** is the one open issue labeled `board` (today #340): rulings and "To X:" questions.
+- **The board** is the one open issue labeled `board` (today #546): rulings and "To X:" questions.
   Find it by label each time.
 - **Your jobs** each have their own issue (label `job` and `owner:muse`). Read only those and the
   board's newest comments, never old history.
@@ -19,6 +19,9 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 - To ask someone: subject `MUSE_TO_CLAUDE: <J-NNN or #N> To <Name>: <question in a few words>`, and
   in the body what you are doing, what you tried, the exact question, and what a useful reply looks
   like (Cory's collaboration rule). Don't wait for the answer: keep working.
+- Tag every subject ASK or FYI right after the job (11-13): `MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`.
+  ASK when Claude must decide or answer; FYI when it only reports (started, pushed, measured, parked, landed).
+  Unsure: ASK. An FYI does not wake Claude; it rides the next inbox post.
 - Mail to you arrives with a subject starting `CLAUDE_TO_MUSE:`.
 - A mail of mine that your safety check refuses: mail me its ID and the reason the check gave, not Cory; I resend it
   reworded the same hour. Cory hears only if the resend is refused too (Cory 11-08).
@@ -29,7 +32,9 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 A GitHub comment or PR of yours needs Cory to tap "allow", so you never comment or open PRs. You push
 your own branches (Cory 11-05) and mail the rest:
 - **Code:** push it to `fb-bot/integrate-<job>` and mail the branch and sha
-  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR. Only if
+  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR from the head
+  commit's message. A job that lands in parts: its last part's head commit carries `Closes #N` (N, the job's
+  issue), so the merge closes it; until then the next part is yours. Only if
   a push fails: the change as a unified diff in the mail body against the `ScraperX-Claude` sha you
   started from; over about 50,000 characters, numbered mails ("part 1 of 2").
 - **Verdicts and questions:** by email as above.
@@ -37,9 +42,9 @@ your own branches (Cory 11-05) and mail the rest:
   own protected PR with a plain before/after: push it alone to `fb-bot/integrate-protected-<job>`. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
-- Ask Claude early (Cory 11-06: J-001 ran 8 h without asking). Two red proof runs on the same failure,
-  or a subagent 60 minutes without a commit or a new number: stop it and email `To Claude: <job> stuck`
-  with what you measured, what you ruled out and the one observation that would settle it.
+- Most work is yours, debugging included (11-12). When a fix fails twice on the same failure, or the job blocks
+  2+ others, stop and email `To Claude: <job> stuck` with what you measured, ruled out, and branch and sha.
+  Claude's helpers find the cause; you build the fix they name. Meanwhile take your next lane.
 - Human sounds are real recordings, never synthesized.
 - **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
 - **Push, then CI proves (11-10).** Push as soon as the change builds and the groups it reaches pass locally. Never hold a push
@@ -49,35 +54,12 @@ your own branches (Cory 11-05) and mail the rest:
   (CLAUDE.md, settled 11-05), and the integrator's pushes to `fb-bot/` are refused by its safety check, so the
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
-## Your queue (11-06)
-The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
-job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-1. J-060 #320: fight contact truth (Cory 11-08 7:12 AM, top job): real limb contacts, both bodies react, real reach.
-2. J-063 #321: her climbing on real support, every ladder (Cory 11-08).
-3. J-059 #307: her injuries reach the screen in play: per-region injury in the sim, exported by the bridge, drawn by matron_injury.gd; capability loss in the runtime sim (measured on #307, 11-08).
-4. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
-5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
-6. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
-7. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
-8. J-076 #391: loud machines draw her (A7), every moving machine heard by its measured energy (11-10).
-9. J-077 #392: a hard blow puts her down, proved at every stage (rule 34) (11-10).
-10. J-078 #393: her motion never snaps, measured bone speeds and hand contacts (rule 37) (11-10).
-11. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
-12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed (J-008 is Grok Bot's, 11-10; J-011 is Claude's; J-021 stays yours, in flight).
-
-Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
-step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
-
-## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
-Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
-integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
-- **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
-  with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
-  place her decisions still read his true state (`step_travel`'s `player_on` checks, the braced state,
-  the ankle passed during a hold), route each through what she saw or heard, and prove hiding with
-  runtime scenarios (he hides and she loses him; he makes a sound and she finds him).
-You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
-matters to the player, files, and finish facts. The integrator rules on it within the hour.
+## Your live work
+Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does. When Cory tells you directly to stop, pause or go, do it and mail Claude the same hour so it becomes a `hold:` line in work/plan.md (or its removal) (11-14: a pause known only to you froze test 2 for 12 h). Stay in sync with Claude: on each new plan version, mail `MUSE_TO_CLAUDE: J-072 SYNC plan <version>` with "agree" or each difference (a job you see in another state, a landed job DONE or NEXT, work not pushed); Claude fixes the plan to what you agree (11-14).
+Before starting a lane, push fb-bot/wip-<job> and mail its real SHA. Push every tested increment; an unpushed SHA is not a shared baseline. Check the live plan before each push.
+On a hold or transfer, first push or explicitly report local work; stop only after the new plan and handoff are acknowledged. At your in-flight limit, land, review or unblock, rather than starting another job.
+Include plan <version> in the subject after a plan-change notice. Keep the existing mail bridge and proof rules.
+Never wait for Claude's go on any step, protected changes included (Cory 11-07): go with your pick, push it, say it in the mail; he overrules by mail.
 
 ## Helping the others (11-03, Cory: "make sure to help each other figure stuff out")
 You are the team's first stop for hard physics and game-code questions. A `CLAUDE_TO_MUSE:` mail that

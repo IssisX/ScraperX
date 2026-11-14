@@ -58,9 +58,10 @@ def warns(sw) -> list[str]:
 
 
 def red_branch(**kw):
-    """A red fb-bot branch with no PR: its Muse notice goes on the board. (the fake, the notice's key)"""
+    """A red fb-bot branch with no PR: its Muse notice goes on the board. (the fake, the notice's key: the fake has
+    no job logs, so the notice says "log unread" and is keyed apart, J-104)"""
     gh = gh_with(runs=[ti.run(40, NAME, ti.HEAD, hours=2)], jobs={40: ti.RED_JOBS}, heads={NAME: ti.HEAD}, **kw)
-    return gh, switch.inbox_key("muse-RED-BRANCH", NAME, ti.HEAD)
+    return gh, switch.inbox_key("muse-RED-BRANCH" + switch.UNREAD_KEY, NAME, ti.HEAD)
 
 
 def marked(key: str, number: int) -> dict:
@@ -211,79 +212,36 @@ class Rollover(unittest.TestCase):
 
 
 class Sweep(unittest.TestCase):
-    """run_sweep hands the board it resolved to the ledger and the reconciler; a sweep that needs no board reads none."""
+    """run_sweep resolves the new board on a full pass; a sweep that needs no board reads none."""
 
     def sweep(self, gh, whole):
         sw = ti.make(gh, ti.NOW)
         sw.root = HERE.parents[1]
+        sw.plan_mode = lambda: "off"   # the plan part has its own sweep tests (test_plan_sweep); not the live config
         sw.merge_token = sw.review_key = ""
         sw._jobs = sw._board = None
         gh.state = whole
         gh.remaining = gh.limit = gh.reset = None
         args = types.SimpleNamespace(part="steer", pr=0, sha="", issue=0, label="", digest=False,
                                      force_digest=False, dry_run=False)
-        import reconciler
-        with mock.patch("ledger.sweep", side_effect=tsc.no_ledger) as led, \
-                mock.patch("reconciler.sweep", return_value=reconciler.Result("committed", "h", {}, 1, 3)) as rec, \
-                mock.patch("reconciler.ledger_notifies", return_value=True), \
-                mock.patch.object(switch, "sweep_heartbeat"):   # the ledger's own clock, as when it notifies
+        with mock.patch.object(switch, "sweep_heartbeat"):
             status = switch.run_sweep(sw, args, ti.NOW)
-        return status, led, rec, sw
+        return status, sw
 
-    def test_a_full_pass_gives_the_ledger_and_the_reconciler_the_new_board(self):
+    def test_a_full_pass_resolves_the_new_board(self):
         gh = tsc.CountingGH([tsc.pr(361)], dry_run=False)
         gh.boards = [NEW]
-        status, led, rec, sw = self.sweep(gh, {})
+        status, sw = self.sweep(gh, {})
         self.assertEqual(status, 0, sw.lines)
-        self.assertEqual(led.call_args.args[2], NEW)
-        self.assertEqual(rec.call_args.args[2], NEW)
         self.assertEqual(gh.state["board"], NEW)
         self.assertEqual(len([c for c in gh.calls if c.startswith(OPEN)]), 1, gh.calls)
 
     def test_an_idle_sweep_reads_no_board(self):
         prs = [tsc.pr(n) for n in range(361, 364)]
         gh = tsc.CountingGH(prs)
-        status, _, _, sw = self.sweep(gh, {"steer": tsc.last_state(prs)})
+        status, sw = self.sweep(gh, {"steer": tsc.last_state(prs)})
         self.assertEqual(status, 0, sw.lines)
         self.assertEqual([c for c in gh.calls if "labels=board" in c], [], gh.calls)
-
-    def ledger_timer(self, thread: int) -> dict:
-        import ledger
-        it = ledger.Item("JOB", "#291", "", "J-099", None, ledger.Person("Builder", "builder"), "claimed, no PR",
-                         ti.NOW - dt.timedelta(hours=4, minutes=1), dt.timedelta(hours=4), "v1", thread)
-        return {"at": tsc.iso(ti.NOW - dt.timedelta(minutes=1)), "item": ledger.item_json(it)}
-
-    def fast_sweep_with_a_ripe_notice(self, thread: int):
-        prs = [tsc.pr(n) for n in range(361, 364)]
-        state = tsc.last_state(prs)
-        state["timers"]["ledger"] = [self.ledger_timer(thread)]
-        gh = tsc.CountingGH(prs, dry_run=False)
-        gh.boards, gh.closed_boards = [NEW], [switch.BOARD_ISSUE]
-        status, _, _, sw = self.sweep(gh, {"steer": state, "board": switch.BOARD_ISSUE})   # the last sweep saw #340
-        self.assertEqual(status, 0, sw.lines)
-        return gh
-
-    def test_a_fast_sweeps_ledger_notice_on_the_board_goes_on_the_new_board(self):
-        # the ledger clock sends from the full pass's reading with no read, but never on a board that has closed:
-        # a comment there is read by no one, and the bridge mails only from open issues
-        gh = self.fast_sweep_with_a_ripe_notice(thread=0)
-        ((number, _),) = gh.posts
-        self.assertEqual(number, NEW)
-        self.assertEqual(len([c for c in gh.calls if c.startswith(OPEN)]), 1, gh.calls)
-
-    def test_a_fast_sweeps_ledger_notice_on_a_job_thread_reads_no_board(self):
-        gh = self.fast_sweep_with_a_ripe_notice(thread=290)
-        ((number, _),) = gh.posts
-        self.assertEqual(number, 290)
-        self.assertEqual([c for c in gh.calls if "labels=board" in c], [], gh.calls)
-
-    def test_the_dry_run_tools_ask_the_switch_for_the_board(self):
-        # ledger.py and reconciler.py's own main() (a dry run by hand) use the board the switch resolves
-        for name in ("ledger.py", "reconciler.py"):
-            src = (HERE / name).read_text(encoding="utf-8")
-            main = src[src.index("\ndef main() -> int:"):]
-            self.assertNotIn("switch.BOARD_ISSUE", main, name)
-            self.assertIn("sw.board_issue()", main, name)
 
 
 if __name__ == "__main__":

@@ -18,9 +18,9 @@ host-build runs when any group does (it builds what all three need and checks th
 What reaches what (first match wins; see groups_of):
   nothing          the switchboard, the board tools, the agents' notes and rules (NO_GAME); the design and
                    execution docs (01_*/, 02_*/, 03_EXECUTION/) and any .md outside godot/; tools/ other than
-                   tools/fab/ and tools/matron_probe/ (tools/rule_check runs in the scope job on every push
-                   anyway); src/voice/ (the offline voice generators: what they make is committed under
-                   godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
+                   tools/fab/ and tools/matron_probe/ (tools/rule_check and the switchboard's unit tests run in
+                   the scope job on every push anyway); src/voice/ (the offline voice generators: what they
+                   make is committed under godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
   godot            tools/matron_probe/ (the godot-touch drawn-body gate records with probe.gd and gates on
                    check.py, and host-build's drawn-body guard reads check.py's EXPECTED keys; the probe
                    files are host-side tools, not packaged in the APK, so android does not run)
@@ -55,9 +55,10 @@ GODOT = frozenset({"godot", "android"})
 NATIVE = frozenset({"native"})
 PROBE = frozenset({"godot"})
 
-# Read by no build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
-# proof workflow reads them; the mentions there are comments). The switchboard's own code is tested by
-# switchboard.yml's selftest job, not by the game proof.
+# Read by no game build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
+# game jobs reads them; the mentions there are comments). The switchboard's and the board tools' unit tests run in
+# the proof's scope job on every push (J-072: switchboard.yml's selftest never starts on a PR its bot opens), not in
+# a game job, so they need no group here.
 NO_GAME_PREFIXES = (
     "tools/switchboard/",
     "tools/board/",

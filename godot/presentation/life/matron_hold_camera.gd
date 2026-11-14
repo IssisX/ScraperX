@@ -87,6 +87,34 @@ const RIP_HOLD_S := 1.4         # the wide shot stays after the arm leaves
 const RIP_EASE := 2.4           # how fast the shot takes the frame (per second)
 const RIP_MIN_M := 3.2          # less open air than this and the wide shot is not taken
 const RIP_RETURN_RAD_S := 4.0  # turn continuously while the blocked exit passes its pivot
+# A shot per beat of her five-beat hold (HOLD_WITH_REAL_ARMS.md), in the
+# order the sim plays them: the pin (the tear) comes after the hang, not
+# third as the storyboard has it. Each beat is its own framing, read off
+# the sim's hold phase, never a timer.
+const BEAT_NONE := -1
+const BEAT_DOWN := 0            # Grab, fingers closed: the body coming off its feet
+const BEAT_DRAG := 1            # Carry: upside down to the rail
+const BEAT_OVER := 2            # Dangle, the heave: up over her head, out over the rail
+const BEAT_HANG := 3            # Dangle, down: hanging by one ankle below the edge
+const BEAT_PIN := 4             # ArmPlay, at the rim: face to face, the arm tear
+const STATE_GRAB := 12
+const STATE_CARRY := 13
+const STATE_DANGLE := 14
+# Dangle's heave and its hang, told apart by her hand against her head: the
+# heave's hand is up over her head, the hang's down below the edge. The fatal
+# window's hand stays high, so a fatal hang reads as the hang by its flag.
+const BEAT_EASE := 2.5          # the shot eases onto a beat (per second): no cut
+# [pitch, dist factor, fov deg, vignette]: tighter and darker as she gets
+# intimate, wider at the hang. The rip shot owns the Pin's position (its own
+# wide, high frame, proven by rip_shot_probe), so the beat's pitch and
+# distance stay neutral there; the beat still tightens the fov and darkens it.
+const BEAT_SHOTS := [
+	[-0.12, 0.90, 2.0, 0.10],   # Down: low, on the deck with him
+	[0.00, 1.00, 0.0, 0.15],    # Drag: the pair's own frame
+	[0.25, 1.10, 4.0, 0.08],    # Over: up, the rail and the drop in it
+	[0.35, 1.15, 6.0, 0.00],    # Hang: widest, the drop under him
+	[0.00, 1.00, -8.0, 0.35],  # Pin: the rip shot, tight and dark over it
+]
 
 var _w := 0.0                   # third person's share of the view, 0..1
 var _engaged := false
@@ -114,8 +142,13 @@ var _floor_black := 0.0
 var _floor_fade := false        # her floor version's fade under way
 var _landed_pending := false    # the death landed before the black was full: the view held till it is
 var _last_view := Transform3D()
-var _fatal_edges := PackedInt64Array()
-var beat_cuts := 0              # fatality beat edges seen: a hook for tests and the sound
+var beat_cuts := 0              # hold-beat edges seen: one cut per beat entered
+var beat := BEAT_NONE           # the hold's beat this frame, -1 outside it
+var beat_entries := PackedInt64Array([0, 0, 0, 0, 0])  # cuts per beat, one per entry
+var _beat_pitch := 0.0          # the beat's framing, eased: no teleporting cut
+var _beat_dist := 1.0
+var _beat_fov := 0.0
+var _beat_vig := 0.0
 # For tests: the last frame's facts.
 var clearance := INF            # the cast's free run past the camera
 var pivot := Vector3.ZERO
@@ -146,11 +179,11 @@ func third_person() -> bool:
 
 
 func fov_offset() -> float:
-	return 0.0
+	return _beat_fov
 
 
 func vignette() -> float:
-	return 0.0
+	return _beat_vig
 
 
 func black() -> float:
@@ -199,7 +232,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		body_q = body_q.normalized() if body_q.length() > 1.0e-6 else Quaternion.IDENTITY
 	var hand: Vector3 = hold.get("matron_hand", Vector3.ZERO)
 	var hand_on := bool(hold.get("matron_hand_present", false))
-	_step_beats(hold, delta)
+	_step_hold_beat(hold, her_head, delta)
 	_note_rip(hold, delta)
 	# The let-go over the drop: its count rises once.
 	var release := int(hold.get("fatal_release_beat", 0))
@@ -341,7 +374,8 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	for q in [his_head, his_feet, him, her_head, her_feet, her_chest]:
 		extent = maxf(extent, (q as Vector3).distance_to(p))
 	var half := deg_to_rad(clampf(vfov_deg, 30.0, 120.0)) * 0.5
-	var fit := clampf(extent / (tan(half) * FRAME_FILL) + 0.3, MIN_DIST, MAX_DIST)
+	var fit := clampf(clampf(extent / (tan(half) * FRAME_FILL) + 0.3, MIN_DIST, MAX_DIST) * _beat_dist,
+		MIN_DIST, MAX_DIST)
 	# The side: across the line between them, the more open one, chosen once.
 	var line := Vector3(him.x - her_head.x, 0.0, him.z - her_head.z)
 	if line.length() < 0.2:
@@ -367,7 +401,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		_pivot = p
 	# The look orbits: its change since the view went out.
 	var yaw := _side_yaw + wrapf(look.x - _look_ref.x, -PI, PI)
-	var pitch := clampf(BASE_PITCH - (look.y - _look_ref.y), PITCH_MIN, PITCH_MAX)
+	var pitch := clampf(BASE_PITCH + _beat_pitch - (look.y - _look_ref.y), PITCH_MIN, PITCH_MAX)
 	_dodge = lerp_angle(_dodge, _dodge_goal, 1.0 - exp(-DODGE_RATE * delta))
 	var dir := _orbit(yaw + _dodge, pitch)
 	var goal := _pivot + dir * fit
@@ -574,13 +608,43 @@ static func _orbit(yaw: float, pitch: float) -> Vector3:
 	return Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
 
 
-func _step_beats(hold: Dictionary, _delta: float) -> void:
-	var edges: PackedInt64Array = hold.get("fatality_beat_edges", PackedInt64Array())
-	if _fatal_edges.size() == edges.size():
-		for i in edges.size():
-			if edges[i] != _fatal_edges[i]:
-				beat_cuts += 1
-	_fatal_edges = edges.duplicate()
+func _step_hold_beat(hold: Dictionary, her_head: Vector3, delta: float) -> void:
+	var next := _hold_beat(hold, her_head)
+	if next != beat:
+		beat = next
+		if beat >= 0:
+			beat_cuts += 1
+			beat_entries[beat] += 1
+	# The let-go owns the frame while he falls: the Hang's wide, open shot
+	# stays till the death lands, then it eases out with the fade.
+	if _since_release >= 0.0 and _awaiting_death:
+		return
+	var shot: Array = BEAT_SHOTS[beat] if beat >= 0 else [0.0, 1.0, 0.0, 0.0]
+	var k := 1.0 - exp(-BEAT_EASE * delta)
+	_beat_pitch = lerpf(_beat_pitch, float(shot[0]), k)
+	_beat_dist = lerpf(_beat_dist, float(shot[1]), k)
+	_beat_fov = lerpf(_beat_fov, float(shot[2]), k)
+	_beat_vig = lerpf(_beat_vig, float(shot[3]), k)
+
+
+## The hold's beat, off the sim's hold phase alone: the state, the grip, the
+## fatal hang, her hand against her head. Claimed ends the beat (no new cut):
+## the floor fatality's fade owns that frame, not a new shot.
+static func _hold_beat(hold: Dictionary, her_head: Vector3) -> int:
+	var state := int(hold.get("state", -1))
+	match state:
+		STATE_GRAB:
+			return BEAT_DOWN if bool(hold.get("held", false)) else BEAT_NONE
+		STATE_CARRY:
+			return BEAT_DRAG
+		STATE_DANGLE:
+			if bool(hold.get("fatal_hang", false)):
+				return BEAT_HANG
+			var hand: Vector3 = hold.get("matron_hand", Vector3.ZERO)
+			return BEAT_OVER if hand.y > her_head.y else BEAT_HANG
+		ARM_PLAY_STATE:
+			return BEAT_PIN
+	return BEAT_NONE
 
 
 ## The cast the camera uses, through the native's look ray: a cone of five

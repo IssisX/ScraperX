@@ -50,7 +50,9 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     ev.climb = -1;
     ev.touch = false;
     ev.seen_age_s = std::min(ev.seen_age_s + dt, Evidence::kNever);
+    ev.sight_age_s = std::min(ev.sight_age_s + dt, Evidence::kNever);
     ev.heard_age_s = std::min(ev.heard_age_s + dt, Evidence::kNever);
+    ev.sound_age_s = std::min(ev.sound_age_s + dt, Evidence::kNever);
 
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
@@ -77,7 +79,7 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     }
     // The world's checkpoint rule (Matron::freezes_checkpoint), not hers to
     // read: he is on her deck, up a ladder from it, or on the deck her corner
-    // pipe is taking her to, or (no longer frail) a deck it joins to hers.
+    // pipe is taking her to, or a deck it joins to hers (frail, the one over hers).
     {
         const float player_floor_y = m.floor_of(float(player.GetY()));
         const Mover *taking = m.holder();
@@ -85,7 +87,7 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
             m.body_in_world_ && in_footprint &&
             ((taking != nullptr && taking->view().has_goal &&
               std::abs(player_floor_y - taking->view().goal_floor_y) < 0.1F) ||
-             (m.stage_ != Matron::Stage::Pest && Matron::pipe_reaches(level_floor) &&
+             ((m.stage_ != Matron::Stage::Pest || player_floor_y > level_floor) && Matron::pipe_reaches(level_floor) &&
               Matron::pipe_reaches(player_floor_y) &&
               std::abs(std::abs(player_floor_y - level_floor) - Matron::kStackPitch) < 0.1F));
         m.checkpoint_freeze_ = on_deck || player_climb >= 0 || by_her_pipe;
@@ -129,6 +131,11 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
         ev.last_heard_at = player;
         ev.heard_age_s = 0.0F;
     }
+    // A sound is a place: it keeps its own age, apart from heard_age_s (breath refreshes that too).
+    if (ev.sound) {
+        ev.last_sound_at = player;
+        ev.sound_age_s = 0.0F;
+    }
 
     // Her eyes, awake and on her feet about the world.
     const bool looking = m.body_in_world_ && (m.state_ == State::Hunting || m.state_ == State::Searching ||
@@ -163,6 +170,10 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
         ev.seen_at = player;
         ev.last_seen_at = player;
         ev.seen_age_s = 0.0F;
+    }
+    if (ev.saw || ev.sees_far || ev.close_look) {
+        ev.last_sight_at = player;
+        ev.sight_age_s = 0.0F;
     }
     if (ev.saw || ev.glimpsed || ev.sees_far || ev.heard()) {
         ev.climb = player_climb;
