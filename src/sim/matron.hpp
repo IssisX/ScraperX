@@ -970,6 +970,11 @@ public:
     // across 143's north edge, 23 m off).
     static constexpr float kPipeListenSeconds = 2.5F;
     static constexpr float kListenReach = 2.0F;
+    // Built steel across her way to a lead on her own floor (J-102): her
+    // feet's way round it is searched for a lead this near, from a floor a
+    // skid or a step over his (deck 2's barrier skid stands 0.45 m).
+    static constexpr float kRoundReachM = 12.0F;
+    static constexpr float kRoundDropM = 0.6F;
     // The moving bodies near her a blow can come from: within this, at most
     // kMaxNear of the nearest.
     static constexpr float kNearM = 3.0F;

@@ -3561,6 +3561,47 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (!scan_walk) {
                     route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 }
+                // Built steel across her way to a lead on her own floor (J-102:
+                // deck 2's blast barrier between her corner pipe's top and the
+                // walkway; her lines and the scan's floor patch both run under
+                // it, so either aim walks her into its face: the patch's straight
+                // at him, or her lines' next point, a short clear step onto a
+                // line that runs on into it, with no straight way to him from
+                // there either). Her feet's way round it over the
+                // real floor (grid_walk) gives her step: the farthest of its
+                // turns she has straight steel to, held a moment as the
+                // watchdog's sidestep is. A low thing her hips clear (a skid,
+                // a step) is no bar here; nor is the Turn's gap.
+                const float lead_over = lead_floor_ - feet_y;
+                if (sidestep_s_ <= 0.0F && turn_ == Turn::None && !elsewhere && lead_over > -kRoundDropM &&
+                    lead_over <= kStepUpM && distance_xz(ax, az, heard_x_, heard_z_) <= kRoundReachM &&
+                    distance_xz(ax, az, wx, wz) > 0.5F &&
+                    (!way_clear(ax, az, wx, wz) ||
+                     (!scan_walk && !way_clear(ax, az, heard_x_, heard_z_) && !way_clear(wx, wz, heard_x_, heard_z_)))) {
+                    const traversal::Ignore ignore = walk_ignore();
+                    const std::vector<Vec3> steps =
+                        traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
+                                             Vec3(heard_x_, lead_floor_, heard_z_), 3.0F, 0.35F, 6000);
+                    float along = 0.0F;
+                    Vec3 last(ax, feet_y_, az);
+                    bool first = true;
+                    for (const Vec3 &step : steps) {
+                        along += distance_xz(last.GetX(), last.GetZ(), step.GetX(), step.GetZ());
+                        last = step;
+                        if (along > 4.0F) {
+                            break;
+                        }
+                        const float off = distance_xz(ax, az, step.GetX(), step.GetZ());
+                        // The first turn a stride off, as the watchdog steps;
+                        // a farther one she has straight steel to beats it.
+                        if ((first && off >= 0.35F) || (off > 0.6F && straight_to(ax, az, step.GetX(), step.GetZ()))) {
+                            sidestep_x_ = step.GetX();
+                            sidestep_z_ = step.GetZ();
+                            sidestep_s_ = 0.45F;
+                            first = false;
+                        }
+                    }
+                }
                 // A hung load she has read the release of (J-100): the way
                 // she walks stops at its rim, whichever way found it (the
                 // scan's patch path sets it straight, past route_toward).
