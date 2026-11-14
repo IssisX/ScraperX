@@ -39,7 +39,7 @@ than the author's (`rules.land_counts`).
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- The board is the one open issue labeled `board` (today #384): its body is the live board (the job section, which the switch rewrites from work/plan.md); comments hold rulings, BLOCKED lines and
+- The board is the one open issue labeled `board` (today #546): its body is the live board (the job section, which the switch rewrites from work/plan.md); comments hold rulings, BLOCKED lines and
   asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
   run (`Switch.board_issue`, `board_`), once per sweep. Rollover, no code: open the new issue with the label and
   the copied body, take the label off the old one, and close the old one only after the next sweep has finished

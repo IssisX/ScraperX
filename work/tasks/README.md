@@ -17,5 +17,5 @@ search for the function), then read only that function or section. Long docs (`G
 `REPO_MAP.md`, `00_START_HERE.md`, specs) are searched by heading and read by section. Threads: the
 body plus what is new since your last read, never the history.
 
-The board is found by label, never by number: **the one open issue labeled `board`** (today #384).
+The board is found by label, never by number: **the one open issue labeled `board`** (today #546).
 When it fills, the integrator opens the next one and moves the label; every task follows by itself.
