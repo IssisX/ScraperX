@@ -222,5 +222,4 @@ J-017, 11-03 (integrator's call under the standing order): the Matron need not f
 
 ## Not decisions (work for an agent; see `GAP_LIST.md`)
 
-The ladder pull, the cluck and croak still cued, the five perception leaks, a helmet lamp, the mix note
-(ambience and footsteps too loud, 10-27), stock above 396 m, and the pipe scenario missing from CI.
+The ladder pull, the five perception leaks, the mix note (ambience and footsteps too loud, 10-27), and the pipe scenario missing from CI.
