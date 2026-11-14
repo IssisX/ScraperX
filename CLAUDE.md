@@ -111,10 +111,10 @@ it to match, never ask him again.
 - Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
   loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
 - **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
-  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the FOREGROUND (run_in_background false),
+  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the FOREGROUND,
   parallel ones in one message: a background report is an extra wake on this big context (11-14). Ask before a 2nd session. Stopping a working helper
   is Cory's call (11-12).
 - **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
-  current; after a compact re-read it, this file and the hourly file, and say what may be lost.
+  current; after a compact re-read it, this file and the hourly file, and name what was lost (always something, 11-14).
 - **Keep reads small:** subscribe only to PRs you merge; big reads go to a helper; read only what a job needs. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.
