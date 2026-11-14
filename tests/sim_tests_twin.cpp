@@ -717,17 +717,50 @@ void pitch_up(Simulation &h, double from_top, double need_y) {
             // rose at 5 m/s: the launch threw the hands above the lip, and
             // the 27-tick regrab lockout plus the 2.5 m/s rising gate kept
             // try_begin_hang shut for the whole rise past it, so he landed
-            // on the deck without hanging. No up press now: face the wall
-            // and hold the stick toward it for the whole flight
-            // (try_begin_hang catches a lip only with stick intent of at
-            // least 0.3 toward the facing), let the line go, and let the
-            // swing's own momentum carry him up. He falls back past the
-            // lip with the hands below it, and the hang catch takes it on
-            // the way down once the lockout clears. The stick stays held
-            // until the pitch ends (stand() clears it). Checks unchanged.
+            // on the deck without hanging. Measured since, two stagings
+            // down: releasing the hook alone leaves him swinging on the
+            // bar for the whole 5 s (the hook line and the hands are two
+            // holds); releasing both at the stall still rockets him up at
+            // 5 m/s and he lands standing on the bar before the lockout
+            // clears (grounded at centre 706.33, no hang). And releasing
+            // both at the swing's top drops him straight down at z
+            // -219.24, a metre short of the lip in z: he catches the bar
+            // (Swinging) on the way down, never the lip. So wait for the
+            // swing's far extreme — z past -220.0, vz back to >= 0, the
+            // body momentarily still right at the lip (the twin target's
+            // z -220.3) — then let both go: the hook line
+            // (request_hook_release) and the hands on the bar
+            // (request_release). He falls straight down past the lip with
+            // the hands below it, and the hang catch takes it on the way
+            // down once the lockout clears. Face the wall and hold the
+            // stick toward it for the whole flight (try_begin_hang catches
+            // a lip only with stick intent of at least 0.3 toward the
+            // facing). The stick stays held until the pitch ends (stand()
+            // clears it). Checks unchanged.
             require(h.set_facing(0.0, -1.0), "twin pitch: face the wall for the dyno");
             (void)h.set_move_input(0.0, -1.0);
+            bool at_lip = false;
+            for (int tick = 0; tick < 90 * 2; ++tick) {
+                if (!h.advance_frame(Simulation::kFixedStepSeconds).accepted)
+                    break;
+                const auto m = h.snapshot();
+                if (m.player_position.y > max_centre)
+                    max_centre = m.player_position.y;
+                if (tick % 15 == 0)
+                    std::cout << "  twin pitch dyno wait: tick " << tick << " centre "
+                              << m.player_position.y << " m z " << m.player_position.z << ", vy "
+                              << m.player_linear_velocity.y << ", vz " << m.player_linear_velocity.z
+                              << ", trav " << int(m.traversal_state) << ", grounded "
+                              << m.player_grounded << ", deaths " << m.death_count << ", hook "
+                              << int(m.hook_state) << '\n';
+                if (m.player_position.z < -220.0 && m.player_linear_velocity.z >= 0.0) {
+                    at_lip = true;
+                    break;
+                }
+            }
+            require(at_lip, "twin pitch: the swing carries him to the lip");
             require(h.request_hook_release(), "twin pitch: let the line go for the dyno");
+            require(h.request_release(), "twin pitch: let the bar go for the dyno");
             bool reached = false;
             for (int tick = 0; tick < 90 * 5; ++tick) {
                 if (!h.advance_frame(Simulation::kFixedStepSeconds).accepted)
@@ -735,6 +768,13 @@ void pitch_up(Simulation &h, double from_top, double need_y) {
                 const auto m = h.snapshot();
                 if (m.player_position.y > max_centre)
                     max_centre = m.player_position.y;
+                if (tick % 15 == 0)
+                    std::cout << "  twin pitch dyno trace: tick " << tick << " centre "
+                              << m.player_position.y << " m z " << m.player_position.z << ", vy "
+                              << m.player_linear_velocity.y << ", vz " << m.player_linear_velocity.z
+                              << ", trav " << int(m.traversal_state) << ", grounded "
+                              << m.player_grounded << ", deaths " << m.death_count << ", hook "
+                              << int(m.hook_state) << '\n';
                 if (m.traversal_state == TraversalState::Hanging || m.player_grounded) {
                     reached = true;
                     break;
