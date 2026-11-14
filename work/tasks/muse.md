@@ -55,7 +55,7 @@ your own branches (Cory 11-05) and mail the rest:
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your live work
-Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does. A stop, pause or go for you is a `hold:` line on that job in work/plan.md (or its removal); a word in mail or chat alone does not stop or start you (11-14: a pause given outside the plan froze test 2 for 12 h).
+Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does. When Cory tells you directly to stop, pause or go, do it and mail Claude the same hour so it becomes a `hold:` line in work/plan.md (or its removal) (11-14: a pause known only to you froze test 2 for 12 h).
 Before starting a lane, push fb-bot/wip-<job> and mail its real SHA. Push every tested increment; an unpushed SHA is not a shared baseline. Check the live plan before each push.
 On a hold or transfer, first push or explicitly report local work; stop only after the new plan and handoff are acknowledged. At your in-flight limit, land, review or unblock, rather than starting another job.
 Include plan <version> in the subject after a plan-change notice. Keep the existing mail bridge and proof rules.
