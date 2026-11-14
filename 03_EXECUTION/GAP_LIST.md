@@ -108,10 +108,13 @@ doors, lifts and wall hits draw her as direct sources is still unverified.
 
 ### 11. Night lighting and the climb (B5)
 
-**Helmet lamp and city glow done by J-081 (#399 closed); lit rings still open, no job holds
-them.** `main.gd` builds `HelmetLamp` (spot range 30 m, angle 55); `sky.gdshader`
-`city_glow` is driven by `sky_cycle.gd`. No named implementation of rings lit behind the
-climber was found. Night readability by eye is unverified.
+**Helmet lamp, city glow and the climb's trail done in part by J-081 (#399 closed); the rings
+above the stack are still unlit, no job holds them.** `main.gd` builds `HelmetLamp` (spot
+range 30 m, angle 55); `sky.gdshader` `city_glow` is driven by `sky_cycle.gd`. `sky_cycle.gd`
+lights a stack lamp at night only once he has passed its deck, so the climb below him reads
+as a trail of light — but only the Stack lamps carry the trail: 14 levels at 11 m (top
+154 m), so the rings above 154 m have no trail lamps. **Remainder is night polish, parked.**
+Night readability by eye is unverified.
 
 ### 12. Foreman radio and story cues (B3)
 
@@ -156,9 +159,12 @@ review would address the rest.
 ### 17. Her mood hints, the stage-up cue and a missing test (A1 leftovers)
 
 **Core built; the named-test gap is closed.** `tests/sim_tests_matron.cpp` now names
-`kRageChangedDown` in the "matron rage down" checks. **Remaining deviations, no job holds
-them:** pain also feeds her rage (`kStaggerRage`, `kKnockdownRage`) against "fed only by
-sound"; the requested radio hint remains to be checked (gap 12). Hurts: 2. Size: small each.
+`kRageChangedDown` in the "matron rage down" checks. **Pain does not feed her rage today:**
+`kStaggerRage` (0.02) and `kKnockdownRage` (0.08) are only declared
+(`src/sim/matron.hpp:816-817`); `step_rage` (`src/sim/matron.cpp:2193`) feeds rage from the
+sound level at her ear only, and a test asserts a knockdown adds no rage
+(`tests/sim_tests_matron.cpp:472`). The requested radio hint remains to be checked (gap 12),
+no job holds it. Hurts: 2. Size: small each.
 
 ### 18. A wrecked machine leaves a way on (rule 51)
 
