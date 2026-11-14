@@ -84,7 +84,9 @@
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
       "mcp__github__create_repository",
-      "mcp__github__fork_repository"
+      "mcp__github__fork_repository",
+      "Bash(rm /dev/*)",
+      "Bash(rm * /dev/*)"
     ],
     "additionalDirectories": [
       "/tmp/claude-0"
