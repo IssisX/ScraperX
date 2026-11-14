@@ -9,7 +9,7 @@ Read through: 1794658801 (2026-11-14 mail+asks)
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
 - THE PLAN (11-14): Carbon's answer (verdict: targeted fixes, no rebuild; coordination signals become standing state). DONE TEST
   (Cory 11-14 "yes"): the next 6 Muse jobs each land within 1 h of going green, no hand fixes, trunk never red unowned.
-  Count: 1/6 = #544 J-040 repin (green 12:08Z, merged 12:16Z, 8 min). In flight: #545 quiet-asks, proof-unittests,
+  Count: 2/6 = #544 J-040 repin (8 min green to merged), #547 J-116 MAT1 (9 min). In flight: #545 quiet-asks, proof-unittests,
   carbon-fixes, delete-dead, board-roll. Not taken: Carbon's 60-min expiry of a pause (it would override Cory). Later list:
   eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven; Carbon rank 4 (test lists to
   ci/shards.json, re-pin split rule, first FAIL in late notices) after proof-unittests lands. Paid reviewer spent to 12-01.

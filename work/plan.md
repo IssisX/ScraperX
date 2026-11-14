@@ -30,7 +30,7 @@ J-043 muse #241 | Belly of the Deck: an underside girder crossing while she walk
 J-059 muse #307 | Her black eye: a clean punch to her eye bruises it dark and swells the lid
 J-063 muse #321 | Her climbing on real support: hands on rungs, feet on rungs, weight moves through them
 J-127 muse #451 | a heard lead lands on the floor he really stands on
-J-049 muse #278 | Her mind runs on evidence: hiding from her truly works (rule 29, gap 4)
+J-049 muse #278 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her mind runs on evidence: hiding from her truly works (rule 29, gap 4)
 J-098 muse #416 | No synthesized human sounds: her wake and his breath become real recordings (rule 41, gap 2)
 J-105 muse #424 | Ways up from 340 to 750 without ladders (Fable's plan, Cory OK'd step 1)
 J-045 muse #248 | Phone stability: force-close on full-height tower views, locker freeze, frame pacing (Fold 6)
@@ -55,8 +55,8 @@ J-132 muse #458 | missions 1 and 7 proven: one touch scenario each
 J-135 muse #461 | rule_check flags world-geometry constants in the tuning header, not just world_solids.inc
 J-136 muse #468 | S2 and S3 recover after an empty send, so neither can strand him (F7)
 J-018 muse #125 hold: waits for J-001's grab code (muse.md 11-12) | Her stock reach with real arms (B3)
-J-007 muse #114 | Her exit items 4, 6, 7: arm's-length holds, the pipe, the hoists
-J-009 muse #116 | Device determinism: the phone computes what CI proved
+J-007 muse #114 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her exit items 4, 6, 7: arm's-length holds, the pipe, the hoists
+J-009 muse #116 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Device determinism: the phone computes what CI proved
 J-014 muse #121 | Stock above 396 m (PE 2)
 J-036 muse #167 hold: parked in live issue; reconcile pushed work before release | Fight S5: slip
 J-040 muse #228 | Improvised weapons: brace carried bars and pipes against Matron
