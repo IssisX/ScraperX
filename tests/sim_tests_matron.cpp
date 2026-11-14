@@ -1197,6 +1197,139 @@ void run_matron_wreck() {
 }
 SCRAPERX_SELECT("matron-wreck", run_matron_wreck);
 
+// ---- her shove of what he placed (J-112): the drum he carries to the
+//      bay's rungs and sets down himself, she notices it moved and shoves
+//      it off the lip into the bay, and he wins it back ----
+namespace {
+struct PlacedShoveRun {
+    std::uint32_t shoves = 0;
+    int shove_tick = -1;
+    double peak_force_n = 0.0;
+    double peak_power_w = 0.0;
+    double peak_push_n = 0.0;
+    double peak_step_m = 0.0;
+    int push_ticks = 0;
+    scraperx::sim::Vector3 rest{};
+    scraperx::sim::Vector3 laid{};
+    scraperx::sim::Vector3 set_at{};
+    bool noticed = false;
+};
+
+PlacedShoveRun matron_placed_shove_run(const bool trace) {
+    using scraperx::sim::Bay;
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    require(s.advance_frame(1.0).accepted, "matron placed shove: settle");
+    const std::uint32_t first = s.loose_stock_throwables_begin();
+    const std::uint64_t drum = LooseStock::kFirstEntity + first + 2;
+    const std::uint32_t drum_body = s.kit_body_index(drum);
+    PlacedShoveRun run;
+    run.laid = s.kit_body_position(drum_body);
+    std::cout << "  matron placed shove: drum (entity " << drum << ") laid at (" << run.laid.x << ", " << run.laid.y
+              << ", " << run.laid.z << ")\n";
+    // He walks to it, picks it up, and carries it to the rungs: his hands,
+    // not a debug move. The drum is 55 kg; his grip holds 900 N.
+    require(walk_to(s, -15.0, -125.2, 30.0, 0.3), "matron placed shove: to the drum by the outer rail");
+    {
+        const auto at = s.kit_body_position(drum_body);
+        const auto p = s.snapshot().player_position;
+        (void)s.set_facing(at.x - p.x, at.z - p.z);
+        (void)s.advance_frame(0.4);
+    }
+    require(s.snapshot().carry_target_entity_id == drum, "matron placed shove: the drum is his to take");
+    (void)s.request_pick_up();
+    (void)s.advance_frame(0.4);
+    require(s.snapshot().carrying_entity_id == drum, "matron placed shove: picked up");
+    require(walk_to(s, -4.85, static_cast<double>(Bay::kRungsZ) - 0.025, 40.0, 0.3),
+            "matron placed shove: carried to the rungs");
+    (void)s.request_set_down();
+    (void)s.advance_frame(1.0);
+    require(s.snapshot().carrying_entity_id == 0, "matron placed shove: set down");
+    run.set_at = s.kit_body_position(drum_body);
+    std::cout << "  matron placed shove: drum set at (" << run.set_at.x << ", " << run.set_at.y << ", "
+              << run.set_at.z << ")\n";
+    require(run.set_at.y > 154.4, "matron placed shove: the drum stands upright by the rungs");
+    // A sprint past her locker wakes her; back west, crouched, to wait in
+    // her sight on the band west of the drum, out of her hands' reach. Over
+    // the bay only on its leaf (kBandNorthZ).
+    require(go(s, -6.5, Matron::kBandNorthZ, false, 6.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2),
+            "matron placed shove: east across the bay on its leaf");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 6.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron placed shove: a sprint toward her locker wakes her");
+    (void)s.set_crouch_input(true);
+    require(go(s, 0.4, Matron::kBandNorthZ, false, 20.0, 0.2) && go(s, -6.5, Matron::kBandNorthZ, false, 12.0, 0.2) &&
+                go(s, -12.0, -126.6, false, 20.0, 0.3),
+            "matron placed shove: back west across the leaf, crouched");
+    (void)s.set_crouch_input(false);
+    (void)s.set_move_input(0.0, 0.0);
+    const scraperx::sim::traversal::Limits limits{};
+    auto last = s.kit_body_position(drum_body);
+    for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        const auto p = s.kit_body_position(drum_body);
+        const double step = std::hypot(std::hypot(p.x - last.x, p.z - last.z), p.y - last.y);
+        last = p;
+        if ((m.stock_handled & 4U) != 0U) {
+            run.noticed = true;
+        }
+        if (m.stock_push_force_n > 0.0) {
+            ++run.push_ticks;
+            run.peak_push_n = std::max(run.peak_push_n, m.stock_push_force_n);
+            run.peak_force_n = std::max(run.peak_force_n, m.climb_force_n);
+            run.peak_power_w = std::max(run.peak_power_w, m.foot_power_w);
+            // On her floor, pushed: never a jump in its place.
+            if (p.y > 154.2) {
+                run.peak_step_m = std::max(run.peak_step_m, step);
+            }
+            require(m.climb_force_n <= static_cast<double>(limits.total_force_n) + 1.0 &&
+                        m.foot_power_w <= static_cast<double>(limits.power_w) + 1.0,
+                    "matron placed shove: the shove is within her feet's 8 kN / 44 kW");
+        }
+        if (trace && i % 30 == 0) {
+            std::cout << "    t " << i << " her (" << m.position.x << ", " << m.position.z << ") state " << int(m.state)
+                      << " seeking " << m.stock_seeking << " push " << m.stock_push_force_n << " N; drum (" << p.x
+                      << ", " << p.y << ", " << p.z << ")\n";
+        }
+        if (m.stock_shoves > 0 && run.shove_tick < 0) {
+            run.shove_tick = i;
+        }
+        if (run.shove_tick >= 0 && i > run.shove_tick + 3 * static_cast<int>(Simulation::kTickRateHz)) {
+            break;
+        }
+    }
+    run.shoves = s.matron_state().stock_shoves;
+    run.rest = s.kit_body_position(drum_body);
+    require(s.snapshot().death_count == 0, "matron placed shove: no death");
+    // His to fetch back: a plain body, still a load his hands can lift.
+    require(s.kit_body_enabled(drum_body) && s.kit_body_carry_kind(drum_body) != 0,
+            "matron placed shove: the shoved drum is still a load he can lift");
+    return run;
+}
+}  // namespace
+
+void run_matron_placed_shove() {
+    const bool trace = std::getenv("SCRAPERX_PLACED_SHOVE_TRACE") != nullptr;
+    const PlacedShoveRun a = matron_placed_shove_run(trace);
+    std::cout << "  matron placed shove: noticed=" << a.noticed << " shoves " << a.shoves << " at tick " << a.shove_tick
+              << ", push ticks " << a.push_ticks << ", peak push " << a.peak_push_n << " N, peak feet " << a.peak_force_n
+              << " N / " << a.peak_power_w << " W, largest step on the floor " << a.peak_step_m << " m, set at ("
+              << a.set_at.x << ", " << a.set_at.y << ", " << a.set_at.z << "), at rest (" << a.rest.x << ", " << a.rest.y
+              << ", " << a.rest.z << ")\n";
+    require(a.noticed, "matron placed shove: she counts the drum he placed as his");
+    require(a.shoves == 1 && a.push_ticks > 0, "matron placed shove: she shoves the drum he placed off the lip");
+    require(a.rest.y < 153.0, "matron placed shove: it lies under her floor, in the bay");
+    require(a.peak_step_m < 0.1, "matron placed shove: pushed, never snapped (under 0.1 m a tick on her floor)");
+    const PlacedShoveRun b = matron_placed_shove_run(false);
+    require(b.shove_tick == a.shove_tick && b.rest.x == a.rest.x && b.rest.y == a.rest.y && b.rest.z == a.rest.z,
+            "matron placed shove: the same run twice is the same shove");
+    std::cout << "PASS scraperx_sim matron placed shove: shove_tick=" << a.shove_tick
+              << " peak_push_n=" << a.peak_push_n << " peak_feet_n=" << a.peak_force_n
+              << " peak_power_w=" << a.peak_power_w << "\n";
+}
+SCRAPERX_SELECT("matron-placed-shove", run_matron_placed_shove);
+
 void run_matron_crash() {
     // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
     //      hunts). She searches where she lost the player; out of her earshot
@@ -2589,6 +2722,7 @@ void run_matron_remaining() {
     }
     run_matron_mischief();
     run_matron_wreck();
+    run_matron_placed_shove();
     run_matron_collision();
     run_matron_balance();
     run_matron_pipe();
