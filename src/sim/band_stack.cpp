@@ -875,7 +875,7 @@ constexpr float kS2CartWaterKg = 1250.0F;
 constexpr float kS2CartWaterCapacityKg = 1250.0F;
 // The drain (J-015 slice 1 fix): the empty cage comes back down because the
 // tank empties at the lower station. Measured on the slice-1 head: at the top
-// of the ride the beam sits at 1.65976 rad and the tank's centre at
+// of the ride the beam sits at 1.65976 rad and the tank's center at
 // (-7.095, 47.353, -141); its mouth (local (0, 0.44, 0)) is then at about
 // (-7.42, 47.65, -141), 0.916 m from the striker pivot. At 1.2 m the mouth
 // was already in reach at beam 1.577 (travel 21.14 m), so the gate opened
@@ -994,7 +994,7 @@ constexpr float kS2GangwayHalfX = 1.40F;
 // the west arm, its floor resting on the upper chord. Interior 2.80 x 0.62 x
 // 0.72 m = 1.25 m^3, holding 1250 kg of water when full; dry shell 250 kg.
 // The body is built with its axes on the beam (x along the arm, y across
-// it), its origin at the cart's centre on the arm, so these parts are
+// it), its origin at the cart's center on the arm, so these parts are
 // axis-aligned in its own frame. Heights are out from the beam's axis: the
 // floor's underside at 0.44 m sits on the upper chord's top face, the walls
 // run 0.50 to 1.22 m, the lid 1.22 to 1.28 m.
@@ -1823,7 +1823,7 @@ void build_s2_drain(kit::Kit &kit, Stack &stack) {
     // ---- The water tank, bolted to the west arm (J-015 slice 1) --------------
     // Its own body, so the water's mass can leave it: dry shell 250 kg, a
     // 1250 kg bin of water when full, 1500 kg wet at the cart's old place on
-    // the arm (t = 0.15, its centre 10.43 m from the fulcrum). The body is
+    // the arm (t = 0.15, its center 10.43 m from the fulcrum). The body is
     // built on the beam's axes, and a grip welds it to the beam, rating 0:
     // bolted, it never lets go. Its drain gate is the striker above: the
     // tank sitting at the lower station presses it open, and the water
@@ -1831,18 +1831,18 @@ void build_s2_drain(kit::Kit &kit, Stack &stack) {
     {
         const JPH::Vec3 west_pt(-10.0F, 11.05F, 0.0F);
         const JPH::Vec3 east_pt(10.0F, -11.05F, 0.0F);
-        const JPH::Vec3 cart_centre = west_pt * 0.85F + east_pt * 0.15F;
+        const JPH::Vec3 cart_center = west_pt * 0.85F + east_pt * 0.15F;
         const JPH::Vec3 along = (east_pt - west_pt).Normalized();
         const JPH::Vec3 normal(-along.GetY(), along.GetX(), 0.0F);
         const JPH::Quat cart_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), along);
         stack.s2_cart = kit.add_body(Sim::kStackS2CartEntityId, s2_cart_parts(),
-                                     kS2Pivot + JPH::RVec3(cart_centre), cart_rotation,
+                                     kS2Pivot + JPH::RVec3(cart_center), cart_rotation,
                                      kS2CartDryMassKg, 0.5F);
         stack.s2_cart_bin = kit.add_bin(stack.s2_cart, kS2CartWaterKg, kS2CartWaterCapacityKg,
                                         JPH::Vec3(0.0F, 0.44F, 0.0F), stack.s2_drain_striker,
                                         kS2DrainGateOpen, kS2DrainGateReach, kS2DrainRate);
         kit.set_bin_water(stack.s2_cart_bin);
-        const JPH::Vec3 to_cart = cart_centre + normal * 0.86F;
+        const JPH::Vec3 to_cart = cart_center + normal * 0.86F;
         stack.s2_cart_grip = kit.add_grip(stack.s2_beam, 0.0F, to_cart.Normalized());
         (void)kit.grip(stack.s2_cart_grip, stack.s2_cart);
     }

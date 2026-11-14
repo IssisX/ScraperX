@@ -566,6 +566,15 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                                           here[built_prefix] >= stock_damage::kPieceEntityLimit)) {
         ++built_prefix;
     }
+    // The save's own built bodies, found the same way: the leading run of
+    // its entities that are not break pieces. A save from before bodies
+    // built since (the S2 drain, built last) holds fewer, and its pieces
+    // follow its own built bodies, not this world's: so only that run is
+    // compared with this world's first bodies, everything after it must be
+    // a piece, and the pieces are reconciled by entity below.
+    const auto is_piece = [](const std::uint64_t entity) {
+        return entity >= stock_damage::kPieceEntityBase && entity < stock_damage::kPieceEntityLimit;
+    };
     // Every list is as long as it was built: the built bodies (not the
     // break pieces or fabricated objects after them) and the rest.
     const bool as_built = b.bodies.size() >= built_prefix && b.bin_contents.size() == c.bin_contents.size() &&
@@ -577,28 +586,29 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                           b.grip_rating.size() == c.grip_rating.size();
     bool ok = as_built && r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
               r.pod(loaded.carrying_entity) &&
-              r.list_up_to(entities, here.size() + 8 * loose_stock_->placed().size()) &&
-              (entities.size() >= built_prefix
-                   ? std::equal(entities.begin(),
-                                entities.begin() + static_cast<std::ptrdiff_t>(built_prefix), here.begin())
-                   : std::equal(entities.begin(), entities.end(), here.begin())) &&
-              r.list_up_to(k.bodies, entities.size()) &&
-              (k.bodies.size() == entities.size() || k.bodies.size() == built) &&
-              r.list_up_to(k.rope_anchor, c.rope_anchor.size()) && r.list_up_to(k.dog_floor, c.dog_floor.size()) &&
-              r.list_up_to(k.bin_contents, c.bin_contents.size()) &&
-              r.bits_up_to(k.rope_parted, c.rope_parted.size()) && k.rope_parted.size() == k.rope_anchor.size() &&
-              // Fewer ropes only from a world with fewer bodies: the ropes
-              // built since (J-092's sling, built with the last bodies).
-              (k.rope_anchor.size() == c.rope_anchor.size() || entities.size() < here.size()) &&
-              // Fewer guides, likewise: those built since (J-108's bait
-              // lift, built with the last bodies).
-              (k.dog_floor.size() == c.dog_floor.size() || entities.size() < here.size()) &&
-              r.bits(k.catch_latched, c.catch_latched.size()) && r.bits_up_to(k.latch_set, c.latch_set.size()) &&
-              r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
-              r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
-              r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing) && r.pod(loaded.bay) &&
-              std::isfinite(loaded.bay.restart_s) && loaded.bay.restart_s >= 0.0F && loaded.bay.supplied <= 1 &&
-              loaded.bay.leaf_running <= 1 && loaded.bay.fan_running <= 1;
+              r.list_up_to(entities, here.size() + 8 * loose_stock_->placed().size());
+    const std::size_t saved_prefix =
+        static_cast<std::size_t>(std::find_if(entities.begin(), entities.end(), is_piece) - entities.begin());
+    ok = ok && saved_prefix <= built_prefix &&
+         std::all_of(entities.begin() + static_cast<std::ptrdiff_t>(saved_prefix), entities.end(), is_piece) &&
+         std::equal(entities.begin(), entities.begin() + static_cast<std::ptrdiff_t>(saved_prefix), here.begin()) &&
+         r.list_up_to(k.bodies, entities.size()) &&
+         (k.bodies.size() == entities.size() || k.bodies.size() == built) &&
+         r.list_up_to(k.rope_anchor, c.rope_anchor.size()) && r.list_up_to(k.dog_floor, c.dog_floor.size()) &&
+         r.list_up_to(k.bin_contents, c.bin_contents.size()) &&
+         r.bits_up_to(k.rope_parted, c.rope_parted.size()) && k.rope_parted.size() == k.rope_anchor.size() &&
+         // Fewer ropes only from a world with fewer bodies: the ropes
+         // built since (J-092's sling, built with the last bodies).
+         (k.rope_anchor.size() == c.rope_anchor.size() || saved_prefix < built_prefix) &&
+         // Fewer guides, likewise: those built since (J-108's bait
+         // lift, built with the last bodies).
+         (k.dog_floor.size() == c.dog_floor.size() || saved_prefix < built_prefix) &&
+         r.bits(k.catch_latched, c.catch_latched.size()) && r.bits_up_to(k.latch_set, c.latch_set.size()) &&
+         r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
+         r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
+         r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing) && r.pod(loaded.bay) &&
+         std::isfinite(loaded.bay.restart_s) && loaded.bay.restart_s >= 0.0F && loaded.bay.supplied <= 1 &&
+         loaded.bay.leaf_running <= 1 && loaded.bay.fan_running <= 1;
     if (!ok) {
         fail("checkpoint bodies");
     }
@@ -802,7 +812,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // without them the save is refused for eight extra bodies and
     // zero missing pieces. A broken record above already names its
     // stock's pieces, so only intact stocks are added here.
-    for (std::size_t j = built_prefix; j < entities.size(); ++j) {
+    for (std::size_t j = saved_prefix; j < entities.size(); ++j) {
         const std::uint64_t piece_entity = entities[j];
         if (piece_entity < stock_damage::kPieceEntityBase ||
             piece_entity >= stock_damage::kPieceEntityLimit) {
@@ -841,7 +851,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // missing ones. A piece of a foreign stock, or any body this world
     // never built, lands in the extra and refuses the save.
     std::vector<std::uint64_t> extra;
-    for (std::size_t j = built_prefix; j < entities.size(); ++j) {
+    for (std::size_t j = saved_prefix; j < entities.size(); ++j) {
         if (!kit_->body_for_entity(entities[j]).valid()) {
             extra.push_back(entities[j]);
         }
@@ -923,7 +933,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     std::vector<int> spawn_order;
     {
         std::vector<bool> seen(static_cast<std::size_t>(loose_stock_->count()), false);
-        for (std::size_t j = built_prefix; j < entities.size(); ++j) {
+        for (std::size_t j = saved_prefix; j < entities.size(); ++j) {
             const std::uint64_t piece_entity = entities[j];
             if (piece_entity < stock_damage::kPieceEntityBase ||
                 piece_entity >= stock_damage::kPieceEntityLimit) {

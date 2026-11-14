@@ -1173,36 +1173,58 @@ void run_save_bad_files() {
     expect_refuse("one-byte file", Bytes{0x53}, "format key");
     // A different world body list: one fewer entity and body state (a
     // prefix of this world's) loads whole, the last body starting as built.
+    // Spliced from the save as the build before the S2 drain wrote it
+    // (parent_save, J-015): this world's last body is the drain's tank, which
+    // its bolt grip and its bin name, so a save without the tank but with
+    // its grip and bin is one no build wrote. The parent's last body (the
+    // last hightower toolbox) is the one dropped; it starts as built, and so
+    // does the tank the parent build never had.
     {
+        const Bytes parent = parent_save(saved, source);
+        SaveSections psec;
+        require(save_sections(parent, psec) && psec.end == parent.size(),
+                "spliced body list: the section walk must read the parent build's save");
         Bytes spliced;
         // Header + entities count - 1 + all but the last entity.
         std::uint32_t entities_count = 0;
-        std::memcpy(&entities_count, saved.data() + 57, sizeof(entities_count));
-        const std::size_t entities_bytes = sec.after_entities - 57 - 4;
-        spliced.insert(spliced.end(), saved.begin(), saved.begin() + static_cast<std::ptrdiff_t>(57));
+        std::memcpy(&entities_count, parent.data() + 57, sizeof(entities_count));
+        const std::size_t entities_bytes = psec.after_entities - 57 - 4;
+        std::uint64_t dropped = 0;
+        std::memcpy(&dropped, parent.data() + 57 + 4 + entities_bytes - 8, sizeof(dropped));
+        spliced.insert(spliced.end(), parent.begin(), parent.begin() + static_cast<std::ptrdiff_t>(57));
         const std::uint32_t fewer = entities_count - 1;
         spliced.insert(spliced.end(), reinterpret_cast<const std::uint8_t *>(&fewer),
                        reinterpret_cast<const std::uint8_t *>(&fewer) + sizeof(fewer));
-        spliced.insert(spliced.end(), saved.begin() + static_cast<std::ptrdiff_t>(57 + 4),
-                       saved.begin() + static_cast<std::ptrdiff_t>(57 + 4 + entities_bytes - 8));
+        spliced.insert(spliced.end(), parent.begin() + static_cast<std::ptrdiff_t>(57 + 4),
+                       parent.begin() + static_cast<std::ptrdiff_t>(57 + 4 + entities_bytes - 8));
         // Bodies count - 1 + all but the last BodyState (80 bytes).
         std::uint32_t bodies_count = 0;
-        std::memcpy(&bodies_count, saved.data() + sec.after_entities, sizeof(bodies_count));
+        std::memcpy(&bodies_count, parent.data() + psec.after_entities, sizeof(bodies_count));
         const std::uint32_t fewer_bodies = bodies_count - 1;
         spliced.insert(spliced.end(), reinterpret_cast<const std::uint8_t *>(&fewer_bodies),
                        reinterpret_cast<const std::uint8_t *>(&fewer_bodies) + sizeof(fewer_bodies));
-        const std::size_t bodies_bytes = sec.after_bodies - sec.after_entities - 4;
-        spliced.insert(spliced.end(), saved.begin() + static_cast<std::ptrdiff_t>(sec.after_entities + 4),
-                       saved.begin() + static_cast<std::ptrdiff_t>(sec.after_entities + 4 + bodies_bytes - 80));
+        const std::size_t bodies_bytes = psec.after_bodies - psec.after_entities - 4;
+        spliced.insert(spliced.end(), parent.begin() + static_cast<std::ptrdiff_t>(psec.after_entities + 4),
+                       parent.begin() + static_cast<std::ptrdiff_t>(psec.after_entities + 4 + bodies_bytes - 80));
         // The rest of the file unchanged.
-        spliced.insert(spliced.end(), saved.begin() + static_cast<std::ptrdiff_t>(sec.after_bodies), saved.end());
+        spliced.insert(spliced.end(), parent.begin() + static_cast<std::ptrdiff_t>(psec.after_bodies), parent.end());
         Simulation w(InitialSpawn::ExteriorGrade);
         require(w.load_game(spliced.data(), spliced.size()), "spliced body list: the load must succeed");
         Simulation fresh(InitialSpawn::ExteriorGrade);
-        const std::uint32_t last = fresh.kit_body_count() - 1;
+        const std::uint32_t last = fresh.kit_body_index(dropped);
+        require(last != 0xFFFFFFFFU && w.kit_body_index(dropped) == last,
+                "spliced body list: the dropped body is built");
         const auto apos = w.kit_body_position(last), bpos = fresh.kit_body_position(last);
         require(apos.x == bpos.x && apos.y == bpos.y && apos.z == bpos.z,
                 "spliced body list: the last body starts as built");
+        // The tank rides the beam on its bolt: set from the beam where the
+        // save has it, composed with the two as they lay at the build.
+        const std::uint32_t tank = fresh.kit_body_index(Simulation::kStackS2CartEntityId);
+        const auto tpos = w.kit_body_position(tank), fpos = fresh.kit_body_position(tank);
+        std::cout << "  spliced body list: dropped entity " << dropped << " at body " << last << ", the tank off "
+                  << std::hypot(tpos.x - fpos.x, tpos.y - fpos.y, tpos.z - fpos.z) << " m from as built\n";
+        require(std::hypot(tpos.x - fpos.x, tpos.y - fpos.y, tpos.z - fpos.z) < 0.01,
+                "spliced body list: the tank, which that build never had, starts on the beam as built");
         ++whole;
     }
     // An older format: the same save cut after the damage (before MAT1)

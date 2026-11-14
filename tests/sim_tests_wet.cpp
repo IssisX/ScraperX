@@ -220,7 +220,7 @@ void run_wet_e_guard(const bool expect) {
     // Re-pinned for world-b (J-014, #207): 137 new east/west pieces on the
     // stack rings, their table places taken after the Matron's throwables
     // and their bodies built last, after the summit. The bay, twin and summit
-    // bodies still follow the original 596 in order; only the total grows
+    // bodies still follow the original 595 in order; only the total grows
     // by 137, so the sequence check covers exactly those twelve bodies.
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
@@ -373,7 +373,7 @@ void run_wet_e_guard(const bool expect) {
         return;
     }
     // As recorded on the tree before E's rebuild (its parent, 4118862).
-    // Re-pinned for world-b (J-014, #207): the first 596 bodies are the
+    // Re-pinned for world-b (J-014, #207): the first 595 bodies are the
     // same bodies in the same order, but the crane steel, machine weights
     // and throwables carried entities 137 higher (the reserved east/west
     // places sat before them in the table), so the hash over their

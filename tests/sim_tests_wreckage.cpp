@@ -644,7 +644,7 @@ void run_s2_upgrade() {
 }
 
 // The same save from before the drain, loaded into a world that has ridden
-// S2 since and drained its tank (J-015 #466 Codex P1): the save has no tank,
+// S2 since and drained its tank (J-015 #466 review): the save has no tank,
 // so the tank is full as built, not as dry as the running world's, its gate
 // shut as built. The beam and the cage are where the save has them, and the
 // loaded ride finishes: the cage to deck 6, then home to deck 4 by itself.
@@ -719,7 +719,7 @@ void run_s2_upgrade_after_drain() {
 }
 
 // A real save from the build before the drain (trunk 74d84b25, J-015 #389
-// Codex P1): S2 ridden to deck 6, the rider still on the cage, saved 10 s
+// review): S2 ridden to deck 6, the rider still on the cage, saved 10 s
 // after it arrived (tests/data/s2_top_before_drain.save). That build has no
 // tank and no striker, so the tank here is full at the lower station from
 // the first tick, where the striker stands. Loaded, the cage must not stay

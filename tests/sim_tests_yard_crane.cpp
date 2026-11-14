@@ -948,7 +948,22 @@ std::vector<std::uint8_t> older_save(const std::vector<std::uint8_t> &bytes, con
 // before the tank drains (water 1250, drained 0): then the parent build's
 // lists are the world's without the drain's entries, and the bytes are
 // what the parent build would have written for the same checkpoint.
-std::vector<std::uint8_t> parent_save(const std::vector<std::uint8_t> &bytes, const Simulation &s) {
+std::vector<std::uint8_t> parent_save(const std::vector<std::uint8_t> &whole, const Simulation &s) {
+    // A world with broken stock ends its save in the stock damage ("DAMG":
+    // the mark, the record count, one record's size, the records), which the
+    // parent build writes the same: found from the end, set aside while the
+    // lists and the grips are walked, and kept as it is.
+    constexpr std::uint32_t kDamageSaveMark = 0x44414D47U;
+    std::size_t cut = whole.size();
+    for (std::size_t p = whole.size() >= 12 ? whole.size() - 12 : 0; p > 0 && cut == whole.size(); --p) {
+        std::uint32_t word[3] = {};
+        std::memcpy(word, whole.data() + p, 12);
+        if (word[0] == kDamageSaveMark && word[2] > 0 &&
+            p + 12 + std::size_t{word[1]} * std::size_t{word[2]} == whole.size()) {
+            cut = p;
+        }
+    }
+    const std::vector<std::uint8_t> bytes(whole.begin(), whole.begin() + static_cast<std::ptrdiff_t>(cut));
     const std::size_t head = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
     std::uint32_t entities = 0;
     std::memcpy(&entities, bytes.data() + head, 4);
@@ -1059,6 +1074,7 @@ std::vector<std::uint8_t> parent_save(const std::vector<std::uint8_t> &bytes, co
         }
     }
     out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(grips_at + 8 + 8 * grips), bytes.end());
+    out.insert(out.end(), whole.begin() + static_cast<std::ptrdiff_t>(cut), whole.end());
     return out;
 }
 
@@ -1210,11 +1226,12 @@ void run_yard_crane_magnet() {
         require(loaded.yard_crane_state().holding_entity == top && loaded.yard_crane_state().magnet_on &&
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
-        // The save ends in the magnet's and the spreader's grips: find each
-        // by the body it holds, not by counting the grips. The S2 drain fix
-        // adds a third, bolted cart grip (rating 0, it never lets go), which
-        // a count would mistake for one of the two.
+        // The save ends in exactly three grips: the magnet's and the
+        // spreader's, each found by the body it holds, and the S2 drain
+        // fix's bolted tank grip (rating 0, it never lets go).
         const auto grips = saved_grips_lists(bytes);
+        require(grips.loads.size() == 3 && grips.ratings.size() == 3,
+                "magnet: the save holds its three grips (the magnet's, the spreader's, the S2 tank's bolt)");
         const std::uint32_t top_body = body_index(s, top);
         bool magnet_grip = false;
         bool spreader_grip = false;

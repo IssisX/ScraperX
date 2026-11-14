@@ -324,7 +324,6 @@ struct Stack final {
     kit::BodyIndex s2_bolt;           // the shoot bolt the rider shoves out
     kit::GuideIndex s2_bolt_guide;
     kit::GuideIndex s2_cage_guide;
-    kit::GuideIndex s2_cart_guide;    // unused: the cart rides the beam on its weld, not a guide
     kit::BinIndex s2_cart_bin;        // the tank's water, 1250 kg when full
     kit::GripIndex s2_cart_grip;      // the bolts holding the tank to the beam
     kit::RopeIndex s2_rope;
