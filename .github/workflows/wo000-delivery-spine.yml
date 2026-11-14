@@ -117,6 +117,24 @@ jobs:
           (cd ci && python3 -m unittest -q test_proof_scope)
           python3 ci/proof_scope.py
 
+      # J-072: the switchboard's and the board tools' unit tests (tools/switchboard/test_*.py), on every push. The
+      # proof skips the game jobs for a switchboard-only change, and switchboard.yml's selftest never starts on a PR
+      # its bot opens (GitHub holds it for approval), so without this a "proof green" there tested nothing. The same
+      # hash-pinned wheels as the selftest (tools/switchboard/requirements.txt), so the SDK-gated tests run too.
+      - name: Install the switchboard's hash-pinned dependencies (wheels only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/switchboard-venv"
+          "$RUNNER_TEMP/switchboard-venv/bin/pip" install --quiet --disable-pip-version-check --require-hashes \
+            --only-binary=:all: -r tools/switchboard/requirements.txt
+
+      - name: Test the switchboard and board tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/switchboard-venv/bin/python" -m unittest discover -s tools/switchboard -p 'test_*.py'
+
       - name: Verify every proof job is gated on its own scope output
         shell: bash
         run: |
