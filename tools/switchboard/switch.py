@@ -155,6 +155,9 @@ PLAN_SHADOW_EVERY_H = 6
 # RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
 # a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
 TRUNK_RUN_READS = 6
+# J-072 (11-14): finished trunk runs judged skip-the-build, kept in the sweep state (gh.state["trunk_skipped"]),
+# newest last: passed over unread and uncounted, so more notes-only runs than one sweep reads never hide a red run.
+TRUNK_SKIPPED_KEPT = 50
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
@@ -3022,14 +3025,20 @@ class Switch:
         below = min(unfinished) if unfinished else None
         newest = next((r.get("created_at") or "" for r in trunk if below is None or (r.get("created_at") or "") < below), "")
         done_all = True
-        for i, r in enumerate(trunk):
+        skipped = [i for i in state.get("trunk_skipped") or [] if isinstance(i, int)][-TRUNK_SKIPPED_KEPT:]
+        was, reads = list(skipped), 0
+        for r in trunk:
             if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
                 break   # nothing newer than the runs already judged
-            if i >= TRUNK_RUN_READS:
+            if r.get("id") in skipped:
+                continue   # judged skip-the-build on an earlier sweep: never read again
+            if reads >= TRUNK_RUN_READS:
                 done_all = False   # the rest wait for the next sweep: nothing past them is marked judged
                 break
+            reads += 1
             try:
                 if not built_run(self.run_jobs(r["id"])):
+                    skipped = (skipped + [r["id"]])[-TRUNK_SKIPPED_KEPT:]
                     continue   # the build was skipped: this run proves nothing about trunk's code
                 proof, url, rid, done = self.run_state(r)
             except RateLimited:
@@ -3060,6 +3069,8 @@ class Switch:
             kept = dict(kept, checked=newest)
         if not getattr(self.gh, "dry_run", False) and kept and isinstance(getattr(self.gh, "state", None), dict):
             self.gh.state["trunk_proof"] = kept
+        if not getattr(self.gh, "dry_run", False) and skipped != was and isinstance(getattr(self.gh, "state", None), dict):
+            self.gh.state["trunk_skipped"] = skipped
         self.__dict__["_trunk_proof"] = kept
         return kept
 

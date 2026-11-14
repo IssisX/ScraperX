@@ -30,12 +30,13 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Proof scope (`ci/proof_scope.py`)
 - A skipped proof group counts as passing, so what decides the scope is a merge gate. It takes no input but the
-  event, the ref and the git graph: no dispatch input, no text from a PR or comment. A dispatch is scoped only on a
-  `switchboard/candidate-*` ref (the range merge-base(HEAD's two parents)..HEAD, the merged tree itself, so extra
-  content pushed there with the right parents is still compared) or an `*/integrate-*` ref (as its push); trunk,
-  any other ref, a candidate that is not a two-parent merge, or any git failure runs the whole proof. The switch
-  merges on a candidate only when its parents are exactly the PR's head and trunk (`switch.py read_candidate`).
-  A path where something an outsider writes can narrow the scope is P1.
+  event, the ref and the git graph: no dispatch input, no text from a PR or comment. A dispatch is scoped only on an
+  `*/integrate-*` ref, by the same range as that branch's push (merge-base(trunk, HEAD)..HEAD); trunk, any other
+  ref or any git failure runs the whole proof. The switch reads a head's newest proof run by its sha alone
+  (`switch.py head_runs`), whatever ref it ran on, so a ref name must never pick a narrower range than the push's:
+  a `switchboard/candidate-*` ref did (merge-base(HEAD's two parents)..HEAD) until the switch stopped making
+  candidates and with them its check of those parents. A path where something an outsider writes can narrow the
+  scope is P1.
 
 ### APK signing
 - `SCRAPERX_APK_KEYSTORE_B64` and `SCRAPERX_APK_KEYSTORE_PASSWORD` are used only in the signing
