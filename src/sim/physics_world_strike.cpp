@@ -1,8 +1,10 @@
 // The player's strike (the Action button's "punch"): wind-up, a short reach
-// in which the fist can land on her, then the recoil. A landing is a force
-// on her body at the fist, held over kStrikeContactTicks and drawn from his
-// strike limits (player_strike_limits.hpp), with the equal force back on
-// him. Nothing here writes a velocity or a position.
+// in which the fist can land on her, then the recoil. A landing is his fist
+// or foot meeting a part of her body (J-060: limb_contact, her drawn rig's
+// segments, Matron::strike_parts), and a force on her body at that contact,
+// held over kStrikeContactTicks and drawn from his strike limits
+// (player_strike_limits.hpp), with the equal force back on him at the same
+// point. Nothing here writes a velocity or a position.
 #include "physics_world.hpp"
 #include "matron_effort.hpp"
 #include "player_strike_limits.hpp"
@@ -18,6 +20,7 @@
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Collision/TransformedShape.h>
 
 #include <algorithm>
 #include <cmath>
@@ -86,11 +89,6 @@ int move_contact_ticks(const std::uint8_t move) noexcept {
     return move == 1 ? kSweepContactTicks : (move == 2 ? kKickContactTicks : (move == 3 ? kJabContactTicks : (move == 4 ? kCrossContactTicks : kStrikeContactTicks)));
 }
 
-// The nearest point on her upright capsule's axis to `p`.
-JPH::RVec3 axis_point(const JPH::RVec3 center, const float half, const JPH::RVec3 p) noexcept {
-    const double y = std::clamp(p.GetY(), center.GetY() - half, center.GetY() + half);
-    return JPH::RVec3(center.GetX(), y, center.GetZ());
-}
 double c_feet(const JPH::BodyInterface &bodies, const JPH::BodyID her) noexcept {
     return bodies.GetPosition(her).GetY() - Matron::kHalfHeight - Matron::kRadius;
 }
@@ -121,6 +119,71 @@ bool Simulation::PhysicsWorld::fist_path_clear(const JPH::RVec3 from, const JPH:
     return !hit.HadHit();
 }
 
+// J-060: his limb, a sphere of `radius` swept along its way from `from` to
+// `to`, meets a part of her before anything else. Her parts (her drawn rig's
+// segments for the stance she is in, rigid on her body, turned by her yaw:
+// Matron::strike_parts) are cast at where her body is now; steel or stock
+// met at or before that part takes the blow instead (her body's own
+// capsule, his and her hands are not in the way: her parts are her body).
+// The contact: the point on her part, its outward normal (the reverse of the
+// cast's axis into it), and the part's region. A near miss meets nothing; a
+// blow through her arm's place meets her arm first.
+bool Simulation::PhysicsWorld::limb_contact(const JPH::RVec3 from, const JPH::RVec3 to, const float radius,
+                                            JPH::RVec3 *point, JPH::Vec3 *normal,
+                                            Matron::PartRegion *region) const noexcept {
+    const JPH::BodyID her = matron_->body();
+    const JPH::Shape *parts = matron_->strike_parts();
+    const JPH::Vec3 span(to - from);
+    if (her.IsInvalid() || parts == nullptr || span.LengthSq() < 1.0e-6F) {
+        return false;
+    }
+    const JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
+    if (!bodies.IsAdded(her)) {
+        return false;
+    }
+    JPH::SphereShape limb(radius);
+    limb.SetEmbedded();
+    const JPH::RShapeCast cast(&limb, JPH::Vec3::sReplicate(1.0F), JPH::RMat44::sTranslation(from), span);
+    const JPH::ShapeCastSettings settings;
+    // Her parts where her body is: their frame is her middle (her body's
+    // origin), turned by her yaw; the compound's own centre of mass is where
+    // Jolt places it.
+    const JPH::Quat turn = matron_->strike_parts_rotation();
+    const JPH::TransformedShape on_her(bodies.GetPosition(her) + turn * parts->GetCenterOfMass(), turn, parts, her);
+    JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> part;
+    on_her.CastShape(cast, settings, from, part);
+    if (!part.HadHit()) {
+        return false;
+    }
+    JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> steel;
+    JPH::IgnoreMultipleBodiesFilter ignore;
+    ignore.Reserve(4);
+    ignore.IgnoreBody(player_id_);
+    ignore.IgnoreBody(her);
+    if (!hand_id_.IsInvalid()) {
+        ignore.IgnoreBody(hand_id_);
+    }
+    if (!hand2_id_.IsInvalid()) {
+        ignore.IgnoreBody(hand2_id_);
+    }
+    physics_system_.GetNarrowPhaseQuery().CastShape(cast, settings, from, steel, {}, {}, ignore);
+    if (steel.HadHit() && steel.mHit.mFraction <= part.mHit.mFraction) {
+        return false;
+    }
+    const JPH::Vec3 axis = part.mHit.mPenetrationAxis;
+    const JPH::Vec3 into = axis.LengthSq() > 1.0e-12F ? axis.Normalized() : span.Normalized();
+    if (point != nullptr) {
+        *point = from + JPH::RVec3(part.mHit.mContactPointOn2);
+    }
+    if (normal != nullptr) {
+        *normal = -into;
+    }
+    if (region != nullptr) {
+        *region = matron_->strike_part_region(part.mHit.mSubShapeID2);
+    }
+    return true;
+}
+
 // The fist he can throw with: the right, else the left; none when each is
 // torn off or broken (a broken arm is out of use, held across the belly).
 bool Simulation::PhysicsWorld::fist_usable(const int side) const noexcept {
@@ -131,25 +194,20 @@ int Simulation::PhysicsWorld::strike_arm() const noexcept {
     return fist_usable(1) ? 1 : (fist_usable(0) ? 0 : -1);
 }
 
-// A punch thrown now along `line` from his chest would land on her (`c` her
-// body's middle): the reach as strike_step sweeps it, the fist within her
-// capsule and its way clear of steel. What the offer of a free punch asks.
+// A punch thrown now along `line` from his chest would land on her: the
+// fist swept over its reach as strike_step sweeps it meets a part of her
+// before any steel (limb_contact). What the offer of a free punch asks.
 bool Simulation::PhysicsWorld::strike_would_land(const JPH::RVec3 chest, const JPH::Vec3 line,
                                                  const JPH::RVec3 c) const noexcept {
-    for (int t = 0; t < 3; ++t) {
-        const JPH::RVec3 fist = chest + line * (kStrikeReachM * static_cast<float>(t + 1) / 3.0F);
-        if (JPH::Vec3(fist - axis_point(c, Matron::kHalfHeight, fist)).Length() <= Matron::kRadius + kStrikeFistRadiusM) {
-            return fist_path_clear(chest, fist);
-        }
-    }
-    return false;
+    (void)c;
+    return limb_contact(chest, chest + line * kStrikeReachM, kStrikeFistRadiusM, nullptr, nullptr, nullptr);
 }
 
-// A sweep thrown now would land on her ankle (`c` her body's middle): the
-// gap between the bodies' surfaces within its reach, her ankle within a
-// leg's arc of his foot, and the way from his foot to her ankle clear of
-// steel, so a low rail, a platform's side or a bar takes it first, as a
-// post takes a punch. One helper for both the offer and the contact, so
+// A sweep thrown now would land on her leg (`c` her body's middle): her
+// ankle within a leg's arc of his foot, and his foot swept along the deck
+// toward her over its reach meets her leg before any steel (limb_contact),
+// so a low rail, a platform's side or a bar takes it first, as a post takes
+// a punch. One helper for both the offer and the contact, so
 // the two can never disagree about the geometry: the offer's height check
 // alone never guarded the contact, because a press only needs can_start.
 // His foot is his body's centre less its capsule's total half-height
@@ -167,9 +225,6 @@ bool Simulation::PhysicsWorld::sweep_land_point(const JPH::RVec3 at, const JPH::
         return false;
     }
     const JPH::Vec3 dir = to / d;
-    if (d - Matron::kRadius - kPlayerRadius > kSweepGapM) {
-        return false;
-    }
     // His foot: his body's centre less its capsule's total half-height
     // (crouched, the short capsule: the centre drops with it, so the soles
     // stay where they are).
@@ -178,20 +233,16 @@ bool Simulation::PhysicsWorld::sweep_land_point(const JPH::RVec3 at, const JPH::
     if (std::abs((ankle_y - foot_y) - kSweepAnkleUpM) > kSweepAnkleTolM) {
         return false;
     }
+    // J-060: the foot swept along the deck toward her, from his side, as far
+    // as the leg reaches (kSweepGapM past his body) and never past her
+    // middle: it lands where it meets her leg, not at a point set on her.
     const JPH::RVec3 from(at.GetX() + dir.GetX() * kPlayerRadius, foot_y + kSweepFootClearM,
                           at.GetZ() + dir.GetZ() * kPlayerRadius);
-    const JPH::RVec3 ankle(c.GetX() - dir.GetX() * Matron::kRadius, ankle_y,
-                           c.GetZ() - dir.GetZ() * Matron::kRadius);
-    if (!fist_path_clear(from, ankle)) {
+    const float run = std::min(d - kPlayerRadius, kSweepGapM + Matron::kRadius);
+    if (run <= 0.0F) {
         return false;
     }
-    if (point != nullptr) {
-        *point = ankle;
-    }
-    if (normal != nullptr) {
-        *normal = -dir;
-    }
-    return true;
+    return limb_contact(from, from + dir * run, kStrikeFistRadiusM, point, normal, nullptr);
 }
 
 // A sweep thrown now would land on her ankle: what the offer of a sweep asks.
@@ -200,17 +251,12 @@ bool Simulation::PhysicsWorld::sweep_would_land(const JPH::RVec3 at, const JPH::
     return sweep_land_point(at, facing, c, nullptr, nullptr);
 }
 
-// A kick thrown now would land on her: the foot's reach as strike_step
-// sweeps it, within her capsule, its way clear (the punch's path check).
+// A kick thrown now would land on her: the foot swept over its reach as
+// strike_step sweeps it meets a part of her before any steel (limb_contact).
 bool Simulation::PhysicsWorld::kick_would_land(const JPH::RVec3 chest, const JPH::Vec3 facing,
                                                const JPH::RVec3 c) const noexcept {
-    for (int t = 0; t < 3; ++t) {
-        const JPH::RVec3 foot = chest + facing * (kKickReachM * static_cast<float>(t + 1) / 3.0F);
-        if (JPH::Vec3(foot - axis_point(c, Matron::kHalfHeight, foot)).Length() <= Matron::kRadius + kKickFootRadiusM) {
-            return fist_path_clear(chest, foot);
-        }
-    }
-    return false;
+    (void)c;
+    return limb_contact(chest, chest + facing * kKickReachM, kKickFootRadiusM, nullptr, nullptr, nullptr);
 }
 
 // His hands on a machine's controls, its seat or its line: no punch from there.
@@ -387,57 +433,48 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     if (strike_phase_ == StrikePhase::Reach) {
         if (!strike_landed_ && her_here && !matron_->down()) {
             const JPH::RVec3 c = bodies.GetPosition(her);
+            // J-060: a landing is the limb meeting a part of her (limb_contact):
+            // the contact's point, its normal and the part met.
+            JPH::RVec3 point;
+            JPH::Vec3 normal;
+            Matron::PartRegion part = Matron::PartRegion::Trunk;
+            JPH::Vec3 travel = facing;   // the way the limb is driven
+            bool met = false;
             if (strike_move_ == 1) {
-                // The sweep lands on her ankle: the same geometry the
-                // offer asked, re-checked at contact (her ankle within
-                // his foot's arc, the way from his foot clear).
-                JPH::RVec3 point;
-                JPH::Vec3 normal;
-                if (sweep_land_point(at, facing, c, &point, &normal)) {
-                    strike_landed_ = true;
-                    strike_contact_left_ = move_contact_ticks(strike_move_);
-                    strike_normal_ = normal;
-                    strike_point_ = point;
-                    strike_impulse_ns_ = 0.0F;
-                    ++strike_hit_count_;
-                }
+                // The sweep lands on her leg: the same geometry the offer
+                // asked, re-checked at contact (her ankle within his foot's
+                // arc, his foot swept toward her meeting her leg first).
+                met = sweep_land_point(at, facing, c, &point, &normal);
+                part = Matron::PartRegion::Leg;
+                const JPH::Vec3 flat(static_cast<float>(c.GetX() - at.GetX()), 0.0F,
+                                     static_cast<float>(c.GetZ() - at.GetZ()));
+                travel = flat.LengthSq() > 1.0e-6F ? flat.Normalized() : facing;
             } else if (strike_move_ == 2) {
-                // The kick lands on her capsule like a punch's fist, at
-                // the foot's longer reach: the offer's geometry, re-checked.
+                // The kick: the foot swept out at the leg's longer reach.
                 const float out = kKickReachM * std::min(1.0F, static_cast<float>(strike_ticks_ + 1) / 3.0F);
-                const JPH::RVec3 foot = chest + facing * out;
-                const JPH::RVec3 q = axis_point(c, Matron::kHalfHeight, foot);
-                const JPH::Vec3 off(foot - q);
-                if (off.Length() <= Matron::kRadius + kKickFootRadiusM && fist_path_clear(chest, foot)) {
-                    strike_landed_ = true;
-                    strike_contact_left_ = move_contact_ticks(strike_move_);
-                    const float ol = off.Length();
-                    strike_normal_ = ol > 1.0e-4F ? off / ol : -facing;
-                    strike_point_ = q + strike_normal_ * Matron::kRadius;
-                    strike_impulse_ns_ = 0.0F;
-                    ++strike_hit_count_;
-                }
+                met = limb_contact(chest, chest + facing * out, kKickFootRadiusM, &point, &normal, &part);
             } else {
-                // Hung in her hand his arm swings at her (the view turns with his
-                // body there, not with his facing); on his feet, along his facing.
+                // Hung in her hand his arm swings at her, at the nearest part of
+                // her (the view turns with his body there, not with his
+                // facing); on his feet, along his facing.
                 JPH::Vec3 line = facing;
                 if (strike_in_hand_) {
-                    const JPH::Vec3 to(axis_point(c, Matron::kHalfHeight, chest) - chest);
+                    const JPH::Vec3 to(matron_->strike_aim(chest) - chest);
                     line = to.LengthSq() > 1.0e-6F ? to.Normalized() : facing;
                 }
                 const float out = kStrikeReachM * std::min(1.0F, static_cast<float>(strike_ticks_ + 1) / 3.0F);
-                const JPH::RVec3 fist = chest + line * out;
-                const JPH::RVec3 q = axis_point(c, Matron::kHalfHeight, fist);
-                const JPH::Vec3 off(fist - q);
-                if (off.Length() <= Matron::kRadius + kStrikeFistRadiusM && fist_path_clear(chest, fist)) {
-                    strike_landed_ = true;
-                    strike_contact_left_ = move_contact_ticks(strike_move_);
-                    const float ol = off.Length();
-                    strike_normal_ = ol > 1.0e-4F ? off / ol : -facing;
-                    strike_point_ = q + strike_normal_ * Matron::kRadius;
-                    strike_impulse_ns_ = 0.0F;
-                    ++strike_hit_count_;
-                }
+                met = limb_contact(chest, chest + line * out, kStrikeFistRadiusM, &point, &normal, &part);
+                travel = line;
+            }
+            if (met) {
+                strike_landed_ = true;
+                strike_contact_left_ = move_contact_ticks(strike_move_);
+                strike_normal_ = normal;
+                strike_point_ = point;
+                strike_drive_ = travel;
+                strike_part_ = static_cast<std::uint8_t>(part);
+                strike_impulse_ns_ = 0.0F;
+                ++strike_hit_count_;
             }
         }
         if (strike_ticks_ >= move_reach_ticks(strike_move_)) {
@@ -450,21 +487,29 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         // The punch is an arm: its force against the bodies' closing speed,
         // capped by what an arm and trunk can deliver. The sweep and the
         // kick are legs driven through the ground: the spec's force flat.
-        const JPH::Vec3 dir = -strike_normal_;
+        // It acts along the limb's drive (the fist's line, the foot's), held
+        // on her part by the grip of the contact; strike_normal_ is her
+        // part's surface there.
+        const JPH::Vec3 dir = strike_drive_;
         const float closing = std::max(kStrikeMinClosingMps,
                                        (bodies.GetLinearVelocity(player_id_) - bodies.GetLinearVelocity(her)).Dot(dir));
         const float force_n = strike_move_ == 1   ? strike::kPlayerSweepForceN
                               : strike_move_ == 2 ? strike::kPlayerKickForceN
                                                   : std::min(strike::kPlayerStrikeForceN, strike::kPlayerStrikePowerW / closing);
+        // Both bodies take it at the contact: his limb's push on her part,
+        // and her part's push back on his limb (J-060).
         bodies.AddForce(her, dir * force_n, strike_point_, JPH::EActivation::Activate);
-        bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
+        bodies.AddForce(player_id_, -dir * force_n, strike_point_, JPH::EActivation::Activate);
         // J-046 measurement only: his blow, received (not her budget's).
         effort::add_force(effort::Path::Blow, dir * force_n,
                           bodies.GetLinearVelocity(her) - bodies.GetLinearVelocity(player_id_), 0.0F, dir * force_n);
         strike_impulse_ns_ += force_n * dt;
         // Read by her balance as a blow (matron.cpp take_blow).
         const bool low = static_cast<float>(strike_point_.GetY() - c_feet(bodies, her)) < 0.5F;
-        matron_->struck_by_player(dir * (force_n * dt), strike_point_, low);
+        // Her arm in its way took it (J-060): a blow on her arm, not her chest.
+        const bool on_arm = strike_part_ == static_cast<std::uint8_t>(Matron::PartRegion::Forearm) ||
+                            strike_part_ == static_cast<std::uint8_t>(Matron::PartRegion::UpperArm);
+        matron_->struck_by_player(dir * (force_n * dt), strike_point_, low, on_arm);
         --strike_contact_left_;
     }
     if (strike_phase_ == StrikePhase::Recoil && strike_ticks_ >= move_recoil_ticks(strike_move_)) {
@@ -491,6 +536,8 @@ void Simulation::PhysicsWorld::strike_reset() noexcept {
     strike_in_hand_ = false;
     strike_point_ = JPH::RVec3::sZero();
     strike_normal_ = JPH::Vec3::sZero();
+    strike_part_ = 255;
+    strike_drive_ = JPH::Vec3::sZero();
     strike_impulse_ns_ = 0.0F;
     strike_queued_move_ = 0;
     strike_grace_ = 0;
@@ -509,6 +556,7 @@ void Simulation::PhysicsWorld::read_strike_state() noexcept {
     state_.strike_hit_count = strike_hit_count_;
     state_.strike_hit_point = Vector3{strike_point_.GetX(), strike_point_.GetY(), strike_point_.GetZ()};
     state_.strike_hit_normal = Vector3{strike_normal_.GetX(), strike_normal_.GetY(), strike_normal_.GetZ()};
+    state_.strike_part = strike_landed_ || strike_contact_left_ > 0 ? strike_part_ : static_cast<std::uint8_t>(255);
     state_.strike_impulse_ns = strike_impulse_ns_;
 }
 
