@@ -2,7 +2,7 @@
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794611768 (2026-11-13 mail+asks)
+Read through: 1794622612 (2026-11-14 mail+asks)
 ## Now (11-13)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
   take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
