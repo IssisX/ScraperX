@@ -1324,7 +1324,7 @@ void damage_save_bytes_case() {
 // full and bolted, its gate shut, the striker on its stop). Compared with
 // this world's first bodies as many as its own, the save's first two pieces
 // met the striker and the tank, and it was refused.
-void parent_break_save_case() {
+void run_s2_drain_break_save() {
     const std::string prefix = "stock damage, a save from before the S2 drain with a broken crate: ";
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
     (void)s.advance_frame(2.0);  // settle; commits happen
@@ -1866,7 +1866,7 @@ void run_stock_damage() {
     // ---- #469 review: the damage section's bytes, its record size, an older save ----
     damage_save_bytes_case();
     // ---- #466 review: a save from before the S2 drain, with a crate broken ----
-    parent_break_save_case();
+    run_s2_drain_break_save();
 }
 
 // J-074 (#352): the group registers itself beside its function, so no
@@ -1874,4 +1874,4 @@ void run_stock_damage() {
 // 980, look_target 990); the ONLY name stays "stock-damage".
 SCRAPERX_GROUP("stock_damage", 985, run_stock_damage);
 SCRAPERX_SELECT("stock-damage", run_stock_damage);
-SCRAPERX_SELECT("s2-drain-break-save", parent_break_save_case);
+SCRAPERX_SELECT("s2-drain-break-save", run_s2_drain_break_save);
