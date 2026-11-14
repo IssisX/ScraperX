@@ -909,6 +909,25 @@ bool Matron::straight_to(const float fx, const float fz, const float tx, const f
     return true;
 }
 
+bool Matron::on_built_floor(const float x, const float floor_y, const float z) const {
+    // Built steel (static) is his floor there, its top at his floor's height:
+    // not a cage's or a lift's moving floor over the deck (that floor stands
+    // a hand or more over the steel under it).
+    class BuiltOnly final : public BodyFilter {
+    public:
+        bool ShouldCollideLocked(const Body &body) const override { return body.IsStatic() && !body.IsSensor(); }
+    };
+    const BuiltOnly built;
+    constexpr float kOverM = 0.3F;
+    constexpr float kWithinM = 0.15F;
+    RayCastResult down;
+    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(x, floor_y + kOverM, z), Vec3(0.0F, -(kOverM + kWithinM), 0.0F)),
+                                                down, {}, {}, built)) {
+        return false;
+    }
+    return std::abs(floor_y + kOverM - (kOverM + kWithinM) * down.mFraction - floor_y) <= kWithinM;
+}
+
 bool Matron::way_clear(const float fx, const float fz, const float tx, const float tz) const {
     const float dx = tx - fx;
     const float dz = tz - fz;
@@ -3571,13 +3590,17 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // real floor (grid_walk) gives her step: the farthest of its
                 // turns she has straight steel to, held a moment as the
                 // watchdog's sidestep is. A low thing her hips clear (a skid,
-                // a step) is no bar here; nor is the Turn's gap.
+                // a step) is no bar here; nor is the Turn's gap; nor a lead on
+                // a floor that moves (him in a cage or on a lift: she boards
+                // it her own way, over its frame).
                 const float lead_over = lead_floor_ - feet_y;
-                if (sidestep_s_ <= 0.0F && turn_ == Turn::None && !elsewhere && lead_over > -kRoundDropM &&
+                round_rest_s_ = std::max(0.0F, round_rest_s_ - dt);
+                if (round_rest_s_ <= 0.0F && sidestep_s_ <= 0.0F && turn_ == Turn::None && !elsewhere && lead_over > -kRoundDropM &&
                     lead_over <= kStepUpM && distance_xz(ax, az, heard_x_, heard_z_) <= kRoundReachM &&
                     distance_xz(ax, az, wx, wz) > 0.5F &&
                     (!way_clear(ax, az, wx, wz) ||
-                     (!scan_walk && !way_clear(ax, az, heard_x_, heard_z_) && !way_clear(wx, wz, heard_x_, heard_z_)))) {
+                     (!scan_walk && !way_clear(ax, az, heard_x_, heard_z_) && !way_clear(wx, wz, heard_x_, heard_z_))) &&
+                    on_built_floor(heard_x_, lead_floor_, heard_z_)) {
                     const traversal::Ignore ignore = walk_ignore();
                     const std::vector<Vec3> steps =
                         traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
@@ -3600,6 +3623,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                             sidestep_s_ = 0.45F;
                             first = false;
                         }
+                    }
+                    // No way round within her search: her aim stands, and the
+                    // search waits (a search a tick, none found, is her whole
+                    // tick's cost).
+                    if (first) {
+                        round_rest_s_ = kRoundRestS;
                     }
                 }
                 // A hung load she has read the release of (J-100): the way
@@ -4800,6 +4829,7 @@ void Matron::restore(const Saved &saved) {
         stalls_ = step_ups_ = clambers_ = sidesteps_ = reroutes_ = 0;
         clamber_now_ = false;
         sidestep_s_ = 0.0F;
+        round_rest_s_ = 0.0F;
         blocked_.clear();
         crumb_count_ = 0;
         patrol_only_ = false;
