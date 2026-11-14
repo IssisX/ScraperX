@@ -102,6 +102,8 @@ MAX_AUTO_PRS = 10                  # PRs the auto-open opens in one sweep (J-047
 # The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
 # helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
 AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
+AUTO_PR_OLD = dt.timedelta(days=7)   # #350: a head this old, its AUTO-PR-FAILED listed once, is never listed again
+MAX_AUTO_PR_OLD = 500                # such heads kept in the sweep state ("auto_pr_old")
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -130,7 +132,9 @@ MAX_INBOX_KEYS = 600                           # keys kept in the sweep state's 
 # for the sweep state: the relay to the session cuts a comment near 4,000 characters, and the keys were most of it.
 INBOX_HOLD = dt.timedelta(minutes=30)
 INBOX_MAX_CHARS = 3500                         # a comment's whole text, under the relay's cut with room to spare
-PLAN_WAKES = frozenset({"claude", "integrator"})   # a late job's next step owed by these reaches the integrator
+# a late job's next step owed by these reaches the integrator. #350: "switchboard" too: a step the switch owes itself
+# and has not taken (J-049's proof read, J-072's PR open) is the integrator's to fix, and else reached nobody
+PLAN_WAKES = frozenset({"claude", "integrator", "switchboard"})
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
 MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
 MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
@@ -214,6 +218,10 @@ MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a b
 PIPE_HEADER = "Claude (integrator): PIPE ALARM:"
 PIPE_MARK = "<!-- switchboard:pipe-alarm kinds={kinds} -->"
 PIPE_KINDS = re.compile(r"^<!-- switchboard:pipe-alarm kinds=([a-z,]*) -->$", re.MULTILINE)
+# #350: the all-clear when a tripped pipe is healthy again. It starts CLAUDE_TO_MUSE: (the bridge mails only that); its
+# mark keeps it from counting as an ask to Muse (inbound_quiet, the fast sweep's pipe trigger)
+PIPE_OK_HEAD = "CLAUDE_TO_MUSE: PIPE OK on #{board}:"
+PIPE_OK_MARK = "<!-- switchboard:pipe-ok -->"
 PIPE_WAKE_STUCK = dt.timedelta(minutes=20)    # a wake:muse label this old: the bridge's outbound is stuck (it runs every 5 min)
 PIPE_INBOUND_QUIET = dt.timedelta(hours=24)   # no bridge post this long while asks went to Muse: its inbound is stuck
 PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound incident is read; older, it alarms again
@@ -1536,7 +1544,24 @@ class Switch:
                     f"the PR by hand. This sweep's auto-open stopped here.")
         else:
             text = f"the auto-open failed ({why}); the next sweep tries again."
+        state = getattr(self.gh, "state", None)
+        if isinstance(state, dict) and f"{branch}@{sha}" in (state.get("auto_pr_old") or []):
+            return   # #350: an old head listed once already; the open is still tried, only the listing is not
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
+
+    def auto_pr_aged(self, key: str, committed: str) -> None:
+        """#350 (60 of 69 inbox lines in six posts were AUTO-PR-FAILED lines for heads from weeks before, each re-listed
+        once the inbox's ring had lost its key): a head older than AUTO_PR_OLD whose AUTO-PR-FAILED item the inbox has
+        listed is recorded in the sweep state ("auto_pr_old", at most MAX_AUTO_PR_OLD, the heads still live), and is
+        never listed again. Its PR is still opened when it can be (a plan line given later)."""
+        state = getattr(self.gh, "state", None)
+        at = parse_time(committed)
+        if (not isinstance(state, dict) or at is None or self.now - at <= AUTO_PR_OLD
+                or getattr(self.gh, "dry_run", False)):
+            return
+        old = [k for k in state.get("auto_pr_old") or [] if isinstance(k, str)]
+        if key not in old:
+            state["auto_pr_old"] = (old + [key])[-MAX_AUTO_PR_OLD:]
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
         """Open PRs for finished fb-bot/integrate-* and claude/integrate-* heads with no PR yet (J-047).
@@ -1560,6 +1585,7 @@ class Switch:
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget heads gone or moved
             current = {f"{b['name']}@{b['commit']['sha']}" for b in listed}
             state["prior_pr"] = [k for k in state.get("prior_pr") or [] if k in current]
+            state["auto_pr_old"] = [k for k in state.get("auto_pr_old") or [] if k in current][-MAX_AUTO_PR_OLD:]
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
@@ -1586,10 +1612,15 @@ class Switch:
                 if any(ref == branch and sha.startswith(ksha) for ref, ksha in kept):
                     self.out(f"SKIP       {branch} @{sha[:8]}: the plan keeps this head as a record")
                     continue
-                message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
+                commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]
+                message = commit["message"]
                 job = rules.job_of_pr(message) or collab_plan.job_of_branch(branch)   # the Job: line, else the name
                 line = lines.get(collab_plan.plan_job(job, lines)) if job else None
-                if line is None and inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                if inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                    self.auto_pr_aged(key, (commit.get("committer") or {}).get("date") or "")
+                    if line is None:
+                        continue
+                if line is None and key in (state.get("auto_pr_old") or []):
                     continue
                 if line is not None and line.hold:
                     self.out(f"SKIP       {branch} @{sha[:8]} ({job}): the plan holds {line.job}")
@@ -1909,7 +1940,40 @@ class Switch:
                               "One alarm per incident; the switch prints the state every sweep.", "",
                               PIPE_MARK.format(kinds=",".join(new))] + marks)
             self.gh.comment(board, body, f"pipe alarm ({', '.join(new)}) on #{board}")
+        self.pipe_all_clear(board, [k for k, on in (("version", version), ("outbound", stuck), ("inbound", quiet)) if on],
+                            getattr(self, "pipe_last_post", None))
         return found
+
+    def pipe_all_clear(self, board: int, kinds: list[str], last_post: dt.datetime | None) -> None:
+        """#350 (Muse believed the bridge down for 36 h after it recovered: an alarm had no all-clear). The sweep state
+        keeps each finding kind the pipe tripped on and when (gh.state["pipe_trip"]); the first pass that finds none
+        posts one PIPE OK on the board, labeled wake:muse so the bridge mails it, and only then clears it (a failed
+        write posts it again next pass). An inbound trip ends only on a bridge post newer than it (`last_post`, the
+        newest one inbound_quiet read): its finding also ends when the day's asks age out, which proves nothing. A dry
+        run writes no state. Reads nothing; two writes, only on recovery."""
+        state = getattr(self.gh, "state", None)
+        if not isinstance(state, dict) or getattr(self.gh, "dry_run", False):
+            return
+        box = state.get("pipe_trip") if isinstance(state.get("pipe_trip"), dict) else {}
+        trips = {k: t for k, v in box.items() if isinstance(k, str) and (t := parse_time(str(v or ""))) is not None}
+        if kinds:
+            state["pipe_trip"] = {k: iso_z(t) for k, t in {**{k: self.now for k in kinds}, **trips}.items()}
+            return
+        if not trips:
+            return
+        if "inbound" in trips and (last_post is None or last_post <= trips["inbound"]):
+            self.out("PIPE        no finding now, but no bridge post since the inbound alarm: no all-clear yet")
+            return
+        since = min(trips.values())
+        body = "\n".join([f"{PIPE_OK_HEAD.format(board=board)} the Muse mail bridge works again ({central(self.now)}).",
+                          "", f"The PIPE ALARM raised {central(since)} is over: this pass found none of its findings "
+                          "(the switch checks the bridge every full sweep). Nothing to do, no reply needed.", "",
+                          PIPE_OK_MARK])
+        self.gh.comment(board, body, f"pipe all-clear on #{board}")
+        self.gh.write("POST", f"repos/{self.gh.repo}/issues/{board}/labels", {"labels": [MUSE_LABEL]},
+                      f"label #{board} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+        self.out(f"PIPE OK     the alarm raised {central(since)} is over: all-clear posted on #{board}")
+        state.pop("pipe_trip", None)
 
     def pipe_ripen(self, at: dt.datetime) -> None:
         """J-072: the next time a clock alone changes pipe_health's findings; a fast sweep runs it then."""
@@ -2004,11 +2068,11 @@ class Switch:
             body = (c.get("body") or "").lstrip()
             if body.startswith(BRIDGE_POST):
                 posts.append(at)
-            elif body.startswith("CLAUDE_TO_MUSE:"):
+            elif body.startswith("CLAUDE_TO_MUSE:") and PIPE_OK_MARK not in body:   # an all-clear asks nothing
                 newest_ask = max(at, newest_ask or at)
                 if at >= start:
                     asks += 1
-        last_post = max(posts) if posts else None
+        last_post = self.pipe_last_post = max(posts) if posts else None   # #350: pipe_all_clear reads it
         if last_post is not None and newest_ask is not None and newest_ask > last_post:
             self.pipe_ripen(last_post + PIPE_INBOUND_QUIET + dt.timedelta(seconds=1))   # quiet a day after the last post
         if not asks or (last_post is not None and last_post >= start):
@@ -2159,6 +2223,9 @@ class Switch:
         changes = machine.labels(model, reads["issues"], aliases)
         for number, add, remove in changes[:MAX_PLAN_LINES]:
             self.out(f"PLAN-LABEL  #{number} add {', '.join(add) or '-'}; remove {', '.join(remove) or '-'}")
+        titles = machine.bad_titles(model, reads["issues"])[:MAX_PLAN_LINES]
+        for job, number, title in titles:
+            self.out(f"PLAN-TITLE  {job} #{number} {plain(untrusted(title, 120))}: not `{job} ` first")
         notices, receipts = [], []
         notes = self.plan_notice_comments(model, reads)
         vers = machine.versions(model)
@@ -2192,6 +2259,13 @@ class Switch:
         self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
                                 for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
         self.plan_items += self.muse_quiet(rows, reads, steered)   # #350: after the cut, so late lines never crowd it out
+        # #350: a job issue the mail bridge cannot find by its title, once per title (its head); the integrator renames it
+        self.plan_items += tuple(InboxItem(
+            "PLAN", f"#{number}", hashlib.sha256(title.encode()).hexdigest()[:16],
+            f"PLAN {job}: #{number} is titled {no_verdict(untrusted(title, 120))}, not `{job} ` first (the id, "
+            f"then a space), so the mail bridge files {job}'s mail on the board, not on #{number}: rename #{number}",
+            "integrator")
+            for job, number, title in titles)
         for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
             c = machine.notice_comment(notes, owner, ver)
             if c and c.get("id"):
@@ -3689,7 +3763,8 @@ def sweep_delta(sw, prs: list[dict], state: dict, running: dict[str, str] | None
     recs = state.get("prs") or {}
     auto = {b for b in finished if b.startswith(AUTO_PR_PREFIX)}
     active = finished | {r.get("head_branch") or "" for r in runs if (parse_time(r.get("created_at") or "") or since) >= since}
-    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST)) for c in comments)
+    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST))
+               and PIPE_OK_MARK not in (c.get("body") or "") for c in comments)   # #350: the all-clear asks nothing
     mail: set[str] = set()
     for c in comments:
         body = (c.get("body") or "").lstrip()

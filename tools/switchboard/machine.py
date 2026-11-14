@@ -163,6 +163,7 @@ class Work:
     why: str = ""
     at: dt.datetime | None = None    # when the head got where it is: pushed, proven or reviewed
     pr: int = 0                      # its open PR, 0 for none
+    draft: bool = False              # that PR is a draft (#350: a held job whose only PRs are drafts reads as held)
 
     @property
     def state(self) -> str:
@@ -330,8 +331,11 @@ def _step(ev: Evidence, ahead: str) -> Step:
     if ev.closed:
         return _row(ev, "closed")
     prs = [w for w in ev.works if w.pr]
-    if prs:   # an open PR lands on its own proof and reviews, held or not
-        w = least(prs if ln.hold else ev.works)
+    if prs and not (ln.hold and all(w.draft for w in prs)):
+        # an open PR lands on its own proof and reviews, held or not; the job is as far as its least advanced PR, and a
+        # side head with no PR never shadows one (#350: J-014 #491, J-040 #472 read red from a dead side branch). A
+        # held job whose only PRs are drafts is held (J-015, draft #466): a draft lands on nothing until it is ready
+        w = least(prs)
         return _row(ev, w.state, w.gate, w.why, w.at, work=w)
     if ev.merged_at and not ev.heads:
         return _row(ev, "landed", since=ev.merged_at)
@@ -466,6 +470,20 @@ def job_issues(issues) -> dict[str, list[dict]]:
     return titled
 
 
+def bad_titles(model: P.Plan, issues) -> list[tuple[str, int, str]]:
+    """#350: (job, issue, title) for each plan line whose own open issue is titled with the job but not as `J-NNN `
+    (the id, then a space): the mail bridge files a mail on the job issue whose title starts so (muse_bridge.gs
+    target_), so a mail naming such a job lands on the board, not on its thread."""
+    by_number = {int(it["number"]): it for it in issues or [] if it.get("number") and it.get("pull_request") is None
+                 and it.get("state", "open") == "open"}
+    out = []
+    for ln in model.lines:
+        title = (by_number.get(ln.issue) or {}).get("title") or ""
+        if rules.job_of_title(title) == ln.job and not title.startswith(f"{ln.job} "):
+            out.append((ln.job, ln.issue, title))
+    return out
+
+
 def when(stamp) -> dt.datetime | None:
     if isinstance(stamp, dt.datetime):
         return stamp
@@ -489,7 +507,7 @@ def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *,
     if "eyes" in f.needs:
         fixes += rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "eye")
     pushed, proven = when(f.head_committed_at), when(proof_at) or when(f.head_committed_at)
-    base = dict(ref=f.head_ref, sha=f.head_sha, proof=f.proof, pr=f.number)
+    base = dict(ref=f.head_ref, sha=f.head_sha, proof=f.proof, pr=f.number, draft=bool(f.draft))
     reasons = "; ".join(d.reasons)
     if f.base_ref != rules.TRUNK:
         return Work(**base, gate="off-trunk", why=f"it is stacked on {f.base_ref}", at=pushed)
@@ -929,7 +947,8 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
             ref, sha = (pr.get("head") or {}).get("ref") or "", (pr.get("head") or {}).get("sha") or ""
             refs.add(ref)
             if owns(ln.owner, ref):
-                ws.append(works.get(sha) or Work(ref, sha, gate="unread", pr=int(pr.get("number") or 0)))
+                w = works.get(sha) or Work(ref, sha, gate="unread", pr=int(pr.get("number") or 0))
+                ws.append(replace(w, draft=bool(pr.get("draft"))) if pr.get("draft") is not None else w)
         stacked = {w.why for w in ws if w.gate == "stacked"}   # the branch a FIX's answer sits on is that PR's step
         for h in mine:   # and one per integrate head with no PR
             if not h.wip and h.ref not in refs and h.ref not in stacked:
