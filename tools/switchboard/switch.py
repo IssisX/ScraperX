@@ -161,7 +161,7 @@ TRUNK_SKIPPED_KEPT = 50
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
-INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "MERGED", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "MERGED", "TO-CLAUDE", "TAKE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
@@ -248,6 +248,15 @@ MUSE_QUIET_AGAIN = dt.timedelta(hours=2)
 # #350 (J-124, J-078): a TO-CLAUDE ask that names a job stays open in the sweep state until a later Claude comment or
 # mail names the job, and is listed again at most once per ASK_AGAIN while it is open. At most MAX_OPEN_ASKS kept.
 ASK_AGAIN = dt.timedelta(hours=1)          # Cory 11-14: an ask to Claude is answered within the hour
+# J-072 (Cory 11-14: J-100, J-014 and J-053 failed twice in Muse's hands and the integrator missed all three): a Muse
+# job whose PR went red on two heads since its last green, on a same failure (same_failure) trunk's red proof does
+# not share, is one TAKE: Muse is mailed once to push what it has and stop (work/tasks/muse.md), and the integrator
+# is told at once, again at most once per ASK_AGAIN, until work/plan.md gives the job to claude. The sweep state
+# keeps each such branch's red heads since its last green ("red_heads") and the open takes ("takes").
+TAKE_HEADS_KEPT = 5
+MAX_TAKE_BRANCHES = 50
+MAX_TAKES = 50
+NUMBERS = re.compile(r"\d+(?:\.\d+)?")
 MAX_OPEN_ASKS = 50
 ASK_FIELDS = ("job", "target", "at", "listed", "said", "url")   # one open ask in the sweep state, every field a string
 JOB_NAMED = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")   # machine.JOB_ID
@@ -401,6 +410,21 @@ def hours(span: dt.timedelta) -> str:
 
 def red_jobs(proof: str) -> list[str]:
     return proof[len("red: "):].split(", ") if proof.startswith("red: ") else []
+
+
+def same_failure(test: str) -> str:
+    """J-072: a failing test as a TAKE compares it, "<job>: <FAIL line>" (red_tests) with its numbers cut, so the
+    same check failing by another measured amount on the next head is the same failure."""
+    job, _, line = test.partition(": ")
+    return f"{job}: {NUMBERS.sub('#', line)}"
+
+
+def take_mail(take: dict) -> str:
+    """J-072: Muse's TAKE line, plain words (work/tasks/mail-to-muse.md: no order, no override, no urgency)."""
+    return (f"the proof went red on two heads since its last green, on the same failing tests, listed below. By the rule in "
+            f"work/tasks/muse.md, a fix that fails twice on the same failure goes to Claude's helpers: please push what "
+            f"you have as it is, mail MUSE_TO_CLAUDE that you stopped {take['job']}, and take your next lane. The "
+            f"plan's next version names the job's new owner.")
 
 
 # J-104: a red notice names the failing tests, read from the failed jobs' logs (Muse's #108 answer: the check
@@ -677,6 +701,8 @@ def inbox_class(it: InboxItem) -> str:
         return "ride"
     if it.kind == "PLAN":
         return "hold" if it.dest in PLAN_WAKES else "ride"
+    if it.kind == "TAKE":   # J-072: a Muse job failed twice on the same failure is Claude's to take now
+        return "now"
     if it.kind == "MERGED":   # J-072: the integrator's own merge wakes it at once; Muse's rides the next post
         return "ride" if it.dest == "muse" else "now"
     return "hold"   # Muse's FIX-STUCK and RED-TWICE too: a fix failed twice is the integrator's to route (CLAUDE.md)
@@ -1676,6 +1702,98 @@ class Switch:
         state = getattr(self.gh, "state", None)
         return held_of(state.get("merged"), frozenset({"now", "ride"})) if isinstance(state, dict) else ()
 
+    def plan_owner(self, job: str) -> str | None:
+        """J-072: the job's owner in work/plan.md, or None when the plan cannot be read (a TAKE then stays open)."""
+        memo = self.__dict__.setdefault("_plan_owner", {})
+        if "model" not in memo:
+            try:
+                memo["model"] = self.read_plan().by_job()
+            except (AttributeError, RuntimeError) as err:
+                self.out(f"NOTE        work/plan.md not read for TAKE ({err_text(err)})")
+                memo["model"] = None
+        line = (memo["model"] or {}).get(job)
+        return line.owner if line is not None else None
+
+    def note_red_head(self, f: rules.PrFacts, ctx: dict, rid) -> dict | None:
+        """J-072: a Muse job's PR head, once per sweep. A green (rid None) forgets the branch's reds. A red is kept
+        with its failures (red_tests, read once per head, then from the sweep state); when an earlier red head since
+        the last green shares one that trunk's red proof does not, the job is one open TAKE. Returns the job's open
+        TAKE, or None. Never in a dry run."""
+        state = getattr(self.gh, "state", None)
+        job = ctx.get("job") or ""
+        if not job or not isinstance(state, dict) or getattr(self.gh, "dry_run", False):
+            return None
+        takes = state["takes"] if isinstance(state.get("takes"), dict) else {}
+        memo = self.__dict__.setdefault("_red_noted", {})
+        if (f.head_ref, f.head_sha) in memo:
+            return memo[(f.head_ref, f.head_sha)]
+        heads = state["red_heads"] if isinstance(state.get("red_heads"), dict) else {}
+        state["red_heads"], state["takes"] = heads, takes
+        memo[(f.head_ref, f.head_sha)] = takes.get(job)
+        if rid is None:
+            heads.pop(f.head_ref, None)
+            return None
+        kept = [e for e in heads.get(f.head_ref) or [] if isinstance(e, dict) and isinstance(e.get("tests"), list)]
+        if any(e.get("head") == f.head_sha for e in kept):
+            return takes.get(job)
+        tests = self.red_tests(rid)
+        if any(t.endswith(f": {LOG_UNREAD}") for t in tests):
+            return takes.get(job)   # a log unread: this head is read again next sweep
+        failures = {same_failure(t) for t in tests} or {f"{j}: red" for j in red_jobs(f.proof)}
+        trunk = state["trunk_proof"] if isinstance(state.get("trunk_proof"), dict) else {}   # as trunk_proof keeps it
+        if str(trunk.get("state", "")).startswith("red"):   # a failure trunk shares is not this job's
+            failures -= {same_failure(t) for t in self.red_tests(trunk.get("run"))} | \
+                {f"{j}: red" for j in red_jobs(trunk["state"])}
+        shared = sorted({t for e in kept for t in e["tests"]} & failures)
+        heads.pop(f.head_ref, None)   # newest last, so the oldest branch goes first past the cap
+        heads[f.head_ref] = (kept + [{"head": f.head_sha, "run": rid, "tests": sorted(failures)[:20]}])[-TAKE_HEADS_KEPT:]
+        while len(heads) > MAX_TAKE_BRANCHES:
+            heads.pop(next(iter(heads)))
+        if shared and job not in takes and self.plan_owner(job) != "claude":
+            takes[job] = {"job": job, "pr": f.number, "branch": f.head_ref, "head": f.head_sha,
+                          "tests": [t[:MAX_FAIL_CHARS] for t in shared[:MAX_FAIL_LINES]], "at": iso_z(self.now),
+                          "listed": ""}
+            while len(takes) > MAX_TAKES:
+                takes.pop(next(iter(takes)))
+            self.out(f"TAKE        {job} #{f.number}: red twice on the same failure ({len(shared)} test line(s))")
+        memo[(f.head_ref, f.head_sha)] = takes.get(job)
+        return takes.get(job)
+
+    def take_items(self) -> list[InboxItem]:
+        """J-072: the integrator's TAKE items: each open take, at once and again at most once per ASK_AGAIN (a new key
+        per listing, the first keeps the bare head), until work/plan.md gives the job to claude, which closes it."""
+        state = getattr(self.gh, "state", None)
+        takes = state.get("takes") if isinstance(state, dict) else None
+        if not isinstance(takes, dict):
+            return []
+        out: list[InboxItem] = []
+        dry = getattr(self.gh, "dry_run", False)
+        for job, rec in list(takes.items()):
+            if not (isinstance(rec, dict) and all(isinstance(rec.get(k), str) for k in ("head", "branch", "listed"))
+                    and isinstance(rec.get("pr"), int) and isinstance(rec.get("tests"), list)):
+                takes.pop(job, None)
+                continue
+            if self.plan_owner(job) == "claude":
+                if not dry:
+                    takes.pop(job, None)
+                    self.out(f"TAKE        {job} closed: work/plan.md gives it to claude")
+                continue
+            last = parse_time(rec["listed"])
+            if last is not None and self.now - last < ASK_AGAIN:
+                continue
+            head = f"{rec['head']}@{iso_z(self.now)}" if last is not None else rec["head"]
+            age = hours(self.now - (parse_time(str(rec.get("at") or "")) or self.now))
+            out.append(InboxItem("TAKE", job, head,
+                                 f"TAKE {job} [#{rec['pr']}](https://github.com/{self.gh.repo}/pull/{rec['pr']}) "
+                                 f"{untrusted(rec['branch'])} head {rec['head'][:8]}: Muse's proof went red on two "
+                                 f"heads on the same failing tests, so Claude takes it (work/tasks/job-routing.md). "
+                                 f"Muse was mailed to push and stop. Give it to claude in work/plan.md and start a "
+                                 f"helper; listed each hour until the plan does (open {age})",
+                                 tests=tuple(str(t) for t in rec["tests"])))
+            if not dry:
+                rec["listed"] = iso_z(self.now)
+        return out
+
     # ---------- auto-open (J-047) ----------
     def prior_pr(self, branch: str, sha: str) -> bool:
         """Has this head of this branch ever been a PR's head (open, closed or merged)? The head filter names the
@@ -2305,6 +2423,7 @@ class Switch:
             items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
             items += self.merged_items()   # J-072: merges no post has listed yet, a quiet or targeted sweep's too
+            items += self.take_items()   # J-072: Muse jobs failed twice on the same failure, until the plan says claude
         if ripe is None:
             audience = ("muse", "both") if prefix else ("claude", "both")
             items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
@@ -2859,10 +2978,16 @@ class Switch:
             rerun = self.outage_rerun(target, where, this) if this else None
             if rerun:
                 out.append(rerun)
+        if f.proof == "green" and owner == "muse":
+            self.note_red_head(f, ctx, None)   # J-072: a green ends the run of reds a TAKE counts
         if d.action == "FIX-CI" and not rerun:
             jobs = red_jobs(f.proof)
             both = "both" if owner == "muse" else "claude"
             rid = (this or {}).get("id") or ctx.get("run_id")   # the head's red proof run, whose logs name its tests
+            take = self.note_red_head(f, ctx, rid) if owner == "muse" else None
+            if take and mine:   # once per job: the key is the head the take was found at
+                out.append(InboxItem("TAKE", target, take["head"], f"TAKE {where}: {plain(take_mail(take))}", "muse",
+                                     tests=tuple(take["tests"])))
             ids = [r["id"] for r in runs_here]
             attempt = int((this or {}).get("run_attempt") or 1)
             if inbox_key(prefix + "RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
