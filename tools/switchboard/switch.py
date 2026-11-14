@@ -2713,8 +2713,9 @@ class Switch:
             if len(waiting) < muse_queue.LOW_UNDER:
                 line = (f"QUEUE-LOW: {len(waiting)} unstarted Muse jobs in work/plan.md (under {muse_queue.LOW_UNDER}). "
                         f"Unstarted: {', '.join(waiting) or 'none'}")
+                # Head = the count and the jobs only: an unrelated plan edit must not list the same low queue again.
                 self.queue_items = (InboxItem("QUEUE-LOW", "work/plan.md",
-                                              model.fingerprint() + ":" + ",".join(waiting), line),)
+                                              f"{len(waiting)}:" + ",".join(waiting), line),)
             return self.queue_items
         text = self.queue_text() if text is None else text
         self.queue_items = ()
