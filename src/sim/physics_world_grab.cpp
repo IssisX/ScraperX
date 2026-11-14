@@ -469,7 +469,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     bodies.AddForce(matron_->body(), -force);
     // S1 measurement only: report the held body's tip every tick. The
     // force above is unchanged; this call writes no force, no velocity.
-    const bool in_her_hands = grip_ != nullptr || hand2_grip_ != nullptr || matron_->regripping();
+    const bool in_her_hands = grip_ != nullptr || hand2_grip_ != nullptr;
     matron_->report_held_load(bodies.GetPosition(matron_->body()), bodies.GetPosition(player_id_),
                               // In either hand (her two-handed beats), or between
                               // grips with the hold going on: held as the
