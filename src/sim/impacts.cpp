@@ -94,8 +94,11 @@ void ImpactLedger::post_step(const std::uint64_t carried) {
             if (speed >= kRunMinMps) {
                 t.rest_ticks = 0;
                 t.peak_ke_j = std::max(t.peak_ke_j, 0.5F * t.mass_kg * speed * speed);
+                if (speed >= kStopArmMps) {
+                    t.ran = true;
+                }
             } else if (++t.rest_ticks == kStopRestTicks) {
-                if (t.peak_ke_j > kSilentJ &&
+                if (t.ran && t.peak_ke_j > kSilentJ &&
                     (t.quiet_ticks <= 0 || t.peak_ke_j >= 2.0F * t.last_energy_j)) {
                     t.quiet_ticks = kQuietTicks;
                     t.last_energy_j = t.peak_ke_j;
@@ -111,6 +114,7 @@ void ImpactLedger::post_step(const std::uint64_t carried) {
                     tick_.push_back(hit);
                 }
                 t.peak_ke_j = 0.0F;
+                t.ran = false;
             }
         }
         if (t.entity == carried || change < kMinChangeMps) {
