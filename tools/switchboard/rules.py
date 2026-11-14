@@ -43,6 +43,7 @@ class Verdict:
     author_login: str    # the GitHub login that posted it
     downgraded: bool     # a FIX or BLOCK without a deterministic repro
     signed: bool = False  # the switch found this automatic review's MAC under SWITCHBOARD_REVIEW_KEY (J-056)
+    receipt: bool = False  # the Codex app's clean receipt (parse_codex_receipt): a LAND only, never clears a FIX
 
 
 @dataclasses.dataclass(frozen=True)
@@ -176,6 +177,27 @@ def parse_codex_state(body: str, created_at: str, author_login: str) -> Verdict 
     if unresolved is None:
         return None
     return Verdict("openai", "Codex", "review", "FIX" if unresolved else "LAND", sha, created_at, author_login, False)
+
+
+_CODEX_RECEIPT = "<!-- codex-review-receipt:v1 -->"
+_CODEX_CLEAN = re.compile(r"^\s*Codex Review:\s*Didn['’]t find any major issues\b", re.MULTILINE)
+_CODEX_REVIEWED = re.compile(r"\*\*Reviewed commit:\*\*\s*`(?P<sha>[0-9a-f]{7,40})`")
+
+
+def parse_codex_receipt(body: str, created_at: str, author_login: str) -> Verdict | None:
+    """The Codex app's receipt comment ("Codex Review: Didn't find any major issues", "Reviewed commit: `<sha>`")
+    -> a LAND on the commit it names (11-12, #343 and #453: a clean pass can come only as a receipt, with no fresh
+    state comment for the head). Only that app's own login, only the clean wording, only one named commit; the
+    LAND counts only where that prefix starts the PR's head (names_head), so a receipt for an older head counts
+    for nothing. It names a 10-character prefix, so it never stands in for a workflow-file PR's whole-sha review
+    (codex_review_on). As a `receipt` it never clears a FIX (open_fixes): the state comment's unresolved findings
+    on the same head still hold the merge (#343 @ b1177151: a clean receipt beside an open P1 thread)."""
+    if author_login.strip().lower() != CODEX_LOGIN or _CODEX_RECEIPT not in body or not _CODEX_CLEAN.search(body):
+        return None
+    shas = {m.group("sha") for m in _CODEX_REVIEWED.finditer(body)}
+    if len(shas) != 1:
+        return None
+    return Verdict("openai", "Codex", "review", "LAND", shas.pop(), created_at, author_login, False, receipt=True)
 
 
 def codex_review_state(body: str, author_login: str) -> dict | None:
@@ -319,7 +341,7 @@ def open_fixes(verdicts: Iterable[Verdict], head_sha: str, head_time: str, kind:
     """
     newest: dict[str, Verdict] = {}
     for v in sorted(verdicts, key=lambda x: x.created_at):
-        if v.kind != kind:
+        if v.kind != kind or v.receipt:   # a clean receipt adds a LAND; only the state comment clears its FIX
             continue
         on_head = names_head(v, head_sha) or (not v.sha and v.created_at >= head_time)
         if on_head and v.verdict in ("LAND", "FIX"):
@@ -350,7 +372,7 @@ def is_codex_app(v: Verdict) -> bool:
 
 def codex_review_on(verdicts: Iterable[Verdict], head_sha: str) -> Verdict | None:
     """The Codex app's newest verdict naming this whole head, or None when it has none."""
-    on_head = [v for v in verdicts if is_codex_app(v) and names_whole_head(v, head_sha)]
+    on_head = [v for v in verdicts if is_codex_app(v) and not v.receipt and names_whole_head(v, head_sha)]
     return max(on_head, key=lambda v: v.created_at) if on_head else None
 
 
@@ -374,13 +396,9 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
     (Cory, 11-04: merging should not need him or the integrator); the eye's LAND on the head when the job
     needs eyes.
 
-    A PR that changes .github/workflows (J-056): the workflow token cannot merge it, so it is HUMAN-MERGE
-    unless `merge_token` (the caller holds SWITCHBOARD_MERGE_TOKEN), `review_key` (it holds
-    SWITCHBOARD_REVIEW_KEY, so it can tell a signed review) and, on top of every gate above, the security pass
-    is clean: the signed automatic Claude review naming all 40 characters of this head exists and is not FIX
-    or BLOCK (a FIX or BLOCK without a repro counts here too). Its cross-vendor LAND must come from a login
-    no agent shares: the Codex app's clean review of the whole head, from a vendor other than the
-    author's. A LAND typed by name (every agent posts as one login) or the API's own LAND does not count.
+    A PR that changes .github/workflows lands like any other PR (SYSTEM_PLAN 4.1, 11-13): the same gates above,
+    then MERGE with the merge token, since GitHub refuses the workflow token there; HUMAN-MERGE only when no
+    merge token is set (`merge_token`). `review_key` is no longer read here (its callers go in the D1 cleanup).
     """
     if pr.base_ref != TRUNK:
         return MergeDecision("SKIP", (f"stacked on {pr.base_ref}, not {TRUNK}",))
@@ -402,8 +420,10 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
     if not lands:
         waits.append(f"no LAND on @{pr.head_sha[:8]} from a vendor other than {author_vendor}")
     if "eyes" in pr.needs:
+        # Any team login's eye LAND naming the head counts, a hand look included, not only the workflow bot's
+        # (SYSTEM_PLAN item 8); parse_verdict already drops a login outside verdict_logins.
         eye_lands = [v for v in pr.verdicts if v.kind == "eye" and v.verdict == "LAND"
-                     and names_head(v, pr.head_sha) and v.author_login == BOT_LOGIN]
+                     and names_head(v, pr.head_sha)]
         if not eye_lands:
             waits.append("needs:eyes and no eye LAND on this head")
     if pr.rule_check_block is None:
@@ -420,43 +440,19 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
         return MergeDecision("WAIT", tuple(waits))
     land_by = lands[-1].who
     if pr.touches_workflows:
-        return workflow_merge(pr, author_vendor, lands, merge_token, review_key)
+        return workflow_merge(pr, lands, merge_token)
     return MergeDecision("MERGE", (f"proof green, LAND by {land_by} on @{pr.head_sha[:8]}",), land_by)
 
 
-def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], merge_token: bool,
-                   review_key: bool = False) -> MergeDecision:
-    """The end of merge_decision for a ready PR that changes .github/workflows (J-056): MERGE with the merge
-    token only after a clean, signed security pass on the head and the Codex app's clean review of it, both
-    naming the whole head sha, else HUMAN-MERGE as before the token, saying why."""
+def workflow_merge(pr: PrFacts, lands: Sequence[Verdict], merge_token: bool) -> MergeDecision:
+    """The end of merge_decision for a ready PR that changes .github/workflows: MERGE with the merge token (the
+    workflow token cannot merge it), else HUMAN-MERGE, saying why. Nothing more than any other PR needs
+    (SYSTEM_PLAN 4.1 and section A, 11-13)."""
     sha, land_by = pr.head_sha[:8], lands[-1].who
     if not merge_token:
         return MergeDecision("HUMAN-MERGE", ("ready, but it changes .github/workflows; the workflow token cannot merge it",), land_by)
-    if not review_key:
-        return MergeDecision("HUMAN-MERGE", ("ready, but it changes .github/workflows: SWITCHBOARD_REVIEW_KEY is not set, "
-                                             "so no automatic review is signed and the security pass cannot be told "
-                                             "from a forged one",), land_by)
-    api = api_review_on(pr.verdicts, pr.head_sha)
-    codex = codex_review_on(pr.verdicts, pr.head_sha)
-    cross = codex is not None and codex.verdict == "LAND" and codex.vendor not in ("unknown", author_vendor)
-    # Cory, 11-10 ("muse"): while Codex cannot review this head (its usage limit), Muse's LAND naming the whole
-    # head stands in for it, beside the security pass. Muse is another vendor; its identity is name-only.
-    muse = None if cross or not pr.codex_failed or author_vendor == "meta" else max(
-        (v for v in pr.verdicts if v.kind == "review" and v.vendor == "meta" and names_whole_head(v, pr.head_sha)),
-        key=lambda v: v.created_at, default=None)
-    if muse is not None and muse.verdict == "LAND":
-        codex, cross = muse, True
-    why = ("no automatic Claude review on this head (the security pass)" if api is None else
-           f"the automatic Claude review on this head is {api.verdict if not api.downgraded else 'FIX or BLOCK'}, "
-           f"not LAND (the security pass)" if api.verdict != "LAND" or api.downgraded else
-           f"no LAND from a vendor other than {author_vendor} by a login no agent shares: the Codex app's clean review "
-           f"of the whole head (a LAND typed by name, or the API's own, does not count here)" +
-           (f"; Codex could not review it, so Muse's LAND by mail (review of #{pr.number} @ {pr.head_sha}: LAND) "
-            f"stands in" if pr.codex_failed and author_vendor != "meta" else "") if not cross else "")
-    if why:
-        return MergeDecision("HUMAN-MERGE", (f"ready, but it changes .github/workflows: {why}",), land_by)
-    return MergeDecision("MERGE", (f"proof green, LAND by {codex.who} and a clean automatic Claude review ({api.verdict}) "
-                                   f"on @{sha}; it changes .github/workflows, so the merge token merges it",), codex.who)
+    return MergeDecision("MERGE", (f"proof green, LAND by {land_by} on @{sha}; it changes .github/workflows, so it "
+                                   f"merges with the merge token",), land_by)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -614,22 +610,41 @@ def eye_overall(judged: Sequence[Mapping], spec_sets: Mapping[str, Mapping], pr_
     return ("LAND" if ok else "FIX"), waived
 
 
+EYE_SET_LINE = re.compile(r"^- (?P<set>[A-Za-z0-9_-]+): (?P<verdict>LAND|FIX)\b", re.MULTILINE)
+
+
+def eye_sets(body: str) -> dict[str, str] | None:
+    """The per-set verdicts the eye's comment lists (switch.eye: "- <set>: LAND|FIX..."), the worst per set, so a
+    line its free text adds can never turn a FIX into a LAND. None when it lists a set as not judged, or none."""
+    if re.search(r"^- sets not judged:", body, re.MULTILINE):
+        return None
+    out: dict[str, str] = {}
+    for m in EYE_SET_LINE.finditer(body):
+        name, verdict = m.group("set"), m.group("verdict")
+        out[name] = "FIX" if "FIX" in (verdict, out.get(name)) else "LAND"
+    return out or None
+
+
+def eye_relook(v: Verdict, body: str, spec_sets: Mapping[str, Mapping], pr_job: str,
+               open_jobs: Iterable[str]) -> Verdict:
+    """The eye's FIX on a head, read again under today's look sets (11-12, #453): when every set it failed is now
+    a known defect of an open job other than this PR's (work/looks/sets.yml changed after the eye looked), it is
+    the eye's LAND, as a fresh look would post (eye_overall), with no paid call. Only the workflow bot's eye FIX
+    with its repro, and every set of today's sets.yml must be in it; anything else is returned as it is."""
+    if v.kind != "eye" or v.verdict != "FIX" or v.author_login != BOT_LOGIN or v.downgraded:
+        return v
+    sets = eye_sets(body)
+    if not sets:
+        return v
+    overall, _ = eye_overall([{"set": k, "verdict": x} for k, x in sets.items()], spec_sets, pr_job, open_jobs)
+    return dataclasses.replace(v, verdict="LAND") if overall == "LAND" else v
+
+
 def needs_eye(pr: PrFacts) -> bool:
     if "eyes" not in pr.needs or pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
     return not any(v.kind == "eye" and names_head(v, pr.head_sha) and v.author_login == BOT_LOGIN
                    for v in pr.verdicts)
-
-
-def needs_security_pass(pr: PrFacts) -> bool:
-    """A green PR that changes .github/workflows, with no open FIX and no signed automatic Claude review on its
-    head (J-056): the switch merges it only after that review, so the ask part runs it even when Codex already
-    reviewed the head and no other review is needed. An unsigned bot review never stands in for it."""
-    if not pr.touches_workflows or pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
-        return False
-    if open_fixes(pr.verdicts, pr.head_sha, pr.head_committed_at, "review"):
-        return False
-    return api_review_on(pr.verdicts, pr.head_sha) is None
 
 
 def extra_owner_labels(labels_in_order: Sequence[str]) -> list[str]:
@@ -651,6 +666,18 @@ def superseded_prs(body: str | None, own: int) -> list[int]:
             if int(n) != own and int(n) not in out:
                 out.append(int(n))
     return out
+
+
+OUTSIDE = frozenset({"NONE", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "MANNEQUIN"})
+
+
+def team_issue(issue: dict) -> bool:
+    """Is this issue the team's? The repo is public: anyone can open an issue titled J-NNN, and a stranger's is
+    not a job (it would be a second issue for a real job, or a job the plan never held). The team's is one a
+    login with write access opened (GitHub's author_association, on every issue it returns) or labeled `job`
+    (a label takes write access to set)."""
+    labels = {(lab.get("name") if isinstance(lab, dict) else lab) for lab in issue.get("labels") or []}
+    return "job" in labels or (issue.get("author_association") or "OWNER") not in OUTSIDE
 
 
 def job_of_title(title: str) -> str:

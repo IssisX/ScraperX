@@ -29,6 +29,7 @@ const PAGE_AUDIO := &"audio"
 const PAGE_LICENCES := &"licences"
 const PAGE_WORK_ID := &"work_id"
 const Licences := preload("res://presentation/ui/licences.gd")
+const PunchList := preload("res://presentation/ui/punch_list.gd")
 const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO]
 
 var settings: SettingsStore
@@ -42,6 +43,12 @@ var _built_for := Vector2.ZERO
 var _side_buttons := {}
 var _page := PAGE_NONE
 var _summary_label: Label
+# The punch list (J-131): the objective lines as the native reads them, in
+# B3 order, at most three -- header plus one row per line, rebuilt by _build
+# and retexted by _refresh_punch_list on every open.
+var _punch_lines: Array = []
+var _punch_header: Label
+var _punch_rows: Array[Label] = []
 var _content: Control
 var _plate: Control
 var _controls_page: Control
@@ -68,13 +75,15 @@ func _ready() -> void:
 	visible = false
 
 
-func open(current_family: int, current_summary: String) -> void:
+func open(current_family: int, current_summary: String, punch_lines: Array = []) -> void:
 	family = current_family
 	summary = current_summary
+	_punch_lines = punch_lines
 	var viewport_size := get_viewport_rect().size
 	if viewport_size != _built_for:
 		_build(viewport_size)
 	_summary_label.text = summary
+	_refresh_punch_list()
 	(_side_buttons[&"restart"] as Button).text = NEW_CLIMB_TEXT
 	_controls_family = _canonical(family)
 	_show_page(PAGE_NONE)
@@ -91,6 +100,30 @@ func close() -> void:
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused != null and is_ancestor_of(focused):
 		focused.release_focus()
+
+
+# Retext the punch-list rows from the lines open() was given: the current
+# line leads with "> ", done lines read DONE in green, open lines OPEN.
+# An empty list hides the whole section.
+func _refresh_punch_list() -> void:
+	if not is_instance_valid(_punch_header):
+		return
+	_punch_header.visible = not _punch_lines.is_empty()
+	for i in _punch_rows.size():
+		var row: Label = _punch_rows[i]
+		if i >= _punch_lines.size():
+			row.visible = false
+			continue
+		var line := _punch_lines[i] as Dictionary
+		if line == null:
+			row.visible = false
+			continue
+		var done := bool(line.get("done", false))
+		var current := bool(line.get("current", false))
+		row.visible = true
+		row.text = ("> " if current else "") + String(line.get("title", "")) + (" - DONE" if done else " - OPEN")
+		row.add_theme_color_override("font_color",
+			UiStyle.SAFE if done else (UiStyle.AMBER if current else UiStyle.PAPER_DIM))
 
 
 func press_resume() -> void:
@@ -195,6 +228,7 @@ func _build(viewport_size: Vector2) -> void:
 	_pages.clear()
 	_page_first.clear()
 	_refreshers.clear()
+	_punch_rows.clear()
 	_built_for = viewport_size
 	_u = UiStyle.unit(self)
 	theme = menu_theme(_u)
@@ -232,6 +266,15 @@ func _build(viewport_size: Vector2) -> void:
 	_summary_label = _label(summary, 22.0, UiStyle.SAFE, UiStyle.font_label())
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_summary_label)
+	# The punch list (J-131): the header and one row per line, at most
+	# three; _refresh_punch_list retexts them on every open.
+	_punch_header = _label("PUNCH LIST", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+	column.add_child(_punch_header)
+	_punch_rows.clear()
+	for i in PunchList.MAX_LINES:
+		var row := _label("", 22.0, UiStyle.PAPER_DIM, UiStyle.font_label())
+		column.add_child(row)
+		_punch_rows.append(row)
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0.0, 36.0 * _u)
 	column.add_child(gap)

@@ -155,10 +155,23 @@ TwinTower::Built TwinTower::build(kit::Kit &kit) {
     // deck, and the hook-climb mantle onto it, cross the front edge, and
     // the rails run along the sides instead.
     for (const float top : kBalconyTops) {
-        box(Vec3(kBalconyWestX, top - 0.3F, face), Vec3(kBalconyEastX, top, kBalconyEdgeZ), Material::Steel);
+        // J-053 (Claude 2026-11-12): the 706 deck's lip is back at its
+        // nominal top — the 0.15 m drop did not close the gap (the pump's
+        // slow rise maxed at 705.105 m, 0.045 m under the lip-catch window
+        // floor, and tracked the lip 1:1, so no drop closes it), so it was
+        // reverted (13:47 ruling). The 706 hook bar was raised +0.20 m
+        // instead (13:47 ruling) and that raise was reverted too (09:25
+        // ruling, 2026-11-13): the raise moves the reel stall 1:1
+        // (704.541 -> 704.743 m at +0.20 m) but leaves the pump's slow
+        // rise where it was (705.105 -> 705.100 m) — the pump max is
+        // capped by something bar-independent, so no raise closes the gap.
+        // The bar is back at top - kBalconyHookBarDropM (705.50 m on the
+        // 706 deck); the rails keep the nominal top.
+        const float lip_top = (top == 706.0F) ? top - kBalcony706LipDropM : top;
+        box(Vec3(kBalconyWestX, lip_top - 0.3F, face), Vec3(kBalconyEastX, lip_top, kBalconyEdgeZ), Material::Steel);
         for (const float x : {kBalconyWestX, kBalconyEastX}) {
             for (const float z : {face, -222.0F, kBalconyEdgeZ})
-                beam(Vec3(x, top, z), Vec3(x, top + 1.1F, z), 0.12F, Material::Galvanised);
+                beam(Vec3(x, lip_top, z), Vec3(x, top + 1.1F, z), 0.12F, Material::Galvanised);
             for (const float rail : kBalconyRailHeights)
                 beam(Vec3(x, top + rail, face), Vec3(x, top + rail, kBalconyEdgeZ), 0.12F, Material::Galvanised);
         }
