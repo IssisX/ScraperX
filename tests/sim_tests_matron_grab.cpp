@@ -198,6 +198,175 @@ void hidden_at(Simulation &s, const double x, const double z, const double her_x
     // Facing away from him: his direction plus half a turn.
     s.debug_face_matron(std::atan2(x - her_x, z - her_z) + 3.141592653589793);
 }
+
+// J-049 (11-14): out of her sight and silent, her mind has only what she sensed.
+void hide_where_last_sensed() {
+    // ---- J-049 (11-14): out of her sight and silent, she goes where she last sensed him ----
+    // She sees him 4 m east of her and goes for him. He slips 4 m west,
+    // behind her back (180 degrees off her sight), out of breath range (2 m)
+    // and silent. For 0.6 s her lead stays the place she saw him and she
+    // goes there, away from him: nothing of his true place reaches her.
+    // Twice, the same.
+    {
+        std::array<double, 4> first{};
+        for (int pass = 0; pass < 2; ++pass) {
+            Simulation s(InitialSpawn::Deck154);
+            caught_at(s, 4.0, -130.0, 0.0, -130.0);
+            bool seen = false;
+            for (int i = 0; i < 3 * 90 && !seen; ++i) {
+                (void)s.set_move_input(0.0, 0.0);
+                tick(s);
+                seen = s.matron_state().sees_player;
+            }
+            require(seen, "matron lost sight: she sees him 4 m east");
+            const auto saw_at = s.snapshot().player_position;
+            const double her_x0 = s.matron_state().position.x;
+            (void)s.debug_launch_player(scraperx::sim::Vector3{-4.0, 154.95, -130.0},
+                                        scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            bool ever_seen = false;
+            bool ever_heard = false;
+            double nearest = 1.0e9;
+            for (int i = 0; i < 54; ++i) {  // 0.6 s
+                (void)s.set_move_input(0.0, 0.0);
+                tick(s);
+                const auto m = s.matron_state();
+                const auto p = s.snapshot().player_position;
+                if (i > 0) {  // the tick of the move itself still reads the old place
+                    ever_seen = ever_seen || m.sees_player;
+                    // Still on the deck at 154.9 (a drop would land loud), and no noise of his to her.
+                    ever_heard = ever_heard || m.noise_heard > 0.0 || p.y < 154.75;
+                    nearest = std::min(nearest, std::hypot(m.position.x - p.x, m.position.z - p.z));
+                }
+            }
+            const auto m = s.matron_state();
+            const auto p = s.snapshot().player_position;
+            const double lead_to_saw = std::hypot(m.lead_x - saw_at.x, m.lead_z - saw_at.z);
+            const double lead_to_him = std::hypot(m.lead_x - p.x, m.lead_z - p.z);
+            std::cout << "  matron lost sight: lead " << lead_to_saw << " m from where she saw him, " << lead_to_him
+                      << " m from him; she went " << m.position.x - her_x0 << " m east, nearest " << nearest
+                      << " m; seen " << ever_seen << " heard " << ever_heard << "\n";
+            require(!ever_seen && !ever_heard && nearest > static_cast<double>(Matron::kBreathM),
+                    "matron lost sight: the setup holds -- unseen, silent on the deck, beyond her breath range");
+            require(m.lead_valid && lead_to_saw < 0.6 && lead_to_him > 3.0,
+                    "matron lost sight: her lead is where she saw him, not where he is");
+            require(m.position.x > her_x0 + 0.2, "matron lost sight: she goes to where she saw him, away from him");
+            const std::array<double, 4> run{m.lead_x, m.lead_z, m.position.x, m.position.z};
+            if (pass == 0) {
+                first = run;
+            } else {
+                require(run == first, "matron lost sight: the same run twice, the same lead and walk (deterministic)");
+            }
+        }
+        std::cout << "PASS scraperx_sim matron lost sight: her lead stays where she saw him\n";
+    }
+    // ---- J-049 (11-14): a dodged reach hands her nothing of his hiding place ----
+    // She sees him 0.8 m east and catches him; her hand goes for his ankle
+    // (Grab, her fingers not yet on him). He slips 4 m west, behind her
+    // back, onto solid deck (no fall, no landing), silent and out of breath
+    // range. Her fingers never touched him:
+    // the place she has is where she last saw him, so her reach, her turn and
+    // her lead stay there. Before this fix the reach handed her his true
+    // place every tick: she turned to him and led straight to him.
+    {
+        std::array<double, 2> first{};
+        for (int pass = 0; pass < 2; ++pass) {
+            Simulation s(InitialSpawn::Deck154);
+            caught_at(s, 0.8, -130.0, 0.0, -130.0);
+            const auto catches = s.matron_state().catches;
+            bool reaching = false;
+            for (int i = 0; i < 3 * 90 && !reaching; ++i) {
+                (void)s.set_move_input(0.0, 0.0);
+                tick(s);
+                reaching = s.matron_state().state == kGrab && s.matron_state().catches > catches;
+            }
+            require(reaching && !s.snapshot().held_by_matron, "matron dodged reach: she catches him; her hand goes");
+            const auto had_at = s.snapshot().player_position;
+            (void)s.debug_launch_player(scraperx::sim::Vector3{-4.0, 154.95, -130.0},
+                                        scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            bool ever_seen = false;
+            bool ever_heard = false;
+            bool held = false;
+            double nearest = 1.0e9;
+            int i = 0;
+            for (; i < 2 * 90 && (i < 2 || s.matron_state().state == kGrab); ++i) {
+                (void)s.set_move_input(0.0, 0.0);
+                tick(s);
+                const auto m = s.matron_state();
+                const auto p = s.snapshot().player_position;
+                if (i > 0) {
+                    ever_seen = ever_seen || m.sees_player;
+                    // Still on the deck at 154.9 (a drop would land loud), and no noise of his to her.
+                    ever_heard = ever_heard || m.noise_heard > 0.0 || p.y < 154.75;
+                    nearest = std::min(nearest, std::hypot(m.position.x - p.x, m.position.z - p.z));
+                }
+                held = held || s.snapshot().held_by_matron;
+            }
+            const auto m = s.matron_state();
+            const auto p = s.snapshot().player_position;
+            const double lead_to_had = std::hypot(m.lead_x - had_at.x, m.lead_z - had_at.z);
+            const double lead_to_him = std::hypot(m.lead_x - p.x, m.lead_z - p.z);
+            std::cout << "  matron dodged reach: the reach over after " << i << " ticks (state " << int(m.state)
+                      << "); lead " << lead_to_had << " m from where she had him, " << lead_to_him
+                      << " m from him (sense " << int(m.lead_sense) << "); nearest " << nearest << " m; seen "
+                      << ever_seen << " heard " << ever_heard << "\n";
+            require(!held, "matron dodged reach: her fingers never close on him");
+            require(!ever_heard && nearest > static_cast<double>(Matron::kBreathM),
+                    "matron dodged reach: the setup holds -- silent on the deck, beyond her breath range");
+            require(lead_to_had < 0.6 && lead_to_him > 2.5,
+                    "matron dodged reach: her lead is where she last had him, not where he hides");
+            require(!ever_seen, "matron dodged reach: she does not turn to him through the reach");
+            const std::array<double, 2> run{m.lead_x, m.lead_z};
+            if (pass == 0) {
+                first = run;
+            } else {
+                require(run == first, "matron dodged reach: the same run twice, the same lead (deterministic)");
+            }
+        }
+        std::cout << "PASS scraperx_sim matron dodged reach: no lead to his hiding place\n";
+    }
+    // ---- J-049 (11-14): in the reach, a noise he makes is where she turns ----
+    // She hears him behind her (0.75 m) and her hand goes for him. Before her
+    // eyes come round he moves 2.5 m behind her back, still loud. Her ears
+    // give her where the noise reached her: her lead follows him, not the
+    // place of the catch.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        hidden_at(s, 0.75, -130.0, 0.0, -130.0);
+        require(s.set_room_loudness(1.0), "matron heard reach: a noise from the spot");
+        bool reaching = false;
+        for (int i = 0; i < 10 * 90 && !reaching; ++i) {
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            reaching = s.matron_state().state == kGrab && !s.snapshot().held_by_matron;
+        }
+        require(reaching, "matron heard reach: she hears him and her hand goes");
+        const auto caught_at_spot = s.snapshot().player_position;
+        const auto her = s.matron_state();
+        (void)s.debug_launch_player(scraperx::sim::Vector3{her.position.x - 2.5 * std::sin(her.yaw), 154.95,
+                                                           her.position.z - 2.5 * std::cos(her.yaw)},
+                                    scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        // Her lead on him within 3 ticks (her eyes are still turned away: a
+        // deaf reach kept the catch's place till she turned and saw him).
+        int on_him = -1;
+        int sense = 0;
+        for (int i = 0; i < 27 && on_him < 0; ++i) {  // 0.3 s at most
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto m = s.matron_state();
+            const auto p = s.snapshot().player_position;
+            if (std::hypot(m.lead_x - p.x, m.lead_z - p.z) < 0.3 &&
+                std::hypot(m.lead_x - caught_at_spot.x, m.lead_z - caught_at_spot.z) > 1.0) {
+                on_him = i;
+                sense = m.lead_sense;
+            }
+        }
+        std::cout << "  matron heard reach: her lead on him " << on_him << " ticks after he moved (sense " << sense
+                  << ")\n";
+        require(on_him >= 0 && on_him <= 3,
+                "matron heard reach: her lead follows the noise he makes, not the place of the catch");
+        std::cout << "PASS scraperx_sim matron heard reach: her lead follows his noise\n";
+    }
+}
 } // namespace
 
 void run_matron_grab() {
@@ -932,6 +1101,7 @@ void run_matron_grab() {
                 "matron sprint sight: out of reach, he is not thrown off his feet");
         std::cout << "PASS scraperx_sim matron sprint sight: no catch, no shove, 0.3 s sight at 0.8 m, true 3.0 m\n";
     }
+    hide_where_last_sensed();
 }
 // run_matron_grab, run_matron_arm, run_matron_fatality: not in the default
 // sequence but this ctest slice, as matron-chase, since her fatality's runs

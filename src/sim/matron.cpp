@@ -3728,14 +3728,27 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::ArmPlay:
     case State::Release:
     case State::Spare:
-    case State::Claimed:
+    case State::Claimed: {
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
-        // and her hands on it: a lead she has, seen, where it is.
-        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
-                  floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
-                  noise_heard_, Sense::Touch);
-        step_hold(dt, ev.felt_at);
+        // and her hands on it: a lead she has, seen, where it is. A reach
+        // tick without eyes or body on him (J-049) has only her ears: a lead
+        // where he is heard; nothing heard, the lead stays as it was and her
+        // hold has the last place she had him.
+        RVec3 had = ev.felt_at;
+        if (ev.touch) {
+            take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
+                      floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
+                      noise_heard_, Sense::Touch);
+        } else if (ev.heard()) {
+            had = ev.heard_at;
+            take_lead(float(had.GetX()), float(had.GetZ()), floor_at(float(had.GetX()), float(had.GetY()), float(had.GetZ())),
+                      noise_heard_, Sense::Hearing);
+        } else {
+            (void)ev.last_place(had);
+        }
+        step_hold(dt, had);
         break;
+    }
     case State::Staggering:
     case State::Down:
         // Knocked about: no eyes on the player, and every sound runs on
