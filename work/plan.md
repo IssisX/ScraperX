@@ -49,7 +49,7 @@ J-088 muse #406 | Her hands close on what she holds: fingers wrap rungs, rails, 
 J-091 muse #409 hold: parked in live issue; reconcile pushed work before release | Turn her bay trap back on her: lure her onto the leaf at 154 m, trip its drive, dump her a full deck
 J-095 muse #413 hold: parked in live issue; reconcile pushed work before release | Pull the line out from under her: one keeper pin turns the zipline she is riding into a falling cable (Grok idea 2)
 J-099 muse #417 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | Dents: shipping containers, barrels and steel boxes dent by the real impulse that hits them (J-038's second half)
-J-100 muse #418 | She reads a load hung over her and gets out from under it
+J-100 claude #418 | She reads a load hung over her and gets out from under it
 J-112 muse #431 hold: parked in live issue; reconcile pushed work before release | She shoves what he placed off an edge (A3, gap 9)
 J-113 muse #432 hold: parked in live issue; reconcile pushed work before release | Her chart and the microphone: the five touch scenarios pass and consent is asked in game (rule 57, gap 21)
 J-120 muse #442 hold: parked in live issue; reconcile pushed work before release | The crew are proven: native tests for every worker state and the laws they keep
