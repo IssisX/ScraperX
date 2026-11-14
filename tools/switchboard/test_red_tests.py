@@ -17,7 +17,6 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import ghapi  # noqa: E402
-import reconciler as R  # noqa: E402
 import switch  # noqa: E402
 from test_inbox import FakeGH, HEAD, later, make, run, steered  # noqa: E402
 
@@ -206,7 +205,7 @@ class RedTests(unittest.TestCase):
         self.assertNotIn("@", body)
         self.assertNotIn("`", body)
         self.assertNotIn(": LAND", body)
-        self.assertEqual(R.SENT_RE.findall(posted), [])
+        self.assertNotIn("<!-- reconciler:sent", posted)
         # 502 and 503 have no log here, so the notice is keyed as one with a log unread (InboxItem.unread)
         self.assertEqual(switch.MUSE_KEYS.findall(gh.by_issue[switch.BOARD_ISSUE][0]["body"]),
                          [switch.inbox_key("muse-RED-BRANCH" + switch.UNREAD_KEY, NAME, HEAD)])
@@ -391,43 +390,6 @@ class GhapiReads(unittest.TestCase):
         self.assertIn("--allow-escape-sequences", calls[0])
         self.assertNotIn("--allow-escape-sequences", calls[1])
         slept.assert_not_called()
-
-
-class ReconcilerRedNotice(unittest.TestCase):
-    def send(self, tests):
-        posted = []
-
-        class GH:
-            repo = "IssisX/ScraperX"
-
-            def comment(self, n, body, what=""):
-                posted.append((n, body))
-                return {"id": 9001}
-
-            def write(self, *a, **kw):
-                return {}
-
-        roster = R.L.Roster({"agents": {"muse": {"vendor": "meta", "names": ["Muse"], "wake": "email"}}})
-        ob = {"id": "O-dde130cf", "kind": "fix", "to": "muse", "via": "email", "version": f"red:{HEAD}",
-              "what": "`fb-bot/integrate-j076` proof red: native-tests (matron-slices-3), no PR", "thread": 391,
-              "due": "2026-11-11T16:58:47Z"}
-        R.CommentOutbox(GH(), roster, 340, tests=tests).send({"job": "J-076", "issue": 391}, ob, 1, 1)
-        (n, body), = posted
-        self.assertEqual(n, 391)
-        return body
-
-    def test_its_red_notice_names_the_failing_tests(self):
-        body = self.send(lambda sha: ("native-tests (matron-slices-3): FAIL: ammo hands: its hits are sounds to her",)
-                         if sha == HEAD else ())
-        self.assertIn("\n\nFailing tests:\n- native-tests (matron-slices-3): FAIL: ammo hands: its hits are sounds to "
-                      "her\n\nFrom the switchboard's reconciler", body)
-
-    def test_a_reader_that_fails_never_stops_the_notice(self):
-        def boom(sha):
-            raise RuntimeError("no logs")
-        body = self.send(boom)
-        self.assertTrue(body.startswith("CLAUDE_TO_MUSE: J-076 fb-bot/integrate-j076 proof red"))
-        self.assertNotIn("Failing tests", body)
 
 
 if __name__ == "__main__":

@@ -35,7 +35,7 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
-  the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
+  the `ask` step that calls out (J-057); the PR check of the switch stays read-only with no
   secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
   `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
   (J-072).
