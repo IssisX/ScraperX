@@ -1784,8 +1784,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     // decides how much: under it (him at its release, J-100
                     // scenario 1), that is all of her motion and she plants;
                     // past it (the climb, whose foot is past the slab's rim),
-                    // only the part carrying her toward the load is taken,
-                    // and the tangential part carries her around its rim:
+                    // she turns onto the rim's tangent and keeps her pace:
                     // taking all of it pinned her at the rim forever.
                     bool goal_under_load = false;
                     for (const HungLoad &goal_load : hung_loads_) {
@@ -1798,11 +1797,26 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     if (goal_under_load) {
                         velocity -= way * std::min(going, cut_limit + foot_accel * dt);
                     } else {
-                        const Vec3 radial = to_load / to_load.Length();
-                        const float inward = flat_new.Dot(radial);
-                        if (inward > 0.0F) {
-                            velocity -= radial * std::min(inward, cut_limit + foot_accel * dt);
+                        // Past it, she skirts its rim at her pace, as anyone
+                        // passing one would: her heading turns onto the
+                        // tangent from where she is to the footprint, on the
+                        // side she already passes, her speed kept; only the
+                        // turn is her feet's work, cut as the plant is.
+                        // Taking her inward speed instead bled a runner
+                        // passing it from 6.8 to 2.9 m/s (the vault).
+                        const float d = to_load.Length();
+                        const float ux = to_load.GetX() / d;
+                        const float uz = to_load.GetZ() / d;
+                        const float side = ux * way.GetZ() - uz * way.GetX() < 0.0F ? -1.0F : 1.0F;
+                        const float a = side * std::asin(load.footprint_r / d);
+                        const Vec3 tangent(ux * std::cos(a) - uz * std::sin(a), 0.0F,
+                                           ux * std::sin(a) + uz * std::cos(a));
+                        Vec3 turn = tangent * going - flat_new;
+                        const float cap = cut_limit + foot_accel * dt;
+                        if (turn.Length() > cap) {
+                            turn *= cap / turn.Length();
                         }
+                        velocity += turn;
                     }
                     break;
                 }
