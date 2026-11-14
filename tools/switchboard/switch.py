@@ -171,10 +171,13 @@ DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
 MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
                                                # are dropped and named in the run's log (keep_held)
-# J-072 (11-14: #555 and #396 merged and the integrator found each only by hand): a merge the switch makes is one
-# MERGED item, kept in the sweep state (gh.state["merged"]) until an inbox post lists it, so a sweep that posts no
-# inbox loses none. The integrator's own (claude/) merges post at once; Muse's ride the next post.
-MAX_MERGED_HELD = 50
+# J-072 (11-14: #555 and #396 merged and the integrator found each only by hand): every merge into trunk is one
+# MERGED item, read from GitHub by each sweep whose inbox runs (merged_items): the closed PRs into trunk, newest
+# updated first, down to the cursor (gh.state["inbox"]["merged_at"], the newest merge listed). Never carried in the
+# run's state: an issue_comment run, which makes most merges, cannot save its cache (run 43610872384). The
+# integrator's own (claude/) merges post at once; Muse's ride the next post. With no cursor, MERGED_FIRST back only.
+MERGED_PAGES = 3                               # pages of 100 closed PRs read at most per sweep
+MERGED_FIRST = dt.timedelta(hours=1)
 MAX_INBOX_HELD = 200                           # wake items held between sweeps (gh.state["inbox"]["held"]), likewise
 MAX_RERUN_HEADS = 200                          # heads re-run, kept between sweeps (timers["rerun"]): one re-run per head
 # A Muse bridge title that is only "J-NNN started" (J-040 take_blow started: one name may sit between), or a bare ack.
@@ -1680,27 +1683,52 @@ class Switch:
         self.gh.comment(facts.number, line, f"merged-note on #{facts.number}")
         if ctx.get("issue"):
             self.gh.comment(ctx["issue"]["number"], line, f"merged-note on job issue #{ctx['issue']['number']}")
-        self.merged_notice(facts, proof)
         return ""
 
-    def merged_notice(self, facts: rules.PrFacts, proof: str) -> None:
-        """J-072: this merge as one MERGED inbox item, kept in the sweep state until an inbox post lists it (never
-        in a dry run). Its dest is the branch's owner: Muse's (fb-bot/) rides the next post, any other wakes at once."""
-        state = getattr(self.gh, "state", None)
-        if getattr(self.gh, "dry_run", False) or not isinstance(state, dict):
-            return
-        it = InboxItem("MERGED", f"#{facts.number}", facts.head_sha,
-                       f"MERGED #{facts.number} {untrusted(facts.head_ref)} at {facts.head_sha[:8]}: the switchboard "
-                       f"merged it; trunk's proof now runs ({proof.rstrip('.')})",
-                       "muse" if owner_of(facts.head_ref) == "muse" else "claude")
-        kept = [r for r in state.get("merged") or [] if isinstance(r, dict)
-                and (r.get("target"), r.get("head")) != (it.target, it.head)]
-        state["merged"] = (kept + [digest_record(it)])[-MAX_MERGED_HELD:]
+    def merged_items(self) -> list[InboxItem]:
+        """J-072: one MERGED item per PR merged into trunk since the cursor (MERGED_PAGES pages at most), read from
+        GitHub; the inbox's keys list each once. The newest merge's time is the next cursor, saved by inbox() once
+        its items are posted or held (merged_commit). Dest: Muse's (fb-bot/) rides the next post, any other at once."""
+        box = self.inbox_box()
+        cursor = parse_time(str(box.get("merged_at") or "")) or (self.now - MERGED_FIRST)
+        out: list[InboxItem] = []
+        newest, reached = cursor, False
+        for page in range(1, MERGED_PAGES + 1):
+            try:
+                got = self.gh.get(f"repos/{self.gh.repo}/pulls?state=closed&base={rules.TRUNK}&sort=updated"
+                                  f"&direction=desc&per_page=100&page={page}") or []
+            except RateLimited:
+                raise
+            except GitHubError as err:   # the cursor stays: the next sweep reads these merges again
+                self.out(f"NOTE        merges not read ({err_text(err)}): read next sweep")
+                return []
+            for pr in got if isinstance(got, list) else []:
+                updated, merged = parse_time(str(pr.get("updated_at") or "")), parse_time(str(pr.get("merged_at") or ""))
+                if updated is not None and updated < cursor:
+                    reached = True
+                    break
+                head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
+                ref, sha, number = str(head.get("ref") or ""), str(head.get("sha") or ""), pr.get("number")
+                if merged is None or merged < cursor or not sha or not isinstance(number, int) or number == INBOX_PR:
+                    continue
+                newest = max(newest, merged)
+                out.append(InboxItem("MERGED", f"#{number}", sha,
+                                     f"MERGED #{number} {untrusted(ref)} at {sha[:8]}: merged into {rules.TRUNK}; "
+                                     f"trunk's proof runs on the merge", "muse" if owner_of(ref) == "muse" else "claude"))
+            if reached or not isinstance(got, list) or len(got) < 100:
+                reached = True
+                break
+        if not reached:
+            self.out(f"NOTE        merges: {MERGED_PAGES} pages of closed PRs read without reaching {iso_z(cursor)}")
+        self.__dict__["_merged_next"] = iso_z(newest)
+        return out
 
-    def merged_items(self) -> tuple[InboxItem, ...]:
-        """The MERGED items no inbox post has listed yet (merged_notice), from the sweep state."""
-        state = getattr(self.gh, "state", None)
-        return held_of(state.get("merged"), frozenset({"now", "ride"})) if isinstance(state, dict) else ()
+    def merged_commit(self, box: dict) -> None:
+        """J-072: the merge cursor moves once this sweep's MERGED items are posted or held. Never in a dry run."""
+        nxt = self.__dict__.pop("_merged_next", None)
+        if nxt and not getattr(self.gh, "dry_run", False):
+            box["merged_at"] = nxt
+            self.gh.state.pop("merged", None)   # the old state-held notices (#557), never read now
 
     def plan_owner(self, job: str) -> str | None:
         """J-072: the job's owner in work/plan.md, or None when the plan cannot be read (a TAKE then stays open)."""
@@ -1989,8 +2017,7 @@ class Switch:
     def inbox_clock(self) -> bool:
         """11-13: a quiet sweep's question: is a held wake item due by its clock alone (the digest never is)? Reads no GitHub."""
         box = self.inbox_box()
-        return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"})))
-                              + [it for it in self.merged_items() if inbox_class(it) == "now"], list(self.digest_held),
+        return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"}))), list(self.digest_held),
                               parse_time(str(box.get("at") or "")))
 
     def inbox(self, steered: list[Steered], flush: bool = False) -> int:
@@ -2039,6 +2066,7 @@ class Switch:
         self.digest_held = self.keep_held(digest, MAX_DIGEST_HELD, "digest")
         if not getattr(self.gh, "dry_run", False):   # kept until a comment carries it, even if the post fails
             box["held"] = [digest_record(it) for it in self.keep_held(wake, MAX_INBOX_HELD, "wake")]
+        self.merged_commit(box)   # J-072: its MERGED items are held (wake) or in the digest now, so the cursor moves
         if not wake or not (flush or self.inbox_due(wake, digest, last)):   # a digest alone never posts
             self.out("INBOX       nothing new" + (f"; {len(wake)} held for the next post (the hold)" if wake else "")
                      + (f"; {len(digest)} held for the digest (J-103)" if digest else ""))
@@ -2059,10 +2087,6 @@ class Switch:
             box["keys"] = list(dict.fromkeys(old + ring + [it.key for it in posted]))[-MAX_INBOX_KEYS:]
             box["at"] = when
             box["held"] = [digest_record(it) for it in wake[len(shown):][-MAX_INBOX_HELD:]]
-            listed = set(box["keys"])   # J-072: a MERGED item a post listed is never kept, nor listed, again
-            if isinstance(self.gh.state.get("merged"), list):
-                self.gh.state["merged"] = [r for r in self.gh.state["merged"] if not (isinstance(r, dict) and
-                                           inbox_key("MERGED", str(r.get("target")), str(r.get("head"))) in listed)]
         return len(shown) + len(carried)
 
     def keep_held(self, items: list[InboxItem], cap: int, what: str) -> tuple[InboxItem, ...]:
@@ -2422,8 +2446,9 @@ class Switch:
         if not prefix:
             items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
-            items += self.merged_items()   # J-072: merges no post has listed yet, a quiet or targeted sweep's too
             items += self.take_items()   # J-072: Muse jobs failed twice on the same failure, until the plan says claude
+        if ripe is None and not prefix:
+            items += self.merged_items()   # J-072: merges into trunk since the cursor, read from GitHub
         if ripe is None:
             audience = ("muse", "both") if prefix else ("claude", "both")
             items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
