@@ -78,6 +78,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
     build_stance_shapes();
+    build_part_shapes();
     // Her deck: down the middle of each band, the catwalk across, and in off
     // the north band round the ladder's west rail to its foot; her post in the
     // mouth of Stage A's cage, facing out over the band; the cage's eye on its
@@ -5307,11 +5308,14 @@ void Matron::take_blow(const float dt) {
         // the region it hits takes the dose, once (J-044a §D).
         // player_blow_at_ survives clear_player_blow() (it clears only the
         // impulse and the low flag), so the point is still here.
-        injury_.credit(injury::classify_contact(
-                           Vec3(static_cast<float>(player_blow_at_.GetX()),
-                                static_cast<float>(player_blow_at_.GetY()),
-                                static_cast<float>(player_blow_at_.GetZ())),
-                           eye_mid, eye_fwd),
+        // J-060: a blow her arm took is on her arm, which has no drawn
+        // region: unclassified, never the chest or face behind it.
+        injury_.credit(player_blow_on_arm_ ? injury::Region::Unclassified
+                                           : injury::classify_contact(
+                                                 Vec3(static_cast<float>(player_blow_at_.GetX()),
+                                                      static_cast<float>(player_blow_at_.GetY()),
+                                                      static_cast<float>(player_blow_at_.GetZ())),
+                                                 eye_mid, eye_fwd),
                        player_ns);
     }
     if (damage_lethal_at_ns(damage_ns_)) {

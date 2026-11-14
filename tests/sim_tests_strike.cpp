@@ -49,6 +49,11 @@ Thrown throw_one(const double her_ahead_m, const std::vector<Simulation::TestExt
     const Vector3 p = s.snapshot().player_position;
     (void)s.set_facing(0.0, 1.0);
     s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+    // She hunts him, so she faces him: launched, she faces away
+    // (yaw 0). J-060: a blow lands only on her body's parts; her
+    // drawn back is 0.28 m behind her middle, and his fist from
+    // 1.05 m reaches 0.24 m from it (the old capsule's 0.30 m took it).
+    s.debug_face_matron(3.141592653589793);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
     Thrown out;
     out.offered = s.snapshot().strike_offered;
@@ -155,6 +160,11 @@ void run_strike() {
         for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && s.matron_state().state != kHunting; ++i) {
             (void)s.advance_frame(Simulation::kFixedStepSeconds);
         }
+        // She hunts him, so she faces him: launched, she faces away
+        // (yaw 0). J-060: a blow lands only on her body's parts; her
+        // drawn back is 0.28 m behind her middle, and his fist from
+        // 1.05 m reaches 0.24 m from it (the old capsule's 0.30 m took it).
+        s.debug_face_matron(3.141592653589793);
         for (int i = 0; i < 90 && !s.snapshot().strike_offered; ++i) {
             const Vector3 me = s.snapshot().player_position;
             const Vector3 her = s.matron_state().position;
@@ -190,6 +200,11 @@ void run_strike() {
         for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && s.matron_state().state != kHunting; ++i) {
             tick(s);
         }
+        // She hunts him, so she faces him: launched, she faces away
+        // (yaw 0). J-060: a blow lands only on her body's parts; her
+        // drawn back is 0.28 m behind her middle, and his fist from
+        // 1.05 m reaches 0.24 m from it (the old capsule's 0.30 m took it).
+        s.debug_face_matron(3.141592653589793);
         for (int i = 0; i < 90 && !s.snapshot().strike_offered; ++i) {
             const Vector3 me = s.snapshot().player_position;
             const Vector3 her = s.matron_state().position;
@@ -351,6 +366,7 @@ void run_strike() {
         at_the_box(s);
         const Vector3 p = s.snapshot().player_position;
         s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
+        s.debug_face_matron(3.141592653589793);   // she faces him (as in throw_one, J-060)
         tick(s);
         require(s.snapshot().carry_target_entity_id != 0 && s.snapshot().strike_offered && s.snapshot().strike_ready,
                 "strike: at the toolbox with her body in reach ahead, the punch and the pick-up are both on offer");
@@ -814,6 +830,11 @@ void run_matron_jab() {
             for (int i = 0; i < 5 * 90 && s.matron_state().state != kHunting; ++i) tick(s);
             require(s.matron_state().state == kHunting, "jab: she hunts (setup)");
             s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+            // She hunts him, so she faces him: launched, she faces away
+            // (yaw 0). J-060: a blow lands only on her body's parts; her
+            // drawn back is 0.28 m behind her middle, and his fist from
+            // 1.05 m reaches 0.24 m from it (the old capsule's 0.30 m took it).
+            s.debug_face_matron(3.141592653589793);
             bool entered = false;
             for (int i = 0; i < 10 * 90 && !entered; ++i) {
                 const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
