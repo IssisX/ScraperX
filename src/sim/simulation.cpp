@@ -1370,6 +1370,10 @@ void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) n
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+void Simulation::debug_clear_corpses() noexcept {
+    physics_world_->clear_corpses_for_test();
+}
+
 double Simulation::debug_support_y(const Vector3 at, const double depth) const noexcept {
     return physics_world_->support_y_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
@@ -1841,16 +1845,22 @@ std::vector<std::uint8_t> Simulation::save_game() const {
 }
 
 bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
+    save_reject_reason_.clear();
     last_load_refusal_.clear();
     if (data == nullptr) {
+        save_reject_reason_ = "empty";
         return false;
     }
     SaveReader r(data, size);
     std::uint64_t key = 0, tick = 0;
     if (!r.pod(key) || key != save_format_key() || !r.pod(tick)) {
+        save_reject_reason_ = "format key";
         return false;
     }
-    if (!physics_world_->load_save(r)) {
+    if (!physics_world_->load_save(r, &save_reject_reason_)) {
+        if (save_reject_reason_.empty()) {
+            save_reject_reason_ = "refused";
+        }
         last_load_refusal_ = physics_world_->load_refusal();
         return false;
     }

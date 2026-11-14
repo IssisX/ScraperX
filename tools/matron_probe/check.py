@@ -29,6 +29,13 @@ Checks, each over every recorded frame unless noted, with its tolerance:
            hand's commanded target, which it lags; from GRIP_FROM_S into the hold; a held frame without a
            held ankle is a failure) and the climb or pipe grip (contact_hand and contact_hand2, when the
            native says they are held).
+  joint_speed
+           a drawn joint turning faster than JOINT_SPEED_RAD_S (rule 37: no joint over 20 rad/s, hair, eyes
+           and fingers excluded, as `govern` does) between two recorded frames: the bone's global rotation
+           in her own body frame, so a parent and a child both at their local caps in the same direction
+           still counts (her elbow was drawn at 34 rad/s while each joint sat at its 19 rad/s burst cap).
+           A root jump over TELEPORT_M (a restore) starts the measurement again; the time between the two
+           frames is their recorded time apart, so a gap while she was not drawn counts honestly.
   plant    a drawn foot that is down (its lowest point within PLANT_M of the surface under it) while she
            stands still on a floor (not climbing, held, knocked down or turning; under STILL_MPS), more than
            PLANT_DRIFT_M across the ground from where it came down. A jump of the root over TELEPORT_M in a
@@ -62,6 +69,7 @@ import score  # noqa: E402
 
 STRETCH_PCT = 5.0
 GRIP_M = 0.03
+JOINT_SPEED_RAD_S = 20.0
 GRIP_FROM_S = 0.3
 STILL_MPS = 0.15
 TURN_RAD_S = 0.4           # a body turning faster than this steps its feet round
@@ -72,8 +80,9 @@ HIT_M = score.HIT_M
 MIN_REST_M = 0.01          # a bone shorter at rest than this has no length to measure
 ARM_BONES = ("sh_", "el_")
 CHECKS = ("stretch_arm", "stretch_arm_hold", "stretch_arm_reach", "stretch_arm_turn", "stretch_leg",
-          "stretch_leg_turn", "grip_hold", "grip_climb", "plant", "hair", "skirt")
+          "stretch_leg_turn", "grip_hold", "grip_climb", "plant", "hair", "skirt", "joint_speed")
 UNIT = {c: "%" for c in CHECKS if c.startswith("stretch")}
+UNIT["joint_speed"] = " rad/s"
 # A known defect's bounds: its failing count may grow by this fraction (at least COUNT_MIN frames) and its
 # worst amount by this fraction, before it reads as a regression (frame timing moves a few frames run to run).
 COUNT_MARGIN = 0.10
@@ -162,6 +171,54 @@ def stretch_failures(run):
                 what = "%s drawn %.2fx its rest length (state %d, turn %d%s)" % (
                     bone, r[k], int(rows["state"][i]), int(rows["turn"][i]), ", " + c if c else "")
                 out.setdefault(check, []).append(((float(r[k]) - 1.0) * 100.0, what, int(rec), float(rows["t"][i])))
+    return out
+
+
+def governed_bone(name):
+    """A bone `govern` governs (matron_rig.gd): everything but hair, eyes, and fingers and thumbs
+    (a name starting with f or t followed by a digit)."""
+    if name.startswith("hair") or name.startswith("eye"):
+        return False
+    if len(name) >= 2 and name[0] in "ft" and name[1].isdigit():
+        return False
+    return True
+
+
+def joint_speed_failures(run):
+    """(speed, what, rec, t) per frame-pair a drawn joint turns faster than JOINT_SPEED_RAD_S.
+
+    The bone's global rotation in her own body frame (the skeleton's frame, not the world's: her
+    whole-body turn is not a joint), between two successive recorded frames. `govern` caps each
+    joint's local turn, but a parent and a child both at their caps in the same direction draw the
+    child at their sum, so the drawn speed is the global one. A root jump over TELEPORT_M is a
+    restore, where govern resets and no snap is drawn across it."""
+    nb = len(run.bone_names)
+    R = score.xf(run.bones_raw.reshape(run.nrec, nb, 12))[..., :3, :3]
+    use = np.array([i for i in range(nb) if governed_bone(run.bone_names[i])])
+    rows = run.rows
+    root = run.skel[:, :3, 3]
+    recs = np.nonzero(run.row_of_rec >= 0)[0]
+    a_idx, b_idx = recs[:-1], recs[1:]
+    ia, ib = run.row_of_rec[a_idx], run.row_of_rec[b_idx]
+    dt = rows["t"][ib] - rows["t"][ia]
+    jump = np.linalg.norm(root[b_idx] - root[a_idx], axis=1)
+    live = (dt > 1e-6) & (jump <= TELEPORT_M)
+    out = []
+    if not live.any():
+        return out
+    n_pairs, n_use = len(a_idx), len(use)
+    Ra = np.swapaxes(R[a_idx][:, use], -1, -2).reshape(-1, 3, 3)
+    Rb = R[b_idx][:, use].reshape(-1, 3, 3)
+    dR = (Ra @ Rb).reshape(n_pairs, n_use, 3, 3)
+    tr = np.trace(dR, axis1=-2, axis2=-1)
+    ang = np.arccos(np.clip((tr - 1.0) / 2.0, -1.0, 1.0))
+    sp = np.where(live[:, None], ang / np.where(dt > 1e-6, dt, 1.0)[:, None], 0.0)
+    for n in np.nonzero((sp > JOINT_SPEED_RAD_S).any(axis=1))[0]:
+        k = int(np.argmax(sp[n]))
+        i = int(ib[n])
+        out.append((float(sp[n][k]), "%s drawn %.2f rad/s (state %d, turn %d%s)" % (
+            run.bone_names[use[k]], sp[n][k], int(rows["state"][i]), int(rows["turn"][i]),
+            ", burst" if rows["burst"][i] else ""), int(b_idx[n]), float(rows["t"][i])))
     return out
 
 
@@ -347,6 +404,8 @@ def main():
             say("  note: " + note)
         for drift, foot, rec, t in plant_failures(run):
             found["plant"].append((drift, foot, rec, t))
+        for speed, what, rec, t in joint_speed_failures(run):
+            found["joint_speed"].append((speed, what, rec, t))
         pen, secs = penetration_failures(run, args.stride)
         found["hair"], found["skirt"] = pen["hair"], pen["skirt"]
         for check in CHECKS:
