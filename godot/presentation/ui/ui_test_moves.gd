@@ -1166,8 +1166,9 @@ func _touch_hook_her() -> bool:
 		return _fail("TAKE HOOK did not take the hook")
 	_native().debug_place_matron(Vector3(-12.0, 220.25, -128.7))
 	_native().debug_hold_matron_hands(60.0)
-	# Her face turned on him (as the native slice stages her), so she sees
-	# him watching her and holds still under his gaze: her stalk.
+	# Her face turned on him, so she sees him watching her and holds still
+	# under his gaze: her stalk. (The native slice turns her to yaw 0, which
+	# gives her the stalk there; here yaw 0 left her unseeing and hunting.)
 	_native().debug_face_matron(atan2(_position().x - (-12.0), _position().z - (-128.7)))
 	var look_at_her := func() -> void:
 		var her: Vector3 = _native().get_matron_state()["position"]
