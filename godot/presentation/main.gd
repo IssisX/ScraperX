@@ -356,7 +356,7 @@ func _ready() -> void:
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
 	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode and _audit == null) or
-			_uitest_scenario == "touch_title"):
+			_uitest_scenario == "touch_title" or _uitest_scenario == "touch_app_leave_title"):
 		_show_title()
 	# The microphone is asked about once, before anything is heard, over the
 	# title when there is one.
@@ -782,6 +782,12 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 			_save_climb(true)
 			_open_pause(true)
+		NOTIFICATION_APPLICATION_RESUMED:
+			# Coming back: the background gap is not play time. The load
+			# gap's one-tick cap (J-045) applies again, so the first frame
+			# back advances one native tick, not up to nine
+			# (MAX_SIM_FRAME_DELTA).
+			_capped_advances = 0
 		NOTIFICATION_WM_CLOSE_REQUEST:
 			_save_climb(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -864,7 +870,10 @@ func discard_saved_climb() -> void:
 func _open_pause(from_system: bool = false) -> void:
 	if _paused or _title_open or _consent_open or _ci_mode or _native == null:
 		return
-	if from_system and not _uitest_scenario.is_empty():
+	# A system pause is refused during a scripted run, so a stray focus-out
+	# cannot freeze an unrelated scenario mid-run -- except the app-leave
+	# scenarios (touch_app_leave_*), where the pause is what is tested.
+	if from_system and not _uitest_scenario.is_empty() and not _uitest_scenario.begins_with("touch_app_leave"):
 		return
 	_paused = true
 	_router.gameplay_active = false

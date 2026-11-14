@@ -265,6 +265,14 @@ const SCENARIOS := {
 	# The title over the live tower at launch: the simulation frozen behind
 	# it, no CONTINUE without a save, NEW CLIMB tapped starts the climb.
 	"touch_title": 8,
+	# Leaving the app mid-anything (J-118 #440): the pause the OS sends, then
+	# the way back, at five moments. Each is its own scenario (one per
+	# process); the stages are the moments' own spawns.
+	"touch_app_leave_ride": 25,
+	"touch_app_leave_slingshot": 8,
+	"touch_app_leave_hold": 11,
+	"touch_app_leave_fall": 9,
+	"touch_app_leave_title": 8,
 	# Phase 4 on touch: a sprint at deck 4's south edge, the stick let go
 	# 2 m short of it: the native teeters (its XCoM past the edge), and the
 	# soles' traction cannot stop the body before it goes over.
@@ -629,6 +637,16 @@ func _run() -> void:
 			ok = await _trapeze()
 		"touch_title":
 			ok = await _title()
+		"touch_app_leave_ride":
+			ok = await _touch_app_leave_ride()
+		"touch_app_leave_slingshot":
+			ok = await _touch_app_leave_slingshot()
+		"touch_app_leave_hold":
+			ok = await _touch_app_leave_hold()
+		"touch_app_leave_fall":
+			ok = await _touch_app_leave_fall()
+		"touch_app_leave_title":
+			ok = await _touch_app_leave_title()
 		"touch_teeter":
 			ok = await _teeter()
 		"touch_stack_upper":

@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_look.gd"
+extends "res://presentation/ui/ui_test_app_leave.gd"
 
 # J-119 (#441): every on-screen control fits every screen. A touch scenario
 # running at four window sizes -- the Fold 6 folded and open, a narrow phone,
