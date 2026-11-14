@@ -85,6 +85,12 @@ const Expected kExpected[] = {
     {"matron-grab", Path::Shove, true, true, 44771.0, 131006.0},
     {"matron-arm", Path::Budget, true, false, law::kLungeForceN, 61324.0},
     {"matron-arm", Path::Shove, true, true, 44770.0, 131006.0},
+    // J-001 (11-14): her crate shove is not charged on this branch (it moves to J-093): trunk's
+    // matron-fatality row stays, and matron-grab's shove (her hold now walks him past a crate) is
+    // listed as measured 11-14 on 8158fd7b: one tick at 8000 N on top of her feet (honest sum
+    // 14891 N that tick when it is not listed), uncharged.
+    {"matron-grab", Path::CrateShove, false, true, 8000.0, 3421.0},
+    {"matron-fatality", Path::CrateShove, false, true, 8000.0, 18913.0},
     {"forklift-matron", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
     {"matron-jab", Path::Shove, true, true, 44770.0, 131006.0},
 };
