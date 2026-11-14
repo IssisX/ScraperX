@@ -1,3 +1,10 @@
+> **Since this was written (11-14, same morning):** the 20 colon titles are retitled (item 4); asks.py no longer cuts off at
+> 1000 comments and looks back 7 days (item 3, partly); Muse's instructions say a stop or go from Cory is mailed to
+> Claude for a `hold:` line (item 1); Muse is unpaused with a landing order (item 11) and has restarted its lanes, so
+> test 2 is live. In flight, unmerged: `claude/integrate-j072-quiet-asks` (items 2 and 3) and
+> `claude/integrate-j072-proof-unittests` (item 5). The API-limit overrun was fixed earlier by #538/#539.
+> Merges to trunk per day from Muse's branches: 11-12: 9, 11-13: 11, 11-14: 0 so far (paused).
+
 # What is still wrong with the Claude + Muse system (Fable, read-only pass, 11-14)
 
 Read only: nothing pushed, posted, labelled or mailed. About 90 GitHub calls. Trunk read at `12567f50`.
