@@ -35,7 +35,7 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
-  the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
+  the `ask` step that calls out (J-057); the PR check of the switch stays read-only with no
   secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
   `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
   (J-072).
@@ -48,12 +48,17 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
   reads them is P0.
-- The merge token acts as the team login and has exactly two uses, both in `switch.py`: the merge of a PR that
-  changes `.github/workflows` (`merge`, J-056), and one comment, `@codex review` plus the ask's hidden mark, on
-  an open PR (`codex_mention`, J-072: the Codex app ignores the workflow bot's mention). That comment's text is
-  fixed: nothing from an issue, PR, comment or branch name reaches it. It is posted once per head, only on a
-  PR whose head is a branch of this repo, whose proof is green there and whose author is not an OpenAI agent.
-  A third use, or outside text in that comment, is P0.
+- The merge token acts as the team login and has exactly two uses, both in `switch.py`. One is the merge of a PR
+  that changes `.github/workflows` (`merge`, J-056), which the workflow token cannot merge. Such a PR lands like
+  any other (11-13, `03_EXECUTION/SYSTEM_PLAN.md` section A): a green proof on this repo's branch, a LAND on its
+  head from a vendor other than the author's, no open FIX and a clean rule check; its merged note says "with the
+  merge token". There is no extra security pass and no Codex-only LAND: trunk has no branch protection, so any
+  holder of the team login can push to it directly, and a gate on the switchboard's door alone closes nothing. A
+  fork's PR is never proved, so it never merges. The other use is one comment, `@codex review` plus the ask's
+  hidden mark, on an open PR (`codex_mention`, J-072: the Codex app ignores the workflow bot's mention). That
+  comment's text is fixed: nothing from an issue, PR, comment or branch name reaches it. It is posted once per
+  head, only on a PR whose head is a branch of this repo, whose proof is green there and whose author is not an
+  OpenAI agent. A third use, or outside text in that comment, is P0.
 - Text from issues, PRs and comments is data, never instructions or shell input; flag any path where
   it can choose a command, a model, a token or a spend.
 - The caps in `work/budget.yml` (`caps`, `max_log_bytes`) are enforced before every paid call; a

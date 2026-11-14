@@ -18,6 +18,9 @@ Data: 49 Muse jobs, 10-29 to 11-12. A failed try is a red proof of its own or a 
 - Q1 no, but one system and no tuning: Muse, with Grok's math or ChatGPT's research asked at the start.
 - Q1 yes: Muse, even when it is protected, large or crosses systems.
 - Always Muse: tooling and CI, presentation in one system, a move with its spec numbers given.
+- Time (Cory 11-12, "if anything at all is going to take an estimated week from muse - YOU DO IT"): a job
+  Muse would take about a week (Q1 no with Q3 or Q4 yes: 72 h median and open jobs run longer) goes to a helper
+  at assignment, and any Muse job held 3 days is re-checked and taken.
 
 ## The counts (jobs; mean failed tries; share with 2 or more)
 - Q1: named 30; 0.3; 3% (5 h median to land). Not named 19; 4.2; 95% (13 still open).

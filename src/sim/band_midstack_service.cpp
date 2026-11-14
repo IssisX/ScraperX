@@ -501,6 +501,55 @@ constexpr float kN706HatchZ1 = -139.3F;
 constexpr float kC5FloorZ0 = -149.0F;
 constexpr float kC5FloorZ1 = -141.0F;
 
+// ---- J-108, the bait lift: west of the 706 deck's strip, the 706 deck to the 728 deck
+// Beside C5 (a climb, no machine of its own): a second way up its stretch,
+// and only with her as the weight. Two platforms on vertical guides, one
+// rope over the head between them, west of the strip and north of N's head,
+// over the 684 deck: the strip, A, a level gap of 1.0 m, B. He crosses A and
+// jumps the gap onto B (his standing jump, stick held, flies 5.2 m); she has
+// no level gap move, her walk bridges 0.45 m at most and her hands reach
+// 0.85 m, so she stops on A, and her weight sinks A to the 684 deck and lifts
+// B, with him on it, to the 728 deck, where he steps east along a catwalk to
+// it. The chain from A's underside to the 684 deck sets down as A sinks, so
+// the pull fades through the stroke. B runs 0.5 m past the 728 deck onto its
+// safety dogs. No handle, no latch, no catch, no governor: her weight starts
+// it, the chain and the guides' friction spend it. Only A is a floor to her
+// (Kit::set_platform), while it rests on its stop; B never is.
+// Numbers from the evaluator (stage1dof.py, 03_EXECUTION/ASCENT/J-108_evaluator):
+// INTEGRATED over guide friction 385 to 485 N (M, N and O's band width: the
+// declared 400 N, the 35 N the engine adds, plus or minus 50 N), every case
+// reaching the 684 deck at 0.3 to 2.2 m/s. The travel, 21.9 m, is the
+// evaluator's as before.
+// Him alone on A pulls 30 kg and the friction holds it; with nobody aboard B
+// sits on its stop. Her alone on A lands it well under her 4.6 m drop.
+constexpr float kBaitZ0 = -146.2F;                  // north of the 728 deck's hatch (z -146.4) at the top
+constexpr float kBaitZ1 = -143.8F;
+constexpr float kBaitZ = 0.5F * (kBaitZ0 + kBaitZ1);
+constexpr float kBaitAX1 = kN706West - 0.07F;       // -5.17, against the strip's west edge
+constexpr float kBaitAX0 = -7.0F;                   // 1.83 m wide: her 0.6 m and room
+constexpr float kBaitGap = 1.0F;                    // level: his jump's, never hers
+constexpr float kBaitBX1 = kBaitAX0 - kBaitGap;     // -8.0
+constexpr float kBaitBX0 = -10.6F;                  // 2.6 m wide, a wall at its far side
+constexpr float kBaitSlab = 0.1F;
+constexpr float kBaitTravel = kN706Top - kBaitSlab - kUpperTop;   // 21.9: A's underside onto the 684 deck
+constexpr float kBaitAStop = kBaitTravel - 0.02F;   // its guide's end, just off the deck
+constexpr float kBaitBStop = kBaitTravel + 0.5F;    // B's guide's top, a dog's tooth, 0.5 m past the 728 deck
+constexpr float kBaitDogPitch = 0.1F;
+constexpr float kBaitAMassKg = 250.0F;
+constexpr float kBaitBMassKg = 365.2F;
+constexpr float kBaitFriction = 200.0F;             // N each, 400 N in all
+constexpr float kBaitChainKgPerM = 2.75F;
+constexpr float kBaitChainLength = 22.0F;
+constexpr float kBaitPost = 2.6F;                   // the rope's post, over her head, on the north edge
+constexpr float kBaitWall = 2.6F;                   // B's far wall: a jump that carries past B meets it
+constexpr float kBaitRail = 1.1F;                   // B's side rails
+constexpr float kBaitSheaveY = 732.5F;              // 1.4 m over B's post at its dogs' top
+constexpr float kBaitMeshBottom = kUpperTop + kBaitSlab + 2.6F;   // she walks out under it at the bottom
+// The catwalk from B's top to the 728 deck's west edge, through an opening
+// in its west rail, north of its hatch and south of the rope.
+constexpr float kBaitWalkZ0 = kBaitZ0 + 0.1F;
+constexpr float kBaitWalkZ1 = -144.4F;
+
 void build_stage_n_frame(std::vector<Part> &frame) {
     const float z0 = kWellZ - kHalf;
     const float z1 = kWellZ + kHalf;
@@ -570,7 +619,9 @@ void build_stage_n_frame(std::vector<Part> &frame) {
     parapet(kN706West, z0, kN706East, z0 + kC4ParapetWidth);
     parapet(kN706West, z1 - kC4ParapetWidth, kN706East, z1);
     parapet(kN706West, z0, kN706West + kC4ParapetWidth, kNZ - kPlatformHalf - 0.1F);
-    parapet(kN706West, kNZ + kPlatformHalf + 0.1F, kN706West + kC4ParapetWidth, z1);
+    // North of the cage, open where the bait lift's A meets the strip (J-108).
+    parapet(kN706West, kNZ + kPlatformHalf + 0.1F, kN706West + kC4ParapetWidth, kBaitZ0 - 0.02F);
+    parapet(kN706West, kBaitZ1 + 0.02F, kN706West + kC4ParapetWidth, z1);
 }
 
 void build_stage_n(kit::Kit &kit, MidstackService &service) {
@@ -864,7 +915,9 @@ void build_c5_frame(std::vector<Part> &frame) {
     };
     parapet(kD728East - kC4ParapetWidth, z0, kD728East, kD728North);
     parapet(kUpperEast, z0, kD728East, z0 + kC4ParapetWidth);
-    parapet(kUpperEast, z0, kUpperEast + kC4ParapetWidth, kD728North);
+    // The west rail, open where the bait lift's catwalk comes in (J-108).
+    parapet(kUpperEast, z0, kUpperEast + kC4ParapetWidth, kBaitWalkZ0);
+    parapet(kUpperEast, kBaitWalkZ1, kUpperEast + kC4ParapetWidth, kD728North);
     parapet(kUpperEast, kD728North - kC4ParapetWidth, 7.0F, kD728North);
     parapet(kC5TankX1, kD728North - kC4ParapetWidth, kD728East, kD728North);
     // Round stage O's well, where its bucket goes down through the deck.
@@ -956,6 +1009,41 @@ void build_c5(kit::Kit &kit) {
                        {span({kC5ManifoldX0, kC5Floor, kC5FloorZ0 + kC4ParapetWidth},
                              {kC5ManifoldX1, kC5Floor + 1.0F, kC5FloorZ1 - kC4ParapetWidth}, Material::Steel)},
                        JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
+}
+
+// J-108, the bait lift's steel, on the band's frame (no body of its own, so
+// every body built before the lift keeps its place in the kit).
+void build_bait_lift_frame(std::vector<Part> &frame) {
+    // The mesh round A's drop, so she cannot walk off it mid-ride: flush with
+    // the strip on the east (she steps on) and with A on the west (he jumps
+    // across), railed along its north and south edges at the deck, and open
+    // under 2.6 m at the bottom, where she walks out onto the 684 deck.
+    constexpr float kMesh = 0.04F;
+    const float wx0 = kBaitAX0 - 0.01F - kMesh, wx1 = kBaitAX1 + 0.01F;
+    const float wz0 = kBaitZ0 - 0.02F - kMesh, wz1 = kBaitZ1 + 0.02F;
+    frame.push_back(span({wx0, kBaitMeshBottom, wz0}, {wx0 + kMesh, kN706Top, wz1 + kMesh}, Material::Galvanised));
+    frame.push_back(span({wx1, kBaitMeshBottom, wz0}, {wx1 + kMesh, kN706Bottom, wz1 + kMesh}, Material::Galvanised));
+    for (const float z : {wz0, wz1}) {
+        frame.push_back(span({wx0, kBaitMeshBottom, z}, {wx1 + kMesh, kN706Top + kC4Parapet, z + kMesh},
+                             Material::Galvanised));
+    }
+    // The catwalk from B's top to the 728 deck's west edge, railed both sides.
+    constexpr float kWalkRail = 1.0F;
+    const float cx0 = kBaitBX1 + 0.05F;
+    frame.push_back(span({cx0, kD728Bottom + 0.3F, kBaitWalkZ0}, {kUpperEast, kD728Top, kBaitWalkZ1}, Material::Steel));
+    for (const float z : {kBaitWalkZ0, kBaitWalkZ1 - 0.05F}) {
+        frame.push_back(span({cx0, kD728Top, z}, {kUpperEast, kD728Top + kWalkRail, z + 0.05F}, Material::Yellow));
+    }
+    // The head beam the sheaves hang from, over the rope's line on the
+    // platforms' north edges: on a plate post on the 728 deck's west rail and
+    // a bracket off the catwalk's north-west corner (plates, not a climb).
+    const float rope_z = kBaitZ1 - 0.1F;
+    frame.push_back(span({kBaitBX0 + 1.0F, kBaitSheaveY, rope_z - 0.15F}, {kUpperEast + kC4ParapetWidth,
+                          kBaitSheaveY + 0.3F, rope_z + 0.15F}, Material::Yellow));
+    frame.push_back(span({kUpperEast, kD728Top + kC4Parapet, rope_z - 0.15F},
+                         {kUpperEast + kC4ParapetWidth, kBaitSheaveY, rope_z + 0.15F}, Material::Yellow));
+    frame.push_back(span({cx0 + 0.15F, kD728Top, kBaitWalkZ1 - 0.05F}, {cx0 + 0.3F, kBaitSheaveY, rope_z + 0.15F},
+                         Material::Yellow));
 }
 
 void build_stage_o_frame(std::vector<Part> &frame) {
@@ -1215,12 +1303,63 @@ void build_midstack_service(kit::Kit &kit, MidstackService &service) {
     build_stage_n_frame(frame);
     build_c5_frame(frame);
     build_stage_o_frame(frame);
+    build_bait_lift_frame(frame);
     (void)kit.add_body(Sim::kServiceFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     build_c4(kit);
     build_climbing_route(kit);
     build_stage_n(kit, service);
     build_c5(kit);
     build_stage_o(kit, service);
+}
+
+// J-108, the bait lift's two platforms: built after every other kit body
+// (physics_world.cpp, after the slab cell), so the bodies before them keep
+// their places and older saves line up. Each about its floor's top centre: a
+// steel floor and, on its north edge, the post the rope is made fast to; B
+// railed on its north and south sides and walled on its far, west side.
+void build_bait_lift(kit::Kit &kit, MidstackService &service) {
+    const float hz = 0.5F * (kBaitZ1 - kBaitZ0);
+    const float ahx = 0.5F * (kBaitAX1 - kBaitAX0);
+    const float bhx = 0.5F * (kBaitBX1 - kBaitBX0);
+    const auto floor = [&](const float hx) {
+        return box(JPH::Vec3(hx, 0.5F * kBaitSlab, hz), JPH::Vec3(0.0F, -0.5F * kBaitSlab, 0.0F), Material::Steel);
+    };
+    const JPH::Vec3 post_top(0.0F, kBaitPost, hz - 0.1F);
+    const Part post = box(JPH::Vec3(0.1F, 0.5F * kBaitPost, 0.1F), JPH::Vec3(0.0F, 0.5F * kBaitPost, hz - 0.1F),
+                          Material::Yellow);
+    std::vector<Part> b_parts{floor(bhx), post,
+                              box(JPH::Vec3(0.025F, 0.5F * kBaitWall, hz), JPH::Vec3(0.025F - bhx, 0.5F * kBaitWall, 0.0F),
+                                  Material::Galvanised)};
+    for (const float side : {-1.0F, 1.0F}) {
+        b_parts.push_back(box(JPH::Vec3(bhx - 0.025F, 0.5F * kBaitRail, 0.025F),
+                              JPH::Vec3(0.025F, 0.5F * kBaitRail, side * (hz - 0.025F)), Material::Yellow));
+    }
+    const JPH::RVec3 a_at(0.5F * (kBaitAX0 + kBaitAX1), kN706Top, kBaitZ);
+    const JPH::RVec3 b_at(0.5F * (kBaitBX0 + kBaitBX1), kN706Top, kBaitZ);
+    service.bait_a = kit.add_body(Sim::kServiceBaitAEntityId, {floor(ahx), post}, a_at, JPH::Quat::sIdentity(),
+                                  kBaitAMassKg, 0.8F);
+    service.bait_a_guide = kit.add_guide(service.bait_a, -JPH::Vec3::sAxisY(), 0.0F, kBaitAStop, 0.0F, 0.0F, 0.0F);
+    kit.set_damping(service.bait_a, 0.0F, 0.05F);
+    kit.set_guide_friction(service.bait_a_guide, kBaitFriction);
+    kit.set_platform(service.bait_a_guide);   // a floor to her at its stop
+    service.bait_chain = kit.add_chain(service.bait_a, JPH::Vec3(0.0F, -kBaitSlab, 0.0F), kUpperTop, kBaitChainKgPerM,
+                                       kBaitChainLength);
+    service.bait_b = kit.add_body(Sim::kServiceBaitBEntityId, b_parts, b_at, JPH::Quat::sIdentity(), kBaitBMassKg, 0.8F);
+    service.bait_b_guide = kit.add_guide(service.bait_b, JPH::Vec3::sAxisY(), 0.0F, kBaitBStop, 0.0F, 0.0F, 0.0F);
+    kit.set_damping(service.bait_b, 0.0F, 0.05F);
+    // Teeth in its top metre only: his jump off A jolts A down and B up a
+    // little, and B settles back onto its stop (a rack down the whole guide
+    // would hold B up and A low after every jump).
+    kit.set_dogs(service.bait_b_guide, kBaitDogPitch, kBaitTravel - 1.0F);
+    kit.set_guide_friction(service.bait_b_guide, kBaitFriction);
+    // The rope: A's post over its sheave, along the head beam, down to B's.
+    const JPH::RVec3 a_top = a_at + JPH::RVec3(post_top);
+    const JPH::RVec3 b_top = b_at + JPH::RVec3(post_top);
+    const JPH::RVec3 f1(a_top.GetX(), kBaitSheaveY, a_top.GetZ());
+    const JPH::RVec3 f2(b_top.GetX(), kBaitSheaveY, b_top.GetZ());
+    const float length =
+        static_cast<float>(JPH::Vec3(f1 - a_top).Length()) + static_cast<float>(JPH::Vec3(f2 - b_top).Length());
+    service.bait_rope = kit.add_rope(service.bait_a, post_top, f1, service.bait_b, post_top, f2, 1.0F, length, 0.0F);
 }
 
 } // namespace scraperx::sim::bands

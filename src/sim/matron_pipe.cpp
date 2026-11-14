@@ -33,7 +33,11 @@ constexpr float kTurnRate = 7.0F;
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kPipeStallS = 2.5F;
 constexpr float kPipeOverloadS = 0.18F;
-constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.78
+constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.68
+// Where her legs bear on a flange: on its top just out from the riser's
+// face (0.35 m off its axis) and in from the flange's (0.40 m, clear of her
+// on her line: world_solids.inc), on her side of it.
+constexpr float kPipeLegsOffAxisM = 0.38F;
 constexpr float kPipeLegsLineN = 800.0F;  // her legs' pull back onto her line while she slides
 constexpr float kHoistRideMps = 1.0F;     // a hoist's car at her pace on it (matron_hoist.cpp's kBoardMps)
 // Her legs come down onto a flange: they bear on it, a support, not a grip.
@@ -215,8 +219,17 @@ bool Matron::pipe_grip_in_reach(const RVec3 at) const {
         return pipe_in_hand_reach(at, pipe_hand_);
     case PipeGrip::Feet: {
         const float below = float(at.GetY() - pipe_hand_.GetY());
-        return std::abs(float(at.GetZ() - pipe_hand_.GetZ())) <= kPipeFootSpanM + 0.01F && below >= kStandCentre - 0.1F &&
-               below <= kStandCentre + 0.3F;
+        // Her soles within kPipeFootSpanM of her middle (her soles' span,
+        // matron.hpp): the full horizontal distance, not the z component
+        // alone. The Perch step drives her middle along x toward kPipeDeckX
+        // away from the planted take point, so the z-only check let the
+        // point sit 0.26-0.28 m off her middle — past her span — while
+        // still calling it held, and the contact truth exported a floor her
+        // soles cannot be on (S6, J-063: 5 ticks on the pipe descent).
+        // Out of reach it is let go, and the step below takes what is in
+        // her reach now.
+        const float across = std::hypot(float(at.GetX() - pipe_hand_.GetX()), float(at.GetZ() - pipe_hand_.GetZ()));
+        return across <= kPipeFootSpanM + 0.01F && below >= kStandCentre - 0.1F && below <= kStandCentre + 0.3F;
     }
     case PipeGrip::Legs:
         return true;
@@ -355,7 +368,7 @@ void Matron::tear_off_pipe() {
     // The flange under her legs: straight down beside the riser's face, the
     // first top met.
     const ClimbBodyFilter filter(body_, player_);
-    const RRayCast ray(RVec3(kPipeCentreX - 0.45F, feet + 0.05F, at.GetZ()), Vec3(0.0F, -2.0F * kStackPitch, 0.0F));
+    const RRayCast ray(RVec3(kPipeCentreX - kPipeLegsOffAxisM, feet + 0.05F, at.GetZ()), Vec3(0.0F, -2.0F * kStackPitch, 0.0F));
     RayCastResult hit;
     pipe_stop_y_ = physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)
                        ? float(ray.GetPointOnRay(hit.mFraction).GetY())
@@ -437,10 +450,9 @@ void Matron::ride_pipe(const float dt) {
             pipe_slide_mps_ = 0.0F;
             ++pipe_slams_;
             ++knockdowns_;
-            rage_ = std::min(1.0F, rage_ + kKnockdownRage);
             BodyID flange;
             SubShapeID member;
-            const RVec3 legs(kPipeCentreX - 0.45F, pipe_stop_y_, az);
+            const RVec3 legs(kPipeCentreX - kPipeLegsOffAxisM, pipe_stop_y_, az);
             if (!hand_rests_on(query, legs, filter, flange, member)) {
                 get_off_pipe(true);
                 return;
