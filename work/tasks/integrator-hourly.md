@@ -60,7 +60,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
 Between runs: the switchboard merges by itself; the inbox (#282: every Muse mail the bridge posts, proofs, reviews)
-wakes the integrator. Helpers run in the foreground, so a report is no separate wake (11-14). Free Muse takes the builds first.
+wakes the integrator. Helpers run in the foreground (11-14). Free Muse takes the builds first.
 
 Trunk merges: each owner merges trunk into its own branch (Muse too, 11-10); the integrator does it only for its
 own and Claude's branches. Never ask for a job and then do it yourself: if you take a job back, mail that first.
