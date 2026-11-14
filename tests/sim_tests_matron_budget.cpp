@@ -105,7 +105,7 @@ const Expected kExpected[] = {
     {"forklift-matron", Path::GrabArm, false, true, 380.0, 368.0},
     {"matron-mischief", Path::GrabSpring, false, true, 1617.0, 4469.0},
     {"matron-mischief", Path::GrabArm, false, true, 252.0, 292.0},
-    {"matron-damage", Path::GrabSpring, false, true, 1339.0, 2012.0},
+    {"matron-damage", Path::GrabSpring, false, true, 1615.0, 3603.0},
     {"matron-damage", Path::GrabArm, false, true, 406.0, 389.0},
     {"strike", Path::GrabSpring, false, true, 2245.0, 3963.0},
     {"strike", Path::GrabArm, false, true, 974.0, 373.0},

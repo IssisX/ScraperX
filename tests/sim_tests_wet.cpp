@@ -235,17 +235,23 @@ void run_wet_e_guard(const bool expect) {
     // sat 78 places later and the magnet's pinned append order failed.
     // Before forklift_at 822, now 744; the total is still 824.
     constexpr std::uint32_t kNewUpper = 78;
+    // J-014 (#121): three toolboxes on the rings the dress left with no
+    // carryable piece (594.25, 640.25 and 684.1 m), their table places
+    // after the Matron's kinds and their bodies after the bait lift's (only
+    // the S2 drain's come later), so the kinds keep their places and only
+    // the total grows by 3.
+    constexpr std::uint32_t kNewHightower = 3;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
     // J-042: then exactly two pieces of stock laid for the Matron by her band
-    // (the extinguisher and the pallet), after the upper pieces; and last
-    // the S2 drain (J-015: its striker and bolted tank), the kit's last two
-    // bodies, built after every other body so saves from before the drain
-    // still line up.
+    // (the extinguisher and the pallet), after the upper pieces (the
+    // hightower pieces come after them); and last the S2 drain (J-015: its
+    // striker and bolted tank), the kit's last two bodies, built after every
+    // other body so saves from before the drain still line up.
     constexpr std::uint32_t kMatronKinds = 2;
     // J-092 (#410): then the slab trap's cell on her deck (slab_cell.hpp):
     // its slab, the table's last piece, then its static frame, its trigger
-    // and the cord's handle; then the S2 drain's two (J-015), the kit's last.
+    // and the cord's handle.
     constexpr std::uint32_t kHungSlabs = 1;
     const std::uint64_t kSlabCell[] = {scraperx::sim::SlabCell::kFrameEntity, scraperx::sim::SlabCell::kTriggerEntity,
                                        scraperx::sim::SlabCell::kHandleEntity};
@@ -259,8 +265,9 @@ void run_wet_e_guard(const bool expect) {
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
     const std::uint32_t cell_at = kinds_at + kMatronKinds + kHungSlabs;
     const std::uint32_t bait_at = cell_at + static_cast<std::uint32_t>(std::size(kSlabCell));
-    // J-015: the S2 drain's two follow the bait lift's, the kit's last.
-    const std::uint32_t drain_at = bait_at + static_cast<std::uint32_t>(std::size(kBait));
+    const std::uint32_t hightower_at = bait_at + static_cast<std::uint32_t>(std::size(kBait));
+    // J-015: the S2 drain's two follow the hightower toolboxes, the kit's last.
+    const std::uint32_t drain_at = hightower_at + kNewHightower;
     constexpr std::uint32_t kDrainBodies = 2;
     bool since_after = world.kit_body_count() == drain_at + kDrainBodies;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
@@ -270,9 +277,10 @@ void run_wet_e_guard(const bool expect) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
     }
     // The 78 upper pieces follow the forklift, in table order, then the
-    // Matron's two and the cell's slab, the table's last three pieces; then
-    // the cell's trigger and handle.
-    const std::uint32_t upper_first = world.loose_stock_count() - kHungSlabs - kMatronKinds - kNewUpper;
+    // Matron's two and the cell's slab, the table's last three pieces
+    // before the cell's trigger and handle; the hightower pieces come
+    // after the bait lift, the table's last three.
+    const std::uint32_t upper_first = world.loose_stock_count() - kHungSlabs - kMatronKinds - kNewHightower - kNewUpper;
     for (std::uint32_t i = 0; since_after && i < kNewUpper + kMatronKinds + kHungSlabs; ++i) {
         since_after = world.kit_body_entity(forklift_at + std::size(kForklift) + i) ==
                       Simulation::kLooseStockFirstEntity + upper_first + i;
@@ -282,6 +290,12 @@ void run_wet_e_guard(const bool expect) {
     }
     for (std::uint32_t i = 0; since_after && i < std::size(kBait); ++i) {
         since_after = world.kit_body_entity(bait_at + i) == kBait[i];
+    }
+    // The hightower toolboxes, the table's last three pieces, built after
+    // the bait lift; their entities follow the cell's slab in table order.
+    for (std::uint32_t i = 0; since_after && i < kNewHightower; ++i) {
+        since_after = world.kit_body_entity(hightower_at + i) ==
+                      Simulation::kLooseStockFirstEntity + upper_first + kNewUpper + kMatronKinds + kHungSlabs + i;
     }
     since_after = since_after && world.kit_body_entity(drain_at) == Simulation::kStackS2DrainStrikerEntityId &&
                   world.kit_body_entity(drain_at + 1) == Simulation::kStackS2CartEntityId;
@@ -383,7 +397,7 @@ void run_wet_e_guard(const bool expect) {
     // to the measured hash is exact).
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, then the slab cell's, then the bait lift's A and B, and the S2 drain's last");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, then the slab cell's, then the bait lift's A and B, then the hightower toolboxes, and the S2 drain's last");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is
@@ -424,9 +438,16 @@ void run_wet_e_guard(const bool expect) {
     // A change that needs stock_before or stock_before_cell re-pinned has
     // put a piece ahead of others and renumbered them: lay it last instead
     // (loose_stock.hpp, kFirstEntity).
-    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs &&
+    // Re-pinned for J-014 (#121): three toolboxes on the rings the dress
+    // left with no carryable piece (594.25, 640.25 and 684.1 m) take the
+    // end of the table, after the cell's slab. The first 542 still hash
+    // to 10019901410837365716, so every earlier piece stands where it
+    // was; the count is 542 + 1 + 3 and the hash over all pieces is new:
+    // now 5979586708644160510 (measured by running run_wet_e on the merged
+    // tree: bodies=835, stock=546).
+    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs + kNewHightower &&
                 stock_before.hash == 16882536141644003327ULL &&
-                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 2030619953479605832ULL,
+                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 5979586708644160510ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");

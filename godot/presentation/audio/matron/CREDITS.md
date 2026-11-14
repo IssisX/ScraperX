@@ -129,3 +129,31 @@ The owner has not yet auditioned these retained takes.
 | `matron_sniff_1.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 2.51–3.35 |
 | `matron_sniff_2.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 4.35–5.20 |
 | `matron_sniff_3.ogg` | https://freesound.org/people/OwlStorm/sounds/151218/ | OwlStorm | CC0 1.0 | 0.05–0.59 |
+
+## Wake takes (2026-11-11)
+
+Her waking dread is recorded now, not generated in code (issue #416).
+Each take is 3.4 s, the old length, so the dread duck is unchanged: a beat
+of hush (0.30 s of silence), the tower's steel taking a load (a real iron
+groan), a wet intake of breath (a real gasp, laid over the groan at 1.25 s),
+and the sub swell (28 Hz with its 56/84 Hz partials, rendered offline, not
+a human sound) under both. Prepared by
+`tools/audio/matron_wake_breath_takes.py`, which re-downloads the sources
+below, refuses a changed byte (SHA-256 pinned in the script), and reproduces
+these files. Each take is its own gasp and its own window of the groan, not
+a pitched copy of another take. Cut, high-passed at 75 Hz, faded at both
+ends, peak-normalized to -1.1 dBFS (0.88); mono Ogg Vorbis at 22,050 Hz.
+
+| File | Gasps (source, part used) | Steel groan (source, part used) |
+|---|---|---|
+| `matron_wake_0.ogg` | https://freesound.org/people/superEGsonic/sounds/784717/ — gasps_female, superEGsonic, CC0 1.0 | https://freesound.org/people/hinchinbrook/sounds/496836/ — Metallic Groan, hinchinbrook, CC0 1.0 |
+|  | gasp 1: 0.55–1.85 | groan: 1.80–4.90 |
+| `matron_wake_1.ogg` | same gasps file | same groan file |
+|  | gasp 2: 2.15–3.45 | groan: 3.00–6.10 |
+| `matron_wake_2.ogg` | same gasps file | same groan file |
+|  | gasp 3: 3.80–5.10 | groan: 4.20–7.30 |
+| `matron_wake_3.ogg` | same gasps file | same groan file |
+|  | gasp 4: 5.40–6.70 | groan: 5.10–8.20 |
+
+The other gasp and groan candidates Cory has not picked are in
+`03_EXECUTION/VOICE_PICKS/` with `breath_wake_PICKS.md`.

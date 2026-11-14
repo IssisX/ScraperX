@@ -7,9 +7,10 @@
 //   SCRAPERX_GROUP("twin", 70, run_twin);
 //       A group of the default sequence (the bare scraperx_sim_tests run),
 //       printed as its TIME line. The
-//       sequence runs in order of the key, never in registration order:
-//       static initialization across files has no set order. Keys are spaced
-//       by 10, so a new group takes a free key between two others.
+//       sequence runs in order of the key, then the name, never in
+//       registration order: static initialization across files has no set
+//       order. Keys are spaced by 10; a key may repeat (groups on one key run
+//       in name order), so two new groups picking the same key never collide.
 //   SCRAPERX_SELECT("twin", run_twin, run_twin_balconies);
 //       SCRAPERX_ONLY=twin runs those functions, in that order, and nothing else.
 //   SCRAPERX_SLICE("matron-riser", test_matron_riser);
@@ -17,8 +18,8 @@
 //       (CMakeLists.txt reads these lines; the post-build check holds the two to
 //       the same list).
 //
-// A repeated name, a repeated key or an unknown SCRAPERX_ONLY name stops the
-// binary at start-up (and so the build, through the post-build check).
+// A repeated name or an unknown SCRAPERX_ONLY name stops the binary at
+// start-up (and so the build, through the post-build check).
 // SCRAPERX_LIST=1 prints the default sequence in order, SCRAPERX_LIST=only every
 // SCRAPERX_ONLY name with what it runs, SCRAPERX_LIST=slices the CTest slices.
 

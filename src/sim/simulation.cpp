@@ -279,6 +279,10 @@ std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
 
+std::uint32_t Simulation::loose_stock_hightower_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().hightower_begin());
+}
+
 std::uint32_t Simulation::loose_stock_upper_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().upper_begin());
 }
@@ -725,6 +729,9 @@ AdvanceResult Simulation::advance_frame(const double frame_delta_seconds) noexce
 
     for (std::uint32_t step = 0; step < due; ++step) {
         step_fixed();
+        if (step_hook_ != nullptr) {
+            step_hook_(step_hook_context_);
+        }
     }
     return {true, due};
 }
@@ -1330,6 +1337,12 @@ bool Simulation::debug_player_snagged() const noexcept { return physics_world_->
 
 void Simulation::debug_matron_player_blow() noexcept { physics_world_->matron().player_blow_landed(); }
 
+void Simulation::debug_matron_player_blow_at(const Vector3 impulse_ns, const Vector3 at, const bool low) noexcept {
+    physics_world_->matron().struck_by_player(
+        JPH::Vec3(static_cast<float>(impulse_ns.x), static_cast<float>(impulse_ns.y), static_cast<float>(impulse_ns.z)),
+        JPH::RVec3(at.x, at.y, at.z), low);
+}
+
 void Simulation::debug_force_strike_move(const std::uint8_t move) noexcept {
     physics_world_->force_strike_move_for_test(move);
 }
@@ -1364,6 +1377,17 @@ void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) n
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
+
+void Simulation::debug_clear_corpses() noexcept {
+    physics_world_->clear_corpses_for_test();
+}
+
+void Simulation::debug_hang_slab(const Vector3 centre) noexcept {
+    physics_world_->hang_slab_for_test(
+        JPH::RVec3(static_cast<float>(centre.x), static_cast<float>(centre.y), static_cast<float>(centre.z)));
+}
+
+void Simulation::debug_release_hung_slab() noexcept { physics_world_->release_hung_slab_for_test(); }
 
 double Simulation::debug_support_y(const Vector3 at, const double depth) const noexcept {
     return physics_world_->support_y_for_test(
@@ -1491,6 +1515,10 @@ bool Simulation::place_matron_home(const float deck_top) {
     return physics_world_->place_matron_home(deck_top);
 }
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
+void Simulation::debug_set_step_hook(DebugStepHook hook, void *context) noexcept {
+    step_hook_ = hook;
+    step_hook_context_ = context;
+}
 
 double Simulation::debug_matron_gravity_factor() const noexcept {
     const Matron &matron = physics_world_->matron();
@@ -1666,6 +1694,12 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.knockdowns = view.knockdowns;
     result.damage_ns = view.damage_ns;
     result.player_damage_ns = view.player_damage_ns;
+    for (std::size_t i = 0; i < injury::kRegions; ++i) {
+        result.injury_j_region[i] = view.injury_j_region[i];
+        result.injury_j_event[i] = view.injury_j_event[i];
+    }
+    result.injury_j_region_unclassified = view.injury_j_region_unclassified;
+    for (std::size_t i = 0; i < 4; ++i) result.limb_health[i] = view.limb_health[i];
     result.damage_stage = view.damage_stage;
     result.blow_mps = view.blow_mps;
     result.blow_low = view.blow_low;
@@ -1826,16 +1860,22 @@ std::vector<std::uint8_t> Simulation::save_game() const {
 }
 
 bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
+    save_reject_reason_.clear();
     last_load_refusal_.clear();
     if (data == nullptr) {
+        save_reject_reason_ = "empty";
         return false;
     }
     SaveReader r(data, size);
     std::uint64_t key = 0, tick = 0;
     if (!r.pod(key) || key != save_format_key() || !r.pod(tick)) {
+        save_reject_reason_ = "format key";
         return false;
     }
-    if (!physics_world_->load_save(r)) {
+    if (!physics_world_->load_save(r, &save_reject_reason_)) {
+        if (save_reject_reason_.empty()) {
+            save_reject_reason_ = "refused";
+        }
         last_load_refusal_ = physics_world_->load_refusal();
         return false;
     }

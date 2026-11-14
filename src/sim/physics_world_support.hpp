@@ -760,9 +760,12 @@ struct LedgeProbe final {
 };
 
 // Step 2 movement. A hold a hand has closed round: the point on the member's
-// axis, on the body the member belongs to.
+// axis, on the body the member belongs to. `level` is the member lying level
+// (its long axis horizontal, a bar or rail, not a pole): the matron's own bar
+// search uses the same slope (matron_found_climb.cpp).
 struct Grip final {
     bool valid = false;
+    bool level = false;
     JPH::BodyID body;
     std::uint64_t entity_id = 0;
     JPH::RVec3 point{JPH::RVec3::sZero()};
@@ -940,6 +943,9 @@ public:
         return true;
     }
     [[nodiscard]] bool done() const noexcept { return at_ == size_; }
+    // Where the next read would start: a test walks the sections with the
+    // production reader and truncates exactly at each section boundary.
+    [[nodiscard]] std::size_t position() const noexcept { return at_; }
 
 private:
     const std::uint8_t *data_;

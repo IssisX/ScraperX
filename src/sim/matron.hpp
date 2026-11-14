@@ -108,6 +108,7 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_injury.hpp"
 #include "sim/matron_mover.hpp"
 #include "sim/matron_perception.hpp"
 #include "sim/matron_routecraft.hpp"
@@ -623,6 +624,20 @@ public:
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
     // (patch Item 3; moved here from matron.cpp so matron_found_climb.cpp can use the same value).
     static constexpr float kRampStallS = 3.0F;
+    // A load hung over her (J-100 #418): heavy enough to kill her, overhead,
+    // seen. Standing under one costs in her route choice while she sees it
+    // and him near its release; a falling one she sees with time to clear,
+    // she steps clear of.
+    static constexpr float kHungLoadMinKg = 500.0F;   // a load this heavy, hung, is read
+    static constexpr float kHungLoadOverheadM = 1.0F; // its bottom this far over her head
+    static constexpr float kHungLoadCeilingM = 22.0F; // and no higher than this over her feet: the
+                                                       // production hang's bottom sits 20.45 m over
+                                                       // deck 154 (SlabCell::kSlabUnderside 174.45 m)
+    static constexpr float kHungLoadReleaseM = 4.0F;  // him within this of its release: it may fall on her
+    static constexpr float kHungLoadHeardS = 1.0F;    // a heard release stays fresh this long
+    static constexpr float kHungLoadFallMps = 1.0F;   // falling this fast: it is falling
+    static constexpr float kHungLoadMarginM = 0.3F;   // past her radius, past its half-diagonal
+    static constexpr float kHungLoadSupportM = 0.2F;  // a support ray this long under its bottom
 
     // Her stages (the owner, 2026-10-19): a pest, dangerous, and fully
     // changed. Her rage moves her between them, both ways: only sound that
@@ -1352,6 +1367,14 @@ public:
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
         float player_damage_ns = 0.0F;  // the player's share only
+        // J-059 #307: the same impulse, split by where it landed (J-044a §D):
+        // per-region doses, the share no region owns, and what each limb has
+        // left (1 = whole, 0 = spent; arms from the chest dose, legs whole
+        // in slice 1). The bridge exports these as `injury`.
+        std::array<float, injury::kRegions> injury_j_region{};
+        std::array<float, injury::kRegions> injury_j_event{};
+        float injury_j_region_unclassified = 0.0F;
+        std::array<float, 4> limb_health{1.0F, 1.0F, 1.0F, 1.0F};
         std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
         bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
@@ -1457,6 +1480,12 @@ public:
         float damage_ns = 0.0F;         // judged physical impulse, all sources
         float player_damage_ns = 0.0F;  // the player's share only
         bool dead = false;              // she lies dead as saved
+        // J-059 #343 fix: the per-region doses, so a restore brings her back
+        // as saved (settled call 11-05 #242; the PR's invariant is regions +
+        // unclassified == damage_ns). All nine regions: the eight drawn plus
+        // unclassified, j_region and j_event each.
+        std::array<float, injury::kRegionCount> injury_j_region{};
+        std::array<float, injury::kRegionCount> injury_j_event{};
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1926,8 +1955,15 @@ public:
         // death is saved as dead: a checkpoint taken while she lies dead has her dead, as a restore
         // brings her back as saved (J-069).
         const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
-                damage_ns_, player_damage_ns_, dead_};
+        Saved out{kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
+                  damage_ns_, player_damage_ns_, dead_};
+        // The per-region doses travel with the damage (J-059 #343 fix), so a
+        // restore brings her back as saved, not as the live doses happen to be.
+        for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+            out.injury_j_region[i] = injury_.doses[i].j_region;
+            out.injury_j_event[i] = injury_.doses[i].j_event;
+        }
+        return out;
     }
     void restore(const Saved &saved);
 
@@ -2044,6 +2080,14 @@ private:
     [[nodiscard]] float floor_of(float y) const;
     // An observed position's supporting scan surface, including floors below her level list.
     [[nodiscard]] float floor_at(float x, float y, float z) const;
+    // The scan patch top under a body centred at (x, y, z): the floor that
+    // body stands on, when her scan knows one there. False when no patch
+    // holds the spot within the body's standing height.
+    [[nodiscard]] bool scan_floor(float x, float y, float z, float &floor) const;
+    // The floor under a heard or glimpsed body: her scan's patch top under
+    // its feet (centre y less 0.9 m), else floor_at. A crash keeps floor_at:
+    // its impact point is not a body standing on a patch.
+    [[nodiscard]] float floor_under_body(float x, float y, float z) const;
     // (x, z) put on the nearest of her level's floor lines (not the
     // catwalk's, not a gap's): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
@@ -2053,6 +2097,9 @@ private:
     // false when no such path reaches it (she then heads straight for it).
     bool route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz,
                       bool allow_gaps = false) const;
+    // A point out of every costed hung load's footprint (J-100): the rim she
+    // stops at, not the load's centre.
+    void clamp_out_of_footprint(float &x, float &z) const;
     // Nothing built standing between (fx, fz) and (tx, tz) at her hips, across
     // her width, on her floor (a post, a frame): she could walk it straight.
     // Her width is swept, not sampled: a post thinner than the space between
@@ -2063,6 +2110,10 @@ private:
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
+    // A falling hung load she sees with time to clear (J-100): her walk's
+    // target and speed are retargeted at the quickest way out of its
+    // footprint (false: no dodge — she walks on as called).
+    bool hung_load_dodge(float &wx, float &wz, float &go);
     // matron_moves.cpp: her pace chosen for this tick of the hunt; a crumb of
     // the player's way; the next crumb on from where she is; the stall
     // watchdog's tick (true: a sidestep target set); silence for silence.
@@ -2457,6 +2508,9 @@ private:
     // read after the step (take_blow); and her staggering and lying there
     // (step_knocked), down onto the steel and up off it.
     void sense_near();
+    // The heavy loads hung overhead she can see (J-100): rebuilt every tick,
+    // costed while she sees one and him near its release.
+    void sense_hung_loads();
     void take_blow(float dt);
     void step_knocked(float dt);
     void lie_down(float fall_x, float fall_z);
@@ -2968,12 +3022,32 @@ private:
     };
     std::array<Near, kMaxNear> near_{};
     std::size_t near_count_ = 0;
+    // A heavy load hung overhead she has read (sense_hung_loads, rebuilt every
+    // tick): its body, where it hangs, how fast it falls, whether she sees it
+    // and whether it is costed in her route choice. Sorted by body id.
+    struct HungLoad {
+        JPH::BodyID body;
+        float x = 0.0F, z = 0.0F;
+        float bottom_y = 0.0F;
+        float centre_y = 0.0F;
+        float vy = 0.0F;
+        float footprint_r = 0.0F;
+        bool seen = false;
+        bool costed = false;
+        bool falling = false;
+    };
+    std::vector<HungLoad> hung_loads_;
     JPH::Vec3 set_velocity_ = JPH::Vec3::sZero();   // hers after she moved, before the step
     // The blow being dealt (above): her change, the strikers' impulse on her
     // mass (horizontal), and a weight's come down on her; since the last
     // tick a striker was against her; what kind of blow it is.
     float damage_ns_ = 0.0F;
     float player_damage_ns_ = 0.0F;
+    // J-059 #307: per-region injury from where each blow lands (J-044a §D).
+    // Monotonic: no heal. Injuries persist through checkpoints (settled
+    // call): restore() loads the saved doses, so a reload brings her back
+    // as saved (#343 fix: the doses travel in Saved, they are not kept live).
+    injury::State injury_{};
     JPH::Vec3 blow_change_ = JPH::Vec3::sZero();
     JPH::Vec3 blow_impulse_ = JPH::Vec3::sZero();
     float blow_above_ = 0.0F;

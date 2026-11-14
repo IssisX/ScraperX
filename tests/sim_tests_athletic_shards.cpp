@@ -15,6 +15,9 @@ void run_athletic_traversal_1() {
     run_twin_geometry();
     run_twin();
     run_twin_balconies();
+    run_twin_pitch();
+    run_twin_pitch_probe();
+    run_twin_pitch_probe_pump();
     run_well_stage_a();
     run_well_stage_b();
     run_well_stage_c();
@@ -78,6 +81,7 @@ void run_athletic_traversal_1() {
     run_wall_chain();
     run_up_controls();
     run_zipline();
+    run_hang_rail();
 }
 
 void run_athletic_traversal_2() {
@@ -99,11 +103,13 @@ void run_athletic_traversal_2() {
     run_matron();
     run_matron_pace();
     run_matron_unstick();
+    run_matron_hung_load();
     run_matron_traverse();
     run_matron_pursuit();
     run_matron_ring_descent();
     run_matron_ways();
     run_matron_same_region();
+    run_matron_heard_lead();
     run_matron_climb();
     run_strike();
     run_one_arm_route();

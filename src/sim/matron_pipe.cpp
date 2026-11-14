@@ -450,7 +450,6 @@ void Matron::ride_pipe(const float dt) {
             pipe_slide_mps_ = 0.0F;
             ++pipe_slams_;
             ++knockdowns_;
-            rage_ = std::min(1.0F, rage_ + kKnockdownRage);
             BodyID flange;
             SubShapeID member;
             const RVec3 legs(kPipeCentreX - kPipeLegsOffAxisM, pipe_stop_y_, az);

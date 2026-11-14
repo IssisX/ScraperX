@@ -609,6 +609,40 @@ float Matron::floor_of(const float y) const {
     return best;
 }
 
+// The scan patch top under a body centred at (x, y, z): the patch holding
+// the spot whose top is nearest the body's feet (y less 0.9 m), within the
+// body's standing height. False when her scan holds no such patch there.
+bool Matron::scan_floor(const float x, const float y, const float z, float &floor) const {
+    if (scanned_ == nullptr) return false;
+    float best = std::numeric_limits<float>::max();
+    bool found = false;
+    for (const traversal::Patch &p : scanned_->patches()) {
+        if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+            z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+            p.top > y + 0.15F || y - p.top > 2.2F) {
+            continue;
+        }
+        const float distance = std::abs(y - 0.9F - p.top);
+        if (distance < best) {
+            best = distance;
+            floor = p.top;
+            found = true;
+        }
+    }
+    return found;
+}
+
+// The floor under a heard or glimpsed body: her scan's patch top under its
+// feet, else floor_at. A body centre 0.9 m above its feet reads its real
+// floor off her scan instead of the levels table, which knows no floor
+// between the decks (J-127: a heard lead on the stepped beam read the deck
+// 2.8 m below him and walked her off the platform to it).
+float Matron::floor_under_body(const float x, const float y, const float z) const {
+    float floor = 0.0F;
+    if (scan_floor(x, y, z, floor)) return floor;
+    return floor_at(x, y, z);
+}
+
 // A sound or sighting belongs to the steel below its actual position, not
 // automatically to her own deck. The levels table does not include grade;
 // her collision scan does. Use the closest local top within the player's
@@ -617,25 +651,8 @@ float Matron::floor_at(const float x, const float y, const float z) const {
     float lowest = std::numeric_limits<float>::max();
     for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
     if (y < lowest - 0.5F) {
-        if (scanned_ != nullptr) {
-            float best = std::numeric_limits<float>::max();
-            float floor = 0.0F;
-            bool found = false;
-            for (const traversal::Patch &p : scanned_->patches()) {
-                if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
-                    z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
-                    p.top > y + 0.15F || y - p.top > 2.2F) {
-                    continue;
-                }
-                const float distance = std::abs(y - 0.9F - p.top);
-                if (distance < best) {
-                    best = distance;
-                    floor = p.top;
-                    found = true;
-                }
-            }
-            if (found) return floor;
-        }
+        float floor = 0.0F;
+        if (scan_floor(x, y, z, floor)) return floor;
         return y - 0.9F;
     }
     if (zipline_ != nullptr) {
@@ -664,6 +681,30 @@ float Matron::floor_at(const float x, const float y, const float z) const {
 
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
     return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
+}
+
+// A point out of every costed hung load's footprint (J-100): the rim she
+// stops at, not the load's centre.
+void Matron::clamp_out_of_footprint(float &x, float &z) const {
+    for (const HungLoad &load : hung_loads_) {
+        if (!load.costed) {
+            continue;
+        }
+        const float dx = x - load.x;
+        const float dz = z - load.z;
+        const float dist = std::hypot(dx, dz);
+        if (dist >= load.footprint_r) {
+            continue;
+        }
+        if (dist < 1.0e-6F) {
+            // Dead centre: step east, out of the footprint.
+            x = load.x + load.footprint_r;
+            z = load.z;
+        } else {
+            x = load.x + dx / dist * load.footprint_r;
+            z = load.z + dz / dist * load.footprint_r;
+        }
+    }
 }
 
 bool Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
@@ -771,6 +812,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     if (prev[static_cast<std::size_t>(to)] < 0 && to != from) {
         wx = tx;
         wz = tz;
+        clamp_out_of_footprint(wx, wz);
         return false;
     }
     std::vector<int> path;
@@ -840,6 +882,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
             wz = on_line.z;
         }
     }
+    clamp_out_of_footprint(wx, wz);
     return true;
 }
 
@@ -989,14 +1032,26 @@ void Matron::feel_floor(const float dt) {
     // as walk_toward's drive gate (a step, a beam, a ladder foot with her
     // middle past its edge). Where her middle is over the floor this reads
     // exactly as before.
+    // J-040: while she lies down her middle stays at standing height, so a
+    // ray from her middle meets a weight lying on her body and reads its
+    // fall as "the floor is moving" — a slab on her made her ride. While
+    // lying, her floor ray starts from her lying body's underside (her real
+    // lowest point), a hair above it so the ray begins in open air and not
+    // inside the floor she lies on; only what is under her can make her
+    // ride. The upright rays are unchanged.
+    RVec3 ray_from = at;
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        ray_from = RVec3(at.GetX(), body_box.mMin.GetY() + 0.02F, at.GetZ());
+    }
     const auto floor_hit = [&](const RVec3 &from) {
         return physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -reach, 0.0F)), hit, {}, {}, self);
     };
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     const Vec3 across(std::cos(yaw_), 0.0F, -std::sin(yaw_));
-    if (floor_hit(at) || floor_hit(at + across * kFootSpanM) || floor_hit(at - across * kFootSpanM) ||
-        floor_hit(at + facing * kFootSpanM) || floor_hit(at - facing * kFootSpanM)) {
-        feet_y_ = float(at.GetY()) - reach * hit.mFraction;
+    if (floor_hit(ray_from) || floor_hit(ray_from + across * kFootSpanM) || floor_hit(ray_from - across * kFootSpanM) ||
+        floor_hit(ray_from + facing * kFootSpanM) || floor_hit(ray_from - facing * kFootSpanM)) {
+        feet_y_ = float(ray_from.GetY()) - reach * hit.mFraction;
         // The bay's leaf on its stop under its motor is a walkway: what it
         // gives under her stride is not a floor going.
         floor_vy = hit.mBodyID == bay_leaf_ && bay_open_ ? 0.0F : bodies.GetLinearVelocity(hit.mBodyID).GetY();
@@ -1132,6 +1187,116 @@ bool Matron::off_its_steel(const int level, const float x, const float feet, con
     return false;   // a level whose steel she does not know: its height is all she has
 }
 
+// A falling hung load she sees with time to clear (J-100): her walk's target
+// and speed are retargeted at the quickest way out of its footprint. The
+// exit is the nearer, in time, of straight away from the load and along her
+// own motion; she dodges only when she clears before it reaches her head.
+bool Matron::hung_load_dodge(float &wx, float &wz, float &go) {
+    // Walking only, on her feet: not held, not riding, not climbing, not on a
+    // line, and not with the player in her hands.
+    const bool walking = state_ == State::Hunting || state_ == State::Searching || state_ == State::Shuffling ||
+                         state_ == State::Guarding || state_ == State::Peering || state_ == State::Unrigging;
+    if (!walking || !body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 ||
+        pipe_phase_ != PipePhase::Off || holder() != nullptr) {
+        return false;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    const float feet = float(at.GetY()) - kStandCentre;
+    const float head = feet + kStandCentre + kHalfHeight;
+    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+    // The time to cover `dist` along `u`: first plant a foot and kill any
+    // speed the wrong way (kCutAccel), then her feet to kHuntMps (kFootAccel),
+    // then at that pace. A speed already past it is kept, not braked away.
+    const auto time_to_clear = [&](const Vec3 &u, float dist) {
+        float v = flat.Dot(u);
+        float t = 0.0F;
+        if (v < 0.0F) {
+            const float tb = -v / kCutAccel;
+            t += tb;
+            dist -= v * tb + 0.5F * kCutAccel * tb * tb;
+            v = 0.0F;
+        }
+        if (v < kHuntMps) {
+            const float ta = (kHuntMps - v) / kFootAccel;
+            const float da = v * ta + 0.5F * kFootAccel * ta * ta;
+            if (da >= dist) {
+                return t + (-v + std::sqrt(v * v + 2.0F * kFootAccel * dist)) / kFootAccel;
+            }
+            t += ta;
+            dist -= da;
+            v = kHuntMps;
+        }
+        return t + dist / std::max(v, 0.1F);
+    };
+    for (const HungLoad &load : hung_loads_) {
+        if (!load.seen || !load.falling) {
+            continue;
+        }
+        const float dx = float(at.GetX()) - load.x;
+        const float dz = float(at.GetZ()) - load.z;
+        const float dist = std::hypot(dx, dz);
+        if (dist >= load.footprint_r) {
+            continue;
+        }
+        const float drop = load.bottom_y - head;
+        if (drop <= 0.0F) {
+            continue;
+        }
+        // Time for the load to reach her head, falling at vy under gravity.
+        const float s = -load.vy;
+        const float t_impact = (-s + std::sqrt(s * s + 2.0F * 9.81F * drop)) / 9.81F;
+        // The way out, along a direction `u`: where her line leaves the
+        // footprint's circle.
+        const auto exit_along = [&](const Vec3 &u, float &exit_dist) {
+            const float along = dx * u.GetX() + dz * u.GetZ();
+            const float inside = dist * dist - load.footprint_r * load.footprint_r;
+            exit_dist = -along + std::sqrt(along * along - inside);
+            return exit_dist > 0.0F;
+        };
+        float best_t = std::numeric_limits<float>::max();
+        Vec3 best_u = Vec3::sZero();
+        float best_exit = 0.0F;
+        // Away from the load.
+        if (dist > 1.0e-6F) {
+            const Vec3 away(dx / dist, 0.0F, dz / dist);
+            float exit_dist = 0.0F;
+            if (exit_along(away, exit_dist)) {
+                const float t = time_to_clear(away, exit_dist);
+                if (t < best_t) {
+                    best_t = t;
+                    best_u = away;
+                    best_exit = exit_dist;
+                }
+            }
+        }
+        // Along her own motion.
+        const float speed_now = flat.Length();
+        if (speed_now > 0.5F) {
+            const Vec3 along_motion = flat / speed_now;
+            float exit_dist = 0.0F;
+            if (exit_along(along_motion, exit_dist)) {
+                const float t = time_to_clear(along_motion, exit_dist);
+                if (t < best_t) {
+                    best_t = t;
+                    best_u = along_motion;
+                    best_exit = exit_dist;
+                }
+            }
+        }
+        if (best_t >= t_impact - 0.05F) {
+            continue;
+        }
+        // Out of the footprint, with a step to spare, at her fastest walk.
+        wx = float(at.GetX()) + best_u.GetX() * (best_exit + 0.5F);
+        wz = float(at.GetZ()) + best_u.GetZ() * (best_exit + 0.5F);
+        go = std::max(go, kHuntMps);
+        return true;
+    }
+    return false;
+}
+
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
                          const bool turn_moves) {
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -1141,6 +1306,15 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     if (sidestep_s_ > 0.0F && speed > 0.0F) {
         wx = sidestep_x_;
         wz = sidestep_z_;
+    }
+    // A falling hung load she sees with time to clear (J-100): her walk is
+    // retargeted at the quickest way out of its footprint, at her fastest walk.
+    // Only while she walks: a stand (the stalk's freeze, the windup, the hush)
+    // holds her where she is, and the dodge does not break it (J-092's trap:
+    // frozen under the slab, she takes it).
+    float go = speed;
+    if (speed > 0.0F) {
+        hung_load_dodge(wx, wz, go);
     }
     target_x_ = wx;
     target_z_ = wz;
@@ -1297,7 +1471,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const float length = std::hypot(dx, dz);
     Vec3 want = Vec3::sZero();
     if (length > 0.15F) {
-        want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
+        want = Vec3(dx / length * go, 0.0F, dz / length * go);
         yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
     }
     if (floor) {
@@ -1578,6 +1752,73 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float reach = toward * dt + kEdgeMarginM;
                 if (toward > 0.0F && edge_at(side, reach)) {
                     velocity -= side * toward;
+                }
+            }
+            // Nor under a hung load she has read the release of (J-100): where
+            // she is headed, inside her stopping distance of a costed load's
+            // footprint, she plants her feet. Inside it already, the dodge
+            // owns the step, not this brake. The brake guards ENTRY, not
+            // proximity: it fires only when her heading would carry her
+            // inside the footprint, so a route that only grazes the rim is
+            // not stopped (J-100 red-fix: the climb, whose route grazes the
+            // slab rim 1.99 m out). A stalk's close is not route choice, and
+            // the trap's lure is her walking under the load to her band
+            // (J-092), so the brake does not fire while stalking.
+            for (const HungLoad &load : hung_loads_) {
+                if (!load.costed || stalking_) {
+                    continue;
+                }
+                const Vec3 to_load(load.x - float(at.GetX()), 0.0F, load.z - float(at.GetZ()));
+                const float gap = to_load.Length() - load.footprint_r;
+                if (gap > 0.0F && gap <= check && way.Dot(to_load) > 0.0F) {
+                    const float along = way.Dot(to_load);
+                    const float closest2 = to_load.LengthSq() - along * along;
+                    const float enter_r = load.footprint_r - 0.01F;
+                    if (closest2 >= enter_r * enter_r) {
+                        continue;
+                    }
+                    // The drive adds up to foot_accel * dt forward in this
+                    // same tick (the Turn's lunge most of all): the brake
+                    // takes that too, or the lunge coasts through it. Whether
+                    // her goal (her lead, the player) lies under the load
+                    // decides how much: under it (him at its release, J-100
+                    // scenario 1), that is all of her motion and she plants;
+                    // past it (the climb, whose foot is past the slab's rim),
+                    // she turns onto the rim's tangent and keeps her pace:
+                    // taking all of it pinned her at the rim forever.
+                    bool goal_under_load = false;
+                    for (const HungLoad &goal_load : hung_loads_) {
+                        if (goal_load.costed &&
+                            std::hypot(heard_x_ - goal_load.x, heard_z_ - goal_load.z) < goal_load.footprint_r) {
+                            goal_under_load = true;
+                            break;
+                        }
+                    }
+                    if (goal_under_load) {
+                        velocity -= way * std::min(going, cut_limit + foot_accel * dt);
+                    } else {
+                        // Past it, she skirts its rim at her pace, as anyone
+                        // passing one would: her heading turns onto the
+                        // tangent from where she is to the footprint, on the
+                        // side she already passes, her speed kept; only the
+                        // turn is her feet's work, cut as the plant is.
+                        // Taking her inward speed instead bled a runner
+                        // passing it from 6.8 to 2.9 m/s (the vault).
+                        const float d = to_load.Length();
+                        const float ux = to_load.GetX() / d;
+                        const float uz = to_load.GetZ() / d;
+                        const float side = ux * way.GetZ() - uz * way.GetX() < 0.0F ? -1.0F : 1.0F;
+                        const float a = side * std::asin(load.footprint_r / d);
+                        const Vec3 tangent(ux * std::cos(a) - uz * std::sin(a), 0.0F,
+                                           ux * std::sin(a) + uz * std::cos(a));
+                        Vec3 turn = tangent * going - flat_new;
+                        const float cap = cut_limit + foot_accel * dt;
+                        if (turn.Length() > cap) {
+                            turn *= cap / turn.Length();
+                        }
+                        velocity += turn;
+                    }
+                    break;
                 }
             }
         }
@@ -2478,6 +2719,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     // on nothing of hers has his true state, only this evidence and her memory.
     Perception::take(*this, him, dt);
     const Evidence &ev = ev_;
+    // The heavy loads hung overhead she can see (J-100): rebuilt every tick.
+    sense_hung_loads();
     if (state_ != State::Hunting) {
         hunt_s_ = 0.0F;
         hush_s_ = 0.0F;
@@ -2569,7 +2812,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
             take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
-                      floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())),
+                      floor_under_body(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()),
+                                       float(ev.heard_at.GetZ())),
                       ev.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -2654,8 +2898,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // middle 0.9 up (physics_world.cpp); a crouch drops the
             // middle 0.3 with the soles where they are, so this reads
             // at most 0.3 low for a crouched player, inside every
-            // floor tolerance here. A sound's lead keeps floor_of: a
-            // noise's height is not a floor she can see.
+            // floor tolerance here. A player's sound takes the same
+            // floor off her scan (floor_under_body); only a crash
+            // keeps floor_at, its impact point no body standing on a patch.
             take_lead(px, pz, float(ev.seen_at.GetY()) - 0.9F, heard ? loudness : 0.3F, Sense::Sight);
             wary_ = false;
             state_ = State::Hunting;
@@ -2665,19 +2910,26 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_x_ = px;
             look_z_ = pz;
             look_s_ = 1.0F;
-            take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
+            take_lead(px, pz, floor_under_body(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
-        } else if (crash_heard || heard) {
-            // The louder sound at her ear: a crash, or the player.
+        } else if ((crash_heard || heard) && (turn_ == Turn::None || heard)) {
+            // The louder sound at her ear: a crash, or the player. In the
+            // Turn she is committed to the player she saw: a crash alone
+            // (a settling crate, a load's impact) is no lead, and a crash
+            // must not steal her lead mid-lunge - the crash's place would
+            // end the Turn at at_crash (J-100 red-fix: the vault, where the
+            // settling crate's crash cancelled the lunge 1.48 m from it).
             const bool crash_first =
-                crash_heard && (!heard || crash.loudness / std::max(picked_carry, 0.1F) >
-                                              loudness / std::max(ev.carry_m, 0.1F));
+                crash_heard && turn_ == Turn::None &&
+                (!heard || crash.loudness / std::max(picked_carry, 0.1F) >
+                               loudness / std::max(ev.carry_m, 0.1F));
             selected_player_sound = !crash_first;
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
             const float sz = crash_first ? crash.z : float(ev.heard_at.GetZ());
-            const float sfloor = floor_at(sx, sy, sz);
+            const float sfloor =
+                crash_first ? floor_at(sx, sy, sz) : floor_under_body(sx, sy, sz);
             const float loud = crash_first ? crash.loudness : loudness;
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
@@ -3309,6 +3561,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (!scan_walk) {
                     route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 }
+                // A hung load she has read the release of (J-100): the way
+                // she walks stops at its rim, whichever way found it (the
+                // scan's patch path sets it straight, past route_toward).
+                clamp_out_of_footprint(wx, wz);
                 // The stalk: his face turned to her, she freezes; turned
                 // away, she closes to her band and holds (matron_stalk.cpp).
                 if (stalk_step(dt, ax, az, feet_y, wx, wz)) {
@@ -4408,6 +4664,14 @@ void Matron::restore(const Saved &saved) {
     dead_ = saved.dead;
     damage_ns_ = saved.damage_ns;
     player_damage_ns_ = saved.player_damage_ns;
+    // The per-region doses come back as saved (J-059 #343 fix): a restore
+    // overwrites the live doses, it never keeps them, so a reload restores
+    // her as saved (settled call 11-05 #242) and a rewind after later hits
+    // puts the doses back to the checkpoint's, not the later ones.
+    for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+        injury_.doses[i].j_region = saved.injury_j_region[i];
+        injury_.doses[i].j_event = saved.injury_j_event[i];
+    }
     {
         remove_body();
         end_hold(saved.state);
@@ -4733,6 +4997,119 @@ void Matron::sense_near() {
     }
 }
 
+// The heavy loads hung overhead she can see (J-100 #418): a load counts
+// when it is heavy, its bottom is over her head and under her ceiling, and
+// nothing holds it up. She reads it only when she sees it; it costs in her
+// route choice while she sees it and him near its release (or heard him
+// there). Rebuilt every tick, the nearest eight, by body id.
+void Matron::sense_hung_loads() {
+    hung_loads_.clear();
+    if (!body_in_world_ || dead_) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    const float feet = float(at.GetY()) - kStandCentre;
+    const Vec3 centre(at);
+    // Overhead, within sight: a box 100 m across and 24 m tall over her.
+    const Vec3 box_centre(centre.GetX(), feet + 11.0F, centre.GetZ());
+    AllHitCollisionCollector<CollideShapeBodyCollector> found;
+    physics_.GetBroadPhaseQuery().CollideAABox(
+        AABox(box_centre - Vec3(kCommitSightM, 12.0F, kCommitSightM),
+              box_centre + Vec3(kCommitSightM, 12.0F, kCommitSightM)),
+        found);
+    const BodyID held = held_body();
+    const ObjectLayer hers = bodies.GetObjectLayer(body_);
+    const Evidence &ev = ev_;
+    struct Candidate {
+        HungLoad load;
+        float distance;
+        std::uint32_t id;
+    };
+    std::array<Candidate, 8> candidates{};
+    std::size_t count = 0;
+    // The nearest; among equals, by id (the broad phase's order is its own).
+    const auto nearer = [](const Candidate &a, const Candidate &b) {
+        return a.distance != b.distance ? a.distance < b.distance : a.id < b.id;
+    };
+    for (const BodyID id : found.mHits) {
+        if (id == body_ || id == player_ || id == held) {
+            continue;
+        }
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), id);
+        if (!lock.Succeeded()) {
+            continue;
+        }
+        const Body &body = lock.GetBody();
+        if (!body.IsDynamic() || body.IsSensor() ||
+            !physics_.GetObjectLayerPairFilter().ShouldCollide(hers, body.GetObjectLayer())) {
+            continue;
+        }
+        const float inverse_mass = body.GetMotionProperties()->GetInverseMass();
+        if (inverse_mass <= 0.0F || 1.0F / inverse_mass < kHungLoadMinKg) {
+            continue;
+        }
+        const AABox bounds = body.GetWorldSpaceBounds();
+        const float bottom = bounds.mMin.GetY();
+        if (bottom < feet + kHungLoadOverheadM || bottom > feet + kHungLoadCeilingM) {
+            continue;
+        }
+        // Resting on something is not hung: a short ray under its bottom.
+        const Vec3 bc = bounds.GetCenter();
+        RayCastResult support;
+        const IgnoreSingleBodyFilter not_load(id);
+        if (physics_.GetNarrowPhaseQuery().CastRay(
+                RRayCast(RVec3(bc.GetX(), bottom, bc.GetZ()), Vec3(0.0F, -kHungLoadSupportM, 0.0F)), support, {},
+                {}, not_load)) {
+            continue;
+        }
+        const RVec3 load_centre = body.GetCenterOfMassPosition();
+        // GetExtent is already the half size (Jolt AABox): the footprint is
+        // the load's half-diagonal, past her radius and the margin.
+        const Vec3 half = bounds.GetExtent();
+        Candidate c;
+        c.load.body = id;
+        c.load.x = float(load_centre.GetX());
+        c.load.z = float(load_centre.GetZ());
+        c.load.bottom_y = bottom;
+        c.load.centre_y = float(load_centre.GetY());
+        c.load.vy = body.GetLinearVelocity().GetY();
+        c.load.footprint_r = std::hypot(half.GetX(), half.GetZ()) + kRadius + kHungLoadMarginM;
+        c.load.falling = c.load.vy < -kHungLoadFallMps;
+        c.load.seen = look_at(load_centre, kCommitSightM) != Glimpse::None;
+        // The release is evidenced: she sees him at it, or heard him there —
+        // but only for a load she sees. Hearing alone never costs a load she
+        // never perceived: her footsteps would reveal a hidden trap.
+        const bool saw_release = c.load.seen && ev.sight_age_s < 1.0F &&
+                                 std::hypot(float(ev.last_sight_at.GetX()) - c.load.x,
+                                            float(ev.last_sight_at.GetZ()) - c.load.z) < kHungLoadReleaseM;
+        const bool heard_release = c.load.seen && lead_valid_ && lead_sense_ == Sense::Hearing &&
+                                   since_heard_s_ < kHungLoadHeardS &&
+                                   std::hypot(heard_x_ - c.load.x, heard_z_ - c.load.z) < kHungLoadReleaseM;
+        c.load.costed = saw_release || heard_release;
+        c.distance = Vec3(load_centre - at).Length();
+        c.id = id.GetIndexAndSequenceNumber();
+        // Past 8 in her box, the 8 nearest are kept, not the broad phase's
+        // first 8: what hangs over her is never crowded out.
+        if (count < candidates.size()) {
+            candidates[count++] = c;
+        } else {
+            Candidate &farthest = *std::max_element(candidates.begin(), candidates.end(), nearer);
+            if (nearer(c, farthest)) {
+                farthest = c;
+            }
+        }
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        hung_loads_.push_back(candidates[i].load);
+    }
+    // By body id: the broad phase's order is its own, and the vector has no
+    // fixed size for the sort to trip over (an 8-array would).
+    std::sort(hung_loads_.begin(), hung_loads_.end(), [](const HungLoad &a, const HungLoad &b) {
+        return a.body.GetIndexAndSequenceNumber() < b.body.GetIndexAndSequenceNumber();
+    });
+}
+
 // After the step (matron.hpp, her balance): the change in her speed her feet
 // did not make, and the impulse given up by what was closing on her and met
 // her, added up over the contact.
@@ -4745,8 +5122,11 @@ void Matron::take_blow(const float dt) {
     // same way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
     const Mover *held_by = holder();
-    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
-        state_ == State::Down || state_ == State::Emerging) {
+    // J-040 (issue #228): Down and Emerging are no longer a shield. A real
+    // external blow counts in both states; her own contacts are already
+    // excluded by the striker filter (closing >= 0.5 m/s of its own motion
+    // plus contact), so this guard only ever dropped real blows.
+    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof)) {
         blow_quiet_ = kBlowQuietTicks;
         player_blow_tag_ = false;
         clear_player_blow();
@@ -4758,12 +5138,42 @@ void Matron::take_blow(const float dt) {
     const Vec3 change = on_pipe ? velocity - set_velocity_
                                 : Vec3(velocity.GetX() - set_velocity_.GetX(), 0.0F, velocity.GetZ() - set_velocity_.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
+    // A weight falling on her is above her body, not above her middle, and
+    // a blow closes on her body, not on her middle. Lying down her middle
+    // stays at standing height while her body is flat, so a slab on her
+    // lying body sits below her middle and reads as moving away from it:
+    // the old checks never fired for her (J-040). The upright references
+    // are unchanged.
+    RVec3 toward_ref = at;
+    float above_y = float(at.GetY());
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        above_y = body_box.mMax.GetY();
+        toward_ref = RVec3(body_box.GetCenter());
+    }
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
     float environment_ns = 0.0F;
+    // J-059 #343 P1 #2: environment credits deferred to one array, applied
+    // after the blow window opens below, so one strike's ticks share one
+    // j_event window instead of each tick overwriting it.
+    std::array<float, injury::kRegionCount> env_ns{};
     float player_ns = 0.0F;
     Vec3 impulse = Vec3::sZero();
     float above_share = 0.0F;
+    // J-059 #307: the head frame every blow is classified in (eye midpoint
+    // + head forward; body yaw when her eyes are closed, see eyes()).
+    // While she staggers her eyes are closed and eyes() returns the zero
+    // frame: fall back to her body yaw at the same eye height and forward
+    // offset, so blows taken mid-stagger still land in the right region.
+    const Eyes eye = eyes();
+    const Vec3 eye_mid =
+        eye.open ? Vec3(static_cast<float>(eye.at.GetX()), static_cast<float>(eye.at.GetY()),
+                        static_cast<float>(eye.at.GetZ()))
+                 : Vec3(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()) + kEyeAboveCentreM,
+                        static_cast<float>(at.GetZ())) +
+                       facing * kEyeForwardM;
+    const Vec3 eye_fwd = eye.open ? eye.forward : facing;
     for (std::size_t i = 0; i < near_count_; ++i) {
         const Near &n = near_[i];
         if (!bodies.IsAdded(n.body)) {
@@ -4775,7 +5185,7 @@ void Matron::take_blow(const float dt) {
         if (its_change.Length() < 0.1F) {
             continue;   // nothing met it this step
         }
-        Vec3 toward(at - n.at);
+        Vec3 toward(toward_ref - n.at);
         const float apart = toward.Length();
         if (apart < 1.0e-3F) {
             continue;
@@ -4797,12 +5207,22 @@ void Matron::take_blow(const float dt) {
         const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
         impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
-        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > above_y;
         const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
             above_share += overhead_ns / kMassKg;
         }
         environment_ns += std::max(given.Length(), overhead_ns);
+        // J-059 #307: each accepted environment impulse is credited once,
+        // by its centre against her middle: trunk or unclassified, never a
+        // face (J-044a §D). Deferred into env_ns (applied after the window
+        // opens below) so the strike's ticks share one j_event window.
+        env_ns[static_cast<std::size_t>(injury::classify_striker_centre(
+                   Vec3(static_cast<float>(n.at.GetX()), static_cast<float>(n.at.GetY()),
+                        static_cast<float>(n.at.GetZ())),
+                   Vec3(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                        static_cast<float>(at.GetZ())),
+                   eye_fwd))] += std::max(given.Length(), overhead_ns);
         if (blow_quiet_ >= kBlowQuietTicks) {
             // A fresh blow: what kind, from where, and whether she faces it.
             blow_low_ = false;
@@ -4861,6 +5281,16 @@ void Matron::take_blow(const float dt) {
         blow_impulse_ = Vec3::sZero();
         blow_above_ = 0.0F;
         blow_by_player_ = false;
+        // A fresh blow opens a new j_event window: the strike's contact
+        // ticks accumulate into one local impact (J-059 #343 P1 #2).
+        injury_.begin_event();
+    }
+    // The environment half of this blow, credited in the window just
+    // opened (or the one still open), once per region.
+    for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+        if (env_ns[i] > 0.0F) {
+            injury_.credit(static_cast<injury::Region>(i), env_ns[i]);
+        }
     }
     // His own blow, tagged as it landed (player_blow_landed): read with the
     // blow it lands in. In her hold before the rip it frees him whatever its
@@ -4872,6 +5302,18 @@ void Matron::take_blow(const float dt) {
     // Judge each real contact impulse once, not the body's response as a second source.
     damage_ns_ += environment_ns + player_ns;
     player_damage_ns_ += player_ns;
+    if (player_ns > 0.0F) {
+        // J-059 #307: the player's blow lands where his fist contacts her;
+        // the region it hits takes the dose, once (J-044a §D).
+        // player_blow_at_ survives clear_player_blow() (it clears only the
+        // impulse and the low flag), so the point is still here.
+        injury_.credit(injury::classify_contact(
+                           Vec3(static_cast<float>(player_blow_at_.GetX()),
+                                static_cast<float>(player_blow_at_.GetY()),
+                                static_cast<float>(player_blow_at_.GetZ())),
+                           eye_mid, eye_fwd),
+                       player_ns);
+    }
     if (damage_lethal_at_ns(damage_ns_)) {
         dead_ = true;
         state_ = State::Dead;
@@ -4905,6 +5347,12 @@ void Matron::take_blow(const float dt) {
             blow_quiet_ = kBlowQuietTicks;
             pipe_struck(at);
         }
+        return;
+    }
+    if (state_ == State::Down) {
+        // Already down: the blow's damage is counted above, but it neither
+        // staggers her nor re-triggers knock_down(), so the time she lies
+        // there keeps counting down (J-040).
         return;
     }
     // Her balance: her stance, her base, and the step she can take.
@@ -4960,7 +5408,6 @@ void Matron::take_blow(const float dt) {
                                                std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F)) *
                      damage_recovery_scale_for_ns(damage_ns_);
         ++staggers_;
-        rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
         return;
     }
@@ -5016,11 +5463,9 @@ void Matron::knock_down() {
     if (blow_staggered_) {
         // The stagger it began as is this knockdown: counted once.
         --staggers_;
-        rage_ = std::max(0.0F, rage_ - kStaggerRage);
         blow_staggered_ = false;
     }
     ++knockdowns_;
-    rage_ = std::min(1.0F, rage_ + kKnockdownRage);
     blow_quiet_ = kBlowQuietTicks;
     lie_down(fall_x_, fall_z_);
 }
@@ -5377,6 +5822,14 @@ void Matron::refresh_view() {
     view_.knockdowns = knockdowns_;
     view_.damage_ns = damage_ns_;
     view_.player_damage_ns = player_damage_ns_;
+    // J-059 #307: per-region injury + limb health, live, every step.
+    for (std::size_t i = 0; i < injury::kRegions; ++i) {
+        view_.injury_j_region[i] = injury_.doses[i].j_region;
+        view_.injury_j_event[i] = injury_.doses[i].j_event;
+    }
+    view_.injury_j_region_unclassified =
+        injury_.doses[static_cast<std::size_t>(injury::Region::Unclassified)].j_region;
+    view_.limb_health = injury::limb_health(injury_);
     view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
     view_.blow_low = blow_low_;

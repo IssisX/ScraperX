@@ -139,8 +139,17 @@ public:
     bool place_matron_home(float deck_top);
     void launch_matron_for_test(JPH::RVec3 at);
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
+    // Tests only: the corpses gone, as a load leaves them (a loaded game has
+    // none). A death restore stands the climber back where the corpse lies,
+    // and the corpse shoves the settle; a relaunch has no corpse to shove
+    // with, so a death-vs-relaunch comparison clears it first.
+    void clear_corpses_for_test() noexcept;
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
+    // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
+    // pin through its lifting eye over `centre`, and the pin pulled (J-100).
+    void hang_slab_for_test(JPH::RVec3 centre);
+    void release_hung_slab_for_test();
     void spin_kit_body_for_test(std::uint32_t body, JPH::Vec3 angular_velocity);
     // Tests only (never bound to the bridge): the next strike press throws
     // this move whatever the stance would pick (the bare punch, move 0, on a
@@ -662,7 +671,14 @@ private:
 
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
                                  const JPH::Vec3 facing,
-                                 const float min_ahead = 0.5F * kPlayerRadius) const noexcept;
+                                 const float min_ahead = 0.5F * kPlayerRadius,
+                                 const JPH::Shape *region_shape = nullptr) const noexcept;
+
+    // A wall face right behind this hold (a rung or pipe on a wall).
+    [[nodiscard]] bool grip_backed_by_wall(const Grip &grip) const noexcept;
+
+    // A sibling hold a rung-spacing above or below this hold (a ladder rung).
+    [[nodiscard]] bool grip_has_rung_neighbor(const Grip &grip, JPH::RVec3 origin) const noexcept;
 
     [[nodiscard]] JPH::RVec3 hand_aim(const JPH::RVec3 centre, const float height,
                                       const float across) const noexcept;
@@ -758,7 +774,9 @@ private:
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept;
 
 public:
-    bool load_save(SaveReader &r) { return read_save(r, physics_system_.GetBodyInterface()); }
+    bool load_save(SaveReader &r, std::string *reason = nullptr) {
+        return read_save(r, physics_system_.GetBodyInterface(), reason);
+    }
     // Why the last load_save was refused, where the refusal names
     // itself (so far: a stock damage section whose record size is not
     // this build's); empty otherwise, and after a load that was taken.
@@ -768,7 +786,7 @@ public:
 
     void write_save(SaveWriter &w) const;
 
-    bool read_save(SaveReader &r, JPH::BodyInterface &bodies);
+    bool read_save(SaveReader &r, JPH::BodyInterface &bodies, std::string *reason = nullptr);
 
     void read_machine_state() noexcept;
 
@@ -789,6 +807,7 @@ public:
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
     JPH::RefConst<JPH::Shape> player_torso_shape_;
     JPH::RefConst<JPH::Shape> grip_region_shape_;
+    JPH::RefConst<JPH::Shape> grip_region_shape_bar_;
     JPH::RefConst<JPH::Shape> climb_sweep_shape_;
     JPH::BodyID deck_id_;
     JPH::BodyID translating_support_id_;
@@ -1037,6 +1056,12 @@ public:
     scraperx::sim::kit::Kit::Checkpoint as_built_{};
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
+    // J-059 #343 P1: checkpoint-restore generation, watched by the injury
+    // view (matron_view.gd) so a restore rewinds her displayed injuries.
+    // Runtime-only: never saved, so a load still moves it — the load
+    // itself restores. Incremented only in restore_from_checkpoint, the
+    // one path every death restore and load_game funnels through.
+    std::uint64_t restores_ = 0;
     bool parachute_deployed_ = false;
     float fall_peak_speed_mps_ = 0.0F;
     float pre_contact_fall_speed_mps_ = 0.0F;
@@ -1308,6 +1333,9 @@ private:
     JPH::BodyID hook_bite_target_;
     JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
     JPH::Ref<kit::RopeConstraint> hook_line_;
+    // The J-100 test slab (hang_slab_for_test): its body and its pin.
+    JPH::BodyID hung_slab_;
+    JPH::Ref<JPH::PointConstraint> hung_slab_pin_;
     // The line's bends (see kHookBendsMax), from the bite outward: each held
     // on its body, with the rope laid from it back to the anchor before it
     // and the sense the line turned round it.

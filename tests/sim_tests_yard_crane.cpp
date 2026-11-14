@@ -672,15 +672,17 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
 // Where the grips' two lists start ([n][n loads][n][n ratings]): the offset
 // of the first count, or bytes.size() if the save holds them nowhere the
 // layout lays them out. The lists are not always at the end: after them come
-// her damage (MAD1, always written now), the fabricated objects (FAB1),
-// the stock damage (DAMG), and the grip-entities section (GRIP, one entity
-// per grip), each only when the world holds it. A save with a grip-entities
-// section is found from its end, allowing her damage between the lists and
-// it; a save with her damage and no entities section is found from the
-// damage mark, allowing a fabricated section after it. (A save with a
-// fabricated or damage section between the lists and the entities section
-// is not located here: no test saves a world whose grip holds a load and
-// whose stock is fabricated or damaged.)
+// her damage (MAD1, always written now), her state (MAT1, 26 bytes, since
+// J-116), her per-region injury (INJ1, 76 bytes, J-059 #343 fix), the
+// fabricated objects (FAB1), the stock damage (DAMG), and the grip-entities
+// section (GRIP, one entity per grip), each only when the world holds it. A
+// save with a grip-entities section is found from its end, allowing her
+// damage (and her state and injury) between the lists and it; a save with
+// her damage and no entities section is found from the damage mark,
+// allowing her state, her injury, and a fabricated section after it. (A save
+// with a fabricated or damage section between the injury and the entities
+// section is not located here: no test saves a world whose grip holds a load
+// and whose stock is fabricated or damaged.)
 std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     const auto word = [&bytes](const std::size_t at, std::uint32_t &out) {
         if (at + 4 > bytes.size()) {
@@ -690,12 +692,16 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
         return true;
     };
     // The grip-entities section, if any, is last: [GRIP][n][n entities].
-    // Her damage (MAD1, 13 bytes) may sit between the lists and it: a
-    // save the merged writer made always carries it; an older save does
-    // not. The lists end where the damage (or the section) starts, so
-    // the counts read back as n.
+    // Her damage (MAD1, 13 bytes) may sit between the lists and it, her
+    // state (MAT1, 26 bytes, since J-116) after her damage, and her
+    // per-region injury (INJ1, 76 bytes, J-059 #343 fix) after her state:
+    // a save the merged writer made always carries her damage; an older
+    // save does not. The lists end where the damage (or the section)
+    // starts, so the counts read back as n.
     constexpr std::uint32_t kGripMark = 0x47524950U;
     constexpr std::uint32_t kDamageMark = 0x314D414DU;
+    constexpr std::uint32_t kMatronStateMark = 0x3154414DU;
+    constexpr std::size_t kMatronStateBytes = 26;
     for (std::size_t n = 1; n <= 16; ++n) {
         const std::size_t section = 8 + 8 * n;  // the entities section's bytes
         if (bytes.size() < 2 * section) {
@@ -706,23 +712,52 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
         if (!word(grip_at, mark) || mark != kGripMark || !word(grip_at + 4, count) || count != n) {
             continue;
         }
-        for (const std::size_t gap : {std::size_t{0}, std::size_t{13}}) {
+        for (const std::size_t gap :
+             {std::size_t{0}, std::size_t{13}, std::size_t{39}, std::size_t{89}, std::size_t{115}}) {
             if (grip_at < gap + 8 + 8 * n) {
                 continue;
             }
             const std::size_t at = grip_at - gap - (8 + 8 * n);
-            if (gap == 13) {
+            const std::size_t base = at + 8 + 8 * n;  // just past the lists: her damage's mark, if any
+            if (gap != 0) {
                 std::uint32_t dmark = 0;
                 float damage = 0.0F, player = 0.0F;
                 std::uint8_t dead = 0;
-                if (!word(at + 8 + 8 * n, dmark) || dmark != kDamageMark) {
+                if (!word(base, dmark) || dmark != kDamageMark) {
                     continue;
                 }
-                std::memcpy(&damage, bytes.data() + at + 8 + 8 * n + 4, 4);
-                std::memcpy(&player, bytes.data() + at + 8 + 8 * n + 8, 4);
-                std::memcpy(&dead, bytes.data() + at + 8 + 8 * n + 12, 1);
+                std::memcpy(&damage, bytes.data() + base + 4, 4);
+                std::memcpy(&player, bytes.data() + base + 8, 4);
+                std::memcpy(&dead, bytes.data() + base + 12, 1);
                 if (!std::isfinite(damage) || !std::isfinite(player) || dead > 1) {
                     continue;
+                }
+                if (gap == 39 || gap == 115) {
+                    // Her state (MAT1, 26 bytes, since J-116) after her
+                    // damage: the mark only, as in the damage-mark search.
+                    std::uint32_t smark = 0;
+                    if (!word(base + 13, smark) || smark != kMatronStateMark) {
+                        continue;
+                    }
+                }
+                if (gap == 89 || gap == 115) {
+                    // Her per-region injury (INJ1, J-059 #343 fix) after her
+                    // damage (gap 89) or her state (gap 115): the mark,
+                    // then nine j_region and nine j_event, 72 bytes after it.
+                    const std::size_t iat = gap == 89 ? base + 13 : base + 39;
+                    std::uint32_t imark = 0;
+                    if (!word(iat, imark) || imark != 0x314A4E49U) {
+                        continue;
+                    }
+                    bool injury_ok = true;
+                    for (std::size_t i = 0; i < 18 && injury_ok; ++i) {
+                        float d = 0.0F;
+                        std::memcpy(&d, bytes.data() + iat + 4 + 4 * i, 4);
+                        injury_ok = std::isfinite(d) && d >= 0.0F;
+                    }
+                    if (!injury_ok) {
+                        continue;
+                    }
                 }
             }
             std::uint32_t loads = 0, ratings = 0;
@@ -753,7 +788,8 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
         return p == bytes.size();
     };
     // Her damage's mark, then the grips just before it, then either the
-    // save's end or a fabricated section to it.
+    // save's end, her state (MAT1, 26 bytes) and then the end, her injury
+    // (INJ1, 76 bytes) and then the end, or a fabricated section to it.
     for (std::size_t m = 0; m + 13 <= bytes.size(); ++m) {
         std::uint32_t mark = 0;
         if (!word(m, mark) || mark != kDamageMark) {
@@ -773,7 +809,19 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
             if (!word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
                 continue;
             }
-            if (m + 13 == bytes.size() || fabricated_to_end(m + 13)) {
+            // After her damage, her state (MAT1, 26 bytes, since J-116)
+            // and then her per-region injury (INJ1, 76 bytes, J-059 #343
+            // fix), each only when the save holds it. A save made before
+            // either ends at the damage, or at the fabricated objects.
+            std::size_t tail = m + 13;
+            std::uint32_t tail_mark = 0;
+            if (tail + 26 <= bytes.size() && word(tail, tail_mark) && tail_mark == kMatronStateMark) {
+                tail += kMatronStateBytes;
+            }
+            if (tail + 76 <= bytes.size() && word(tail, tail_mark) && tail_mark == 0x314A4E49U) {
+                tail += 76;
+            }
+            if (tail == bytes.size() || fabricated_to_end(tail)) {
                 return at;
             }
         }
@@ -1044,18 +1092,24 @@ void run_yard_crane_magnet() {
     // before the forklift, and the 137 after it are stock entities. J-092
     // (#410) then appends the slab cell's frame, trigger and handle, exactly
     // those three (run_wet_e_guard pins the same order). J-108 (#427) then
-    // appends the bait lift's platforms, A then B, after the cell; and last
-    // the S2 drain (J-015: its striker and bolted tank, built after every
-    // other body so a save from before the drain still lines up), the kit's
-    // very last two: "the slab cell, then A, then B, then the drain's two,
-    // last", each body pinned.
+    // appends the bait lift's platforms, A then B, after the cell: re-pinned,
+    // before "the slab cell last", now "the slab cell, then A, then B, last",
+    // each body pinned. J-014 then appends the hightower toolboxes after B:
+    // re-pinned, the cell, then A, then B, then each toolbox by entity. And
+    // last the S2 drain (J-015: its striker and bolted tank, built after
+    // every other body so a save from before the drain still lines up), the
+    // kit's very last two, each body pinned.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
     const std::uint64_t kSlabCell[] = {SlabCell::kFrameEntity, SlabCell::kTriggerEntity, SlabCell::kHandleEntity};
     const std::uint64_t kBait[] = {Simulation::kServiceBaitAEntityId, Simulation::kServiceBaitBEntityId};
     constexpr auto kBaitBodies = static_cast<std::uint32_t>(std::size(kBait));
     constexpr auto kCellBodies = static_cast<std::uint32_t>(std::size(kSlabCell));
-    constexpr auto kTailBodies = kCellBodies + kBaitBodies;
+    // The hightower toolboxes trail the bait lift: the tail is the cell,
+    // then A, then B, then each toolbox by entity.
+    const std::uint32_t hightower_begin = s.loose_stock_hightower_begin();
+    const std::uint32_t toolboxes = s.loose_stock_count() - hightower_begin;
+    const auto kTailBodies = kCellBodies + kBaitBodies + toolboxes;
     std::uint32_t fork = last;
     for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
         fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
@@ -1071,10 +1125,14 @@ void run_yard_crane_magnet() {
         later_stock = s.kit_body_entity(last - kDrainBodies - kTailBodies + i) == kSlabCell[i];
     }
     for (std::uint32_t i = 0; later_stock && i < kBaitBodies; ++i) {
-        later_stock = s.kit_body_entity(last - kDrainBodies - kBaitBodies + i) == kBait[i];
+        later_stock = s.kit_body_entity(last - kDrainBodies - kBaitBodies - toolboxes + i) == kBait[i];
+    }
+    for (std::uint32_t i = 0; later_stock && i < toolboxes; ++i) {
+        later_stock = s.kit_body_entity(last - kDrainBodies - toolboxes + i) ==
+                      Simulation::kLooseStockFirstEntity + hightower_begin + i;
     }
     require(later_stock,
-            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B");
+            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B, then each hightower toolbox by entity");
     require(s.kit_body_entity(last - 2) == Simulation::kStackS2DrainStrikerEntityId &&
                 s.kit_body_entity(last - 1) == Simulation::kStackS2CartEntityId,
             "magnet: the kit's last two bodies are the S2 drain's striker and tank");

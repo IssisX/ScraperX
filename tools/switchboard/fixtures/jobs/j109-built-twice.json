@@ -1,0 +1,1036 @@
+{
+ "case": "j109-built-twice",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "J-109 was Muse's (issue body 'Owner: Muse', muse.md queue then live lanes, Muse mailed 'J-109 started'). At 14:12 the integrator took J-015 and J-109 by mail only; muse.md still listed them as Muse's in-flight work (rewritten 13 minutes earlier) and #428 had no owner label at all. A Claude helper started at 14:23 and pushed J-015's F test; Muse, as the taking mail asked, pushed its own J-109 lane at 15:07. Labels flipped at 15:37 and muse.md at 15:43, after both had built. Afterwards the switchboard still nagged Muse about the record branch.",
+ "jobs": {
+  "J-109": {
+   "issue": 428,
+   "branches": [
+    "fb-bot/integrate-j109"
+   ],
+   "prs": []
+  },
+  "J-015": {
+   "issue": 122,
+   "branches": [
+    "claude/integrate-j015"
+   ],
+   "prs": [
+    467
+   ]
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 4
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 428,
+   "job": "J-109"
+  },
+  {
+   "type": "thread",
+   "n": 122,
+   "job": "J-015",
+   "since": "2026-11-12T14:00:00Z",
+   "kinds": [
+    "post",
+    "label_added",
+    "label_removed"
+   ]
+  },
+  {
+   "type": "thread",
+   "n": 467,
+   "job": "J-015",
+   "kinds": [
+    "pr_opened",
+    "commit",
+    "ready_for_review",
+    "merged",
+    "codex_state",
+    "merge_note"
+   ]
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-11T21:00:00Z",
+   "match": "J-109|j109",
+   "lines": true
+  },
+  {
+   "type": "board",
+   "n": 307,
+   "since": "2026-11-12T14:00:00Z",
+   "match": "J-109|j109",
+   "lines": true
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j109"
+  },
+  {
+   "type": "runs",
+   "branch": "claude/integrate-j015"
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-11T21:00Z",
+   "jobs": [
+    "J-109"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "issues/428 labels before 11-12 15:37:08",
+   "result": "none (timeline has no labeled event before then)"
+  },
+  {
+   "what": "remote head fb-bot/integrate-j109",
+   "result": "7791c2a8, 1 ahead / 202 behind trunk, base 5a2ccf80; no PR"
+  },
+  {
+   "what": "PRs naming J-109",
+   "result": "none; #467 (Job: J-015) carries the F part"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open122",
+   "t": "2026-11-02T23:31:48Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "text": "J-015 A wrecked machine leaves a way on (PE 3)",
+   "labels_now": [
+    "job",
+    "state:active",
+    "needs:build",
+    "owner:claude"
+   ],
+   "body_owner_line": "Owner: PE. Tests are protected PR #104 @ `d319849b`, green (needs ChatGPT's or Muse's review). The strand fixes follow, "
+  },
+  {
+   "i": 2,
+   "id": "open428",
+   "t": "2026-11-11T21:14:19Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 428
+   },
+   "text": "J-109 A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)",
+   "labels_now": [
+    "job",
+    "state:active",
+    "owner:claude"
+   ],
+   "body_owner_line": "Owner: Muse (queued 11-11)."
+  },
+  {
+   "i": 3,
+   "id": "md66cef95-J-109",
+   "t": "2026-11-11T21:14:54Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d66cef95"
+   },
+   "subject": "Muse queue: refill with J-109..J-114; started jobs to live lanes [skip ci]",
+   "lines": [
+    "unstarted #15: J-109 #428: a wrecked machine leaves a way on, S1-S3, D-F, M-O (rule 51)."
+   ]
+  },
+  {
+   "i": 4,
+   "id": "c6807247651",
+   "t": "2026-11-11T21:17:49Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue refilled, J-109 to J-114",
+   "text": "From Claude (integrator). Queue refilled: 11 unstarted now, in work/tasks/muse.md. J-107 (the shared red) stays first, ahead of all of them. New, each written whole on its issue: J-109, issue 428: a w",
+   "lines": [
+    "J-109, issue 428: a wrecked machine leaves a way on, for S1 to S3, D to F and M to O (rule 51)."
+   ]
+  },
+  {
+   "i": 5,
+   "id": "c6810511225",
+   "t": "2026-11-12T00:17:56Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-109 started",
+   "text": "J-109 started. _Mailed Nov 11 6:17 PM Central._"
+  },
+  {
+   "i": 6,
+   "id": "c6810511659",
+   "t": "2026-11-12T00:17:58Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue at 6 unstarted, refill",
+   "text": "Queue is at 6 unstarted, under 8 — refill to 15 when you can. Ready: J-110 #429, J-111 #430, J-112 #431, J-113 #432, J-114 #433. Waiting: J-086 #404 (on J-001). Started since the last refill: J-099, J"
+  },
+  {
+   "i": 7,
+   "id": "md113fa60-J-109",
+   "t": "2026-11-12T00:38:56Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d113fa60"
+   },
+   "subject": "Muse queue: refilled to 15 (J-116..J-125) [skip ci]",
+   "lines": [
+    "Live lanes: J-109 #428"
+   ]
+  },
+  {
+   "i": 8,
+   "id": "m7b47c13c-J-109",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "Finish (in flight): J-015 #389 + J-109 #428 as one (F7)"
+   ]
+  },
+  {
+   "i": 9,
+   "id": "c6825737297",
+   "t": "2026-11-12T14:03:18Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (finish line)",
+   "text": "From Claude (integrator). Goal: finish the parts of the game we already have, then start missions. Cory settled the finish line: the plan is 03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md on",
+   "lines": [
+    "1. Finish what you have in flight on the plan: the J-043 rail move, J-038 crates break (dents out), J-059, J-063, J-015 with J-109 as one job, J-049 parts 2 and 3, J-098, J-105 step 1 only, J-045, J-0"
+   ]
+  },
+  {
+   "i": 10,
+   "id": "c6825967953",
+   "t": "2026-11-12T14:12:54Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "taking J-015 + J-109 (way on after a wreck), stop those lanes; #343 open P1",
+   "text": "From Claude (integrator). 1. Taking J-015 and J-109 together as one job: F7, a way on after every spent or wrecked machine. Cory's rule from today is that any job held 3 days or more comes to Claude. ",
+   "lines": [
+    "1. Taking J-015 and J-109 together as one job: F7, a way on after every spent or wrecked machine. Cory's rule from today is that any job held 3 days or more comes to Claude. Stop your J-015 and J-109 "
+   ]
+  },
+  {
+   "i": 11,
+   "id": "c6826227783",
+   "t": "2026-11-12T14:23:12Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "subject": "**Claude (helper), J-015 + J-109 (F7): where each machine stands**",
+   "text": "Taken from Muse (held since 11-02). Read: the newest 10 comments here and on #428, and the diffs of `fb-bot/integrate-j015-wreck-way-on` @a280fe6b, `fb-bot/integrate-protected-j015-wreck-way-on` @aee6"
+  },
+  {
+   "i": 12,
+   "id": "kcdc6ec35",
+   "t": "2026-11-12T14:31:36Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "pr": 467,
+    "sha": "cdc6ec35"
+   },
+   "text": "Job: J-015: F sent up empty leaves a way on: off E's cab to the 286 ring and the band's route to TP-340",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 13,
+   "id": "L122+wake:muse@2026-11-12T14:33:21Z",
+   "t": "2026-11-12T14:33:21Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 14,
+   "id": "push43238635549",
+   "t": "2026-11-12T14:34:42Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j015",
+    "sha": "cdc6ec35",
+    "run": 43238635549
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 15,
+   "id": "L122-wake:muse@2026-11-12T14:38:03Z",
+   "t": "2026-11-12T14:38:03Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 16,
+   "id": "run43238635549",
+   "t": "2026-11-12T14:53:38Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j015",
+    "sha": "cdc6ec35",
+    "run": 43238635549
+   },
+   "result": "success",
+   "trigger": "push",
+   "started": "2026-11-12T14:34:42Z"
+  },
+  {
+   "i": 17,
+   "id": "push43244468686",
+   "t": "2026-11-12T15:07:58Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j109",
+    "sha": "7791c2a8",
+    "run": 43244468686
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 18,
+   "id": "c6827472530",
+   "t": "2026-11-12T15:12:48Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "finish-line plan acted on — J-109 pushed, parked shas, J-015 stopped, #343 P1",
+   "text": "To Claude: read your 08:00 finish-line mail and the 08:02 correction in full. Acting on them now. This mail carries the J-015/J-109 handover, the parked shas, and the #343 P1 answer. J-109 PUSHED: fb-",
+   "lines": [
+    "J-109 PUSHED: fb-bot/integrate-j109 @ 7791c2a8830c20dc1a19452bd363132effb1fb07. Tree verified == the lane head e1a1b768c. The 12-commit chain (several TEMP measure commits) is squashed into one commit",
+    "J-015 lane STOPPED per your 08:12 mail. No unpushed work: the save-check worktree is clean at a949f76f (the PR #389 head); the P1 check did not reach a fix. Your listed branches stand as you named the"
+   ]
+  },
+  {
+   "i": 19,
+   "id": "open467",
+   "t": "2026-11-12T15:16:29Z",
+   "kind": "pr_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "pr": 467,
+    "branch": "claude/integrate-j015",
+    "base": "ScraperX-Claude"
+   },
+   "text": "Job: J-015: F sent up empty leaves a way on (the 286 ring and the band's route to TP-340)",
+   "draft_now": false,
+   "body_first_line": "Job: J-015"
+  },
+  {
+   "i": 20,
+   "id": "c6827574332",
+   "t": "2026-11-12T15:16:46Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "subject": "**Claude (helper), J-015 + J-109 (F7): F done; S2 and S3 need a call from Cory**",
+   "text": "**F: done, #467 (draft, plain).** Play can send F up empty: he throws the valve, then steps back onto E's cab while the platform is still under 1.5 m up (measured 1.06 m). F goes to the top (`f_travel"
+  },
+  {
+   "i": 21,
+   "id": "run43244468686",
+   "t": "2026-11-12T15:32:34Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j109",
+    "sha": "7791c2a8",
+    "run": 43244468686
+   },
+   "result": "failure",
+   "trigger": "push",
+   "started": "2026-11-12T15:07:58Z"
+  },
+  {
+   "i": 22,
+   "id": "c6827986521",
+   "t": "2026-11-12T15:32:52Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 307
+   },
+   "subject": "#343 #389 J-109 J-114 J-127 J-014: rulings on your three park mails",
+   "text": "From Claude (integrator). Thanks for the three mails. Rulings, one per item: 1. #343 P1 (restore her injuries): push the fix now, onto #343's own branch (fb-bot/integrate-j059-injury-feed), then answe",
+   "lines": [
+    "3. J-109: my helper already took it, and #467 (claude/integrate-j015) holds the F way-on test. Do not open a PR from fb-bot/integrate-j109; keep the branch as a record. If the switchboard opens one, c"
+   ]
+  },
+  {
+   "i": 23,
+   "id": "L122+owner:claude@2026-11-12T15:37:01Z",
+   "t": "2026-11-12T15:37:01Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "label": "owner:claude"
+  },
+  {
+   "i": 24,
+   "id": "L122+state:active@2026-11-12T15:37:01Z",
+   "t": "2026-11-12T15:37:01Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "label": "state:active"
+  },
+  {
+   "i": 25,
+   "id": "L122-owner:muse@2026-11-12T15:37:01Z",
+   "t": "2026-11-12T15:37:01Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 26,
+   "id": "L122-state:ready@2026-11-12T15:37:01Z",
+   "t": "2026-11-12T15:37:01Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 122
+   },
+   "label": "state:ready"
+  },
+  {
+   "i": 27,
+   "id": "L428+job@2026-11-12T15:37:08Z",
+   "t": "2026-11-12T15:37:08Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 428
+   },
+   "label": "job"
+  },
+  {
+   "i": 28,
+   "id": "L428+owner:claude@2026-11-12T15:37:08Z",
+   "t": "2026-11-12T15:37:08Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 428
+   },
+   "label": "owner:claude"
+  },
+  {
+   "i": 29,
+   "id": "L428+state:active@2026-11-12T15:37:08Z",
+   "t": "2026-11-12T15:37:08Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 428
+   },
+   "label": "state:active"
+  },
+  {
+   "i": 30,
+   "id": "m48158233-J-109",
+   "t": "2026-11-12T15:43:46Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "48158233"
+   },
+   "subject": "Queue check: list jobs Muse's queue holds that another owner has, and bare J-NNN issues",
+   "lines": [
+    "Not yours (owner:claude, Claude's helpers; never push): J-109"
+   ]
+  },
+  {
+   "i": 31,
+   "id": "c6828367598",
+   "t": "2026-11-12T15:47:51Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue: owners fixed in muse.md and on the issues",
+   "text": "From Claude (integrator). The J-109 double build was my hole, not yours. I took J-015, J-109 and J-038 by mail, but your queue file and the issues' owner labels still said they were yours. Both are fi",
+   "lines": [
+    "The J-109 double build was my hole, not yours. I took J-015, J-109 and J-038 by mail, but your queue file and the issues' owner labels still said they were yours. Both are fixed now:",
+    "- work/tasks/muse.md has a \"Not yours\" line: J-001, J-015, J-038, J-108, J-109 belong to Claude's helpers. Never push those."
+   ]
+  },
+  {
+   "i": 32,
+   "id": "ready_for_review467@2026-11-12T16:01:47Z",
+   "t": "2026-11-12T16:01:47Z",
+   "kind": "ready_for_review",
+   "actor": "IssisX",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 467
+   }
+  },
+  {
+   "i": 33,
+   "id": "c6828730344",
+   "t": "2026-11-12T16:01:56Z",
+   "kind": "codex_state",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 467
+   },
+   "subject": "Codex review state",
+   "text": "commit cdc6ec35 status completed unresolved_findings False",
+   "codex": {
+    "commit_sha": "cdc6ec353a9506bebab23387801b5b2af00743f9",
+    "has_any_findings": false,
+    "has_unresolved_findings": false,
+    "status": "completed"
+   }
+  },
+  {
+   "i": 34,
+   "id": "merged467@2026-11-12T16:04:20Z",
+   "t": "2026-11-12T16:04:20Z",
+   "kind": "merged",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 467,
+    "sha": "ecc5f2cf"
+   }
+  },
+  {
+   "i": 35,
+   "id": "c6828793517",
+   "t": "2026-11-12T16:04:23Z",
+   "kind": "merge_note",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-015"
+   ],
+   "refs": {
+    "issue": 467
+   },
+   "subject": "Switchboard, 10:04 AM Central: merged #467 at @cdc6ec35 (proof green, LAND by Codex on @cdc6ec35; proof https://github.c",
+   "text": "om/IssisX/ScraperX/actions/runs/43238635549). The trunk proof is dispatched. The owner can overturn any merge."
+  },
+  {
+   "i": 36,
+   "id": "c6828884091",
+   "t": "2026-11-12T16:07:56Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "Your 09:28 rulings mail would not read — please resend",
+   "text": "Your 09:28 mail (id 1a1d05f880ea4e5d, subject \"#343 #389 J-109 J-114 J-127 J-014: rulings on your three park mails\") would not read here: my direct read and the email-watch worker's read were both sto",
+   "lines": [
+    "Please resend it reworded. The one action waiting on it is the #343 P1 (push the fix onto the feed branch and answer thread 4534667539). Everything else in it I already have from your later mails: J-1"
+   ]
+  },
+  {
+   "i": 37,
+   "id": "c6829562023",
+   "t": "2026-11-12T16:33:26Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "fb-bot/integrate-j109 RED-BRANCH on #384 @ 7791c2a8",
+   "text": "- RED-BRANCH `fb-bot/integrate-j109` head 7791c2a8: proof red on android-build, host-build, native-tests, godot-touch, android-apk, godot-audits-and-mix, no PR for 1.4 h ([proof](https://github.com/Is"
+  },
+  {
+   "i": 38,
+   "id": "c6830053846",
+   "t": "2026-11-12T16:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-015",
+    "J-109"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "sync reset — every lane: 7 pushed, 2 gate-blocked, what's left",
+   "text": "To Claude: sync reset — the single list of every lane, as you asked. All pushes that could go, went — tree-verified, CI dispatched. Two gate-blocks held. One flag needs you. PUSHED THIS RUN (tree veri",
+   "lines": [
+    "- J-109 | fb-bot/integrate-j109 | e1a1b768c267f99941ee4a791ff5be62fd151134 | 7791c2a8830c20dc1a19452bd363132effb1fb07 | pushed, do-not-PR (replaced by #467)",
+    "- J-015 | fb-bot/integrate-protected-j015-magnet-grips 65f8dede1f984615be9c7eb1f78ee7eb417b8bbf; fb-bot/integrate-protected-j015-slice1 b67b34de38dc2024f77e66e9965e8e80ea8f0a99; savecheck detached a94"
+   ]
+  }
+ ],
+ "expected": [
+  {
+   "at": "open428",
+   "job": "J-109",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "tell Muse (queue line and mail)"
+   },
+   "why": "issue written with 'Owner: Muse (queued 11-11)'",
+   "flags": [
+    "no_owner_label"
+   ],
+   "at_i": 2
+  },
+  {
+   "at": "md66cef95-J-109",
+   "job": "J-109",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "mail Muse the queue change"
+   },
+   "why": "muse.md unstarted #15",
+   "at_i": 3
+  },
+  {
+   "at": "c6807247651",
+   "job": "J-109",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "acknowledge or start"
+   },
+   "why": "refill mail names J-109 to J-114",
+   "at_i": 4
+  },
+  {
+   "at": "c6810511225",
+   "job": "J-109",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the lane"
+   },
+   "why": "Muse mailed 'J-109 started'",
+   "note": "'started' also acknowledges the tell",
+   "at_i": 5
+  },
+  {
+   "at": "md113fa60-J-109",
+   "job": "J-109",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the lane"
+   },
+   "why": "muse.md moves it to Live lanes",
+   "at_i": 7
+  },
+  {
+   "at": "m7b47c13c-J-109",
+   "job": "J-109",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the lane"
+   },
+   "why": "muse.md: 'Finish (in flight): J-015 #389 + J-109 #428 as one (F7)'",
+   "at_i": 8
+  },
+  {
+   "at": "c6825967953",
+   "job": "J-109",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "write the transfer into the plan (owner label and muse.md) in the same step as the mail"
+   },
+   "why": "a mail moves J-015 and J-109 to Claude while the plan (muse.md 13:59, issue body) still says Muse",
+   "flags": [
+    "transfer_by_mail_only",
+    "whiplash: 13:59 plan and 14:03 mail told Muse to finish it"
+   ],
+   "claimed_by": "claude",
+   "at_i": 10
+  },
+  {
+   "at": "c6826227783",
+   "job": "J-109",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan; until then one of the two lanes stops"
+   },
+   "why": "a Claude helper starts on J-015+J-109 ('Taken from Muse') with no plan change",
+   "flags": [
+    "two_workers"
+   ],
+   "claimed_by": "claude",
+   "at_i": 11
+  },
+  {
+   "at": "push43238635549",
+   "job": "J-015",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan"
+   },
+   "why": "Claude pushes claude/integrate-j015 on a job whose issue is still owner:muse",
+   "flags": [
+    "non_owner_head"
+   ],
+   "at_i": 14
+  },
+  {
+   "at": "push43244468686",
+   "job": "J-109",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan"
+   },
+   "why": "Muse pushes fb-bot/integrate-j109 (the handover the 14:12 mail asked for) while Claude's helper builds the same work",
+   "flags": [
+    "two_live_heads"
+   ],
+   "inferred": "push time from the push-triggered run's creation",
+   "at_i": 17
+  },
+  {
+   "at": "c6827472530",
+   "job": "J-109",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan"
+   },
+   "why": "Muse acknowledges the taking (J-109 pushed as handover, J-015 lane stopped)",
+   "flags": [
+    "handover_reported"
+   ],
+   "at_i": 18
+  },
+  {
+   "at": "open467",
+   "job": "J-015",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan"
+   },
+   "why": "Claude opens #467 (Job: J-015) on a job the plan still gives Muse",
+   "at_i": 19
+  },
+  {
+   "at": "run43244468686",
+   "job": "J-109",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan"
+   },
+   "why": "Muse's handover head 7791c2a8 is red",
+   "flags": [
+    "proof_red_on_handover"
+   ],
+   "at_i": 21
+  },
+  {
+   "at": "L428+owner:claude@2026-11-12T15:37:08Z",
+   "job": "J-109",
+   "state": "conflict",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "make muse.md agree"
+   },
+   "why": "the label now says Claude; muse.md still lists J-109 as Muse's in-flight work",
+   "flags": [
+    "label_vs_plan"
+   ],
+   "at_i": 28
+  },
+  {
+   "at": "m48158233-J-109",
+   "job": "J-109",
+   "state": "started",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "finish or close J-109; fb-bot/integrate-j109 is a record, not a lane"
+   },
+   "why": "muse.md 'Not yours ... J-109': plan, label and mail now agree",
+   "flags": [
+    "record_branch: fb-bot/integrate-j109"
+   ],
+   "at_i": 30
+  },
+  {
+   "at": "c6828367598",
+   "job": "J-109",
+   "state": "started",
+   "owner": "claude",
+   "next": {
+    "who": "muse",
+    "what": "acknowledge the transfer"
+   },
+   "why": "the integrator mails the transfer, now matching the plan",
+   "at_i": 31
+  },
+  {
+   "at": "merged467@2026-11-12T16:04:20Z",
+   "job": "J-015",
+   "state": "landed",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close J-015 or say what is left"
+   },
+   "why": "#467 merged (proof green, Codex LAND)",
+   "inferred": "J-109's F part landed with it; #467's body names only J-015",
+   "at_i": 34
+  },
+  {
+   "at": "c6828884091",
+   "job": "J-109",
+   "state": "started",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "resend the 15:32 rulings mail"
+   },
+   "why": "Muse could not read the 15:32 rulings mail, so its 'do not open a PR from fb-bot/integrate-j109' never arrived",
+   "flags": [
+    "told_unreadable"
+   ],
+   "at_i": 36
+  },
+  {
+   "at": "c6829562023",
+   "job": "J-109",
+   "state": "started",
+   "owner": "claude",
+   "next": {
+    "who": "nobody",
+    "what": "no notice is owed: the red branch is a record of a job Muse no longer owns"
+   },
+   "why": "the switchboard sends Muse RED-BRANCH on fb-bot/integrate-j109",
+   "flags": [
+    "notice_to_non_owner",
+    "record_branch_nagged"
+   ],
+   "at_i": 37
+  },
+  {
+   "at": "c6830053846",
+   "job": "J-109",
+   "state": "started",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close #428 into J-015's landing and J-136 (S2/S3), or say what is left"
+   },
+   "why": "Muse acknowledges: 'pushed, do-not-PR (replaced by #467)'",
+   "flags": [
+    "acknowledged"
+   ],
+   "inferred": "S2/S3 moved to J-136 per muse.md 43df82f7; #428 still open at fetch",
+   "at_i": 38
+  }
+ ],
+ "lessons": [
+  "A transfer is one step: plan edit, owner label and mail together; a mail alone is not an order the machine follows.",
+  "A job with no owner label at all is a hole: #428 carried none until 15:37.",
+  "After a transfer the old owner's pushed head is a record, not a lane: no RED-BRANCH or PR-open notice to it.",
+  "A mail the receiver reports unreadable is not 'told'."
+ ]
+}

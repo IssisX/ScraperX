@@ -557,8 +557,10 @@ class CodexRunning(unittest.TestCase):
         self.assertFalse(rules.codex_failed([self.state(OTHER_HEAD, "failed")], HEAD))
 
     def test_running_on_another_head_or_nothing_running_does_not_wait(self):
-        self.assertEqual(self.go([self.state(OTHER_HEAD, "running")])[0], [HEAD])
-        self.assertEqual(self.go()[0], [HEAD])
+        # plan step 7: an unasked head is Codex's turn, so each run here has had its one ask on the head
+        asked = CodexFirst.CODEX_ASKED
+        self.assertEqual(self.go([self.state(OTHER_HEAD, "running"), asked])[0], [HEAD])
+        self.assertEqual(self.go([asked])[0], [HEAD])
         # an eyes reaction next to a completed state for the head is not a running review
         self.assertFalse(rules.codex_in_flight([self.state(HEAD, "completed")], [self.EYES], HEAD))
 
@@ -732,7 +734,9 @@ class CodexMention(unittest.TestCase):
         c = dict(ctx(), proof_done_at=ago(6), created_at=ago(0.05))
         sw.ask_pr(pr_facts(head_ref="muse/integrate-x"), c)   # the ask part runs before the steer part asks Codex
         self.assertEqual(reviewed, [])
-        sw.ask_pr(pr_facts(head_ref="muse/integrate-x"), dict(c, created_at=ago(0.5)))   # ten minutes on: the API
+        # plan step 7: the steer part has asked Codex by then; ten minutes past that ask: the API
+        sw.ask_pr(pr_facts(head_ref="muse/integrate-x"),
+                  dict(c, created_at=ago(0.5), comments=[ask_comment("codex", 0.45)]))
         self.assertEqual(reviewed, [HEAD])
 
     def test_the_clock(self):
@@ -755,6 +759,51 @@ class CodexMention(unittest.TestCase):
         self.assertEqual(gh.as_team, [])
         self.assertNotIn("@", gh.posted[0][1])   # the bot's record for the integrator, with no mention
 
+
+
+class CodexAskedFirst(unittest.TestCase):
+    """Plan step 7 (J-072): the paid review waits until Codex has been asked on the head. While Codex's review can
+    count and it was not asked, it is its turn; the 10-minute start clock runs from the ask, not from the green."""
+
+    TEAM = NoteLandsNothing.TEAM
+
+    def sweep(self, thread=(), green_hours_ago=2.0, refuse=0, steer=False):
+        gh = FakeGH(thread)
+        gh.refuse = refuse
+        sw = make(gh, team=self.TEAM)
+        sw.merge_token = "t0ken"
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        sw.stale = lambda facts: False
+        reviewed = []
+        sw.review = lambda facts, c, author, security=False: reviewed.append(facts.head_sha)
+        c = dict(ctx(comments=list(thread)), proof_done_at=ago(green_hours_ago))
+        sw.ask_pr(pr_facts(head_ref="muse/integrate-x"), c)   # the sweep's order: the ask part, then the steer part
+        if steer:
+            sw.steer_pr(pr_facts(head_ref="muse/integrate-x"), c)
+        return reviewed, gh, sw
+
+    def test_green_two_hours_codex_expected_and_not_asked_no_paid_call(self):
+        reviewed, _, sw = self.sweep()
+        self.assertEqual(reviewed, [])
+        self.assertTrue(any(l.startswith("WAIT-CODEX") for l in sw.lines))
+
+    def test_asked_and_silent_ten_minutes_the_paid_review_runs(self):
+        # a team login typed the ask before the proof went green: the clock runs from the ask, not the green
+        typed = {"body": "@codex review", "user": {"login": "IssisX"}, "created_at": ago(11 / 60)}
+        self.assertEqual(self.sweep([typed], green_hours_ago=2 / 60)[0], [HEAD])
+        typed = dict(typed, created_at=ago(5 / 60))   # asked five minutes ago: still its turn
+        self.assertEqual(self.sweep([typed], green_hours_ago=2 / 60)[0], [])
+
+    def test_the_recorded_ask_when_the_token_is_refused_starts_the_clock(self):
+        reviewed, gh, _ = self.sweep(refuse=403, steer=True)   # green 2 h, never asked: no paid call
+        self.assertEqual(reviewed, [])
+        (where, body), = gh.posted   # the bot's record of the ask, for the integrator
+        self.assertIn(switch.MARK.format(kind="ask-codex", pr=9, head=HEAD), body)
+        note = {"body": body, "user": {"login": BOT}, "created_at": ago(3 / 60)}
+        self.assertEqual(self.sweep([note], refuse=403)[0], [])        # three minutes after the ask: its turn
+        note = dict(note, created_at=ago(11 / 60))
+        self.assertEqual(self.sweep([note], refuse=403)[0], [HEAD])    # silent ten minutes: the paid review runs
 
 class SettledCalls(unittest.TestCase):
     """J-072: #376's automatic review answered NOTE to have the owner confirm a call he had already made (her
