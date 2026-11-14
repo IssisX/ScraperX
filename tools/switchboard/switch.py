@@ -3015,7 +3015,13 @@ class Switch:
         trunk = sorted((r for r in runs if r.get("head_branch") == rules.TRUNK and r.get("status") == "completed"),
                        key=lambda r: r.get("created_at") or "", reverse=True)
         checked = max(str(kept.get("checked") or ""), str(kept.get("created") or ""))
-        newest, done_all = (trunk[0].get("created_at") or "") if trunk else "", True
+        # J-072 (11-14, run 43595346281): a trunk run still going when the sweep marks newer finished runs judged
+        # was never read once it went red. `checked` stays below the oldest unfinished trunk run not yet judged.
+        unfinished = [r.get("created_at") or "" for r in runs if r.get("head_branch") == rules.TRUNK
+                      and r.get("status") != "completed" and (r.get("created_at") or "") > checked]
+        below = min(unfinished) if unfinished else None
+        newest = next((r.get("created_at") or "" for r in trunk if below is None or (r.get("created_at") or "") < below), "")
+        done_all = True
         for i, r in enumerate(trunk):
             if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
                 break   # nothing newer than the runs already judged
