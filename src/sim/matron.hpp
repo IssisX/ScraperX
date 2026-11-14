@@ -1599,6 +1599,10 @@ public:
     bool travel_to(int region);
     // The same, with edges her plan leaves out (a ladder with him on it).
     bool travel_to(int region, const std::vector<int> &avoid);
+    // Tests only (Simulation::debug_matron_reachable_with_risers): whether
+    // a plan with her risers joins two regions of her scanned map — the
+    // route travel_to reads — for a test to ask before sending her there.
+    [[nodiscard]] bool reachable_with_risers_for_test(int from, int goal);
     // The world's hoists (matron_hoist.cpp), given before pre_step: each a
     // body on a vertical guide a catch holds, its travel, and what frees the
     // catch (a pin on its own guide, or a trip line's hanging handle). Her

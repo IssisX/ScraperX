@@ -1774,6 +1774,9 @@ public:
     // Tests: a journey to one region of her scanned map, by its id.
     [[nodiscard]] bool debug_matron_travel_region(int region) noexcept;
     bool debug_matron_travel(double top) noexcept;
+    // Tests: whether her plan with risers joins two regions of her scanned
+    // map — the route travel_to reads — to ask before sending her there.
+    [[nodiscard]] bool debug_matron_reachable_with_risers(int from, int goal) noexcept;
     // Her feet's floor search between two points (traversal::grid_walk), for tests.
     [[nodiscard]] std::size_t debug_matron_grid_walk(double fx, double fy, double fz, double tx, double ty, double tz,
                                                      float margin, int max_nodes);

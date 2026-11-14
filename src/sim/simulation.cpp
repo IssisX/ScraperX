@@ -1236,6 +1236,11 @@ bool Simulation::debug_matron_travel_region(const int region) noexcept {
     return region >= 0 && matron.travel_to(region);
 }
 
+bool Simulation::debug_matron_reachable_with_risers(const int from, const int goal) noexcept {
+    Matron &matron = physics_world_->matron();
+    return matron.reachable_with_risers_for_test(from, goal);
+}
+
 std::size_t Simulation::debug_matron_grid_walk(const double fx, const double fy, const double fz, const double tx,
                                                const double ty, const double tz, const float margin, const int max_nodes) {
     return physics_world_->matron_grid_walk(JPH::Vec3(float(fx), float(fy), float(fz)), JPH::Vec3(float(tx), float(ty), float(tz)),

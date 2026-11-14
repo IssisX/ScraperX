@@ -152,6 +152,11 @@ void unreachable_request_keeps_ride() {
         if (exit >= 0 && !map.plan(exit, r.id).empty()) {
             continue;
         }
+        // Her risers join decks her map does not: a region one reaches
+        // is not unreachable, whatever the plain plan says.
+        if (s.debug_matron_reachable_with_risers(board, r.id)) {
+            continue;
+        }
         unreachable = r.id;
         break;
     }

@@ -167,10 +167,15 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     // then replans from her actual landing before executing any move.
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
-    if (from >= 0) route = plan_with_risers(from, region, avoid);
+    if (from >= 0) route = scanned_->plan(from, region, avoid);
     int target = region;
     // No way of her map joins them: a hoist does. First to its landing.
     const bool hoisted = here >= 0 && route.empty() && here != region && plan_hoist(here, region);
+    // No hoist either: her risers beside the steel, one graph. The risers
+    // wait behind the hoist: where a hoist joins the decks she rides it, and
+    // a riser route must not pre-empt it (a riser plan took her up past the
+    // hoist's deck instead of boarding).
+    if (!hoisted && route.empty() && from >= 0) route = plan_with_risers(from, region, avoid);
     if (hoisted) {
         target = hoist_.board;
         if (target != here) route = scanned_->plan(here, target, avoid);
@@ -568,6 +573,13 @@ void Matron::step_travel(const float dt) {
     travel_walk_.clear();
     travel_.move = e.kind;
     climber_->begin(e.spec);
+}
+
+bool Matron::reachable_with_risers_for_test(const int from, const int goal) {
+    if (scanned_ == nullptr || from < 0 || goal < 0) {
+        return false;
+    }
+    return !plan_with_risers(from, goal, {}).empty();
 }
 
 std::vector<int> Matron::plan_with_risers(const int from, const int goal, const std::vector<int> &avoid) {
