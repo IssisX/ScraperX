@@ -17,8 +17,7 @@ Read through: 1794664120 (2026-11-14 mail+asks)
   03_EXECUTION/CARBON_REDESIGN_11-14.md, ASTRA_REDESIGN_11-14.md, ASTRA_REDESIGN_2_11-14.md (picks: merge the tested tree,
   file locks, Muse (Meta) reviews Claude's code, work leases, dispatch workflows explicitly, untrusted PR code gets no tokens); cap its 20-min re-wakes if built. Paid reviewer spent to 12-01.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
-- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
-  alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
+- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest, alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
 - Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (the `advisor` tool is Fable, ~/.claude/settings.json):
   for important calls, above all every design change to the collaboration system before it is built (Cory 11-14, asked ~10 times;
   skipped on the clock and helper calls that day); also a 2nd failed fix and before "system done". Not for small first problems.
