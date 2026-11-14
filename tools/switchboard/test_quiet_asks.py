@@ -2,7 +2,7 @@
 
 A. 12 h with no Muse push and no mail either way while 13 Muse lanes were late raised nothing (run 43587341746):
    inbound_quiet needs a CLAUDE_TO_MUSE ask in its day. Now, while a Muse lane is in flight, no fb-bot push and no
-   bridge post for MUSE_QUIET is one QUIET item that wakes the integrator, at most once a day while it lasts.
+   bridge post for MUSE_QUIET is one QUIET item that wakes the integrator, again every MUSE_QUIET_AGAIN while it lasts.
 B. A TO-CLAUDE ask was listed once and forgotten, and the job machine then said the job "belongs to muse" (J-124
    waited 37 h on a ruling, J-078 42 h). Now an ask that names a job stays open until a later Claude comment or mail
    names the job, is listed again once per ASK_AGAIN, and the job's step waits on Claude's answer.
@@ -64,7 +64,7 @@ class MuseQuiet(unittest.TestCase):
         self.assertEqual(number, switch.INBOX_PR)
         self.assertIn("QUIET Muse: no fb-bot push", body)
 
-    def test_once_a_day_while_it_lasts_and_again_after_muse_is_heard(self):
+    def test_again_every_two_hours_while_it_lasts_and_anew_after_muse_is_heard(self):
         gh = T.FakeGH(open_issues=[BOARD])
         rows, reads = [lane()], {"branches": [], "head_at": {}}
 
@@ -80,23 +80,23 @@ class MuseQuiet(unittest.TestCase):
         self.assertEqual(sweep(0, inbox=False), 0)   # the inbox part failed this pass: nothing is lost
         self.assertEqual(sweep(1), 1)
         self.assertIn("QUIET Muse", gh.posts[-1][1])
-        self.assertEqual(sweep(3), 0)
-        self.assertEqual(sweep(23.9), 0)
-        self.assertEqual(sweep(24), 1)               # a day on: once more
+        self.assertEqual(sweep(1.5), 0)
+        self.assertEqual(sweep(1.9), 0)
+        self.assertEqual(sweep(2), 1)                # MUSE_QUIET_AGAIN after the first: once more
         # Muse posts; the silence ends, and a new one alarms once it is MUSE_QUIET long
-        gh.comments.append(T.comment(5, BOARD, "**Muse (via email bridge): J-124 pushed**", -25.0))
-        self.assertEqual(sweep(26), 0)
+        gh.comments.append(T.comment(5, BOARD, "**Muse (via email bridge): J-124 pushed**", -5.0))
+        self.assertEqual(sweep(5.5), 0)
         self.assertNotIn("quiet_at", gh.state["inbox"])
-        self.assertEqual(sweep(31.1), 1)
+        self.assertEqual(sweep(6.1), 1)
 
     def test_a_recent_push_or_bridge_post_is_no_alarm(self):
         rows = [lane()]
-        post = T.comment(5, BOARD, "**Muse (via email bridge): J-124 status**", 2.0)
+        post = T.comment(5, BOARD, "**Muse (via email bridge): J-124 status**", 0.5)
         self.assertEqual(T.make(T.FakeGH(comments=[post])).muse_quiet(rows, {}), ())
         head = {"branches": [{"name": "fb-bot/wip-j124", "commit": {"sha": "s1"}}],
-                "head_at": {"s1": NOW - dt.timedelta(hours=3)}}
+                "head_at": {"s1": NOW - dt.timedelta(hours=0.5)}}
         self.assertEqual(T.make(T.FakeGH()).muse_quiet(rows, head), ())
-        pr = facts("fb-bot/integrate-j124", T.ago(1))
+        pr = facts("fb-bot/integrate-j124", T.ago(0.5))
         self.assertEqual(T.make(T.FakeGH()).muse_quiet(rows, {}, [pr]), ())
         # older than MUSE_QUIET, another agent's push, a post from a login outside the team: still quiet
         old = T.comment(6, BOARD, "**Muse (via email bridge): J-124 status**", 7.0)
@@ -132,15 +132,15 @@ class OpenAsks(unittest.TestCase):
         gh = self.gh()
         self.assertEqual(T.make(gh).inbox([]), 1)                    # listed once, under its comment id
         self.assertEqual(list(gh.state["inbox"]["asks"]), ["42"])
-        self.assertEqual(self.asks(at(gh, 2)), [])                   # not again before ASK_AGAIN
+        self.assertEqual(self.asks(at(gh, 0.5)), [])                 # not again before ASK_AGAIN
         (again,) = self.asks(at(gh, 30))                              # past the comment window: still open
         self.assertEqual((again.kind, again.target), ("TO-CLAUDE", f"#{BOARD}"))
         self.assertNotEqual(again.head, "42")
         self.assertIn("still open after 31.0 h", again.line)
         self.assertIn("J-124", again.line)
         self.assertEqual(switch.inbox_class(again), "now")
-        self.assertEqual(self.asks(at(gh, 32)), [])                  # listed at 30 h: not again until 34 h
-        self.assertEqual(len(self.asks(at(gh, 34))), 1)
+        self.assertEqual(self.asks(at(gh, 30.5)), [])                # listed at 30 h: not again until 31 h
+        self.assertEqual(len(self.asks(at(gh, 31))), 1)
 
     def test_a_claude_mail_naming_the_job_answers_it_and_a_bot_notice_does_not(self):
         gh = self.gh()

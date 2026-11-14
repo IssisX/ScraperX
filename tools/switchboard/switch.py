@@ -221,11 +221,11 @@ PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound inc
 # #350 (run 43587341746: 12 h with no Muse push and no mail either way, 13 Muse lanes late, and nothing woke anyone;
 # inbound_quiet needs a CLAUDE_TO_MUSE ask in its day). While a Muse lane is in flight, this long with no fb-bot push
 # and no bridge post is one QUIET item to the integrator, at most once per MUSE_QUIET_AGAIN while it lasts.
-MUSE_QUIET = dt.timedelta(hours=6)
-MUSE_QUIET_AGAIN = dt.timedelta(hours=24)
+MUSE_QUIET = dt.timedelta(hours=1)        # Cory 11-14: Muse posts about every half hour; 6 h was far too long
+MUSE_QUIET_AGAIN = dt.timedelta(hours=2)
 # #350 (J-124, J-078): a TO-CLAUDE ask that names a job stays open in the sweep state until a later Claude comment or
 # mail names the job, and is listed again at most once per ASK_AGAIN while it is open. At most MAX_OPEN_ASKS kept.
-ASK_AGAIN = dt.timedelta(hours=4)
+ASK_AGAIN = dt.timedelta(hours=1)          # Cory 11-14: an ask to Claude is answered within the hour
 MAX_OPEN_ASKS = 50
 ASK_FIELDS = ("job", "target", "at", "listed", "said", "url")   # one open ask in the sweep state, every field a string
 JOB_NAMED = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")   # machine.JOB_ID
