@@ -31,7 +31,7 @@ J-053 muse #82 | The Void Crossing: parachute from the 750 m deck to the second 
 J-078 muse #393 | Her motion never snaps: measured bone speeds and hand contacts across every scenario (rule 37)
 J-124 muse #446 hold: parked 11-14: steering cannot clear 550.25 E; the lip and grab rule are a design call (Muse's numbers on the issue) | The parachute is the way back from every height: a jump from each deck edge lands him alive
 J-116 muse #438 | A relaunch puts the world back exactly as a death restore does, and a bad save never breaks a load
-J-136 muse #468 | S2 and S3 recover after an empty send, so neither can strand him (F7)
+J-136 muse #468 hold: parked 11-14: gated on J-015 (#466), which is held | S2 and S3 recover after an empty send, so neither can strand him (F7)
 J-018 muse #125 hold: waits for J-001's grab code (muse.md 11-12) | Her stock reach with real arms (B3)
 J-007 muse #114 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her exit items 4, 6, 7: arm's-length holds, the pipe, the hoists
 J-009 muse #116 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Device determinism: the phone computes what CI proved
