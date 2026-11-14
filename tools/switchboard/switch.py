@@ -218,6 +218,17 @@ PIPE_KINDS = re.compile(r"^<!-- switchboard:pipe-alarm kinds=([a-z,]*) -->$", re
 PIPE_WAKE_STUCK = dt.timedelta(minutes=20)    # a wake:muse label this old: the bridge's outbound is stuck (it runs every 5 min)
 PIPE_INBOUND_QUIET = dt.timedelta(hours=24)   # no bridge post this long while asks went to Muse: its inbound is stuck
 PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound incident is read; older, it alarms again
+# #350 (run 43587341746: 12 h with no Muse push and no mail either way, 13 Muse lanes late, and nothing woke anyone;
+# inbound_quiet needs a CLAUDE_TO_MUSE ask in its day). While a Muse lane is in flight, this long with no fb-bot push
+# and no bridge post is one QUIET item to the integrator, at most once per MUSE_QUIET_AGAIN while it lasts.
+MUSE_QUIET = dt.timedelta(hours=1)        # Cory 11-14: Muse posts about every half hour; 6 h was far too long
+MUSE_QUIET_AGAIN = dt.timedelta(hours=2)
+# #350 (J-124, J-078): a TO-CLAUDE ask that names a job stays open in the sweep state until a later Claude comment or
+# mail names the job, and is listed again at most once per ASK_AGAIN while it is open. At most MAX_OPEN_ASKS kept.
+ASK_AGAIN = dt.timedelta(hours=1)          # Cory 11-14: an ask to Claude is answered within the hour
+MAX_OPEN_ASKS = 50
+ASK_FIELDS = ("job", "target", "at", "listed", "said", "url")   # one open ask in the sweep state, every field a string
+JOB_NAMED = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")   # machine.JOB_ID
 BRIDGE_POST = "**Muse (via email bridge)"     # the first line of every inbound bridge post
 LEDGER_NOTICE = "<!-- switchboard:ledger keys="   # the hidden marker of a ledger notice (ledger.py NOTICE_MARK)
 # J-072: the live bridge's version. muse_bridge.gs's BRIDGE_VERSION is bridge_version() of its own text; its clock
@@ -454,6 +465,29 @@ def muse_routine(first: str, body: str) -> str:
     if kind:
         return "" if MUSE_WAKES.search(FAILING_FIRST.sub(" ", ACK_ID.sub("", body))) else kind
     return "FYI" if muse_report(title, body) else ""
+
+
+def ask_said(kind: str, first: str) -> str:
+    """An ask's first line as an inbox line shows it: bounded, no mention, nothing that wakes the switchboard."""
+    said = first if kind == "TO-CLAUDE" else "Muse: " + first[len(BRIDGE_POST):].strip(": *")
+    return no_verdict(plain(said[:100]))
+
+
+def thread_job(thread: dict | None) -> str:
+    """The job an open issue or PR is (#350): a PR's `Job: J-NNN` line, an issue's title; "" for neither."""
+    if not isinstance(thread, dict):
+        return ""
+    if thread.get("pull_request") is not None:
+        return rules.job_of_pr(thread.get("body") or "")
+    return rules.job_of_title(thread.get("title") or "")
+
+
+def same_job(job: str, named) -> bool:
+    """Does an id in `named` name `job` (#350)? The same id, or one is the other's base (J-044c and J-044): a
+    split's answer answers its base's ask, and the base's answers the split's."""
+    def base(j: str) -> str:
+        return j.rstrip("abcdefghijklmnopqrstuvwxyz")
+    return any(n and (n == job or n == base(job) or base(n) == job) for n in named)
 
 
 def unquoted(body: str) -> str:
@@ -2083,7 +2117,7 @@ class Switch:
             mail = mail_reader.read(self, model, reads, also=notes)   # posts and notices from one comment set
             mail = dataclasses.replace(mail, receipts={**machine.recorded_receipts(notes), **mail.receipts})
             rows = machine.table(model, machine.collect(model, reads, works=works, mail=mail,
-                                                        planned_at=reads.get("planned_at")))
+                                                        planned_at=reads.get("planned_at"), asks=self.ask_jobs()))
             memo = self.__dict__["_plan_table"] = (model, reads, mail, rows)
         return memo
 
@@ -2153,7 +2187,9 @@ class Switch:
             answer = machine.receipt_post(mail, ver, sent) if sent else None
             if answer and (owner, ver) not in mail.receipts:
                 receipts.append((owner, ver, answer))
-            unread = sent and any(r.owner == owner and r.state == "told" and r.late(self.now) for r in rows)
+            # #350: a told job waiting on an open ask is late on Claude's clock, not on the receipt's
+            unread = sent and any(r.owner == owner and r.owes == owner and r.state == "told" and r.late(self.now)
+                                  for r in rows)
             again = machine.NOTICE_AGAIN.format(owner=owner, ver=ver)
             if sent and not (unread and not any(again in (c.get("body") or "") and
                                                 (c.get("user") or {}).get("login") == rules.BOT_LOGIN for c in notes)):
@@ -2169,6 +2205,7 @@ class Switch:
         # 11-13: dest is who owes the next step; only the integrator's own wake it (inbox_class), the rest ride
         self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
                                 for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
+        self.plan_items += self.muse_quiet(rows, reads, steered)   # #350: after the cut, so late lines never crowd it out
         for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
             c = machine.notice_comment(notes, owner, ver)
             if c and c.get("id"):
@@ -2301,11 +2338,39 @@ class Switch:
         The first line holds `To Claude` or `proposal`, or is the bridge's `**Muse (via email bridge):
         <subject>**`: every Muse mail is to Claude, so every one wakes it. Every agent posts as IssisX, so the author is read
         from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
-        start with `<!-- codex`."""
-        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
-        open_threads = {int(i["number"]) for i in
-                        self.listing(f"repos/{self.gh.repo}/issues?state=open")}
+        start with `<!-- codex`. #350: an ask that names a job is listed again, once per ASK_AGAIN, while no Claude
+        post has named the job since (open_asks)."""
         out: list[InboxItem] = []
+        for c, number, kind, first in self.asks_seen():
+            cid = str(c["id"])
+            if inbox_key(kind, f"#{number}", cid) in reported:
+                continue
+            out.append(InboxItem(kind, f"#{number}", cid, f"{kind} #{number} {ask_said(kind, first)} "
+                                                          f"{c.get('html_url') or ''}"))
+        for cid, rec in self.open_asks().items():
+            last = parse_time(rec["listed"])
+            if last is not None and self.now - last < ASK_AGAIN:
+                continue
+            head = f"{cid}@{iso_z(self.now)}"   # a new key per listing; the first listing keeps the bare id
+            if inbox_key("TO-CLAUDE", rec["target"], head) in reported:
+                continue
+            age = self.now - (parse_time(rec["at"]) or self.now)
+            out.append(InboxItem("TO-CLAUDE", rec["target"], head,
+                                 f"TO-CLAUDE {rec['target']} still open after {hours(age)}: no Claude comment or mail "
+                                 f"has named {rec['job']} since. {rec['said']} {rec['url']}"))
+            rec["listed"] = iso_z(self.now)
+        return out
+
+    def asks_seen(self) -> list[tuple[dict, int, str, str]]:
+        """The asks to the integrator in the inbox's comment window, as (comment, thread, kind, first line): kind
+        TO-CLAUDE, or a routine Muse post's digest kind (muse_routine). Read once per run (#350: open_asks too)."""
+        memo = self.__dict__.get("_asks_seen")
+        if memo is not None:
+            return memo
+        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+        threads = {int(i["number"]): i for i in self.listing(f"repos/{self.gh.repo}/issues?state=open")}
+        self.__dict__["_ask_threads"] = threads
+        out: list[tuple[dict, int, str, str]] = []
         for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
             if (c.get("updated_at") or c.get("created_at") or "") < since:   # the hour's floor read a little more
                 continue
@@ -2321,14 +2386,13 @@ class Switch:
                 continue
             if body.lstrip().startswith("CLAUDE_TO_MUSE:"):   # Claude's own mail to Muse, as the bridge records it
                 continue
-            cid = c.get("id")
-            if cid is None:
+            if c.get("id") is None:
                 continue
             try:
                 number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
             except (ValueError, IndexError):
                 continue
-            if number not in open_threads:
+            if number not in threads:
                 continue
             first = (body.split("\n", 1)[0] or "").strip()
             low = first.lower()
@@ -2339,14 +2403,130 @@ class Switch:
                 continue
             # J-103: a bridged "J-NNN started" or a bare ack is digested, never posted alone (muse_routine); a question,
             # a sha, a red, a finding or "taken" in it still wakes as TO-CLAUDE. queue_check counts STARTED either way.
-            kind = muse_routine(first, body) or "TO-CLAUDE"
-            if inbox_key(kind, f"#{number}", str(cid)) in reported:
-                continue
-            said = first if kind == "TO-CLAUDE" else "Muse: " + first[len(BRIDGE_POST):].strip(": *")
-            out.append(InboxItem(kind, f"#{number}", str(cid),
-                                 f"{kind} #{number} {no_verdict(plain(said[:100]))} "
-                                 f"{c.get('html_url') or ''}"))
+            out.append((c, number, muse_routine(first, body) or "TO-CLAUDE", first))
+        self.__dict__["_asks_seen"] = out
         return out
+
+    def open_asks(self) -> dict[str, dict]:
+        """#350 (J-124 waited 37 h on a ruling, J-078 42 h on a landing path, each listed once and then forgotten):
+        comment id -> the TO-CLAUDE asks from a team login that name a job (the subject's, else the job whose issue
+        or PR the thread is) and that no later Claude post has answered: a comment from a team login, never the
+        switch's own, that carries Claude's footer, opens `Claude (integrator)` or is a hand mail to Muse
+        (`CLAUDE_TO_MUSE:`), and that names the job or sits on the job's own thread. One post naming several jobs
+        answers each of them. Kept in the sweep state (the inbox's
+        box), past the comment window, at most MAX_OPEN_ASKS, the newest. An ask that names no job is listed once,
+        as before. No read of its own: the inbox's comment window and open-thread listing, once per run."""
+        memo = self.__dict__.get("_open_asks")
+        if memo is not None:
+            return memo
+        box = self.inbox_box()
+        stored = box.get("asks") if isinstance(box.get("asks"), dict) else {}
+        kept = {str(k): v for k, v in stored.items()
+                if isinstance(v, dict) and all(isinstance(v.get(f), str) for f in ASK_FIELDS)
+                and parse_time(v["at"]) is not None}
+        seen = self.asks_seen()
+        threads = self.__dict__.get("_ask_threads") or {}
+        logins = {login.lower() for login in self.team.verdict_logins}
+        for c, number, kind, first in seen:
+            cid = str(c["id"])
+            at = parse_time(c.get("created_at") or "")
+            job = (machine.JOB_ID.findall(first) or [thread_job(threads.get(number))])[0]
+            # only a team login's ask is kept: anyone can comment on the public repo, and a kept ask moves a job's
+            # step to Claude; a stranger's is still listed once, as before
+            if kind != "TO-CLAUDE" or cid in kept or not job or at is None or \
+                    ((c.get("user") or {}).get("login") or "").lower() not in logins:
+                continue
+            kept[cid] = {"job": job, "target": f"#{number}", "at": iso_z(at), "listed": iso_z(self.now),
+                         "said": ask_said(kind, first), "url": str(c.get("html_url") or "")}
+        team = logins - {rules.BOT_LOGIN.lower()}
+        for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
+            body = (c.get("body") or "").lstrip()
+            at = parse_time(c.get("created_at") or "")
+            if at is None or ((c.get("user") or {}).get("login") or "").lower() not in team or not (
+                    body.startswith(("CLAUDE_TO_MUSE:", "Claude (integrator)")) or "Generated by [Claude Code]" in body):
+                continue
+            try:
+                number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
+            except (ValueError, IndexError):
+                number = 0
+            named = set(machine.JOB_ID.findall(body)) | {thread_job(threads.get(number))}
+            for cid, rec in list(kept.items()):
+                if at > (parse_time(rec["at"]) or at) and same_job(rec["job"], named):
+                    self.out(f"ASK         {rec['target']} {rec['job']}: answered by {c.get('html_url') or c.get('id')}")
+                    del kept[cid]
+        kept = dict(sorted(kept.items(), key=lambda kv: kv[1]["at"])[-MAX_OPEN_ASKS:])
+        if not getattr(self.gh, "dry_run", False):
+            box["asks"] = kept
+        self.__dict__["_open_asks"] = kept
+        return kept
+
+    def ask_jobs(self) -> dict[str, tuple[dt.datetime, str]]:
+        """job -> (when, link) of its oldest open ask (open_asks), for the job machine. A read that fails leaves the
+        machine without them this pass; the plan part goes on."""
+        try:
+            asks = self.open_asks()
+        except GitHubError as err:
+            self.out(f"NOTE        open asks not read this pass ({plain(str(err)[:160])})")
+            return {}
+        out: dict[str, tuple[dt.datetime, str]] = {}
+        for rec in asks.values():
+            at = parse_time(rec["at"])
+            if at is not None and (rec["job"] not in out or at < out[rec["job"]][0]):
+                out[rec["job"]] = (at, rec["url"] or rec["target"])
+        return out
+
+    def muse_heard(self, reads: dict, steered=()) -> dt.datetime | None:
+        """#350: the newest sign of Muse on GitHub that a full pass reads anyway: a head commit on its branches
+        with no PR (the plan's compares) or on its open PRs (the steered PRs' facts), and a bridge post from a team
+        login (the inbox's comment window). None when none of them shows one."""
+        def muses(ref: str) -> bool:
+            return any(machine.owns(o, ref) for o in machine.MAIL_OWNERS)
+        head_at = reads.get("head_at") or {}
+        times = [head_at[collab_plan.branch_sha(b)] for b in reads.get("branches") or []
+                 if muses(collab_plan.branch_name(b)) and collab_plan.branch_sha(b) in head_at]
+        times += [t for s in steered if muses(s.facts.head_ref)
+                  and (t := parse_time(s.facts.head_committed_at or "")) is not None]
+        team = {login.lower() for login in self.team.verdict_logins}
+        times += [t for c in self.comments_since(self.now - INBOX_RUNS_WINDOW)
+                  if (c.get("body") or "").lstrip().startswith(BRIDGE_POST)
+                  and ((c.get("user") or {}).get("login") or "").lower() in team
+                  and (t := parse_time(c.get("created_at") or "")) is not None]
+        return max(times, default=None)
+
+    def muse_quiet(self, rows, reads: dict, steered=()) -> tuple[InboxItem, ...]:
+        """#350: one QUIET item to the integrator (class "hold": it wakes, never digest-only) while a Muse lane is in
+        flight and nothing of Muse's (muse_heard) is newer than MUSE_QUIET; at most once per MUSE_QUIET_AGAIN while
+        the silence lasts (its head is the incident's stamp, the inbox box's quiet_at), and again once Muse is heard
+        and then goes quiet again. Needs no CLAUDE_TO_MUSE ask (inbound_quiet does) and makes no read of its own; a
+        read that fails drops only this item."""
+        box = self.inbox_box()
+        write = not getattr(self.gh, "dry_run", False)
+        lanes = [r for r in rows if r.owner in machine.MAIL_OWNERS and machine.flying(r)]
+        try:
+            heard = self.muse_heard(reads, steered) if lanes else None
+        except GitHubError as err:
+            self.out(f"NOTE        Muse quiet check not made this pass ({plain(str(err)[:160])})")
+            return ()
+        if not lanes or (heard is not None and self.now - heard < MUSE_QUIET):
+            if write:
+                box.pop("quiet_at", None)
+            return ()
+        # the incident's stamp is the item's head: every silent pass returns it and the inbox's ring lists it once,
+        # so an inbox part that fails this pass loses nothing; a day on, a new stamp lists it again
+        stamp = parse_time(str(box.get("quiet_at") or ""))
+        if stamp is None or self.now - stamp >= MUSE_QUIET_AGAIN:
+            stamp = self.now
+            if write:
+                box["quiet_at"] = iso_z(stamp)
+        late = [r.job for r in lanes if r.owes == r.owner and r.late(self.now)]   # an ask's clock is Claude's
+        jobs = ", ".join(r.job for r in lanes[:8]) + (", ..." if len(lanes) > 8 else "")
+        span = hours(self.now - heard) if heard is not None else \
+            f"at least {hours(INBOX_RUNS_WINDOW)} (none in the window read)"
+        self.out(f"QUIET       Muse: no push and no bridge post for {span}, {len(lanes)} lane(s) in flight")
+        return (InboxItem("QUIET", "muse", iso_z(stamp),
+                          f"QUIET Muse: no fb-bot push and no bridge post for {span} while {len(lanes)} Muse lane(s) "
+                          f"are in flight ({jobs}), {len(late)} of them late. Muse may be down or holding: mail "
+                          f"Muse, or check the bridge."),)
 
     def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
         """One PR's items, for one audience (J-052): prefix "" is the integrator's, "muse-" is Muse's.
