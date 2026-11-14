@@ -1,8 +1,11 @@
 """A test group is skipped only when no changed file reaches it, and the whole proof runs on any doubt."""
+import contextlib
+import io
 import os
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 import proof_scope
 from proof_scope import EVERY, NONE, decide, groups_of, outputs, reaches_game
@@ -194,6 +197,73 @@ class CandidateRangeGodot(CandidateRange):
         got = sorted(self.changed())
         self.assertEqual(got, ["godot/main.gd", "godot/pr.gd"])
         self.assertEqual(decide("workflow_dispatch", CANDIDATE, got)[0], {"godot", "android"})
+
+
+class DispatchedCheckout(unittest.TestCase):
+    """The whole step, main(), in a real shallow checkout as actions/checkout leaves it (depth 1): an integrate
+    branch that changed one native test, on a trunk that has since moved the Godot project."""
+
+    NATIVE_ONLY = {"game": "true", "native": "true", "godot": "false", "android": "false"}
+    EVERYTHING = {"game": "true", "native": "true", "godot": "true", "android": "true"}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.origin = f"{self.tmp.name}/origin"
+        os.mkdir(self.origin)
+        git(self.origin, "init", "-q", "-b", "ScraperX-Claude")
+        self.commit("work/plan.md", "base")
+        git(self.origin, "checkout", "-q", "-b", "claude/integrate-x")
+        self.commit("tests/pr.cpp", "the branch's own change")
+        git(self.origin, "checkout", "-q", "ScraperX-Claude")
+        self.commit("godot/main.gd", "trunk moved the game")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def commit(self, path, msg):
+        full = os.path.join(self.origin, path)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "a", encoding="utf-8") as fh:
+            fh.write(msg + "\n")
+        git(self.origin, "add", path)
+        git(self.origin, "commit", "-q", "-m", msg)
+
+    def step(self, event, ref, branch="claude/integrate-x", extra=None) -> dict[str, str]:
+        """What the scope step writes to $GITHUB_OUTPUT for this event, on a fresh depth-1 checkout of `branch`."""
+        work = tempfile.mkdtemp(dir=self.tmp.name)
+        git(self.tmp.name, "clone", "-q", "--depth=1", "--branch", branch, f"file://{self.origin}", work)
+        out = os.path.join(work, "github_output")
+        env = dict({"EVENT": event, "REF": ref, "BEFORE": "", "GITHUB_OUTPUT": out}, **(extra or {}))
+        was = os.getcwd()
+        os.chdir(work)
+        try:
+            with mock.patch.dict(os.environ, env), contextlib.redirect_stdout(io.StringIO()), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(proof_scope.main(), 0)
+        finally:
+            os.chdir(was)
+        with open(out, encoding="utf-8") as fh:
+            return dict(line.strip().split("=", 1) for line in fh if line.strip())
+
+    def test_a_dispatch_on_an_integrate_branch_is_scoped_as_its_push(self):
+        pushed = self.step("push", BRANCH)
+        self.assertEqual(pushed, self.NATIVE_ONLY)   # trunk's godot change since the branch point is not the branch's
+        self.assertEqual(self.step("workflow_dispatch", BRANCH), pushed)
+
+    def test_a_dispatch_on_trunk_runs_everything(self):
+        self.assertEqual(self.step("workflow_dispatch", TRUNK, branch="ScraperX-Claude"), self.EVERYTHING)
+
+    def test_nothing_a_dispatch_can_set_narrows_the_scope(self):
+        asks = {"INPUT_SCOPE": "none", "SCOPE": "none", "GROUPS": "", "BEFORE": "HEAD"}
+        self.assertEqual(self.step("workflow_dispatch", TRUNK, branch="ScraperX-Claude", extra=asks), self.EVERYTHING)
+        self.assertEqual(self.step("workflow_dispatch", "refs/heads/claude/wip-x", extra=asks), self.EVERYTHING)
+        self.assertEqual(self.step("workflow_dispatch", BRANCH, extra=asks), self.NATIVE_ONLY)
+
+    def test_a_branch_with_no_way_back_to_trunk_runs_everything(self):
+        git(self.origin, "checkout", "-q", "--orphan", "claude/integrate-lost")
+        self.commit("work/plan.md", "no shared history")
+        self.assertEqual(self.step("workflow_dispatch", "refs/heads/claude/integrate-lost",
+                                   branch="claude/integrate-lost"), self.EVERYTHING)
 
 
 if __name__ == "__main__":

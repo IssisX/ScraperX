@@ -49,6 +49,8 @@ your own branches (Cory 11-05) and mail the rest:
 - **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
 - **Push, then CI proves (11-10).** Push as soon as the change builds and the groups it reaches pass locally. Never hold a push
   for a local full proof or a free memory slot: the full proof is CI's job (CLAUDE.md), and a 90-minute local wait stalls the job.
+  Your push starts the proof: never dispatch it too (11-14: each dispatch cancelled the push's run and started over). Only a
+  head whose push started no run (`[skip ci]`) is dispatched.
 - **Trunk merges are yours (11-10).** When one of your PRs conflicts with trunk, merge trunk into your branch
   yourself (a real merge, never a rebase) and push; never wait for the integrator. You push your own branches
   (CLAUDE.md, settled 11-05), and the integrator's pushes to `fb-bot/` are refused by its safety check, so the
