@@ -27,7 +27,7 @@ J-102 claude #421 hold: paused by Cory 11-13: Claude does no game code until the
 J-109 claude #428 kept fb-bot/integrate-j109@7791c2a8830c hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)
 J-137 claude #474 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | She pins in a Lunge about 4 m short of a still climber and never closes
 J-049 muse #278 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her mind runs on evidence: hiding from her truly works (rule 29, gap 4)
-J-053 muse #82 | The Void Crossing: parachute from the 750 m deck to the second tower
+J-053 claude #82 | The Void Crossing: parachute from the 750 m deck to the second tower
 J-078 muse #393 | Her motion never snaps: measured bone speeds and hand contacts across every scenario (rule 37)
 J-124 muse #446 hold: parked 11-14: steering cannot clear 550.25 E; the lip and grab rule are a design call (Muse's numbers on the issue) | The parachute is the way back from every height: a jump from each deck edge lands him alive
 J-116 muse #438 | A relaunch puts the world back exactly as a death restore does, and a bad save never breaks a load
