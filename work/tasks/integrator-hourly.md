@@ -11,12 +11,16 @@ How: helpers get the important work and long reads, never chores (11-06); the in
 Fewer, batched calls.
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
+Docs stay true (11-14): a contradiction or stale fact seen while working, or left behind by a change that landed, is
+fixed that run, never listed for later; no hunting through every file for them.
+Every wait, alarm or limit a helper or I pick is checked against the measured rhythm before it ships, never
+the safe-looking long one (11-14: a helper's 6 h Muse-quiet alarm, passed on unchecked; Muse posts about every 30 min).
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
-Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
+Overview: a scheduled task (trig_019Qy9rcek8tdRXTcpNjF1zs, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
-says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 48`, Claude's red branches, idle PRs over
+says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 168`, Claude's red branches, idle PRs over
 4 h) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
@@ -27,7 +31,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    to a helper; post its verdicts on GitHub if the bridge has not. Muse pushes its own branches (the integrator's
    pushes to `fb-bot/` are refused); the switchboard opens its PRs.
    Asks: RELAY? = a `To Muse:` post (mail it); REPOST = an ask to Grok not at the start of a comment (repost it
-   starting `To Grok:`); an ask to Claude = answer it now. Full runs also run `asks.py --hours 24` and answer any
+   starting `To Grok:`); an ask to Claude = answer it now. Full runs also run `asks.py --hours 168` and answer any
    ask to Claude still open (a miss); its other lines were handled when first listed.
    Sentry (phone errors from the APK): each new issue goes to its owner's job (Muse for game code) with the error,
    file and line. A failed Switchboard run: read its failing job's error lines; fix it or hand it to a helper.

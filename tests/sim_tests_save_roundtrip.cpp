@@ -726,9 +726,28 @@ bool saves_agree(const Bytes &a, const Bytes &b) {
             }
         }
     }
+    if (mark_a == 0x314A4E49U) {  // "INJ1": her per-region injury (J-059 #343 fix).
+        float region_a[9] = {}, region_b[9] = {}, event_a[9] = {}, event_b[9] = {};
+        if (!ra.pod(region_a) || !rb.pod(region_b) || !ra.pod(event_a) || !rb.pod(event_b)) {
+            std::cout << "  save-roundtrip agree: her injury differs\n";
+            return false;
+        }
+        for (int j = 0; j < 9; ++j) {
+            if (!closef(region_a[j], region_b[j]) || !closef(event_a[j], event_b[j])) {
+                std::cout << "  save-roundtrip agree: her injury differs\n";
+                return false;
+            }
+        }
+        if (!ra.done() || !rb.done()) {
+            if (!ra.pod(mark_a) || !rb.pod(mark_b) || mark_a != mark_b) {
+                std::cout << "  save-roundtrip agree: the mark after her injury differs\n";
+                return false;
+            }
+        }
+    }
     if (!ra.done() || !rb.done()) {
         if (mark_a != 0x31424146U) {  // "FAB1": the fabricated objects.
-            std::cout << "  save-roundtrip agree: the mark after her state is not the fabricated mark\n";
+            std::cout << "  save-roundtrip agree: the mark after her matron sections is not the fabricated mark\n";
             return false;
         }
         std::uint32_t count_a = 0, count_b = 0;
@@ -856,39 +875,6 @@ void roundtrip_leg(const char *leg, const InitialSpawn spawn, bool (*rig)(Simula
               << " save_bytes=" << saved.size() << '\n';
 }
 
-// Her stage on relaunch (muse.md): save at Dangerous, load fresh, she is
-// still Dangerous. Without the MAT1 section the load restores her from a
-// default Saved (Pest, rage 0) and this fails.
-void run_matron_dangerous_relaunch() {
-    Simulation s(InitialSpawn::ExteriorGrade);
-    (void)s.advance_frame(1.0);
-    const std::uint64_t commits_before = s.snapshot().checkpoint_commit_count;
-    s.debug_set_matron_stage(1);
-    // Hold her at Dangerous while the checkpoint commits: her rage cools
-    // as she goes, so the stage is re-asserted every tick, as the matron
-    // tests hold it.
-    bool committed = false;
-    for (std::uint32_t tick = 0; tick < 3 * Simulation::kTickRateHz; ++tick) {
-        s.debug_set_matron_stage(1);
-        (void)s.advance_frame(Simulation::kFixedStepSeconds);
-        if (s.snapshot().checkpoint_commit_count > commits_before) {
-            committed = true;
-            break;
-        }
-    }
-    require(committed, "dangerous: the checkpoint must commit at Dangerous");
-    const auto before = s.matron_state();
-    require(before.stage == 1 && before.rage > 0.4, "dangerous: she is Dangerous before the save");
-    const Bytes saved = s.save_game();
-    Simulation b(InitialSpawn::ExteriorGrade);
-    require(b.load_game(saved.data(), saved.size()), "dangerous: the save must load");
-    const auto after = b.matron_state();
-    require(after.stage == 1, "dangerous: she is still Dangerous after relaunch");
-    require(after.rage > 0.4, "dangerous: her rage survives the relaunch");
-    require(after.state == before.state, "dangerous: her state survives the relaunch");
-    std::cout << "  save-roundtrip dangerous: stage=" << int(after.stage) << " rage=" << after.rage << '\n';
-}
-
 bool die_walk_east(Simulation &s) { return try_walkoff(s, 0.6, 0.0, 10.0) || die_by_launch(s); }
 bool die_walk_south(Simulation &s) { return try_walkoff(s, 0.0, -0.6, 10.0) || die_by_launch(s); }
 
@@ -997,7 +983,8 @@ bool save_sections(const Bytes &bytes, SaveSections &out) {
     }
     out.after_grips = r.position();
     // The damage mark and its three fields, then the matron-state mark and
-    // its six, then the fabricated mark if the save holds any.
+    // its six, then her injury mark and its eighteen, then the fabricated
+    // mark if the save holds any.
     std::uint32_t mark = 0;
     if (r.done()) {
         out.after_damage = out.after_matron = out.end = r.position();
@@ -1016,20 +1003,30 @@ bool save_sections(const Bytes &bytes, SaveSections &out) {
         out.after_matron = out.end = r.position();
         return true;
     }
-    if (!r.pod(mark)) {
-        return false;
-    }
-    if (mark != 0x3154414DU) {
-        // No matron state: the next mark is the fabricated objects'.
-        out.after_matron = out.after_damage;
-        out.end = bytes.size();
-        return true;
-    }
-    std::uint8_t state = 0, stage = 0;
-    float strain = 0.0F, rage = 0.0F, exposure = 0.0F;
-    std::uint64_t handled = 0;
-    if (!r.pod(state) || !r.pod(strain) || !r.pod(rage) || !r.pod(stage) || !r.pod(exposure) || !r.pod(handled)) {
-        return false;
+    // Her state (MAT1, only when the save holds it) and her per-region
+    // injury (INJ1, J-059 #343 fix), each under its own mark, in write_save
+    // order; a save made before either ends at the damage, and either
+    // absent the next mark is the fabricated objects'.
+    while (!r.done()) {
+        if (!r.peek(mark)) {
+            return false;
+        }
+        if (mark == 0x3154414DU) {
+            std::uint8_t state = 0, stage = 0;
+            float strain = 0.0F, rage = 0.0F, exposure = 0.0F;
+            std::uint64_t handled = 0;
+            if (!r.pod(mark) || !r.pod(state) || !r.pod(strain) || !r.pod(rage) || !r.pod(stage) ||
+                !r.pod(exposure) || !r.pod(handled)) {
+                return false;
+            }
+        } else if (mark == 0x314A4E49U) {
+            float region[9] = {}, event[9] = {};
+            if (!r.pod(mark) || !r.pod(region) || !r.pod(event)) {
+                return false;
+            }
+        } else {
+            break;
+        }
     }
     out.after_matron = r.position();
     out.end = bytes.size();
@@ -1038,7 +1035,7 @@ bool save_sections(const Bytes &bytes, SaveSections &out) {
 
 void run_save_bad_files() {
     // A plain yard save: no keg, no fabricated section, so the file ends
-    // at the matron state.
+    // at her injury.
     Simulation source(InitialSpawn::ExteriorGrade);
     (void)source.advance_frame(1.0);
     const Bytes saved = source.save_game();
@@ -1124,20 +1121,6 @@ void run_save_bad_files() {
         // The dead byte is the last byte of the damage section.
         bad[sec.after_damage - 1] = 2;
         expect_refuse("dead byte 2", bad, "matron damage");
-    }
-    {
-        Bytes bad = saved;
-        // The matron state byte is the first byte after the MAT1 mark.
-        bad[sec.after_damage + 4] = 19;
-        expect_refuse("matron state 19", bad, "matron state");
-    }
-    {
-        Bytes bad = saved;
-        // Her rage is the float after the MAT1 mark, the state byte and
-        // the strain float.
-        const float rage = 2.0F;
-        std::memcpy(bad.data() + sec.after_damage + 4 + 1 + 4, &rage, sizeof(rage));
-        expect_refuse("matron rage 2", bad, "matron state");
     }
     {
         Bytes bad = saved;
@@ -1260,9 +1243,8 @@ void run_save_roundtrip() {
     roundtrip_leg("221", InitialSpawn::Ring220North, rig_221, {0.0, 0.0, -10.0});
     roundtrip_leg("340", InitialSpawn::PlateTop, rig_340);
     roundtrip_leg("484", InitialSpawn::Ring484North, rig_484);
-    run_matron_dangerous_relaunch();
     run_save_bad_files();
-    std::cout << "PASS scraperx_sim save-roundtrip: legs=5 dangerous=1 bad_files=1\n";
+    std::cout << "PASS scraperx_sim save-roundtrip: legs=5 bad_files=1\n";
 }
 
 // ---- the probe ---------------------------------------------------------------

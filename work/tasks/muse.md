@@ -4,7 +4,7 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 
 ## Where things are
 - **Issues #3 and #87 are retired.** Stop watching them; never post there.
-- **The board** is the one open issue labeled `board` (today #340): rulings and "To X:" questions.
+- **The board** is the one open issue labeled `board` (today #546): rulings and "To X:" questions.
   Find it by label each time.
 - **Your jobs** each have their own issue (label `job` and `owner:muse`). Read only those and the
   board's newest comments, never old history.
@@ -19,6 +19,9 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 - To ask someone: subject `MUSE_TO_CLAUDE: <J-NNN or #N> To <Name>: <question in a few words>`, and
   in the body what you are doing, what you tried, the exact question, and what a useful reply looks
   like (Cory's collaboration rule). Don't wait for the answer: keep working.
+- Tag every subject ASK or FYI right after the job (11-13): `MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`.
+  ASK when Claude must decide or answer; FYI when it only reports (started, pushed, measured, parked, landed).
+  Unsure: ASK. An FYI does not wake Claude; it rides the next inbox post.
 - Mail to you arrives with a subject starting `CLAUDE_TO_MUSE:`.
 - A mail of mine that your safety check refuses: mail me its ID and the reason the check gave, not Cory; I resend it
   reworded the same hour. Cory hears only if the resend is refused too (Cory 11-08).
@@ -52,7 +55,7 @@ your own branches (Cory 11-05) and mail the rest:
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your live work
-Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does.
+Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does. When Cory tells you directly to stop, pause or go, do it and mail Claude the same hour so it becomes a `hold:` line in work/plan.md (or its removal) (11-14: a pause known only to you froze test 2 for 12 h).
 Before starting a lane, push fb-bot/wip-<job> and mail its real SHA. Push every tested increment; an unpushed SHA is not a shared baseline. Check the live plan before each push.
 On a hold or transfer, first push or explicitly report local work; stop only after the new plan and handoff are acknowledged. At your in-flight limit, land, review or unblock, rather than starting another job.
 Include plan <version> in the subject after a plan-change notice. Keep the existing mail bridge and proof rules.

@@ -1329,6 +1329,12 @@ bool Simulation::debug_player_snagged() const noexcept { return physics_world_->
 
 void Simulation::debug_matron_player_blow() noexcept { physics_world_->matron().player_blow_landed(); }
 
+void Simulation::debug_matron_player_blow_at(const Vector3 impulse_ns, const Vector3 at, const bool low) noexcept {
+    physics_world_->matron().struck_by_player(
+        JPH::Vec3(static_cast<float>(impulse_ns.x), static_cast<float>(impulse_ns.y), static_cast<float>(impulse_ns.z)),
+        JPH::RVec3(at.x, at.y, at.z), low);
+}
+
 void Simulation::debug_force_strike_move(const std::uint8_t move) noexcept {
     physics_world_->force_strike_move_for_test(move);
 }
@@ -1673,6 +1679,12 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.knockdowns = view.knockdowns;
     result.damage_ns = view.damage_ns;
     result.player_damage_ns = view.player_damage_ns;
+    for (std::size_t i = 0; i < injury::kRegions; ++i) {
+        result.injury_j_region[i] = view.injury_j_region[i];
+        result.injury_j_event[i] = view.injury_j_event[i];
+    }
+    result.injury_j_region_unclassified = view.injury_j_region_unclassified;
+    for (std::size_t i = 0; i < 4; ++i) result.limb_health[i] = view.limb_health[i];
     result.damage_stage = view.damage_stage;
     result.blow_mps = view.blow_mps;
     result.blow_low = view.blow_low;

@@ -170,6 +170,11 @@ func _pose(pose: String) -> void:
 
 func _act_pose(pose: String) -> void:
 	await _pose(pose)
+	# The frame helpers (_act_frame_her, _act_frame_box) hold the simulation
+	# still for this shot. The act's _pose lets it go; the base _pose, used
+	# outside the act (_act_running false: J-118's hold, J-137), does not,
+	# and the world stayed frozen with her mid-Lunge 4 m short of him.
+	_main.freeze_sim = false
 	if not is_nan(_act_view_back.x):
 		_main._yaw = _act_view_back.x
 		_main._pitch = _act_view_back.y
@@ -1989,6 +1994,25 @@ func _play_summit_ending() -> bool:
 		return _fail("ending: the final radio line repeated during the descent")
 	await _pose("ending_home")
 	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
+	return true
+
+# J-133 (#459): the climb and the ending in one touch run — grade through
+# the summit and the ending to the Home phase, zero deaths. Joins the two
+# existing scripts: _stack plays grade to the derrick's upper receiver
+# (803 m), and _summit_ending plays the ending from where the climber
+# stands there. No summit spawn and no state reset between the halves, so
+# a failure here names the state handed across the join (his position, a
+# machine state, her stage) before anything is changed. This lives here,
+# not in ui_test_stack.gd: the act sees _stack through its base chain
+# (act -> chase -> stack), while the stack cannot see _summit_ending.
+func _stack_ending(device: int) -> bool:
+	if not await _stack(device):
+		return false
+	var stack_detail := _detail
+	if not await _summit_ending():
+		return false
+	_detail = "stack[%s] ending[%s] deaths=%d" % [stack_detail, _detail,
+		int(_native().get_death_count())]
 	return true
 
 # J-045 (#248), phone stability: a per-frame recorder for rendered runs, and

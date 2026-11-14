@@ -912,6 +912,7 @@ bool climb_c3(scraperx::sim::Simulation &simulation);
 void run_stack();
 void run_wet_handling();
 void run_brachiation();
+void run_hang_rail();
 void run_pipe_gallery();
 void run_slide();
 void run_speed_vault();
@@ -958,6 +959,7 @@ void run_ammo();   // J-042: her ammo, your ammo (sim_tests_ammo.cpp)
 void run_matron_capacity(); // J-044b H.4: the capacity test, five falsifiers, no motor code (sim_tests_matron_capacity.cpp)
 void run_strike();
 void run_matron_damage();
+void run_matron_injury();  // J-059 #307: per-region injury feed (sim_tests_matron_injury.cpp)
 void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();

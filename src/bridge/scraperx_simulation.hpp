@@ -362,7 +362,8 @@ private:
     mutable MatronKeys state_keys_;
     mutable MatronKeys hold_keys_;
     mutable MatronKeys leg_keys_;
-    void fill_matron_state(godot::Dictionary &out, const sim::MatronSnapshot &state) const;
+    void fill_matron_state(godot::Dictionary &out, const sim::Snapshot &p,
+                           const sim::MatronSnapshot &state) const;
     void fill_matron_hold(godot::Dictionary &out, const sim::Snapshot &p, const sim::MatronSnapshot &m) const;
 };
 

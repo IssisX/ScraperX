@@ -221,37 +221,14 @@ def ask_mark(head: str = D982) -> str:
 
 
 class UnaskedCodex473(unittest.TestCase):
-    def test_the_merge_by_hand_head_had_no_ask_mark_so_codex_asked_is_false_and_the_gate_is_codex(self):
-        # c6832558192 MERGE-BY-HAND: the signed automatic review's LAND (c6832452993) and the eye's (c6832471420);
-        # nobody had asked Codex yet
-        lands = (verdict("anthropic", "Claude", "LAND", D982, t(J079["c6832452993"]), rules.BOT_LOGIN, signed=True),
-                 verdict("anthropic", "Claude", "LAND", D982[:8], t(J079["c6832471420"]), rules.BOT_LOGIN, "eye"))
-        comments = [comment(J079["c6832452993"]), comment(J079["c6832471420"])]
-        s = steered(facts_473(lands), ctx_473(comments))
-        self.assertEqual(s.decision.action, "HUMAN-MERGE")
-        self.assertFalse(W.codex_asked(FakeSw(), s.facts, s.ctx))
-        sw = FakeSw()
-        w = W.read(sw, MODEL, {"branches": [br(J079_REF, D982)]}, [s])[D982]
-        self.assertEqual((w.state, w.gate, w.land, w.pr), ("reviewed", "codex", True, 473))
-        self.assertEqual(w.at, at(t(J079["c6832452993"])))
-        r = row("J-079", w)
-        self.assertEqual((r.owes, r.next), ("integrator", "post `@codex review` on #473 (only a person's login wakes Codex)"))
-        self.assertEqual((sw.gh.calls, sw.proof_calls), ([], []))
-
-    def test_once_the_integrator_has_asked_codex_by_hand_the_step_is_codexs_and_nobody_is_told_to_ask_again(self):
+    def test_a_team_logins_own_codex_ask_after_the_head_commit_is_codex_woken(self):
         # c6832643514: the integrator's own `@codex review` on d982c18b, with no switchboard mark
         lands = (verdict("anthropic", "Claude", "LAND", D982, t(J079["c6832452993"]), rules.BOT_LOGIN, signed=True),
                  verdict("anthropic", "Claude", "LAND", D982[:8], t(J079["c6832471420"]), rules.BOT_LOGIN, "eye"))
         asked = comment(J079["c6832643514"])
         self.assertTrue(asked["body"].lower().startswith("@codex review"))
         s = steered(facts_473(lands), ctx_473([comment(J079["c6832452993"]), comment(J079["c6832471420"]), asked]))
-        self.assertEqual(s.decision.action, "HUMAN-MERGE")
         self.assertEqual(W.codex_woken(FakeSw(), s.facts, s.ctx), asked["created_at"])
-        w = W.read(FakeSw(), MODEL, {"branches": [br(J079_REF, D982)]}, [s])[D982]
-        self.assertEqual((w.state, w.gate, w.at), ("reviewed", "asked", at(asked["created_at"])))
-        r = row("J-079", w)
-        self.assertEqual((r.owes, r.limit), ("reviewer", M.hours(3)))
-        self.assertIn("review #473 @ d982c18b: Codex was asked", r.next)
         # the same words from a login off the team, or from the workflow bot, wake nobody
         for login in ("someone-else", rules.BOT_LOGIN):
             other = ctx_473([comment(J079["c6832643514"], login=login)])
@@ -332,7 +309,7 @@ class BranchHeads(unittest.TestCase):
                          br("fb-bot/integrate-j999", sha(4)),               # no plan line
                          br("fb-bot/integrate-j079", sha(5)),               # an open PR's head (by sha)
                          br("fb-bot/integrate-protected-j079", sha(6)),     # an open PR's head (by ref)
-                         br("claude/integrate-j201", sha(7)),               # Claude's, read; no auto PR
+                         br("claude/integrate-j201", sha(7)),               # Claude's, read; the switch opens its PR (11-13)
                          br("fb-bot/integrate-j059-old", sha(8))],          # landed
             "prs": [{"number": 1, "state": "open", "head": {"ref": "fb-bot/integrate-j079", "sha": sha(5)}},
                     {"number": 2, "state": "open", "head": {"ref": "fb-bot/integrate-protected-j079", "sha": sha(66)}}],
@@ -342,7 +319,7 @@ class BranchHeads(unittest.TestCase):
         self.assertEqual(sorted(sw.proof_calls), [sha(1), sha(7)])
         self.assertEqual(set(works), {sha(1), sha(7)})
         self.assertEqual((works[sha(1)].gate, works[sha(1)].why, works[sha(1)].at), ("red", "native", at(stamp(3))))
-        self.assertEqual(works[sha(7)].gate, "no-pr")
+        self.assertEqual(works[sha(7)].gate, "auto-pr")
 
     def test_a_steered_pr_head_is_never_read_again_by_the_branch_side(self):
         sw = FakeSw()

@@ -19,7 +19,7 @@ sys.path.insert(0, str(HERE))
 import ghapi  # noqa: E402
 import reconciler as R  # noqa: E402
 import switch  # noqa: E402
-from test_inbox import FakeGH, HEAD, make, run, steered  # noqa: E402
+from test_inbox import FakeGH, HEAD, later, make, run, steered  # noqa: E402
 
 NATIVE_LOG = """\
 2026-11-11T12:04:10.0000000Z ##[group]Run ctest --output-on-failure -L matron-slices-3
@@ -38,11 +38,24 @@ TOUCH_LOG = """\
 samples 1411, worst 0.101 m (limit 0.05 m)
 2026-11-11T12:07:27.0000000Z FAIL: a native-style line the touch notice does not use
 """
+# 11-13 (#350): host-build's red on trunk 51be238d (proof run 43503650648), in the runner's own shape: the step's
+# header, then its output, then the runner's error line
+HOST_LOG = """\
+2026-11-13T20:40:38.1940441Z STORY_RADIO_SOURCE PASS
+2026-11-13T20:40:38.2075553Z ##[group]Run set -euo pipefail
+2026-11-13T20:40:38.2077791Z \x1b[36;1mpython3 ci/verify_asset_credits.py\x1b[0m
+2026-11-13T20:40:38.2122046Z ##[endgroup]
+2026-11-13T20:40:38.3116630Z ASSET_CREDITS FAIL files=363 recorded=354 unrecorded=9
+""" + "".join(f"2026-11-13T20:40:38.31{n}Z   unrecorded: presentation/audio/breath_wake_picks/b_{n}.ogg\n"
+              for n in range(9)) + """\
+2026-11-13T20:40:38.3185490Z ##[error]Process completed with exit code 1.
+2026-11-13T20:40:38.3623753Z Post job cleanup.
+"""
 NAME = "fb-bot/integrate-j076"
 JOBS = [{"id": 501, "name": "native-tests (matron-slices-3)", "status": "completed", "conclusion": "failure"},
         {"id": 502, "name": "godot-touch (touch-2)", "status": "completed", "conclusion": "failure"},
         {"id": 503, "name": "native-tests (athletic-traversal-1)", "status": "completed", "conclusion": "failure"},
-        {"id": 504, "name": "host-build", "status": "completed", "conclusion": "failure"},
+        {"id": 504, "name": "android-build", "status": "completed", "conclusion": "failure"},
         {"id": 505, "name": "native-tests (matron-slices-1)", "status": "completed", "conclusion": "success"},
         {"id": 506, "name": "godot-touch (touch-3)", "status": "completed", "conclusion": "cancelled"}]
 
@@ -88,6 +101,39 @@ class FailLines(unittest.TestCase):
     def test_a_log_with_none_has_none(self):
         self.assertEqual(switch.fail_lines("PASS: all good\nThe following tests FAILED:\n", "native-tests"), ([], 0))
 
+    def test_host_build_names_its_failing_steps_lines_bounded(self):
+        lines, more = switch.fail_lines(HOST_LOG, "host-build")
+        self.assertEqual(lines, ["ASSET_CREDITS FAIL files=363 recorded=354 unrecorded=9"] +
+                         [f"unrecorded: presentation/audio/breath_wake_picks/b_{n}.ogg" for n in range(5)])
+        self.assertEqual(more, 4)
+
+    def test_host_build_reads_only_the_failed_steps_output_from_its_first_failing_line(self):
+        log = ("2026-11-13T10:00:00.0Z ##[group]Run python3 .github/scripts/check_ctest_shard_coverage.py\n"
+               "2026-11-13T10:00:00.1Z ##[endgroup]\n"
+               "2026-11-13T10:00:01.0Z FAIL: an earlier step's line, not the failed step's\n"
+               "2026-11-13T10:00:02.0Z ##[group]Run python3 .github/scripts/check_group_content_coverage.py\n"
+               "2026-11-13T10:00:02.1Z ##[endgroup]\n"
+               "2026-11-13T10:00:03.0Z SCRAPERX_ONLY groups: 41\n"
+               "2026-11-13T10:00:03.1Z Traceback (most recent call last):\n"
+               "2026-11-13T10:00:03.2Z   File \"check_group_content_coverage.py\", line 273, in main\n"
+               "2026-11-13T10:00:03.3Z AssertionError: registry parse failed: tests/simulation_tests.cpp ['x']\n"
+               "2026-11-13T10:00:03.4Z ##[error]Process completed with exit code 1.\n")
+        self.assertEqual(switch.fail_lines(log, "host-build"),
+                         (["AssertionError: registry parse failed: tests/simulation_tests.cpp ['x']"], 0))
+        compile_log = ("2026-11-13T10:00:00.1Z ##[endgroup]\n"
+                       "2026-11-13T10:00:01.0Z FAILED: CMakeFiles/scraperx_sim.dir/src/sim/a.cpp.o\n"
+                       "2026-11-13T10:00:01.1Z /home/runner/work/ScraperX/ScraperX/src/sim/a.cpp:12:5: error: 'x' was "
+                       "not declared in this scope\n"
+                       "2026-11-13T10:00:01.2Z ninja: build stopped: subcommand failed.\n"
+                       "2026-11-13T10:00:01.3Z ##[error]Process completed with exit code 1.\n")
+        self.assertEqual(switch.fail_lines(compile_log, "host-build")[0][0],
+                         "/home/runner/work/ScraperX/ScraperX/src/sim/a.cpp:12:5: error: 'x' was not declared in this "
+                         "scope")
+        quiet = ("2026-11-13T10:00:00.0Z ##[endgroup]\n2026-11-13T10:00:00.1Z test -s build/host/scraperx_sim_tests\n"
+                 "2026-11-13T10:00:01.3Z ##[error]Process completed with exit code 1.\n")
+        self.assertEqual(switch.fail_lines(quiet, "host-build"), (["test -s build/host/scraperx_sim_tests"], 0),
+                         "no failing line: the step's last line")
+
 
 class RedTests(unittest.TestCase):
     def gh(self, logs=None, **kw):
@@ -125,6 +171,20 @@ class RedTests(unittest.TestCase):
         (_, posted), = unread.posts
         self.assertIn("RED-BRANCH", posted)
         self.assertIn("native-tests (matron-slices-3): log unread", posted)
+
+    def test_a_red_host_build_names_its_failing_line(self):
+        # 11-13 (#350): RED-TRUNK and J-118's RED-TWICE on #519 named only "host-build", not the ASSET_CREDITS line
+        host = {"id": 507, "name": "host-build", "status": "completed", "conclusion": "failure"}
+        gh = LogGH({507: HOST_LOG}, runs=[run(42, NAME, HEAD, hours=2)], jobs={42: [host]}, heads={NAME: HEAD})
+        got = make(gh).red_tests(42)
+        self.assertEqual(got[0], "host-build: ASSET_CREDITS FAIL files=363 recorded=354 unrecorded=9")
+        self.assertEqual(got[-1], "host-build: and 4 more FAIL lines")
+        self.assertEqual(len(got), switch.MAX_FAIL_LINES + 1)
+        mine = "claude/integrate-j104"
+        gh = LogGH({507: HOST_LOG}, runs=[run(43, mine, HEAD, hours=2)], jobs={43: [host]}, heads={mine: HEAD})
+        self.assertEqual(make(gh).inbox([]), 1)
+        (_, posted), = gh.posts
+        self.assertIn("\n  - `host-build: ASSET_CREDITS FAIL files=363 recorded=354 unrecorded=9`", posted)
 
     def test_the_integrators_inbox_names_them_in_code_spans(self):
         mine = "claude/integrate-j104"
@@ -213,17 +273,17 @@ class RedTests(unittest.TestCase):
         self.assertEqual(make(gh).inbox([]), 1)
         self.assertEqual(make(gh).inbox([]), 0)
         gh.logs = {501: NATIVE_LOG}
-        self.assertEqual(make(gh).inbox([]), 1)
+        self.assertEqual(later(gh).inbox([]), 1)   # a later sweep: past the hold on the integrator's own work (11-13)
         reads = len(gh.log_reads)
-        self.assertEqual(make(gh).inbox([]), 0)
+        self.assertEqual(later(gh, 62).inbox([]), 0)
         self.assertEqual(len(gh.log_reads), reads, "listed with its tests: its log is not read again")
         (_, first), (_, second) = gh.posts
         self.assertIn("`native-tests (matron-slices-3): log unread`", first)
         self.assertIn(switch.READ_NOW, second)
         self.assertIn("`native-tests (matron-slices-3): FAIL: ammo hands", second)
-        keys = switch.INBOX_KEYS.findall(second)[0].split(",")
-        self.assertEqual(keys, [switch.inbox_key("RED-BRANCH" + switch.UNREAD_KEY, mine, HEAD),
-                                switch.inbox_key("RED-BRANCH", mine, HEAD)])
+        self.assertEqual(switch.INBOX_KEYS.findall(second), [])   # 11-13: the keys are the sweep state's ring
+        self.assertEqual(gh.state["inbox"]["keys"], [switch.inbox_key("RED-BRANCH" + switch.UNREAD_KEY, mine, HEAD),
+                                                     switch.inbox_key("RED-BRANCH", mine, HEAD)])
 
     def test_a_pr_red_notice_is_posted_again_once_when_its_logs_read(self):
         s = steered(ref=NAME, proof="red: native-tests (matron-slices-3)", committed="2026-11-06T19:30:00Z",
@@ -311,6 +371,26 @@ class GhapiReads(unittest.TestCase):
             gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs")
         self.assertEqual(got.exception.detail, "exit 2, no stderr")
         self.assertEqual(len(calls), ghapi.GET_ATTEMPTS)
+
+    def test_a_log_read_passes_the_escape_flag_and_no_other_read_does(self):
+        # run 43489020325: every log read failed with gh's "the response contains terminal escape sequences;
+        # pass --allow-escape-sequences to output it anyway"
+        gh, calls = self.client(subprocess.CompletedProcess([], 0, b"FAIL: x\n", b""))
+        self.assertEqual(gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs"), b"FAIL: x\n")
+        self.assertIn("--allow-escape-sequences", calls[0])
+        gh.get_bytes("repos/IssisX/ScraperX/actions/artifacts/7/zip")
+        self.assertNotIn("--allow-escape-sequences", calls[1])
+
+    def test_a_gh_that_does_not_know_the_flag_is_asked_again_without_it(self):
+        old = subprocess.CompletedProcess([], 1, b"", b"unknown flag: --allow-escape-sequences\n\nUsage:  gh api "
+                                                       b"<endpoint> [flags]\n")   # gh 2.89.0's own answer
+        gh, calls = self.client(old, subprocess.CompletedProcess([], 0, b"FAIL: x\n", b""))
+        with mock.patch.object(ghapi.time, "sleep") as slept:
+            self.assertEqual(gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs"), b"FAIL: x\n")
+        self.assertEqual(len(calls), 2)
+        self.assertIn("--allow-escape-sequences", calls[0])
+        self.assertNotIn("--allow-escape-sequences", calls[1])
+        slept.assert_not_called()
 
 
 class ReconcilerRedNotice(unittest.TestCase):

@@ -667,7 +667,14 @@ private:
 
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
                                  const JPH::Vec3 facing,
-                                 const float min_ahead = 0.5F * kPlayerRadius) const noexcept;
+                                 const float min_ahead = 0.5F * kPlayerRadius,
+                                 const JPH::Shape *region_shape = nullptr) const noexcept;
+
+    // A wall face right behind this hold (a rung or pipe on a wall).
+    [[nodiscard]] bool grip_backed_by_wall(const Grip &grip) const noexcept;
+
+    // A sibling hold a rung-spacing above or below this hold (a ladder rung).
+    [[nodiscard]] bool grip_has_rung_neighbor(const Grip &grip, JPH::RVec3 origin) const noexcept;
 
     [[nodiscard]] JPH::RVec3 hand_aim(const JPH::RVec3 centre, const float height,
                                       const float across) const noexcept;
@@ -796,6 +803,7 @@ public:
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
     JPH::RefConst<JPH::Shape> player_torso_shape_;
     JPH::RefConst<JPH::Shape> grip_region_shape_;
+    JPH::RefConst<JPH::Shape> grip_region_shape_bar_;
     JPH::RefConst<JPH::Shape> climb_sweep_shape_;
     JPH::BodyID deck_id_;
     JPH::BodyID translating_support_id_;
@@ -1040,6 +1048,12 @@ public:
     MachineCheckpoint checkpoint_{};
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
+    // J-059 #343 P1: checkpoint-restore generation, watched by the injury
+    // view (matron_view.gd) so a restore rewinds her displayed injuries.
+    // Runtime-only: never saved, so a load still moves it — the load
+    // itself restores. Incremented only in restore_from_checkpoint, the
+    // one path every death restore and load_game funnels through.
+    std::uint64_t restores_ = 0;
     bool parachute_deployed_ = false;
     float fall_peak_speed_mps_ = 0.0F;
     float pre_contact_fall_speed_mps_ = 0.0F;
