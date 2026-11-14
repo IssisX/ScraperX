@@ -33,7 +33,7 @@ it to match, never ask him again.
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Claude picks each helper's
   effort and tells him in one line; he changes it if he wants (11-13: "I don't want to have to name every single time").
 - Claude types no clock time (11-11): an event is named by its link; a time decision
-  runs `date`. Hooks refuse them; `time_audit.py` counts slips.
+  runs `date`. Hooks refuse them.
 
 ## Test only what a change reaches
 
@@ -48,8 +48,8 @@ it to match, never ask him again.
 ## Talking to Cory (he is on a phone)
 
 - **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
-  faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
-  unclear input gets one simple follow-up on what he means before acting, never on wording.
+  faster without waste; if the literal reading fails, do the sensible thing and say why. Speech-to-text mishears him (11-14): read for meaning; rough or
+  unclear input gets one simple follow-up on what he means, never on wording.
 - SIMPLE AND CONCISE, every message (11-14, said often): few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan (11-13). What happened, why, the fix; progress is what is left.
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links. For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
