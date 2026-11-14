@@ -2,9 +2,8 @@
 
 Built from the recovered owner calls (`00_START_HERE_ARCHIVE.md`, "Owner calls recovered from the
 archived log and handoff"), the rules in force (`00_START_HERE.md`) and the original static audit at `2ac7fa1` (2026-10-29). Corrections inspect `dea9cfcba0923242fc6046d88aada9726a1b97e1` and the
-`tests/sim_tests_stock.cpp` delta on trunk `65896fbd11ed2048bbd0a102b252008a8cc3db98`; no game, device, visual or audio run was made
-for this revision. Source and test definitions establish implementation or coverage, not a pass.
-Older line numbers can drift; search the cited symbol. Issue #3 and open PRs own current assignments.
+`tests/sim_tests_stock.cpp` delta on trunk `65896fbd11ed2048bbd0a102b252008a8cc3db98`. J-142 (2026-11-14) rechecked every entry against trunk `d8a2d71f` and named the job holding each one. No game, device, visual or audio run was made for either revision. Source and test definitions establish implementation or coverage, not a pass.
+Older line numbers can drift; search the cited symbol. `work/plan.md` and the board (#546) own current assignments.
 
 **Evidence boundary:** entries 0–21 distinguish inspected source and test definitions from
 historical findings and unverified behavior. Named searches do not rule out code under other
