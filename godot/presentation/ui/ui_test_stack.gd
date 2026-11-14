@@ -419,8 +419,22 @@ func _mission_1(device: int) -> bool:
 	return true
 
 
+func _stack(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var body := _watch_body()
+	var started := int(_native().get_tick_index())
+	if not await _stack_s1_leg(device):
+		return false
+	var at_deck2 := _position().y
+	await _pose("stack_deck2")
+	if not await _stack_c1(device):
+		return false
+	return await _stack_above_deck4(device, body, started, at_deck2)
+
+
 # C1, the facade climb, on touch: the cabinet, the duct, the vent
-# stack, the monorail and the davit's ladder to deck 4.
+# stack, the monorail and the davit's ladder to deck 4. Shared by
+# touch_stack and touch_canonical_ascent (J-084), so the two never drift.
 func _stack_c1(device: int) -> bool:
 	# C1, the facade: out onto the landing, round the cabinet, up onto it.
 	if not await _go(device, Vector2(21.2, -124.4), 0.15, 20.0) or \
@@ -503,18 +517,10 @@ func _stack_c1(device: int) -> bool:
 	return true
 
 
-func _stack(device: int) -> bool:
-	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	var body := _watch_body()
-	var started := int(_native().get_tick_index())
-	if not await _stack_s1_leg(device):
-		return false
-	var at_deck2 := _position().y
-	await _pose("stack_deck2")
-
-	if not await _stack_c1(device):
-		return false
+# touch_stack from deck 4 up, the AS-007 way (_stack hands over here once C1 is climbed).
+func _stack_above_deck4(device: int, body: Dictionary, started: int, at_deck2: float) -> bool:
 	var at_deck4 := _position().y
+
 	# Continue upward through the full Stack sequence to Deck 14, then the AS-006 well to Ring 220.
 	if not await _stack_s2(device):
 		return false
