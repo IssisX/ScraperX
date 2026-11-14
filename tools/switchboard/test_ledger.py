@@ -198,8 +198,8 @@ class Deadlines(unittest.TestCase):
                       pr(2, "claude/integrate-j002", job="J-002", needs_review=True, done=1.5),
                       pr(3, "claude/integrate-j003", job="J-003", needs_review=True, reviewer="chatgpt", done=2.5),
                       pr(4, "claude/integrate-j004", job="J-004", needs_review=True, reviewer="claude-api", done=1),
-                      pr(5, "fb-bot/integrate-j005", job="J-005", action="FIX", reasons=("open FIX by Codex",), touched=30),
-                      pr(6, "fb-bot/integrate-j006", job="J-006", action="MERGE", touched=5),
+                      pr(5, "fb-bot/integrate-j005", job="J-005", action="FIX", reasons=("open FIX by Codex",), touched=5),
+                      pr(6, "fb-bot/integrate-j006", job="J-006", action="MERGE", touched=3),
                       pr(8, "fb-bot/integrate-j008", job="J-008", action="MERGE", touched=50),
                       pr(7, "fb-bot/integrate-j007", job="J-007", reasons=("needs:eyes and no eye LAND on this head",))])
         led = L.classify(f, NOW, ROSTER)
@@ -208,7 +208,7 @@ class Deadlines(unittest.TestCase):
         self.assertEqual((p2.holder.name, p2.deadline, p2.stage(NOW)), ("Codex", L.ACT, 0))  # green 1.5 h, no review
         self.assertEqual((p3.holder.name, p3.stage(NOW)), ("ChatGPT", 1))
         self.assertEqual(p4.holder.name, "Claude")   # the automatic review is late: the integrator looks
-        self.assertEqual((p5.holder.name, p5.deadline, p5.stage(NOW)), ("Muse", L.STALE, 1))   # untouched 30 h
+        self.assertEqual((p5.holder.name, p5.deadline, p5.stage(NOW)), ("Muse", L.STALE, 1))   # untouched 5 h: past 4 h
         self.assertEqual((p6.holder, p6.stage(NOW)), (L.SWITCHBOARD, 0))
         self.assertEqual((p8.holder.name, p8.stage(NOW)), ("Claude", 2))   # the merge never happened
         self.assertIn("the switchboard has not done it", p8.state)
@@ -221,9 +221,9 @@ class Deadlines(unittest.TestCase):
             self.assertEqual(it.stage(NOW), stage, hours)
 
     def test_stale_branch_and_issue(self):
-        f = feed(branches=[L.BranchIn("grok/integrate-j010-x", SHA["a"], ago(25))],
+        f = feed(branches=[L.BranchIn("grok/integrate-j010-x", SHA["a"], ago(5))],   # past 4 h, not 8 h
                  issues=[L.IssueIn(9, "u9", "J-011 thing", ("job", "owner:chatgpt"), ago(49))],
-                 runs=[run(1, "grok/integrate-j010-x", "a", 24.5, "success")])
+                 runs=[run(1, "grok/integrate-j010-x", "a", 4.5, "success")])
         led = L.classify(f, NOW, ROSTER)
         b = by_ref(led, "grok/integrate-j010-x")
         self.assertEqual((b.holder.name, b.deadline, b.stage(NOW)), ("Grok", L.STALE, 1))
@@ -383,12 +383,12 @@ class Escalation(unittest.TestCase):
         self.assertIn("holder is told once", [b["body"] for m, p, b in gh.writes if p.endswith("/issues/340")][-1])
 
     def test_the_switchboard_is_never_told(self):
-        f = feed(prs=[pr(6, "fb-bot/integrate-j006", job="J-006", action="MERGE", touched=5)])
+        f = feed(prs=[pr(6, "fb-bot/integrate-j006", job="J-006", action="MERGE", touched=3)])
         gh = FakeGH()
         self.sweep(gh, f, NOW, BOARD)
         self.assertEqual(gh.comments, [])
         gh = FakeGH()
-        self.sweep(gh, f, NOW + 20 * H, BOARD)                # past 24 h: the integrator is told
+        self.sweep(gh, f, NOW + 2 * H, BOARD)                 # past 4 h: the integrator is told
         self.assertEqual(len(gh.comments), 1)
         self.assertTrue(gh.comments[0][1].startswith("To Claude:"))
 
@@ -517,6 +517,25 @@ class ReadFeedAsks(unittest.TestCase):
             self.assertEqual([a.cid for a in f.asks], ["6757835992", "6761158625"])
         self.assertEqual(activity.call_count, 2)
         self.assertEqual(L.thread_jobs(f.issues, f.prs, f.system_prs), {128: "J-021", 121: "J-014"})
+
+    def test_with_the_plan_live_a_job_issue_missing_its_job_label_is_still_read(self):
+        """Rebuild failure 2: an open J-NNN issue with no `job` label vanished from reconciliation."""
+        import types
+        from unittest import mock
+        issue = lambda n, title, labels: {"number": n, "title": title, "html_url": f"u{n}",  # noqa: E731
+                                          "created_at": L.iso(ago(90)), "updated_at": L.iso(ago(1)), "labels": labels}
+        stranger = dict(issue(999, "J-021 Environment lane C", []), author_association="NONE")
+        issues = [issue(128, "J-021 Environment lane C", [{"name": "job"}]), issue(451, "J-127 a heard lead", []),
+                  issue(340, "Board: live jobs (3)", []), stranger]
+        sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None, plan_mode=lambda: "live")
+        with mock.patch.object(L, "cursor_pages", return_value=([], False)):
+            f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)
+        self.assertEqual(sorted(i.number for i in f.issues), [128, 451])
+        for mode in ("shadow", "off"):   # until the plan is live the jobs are the issues with the label, as before
+            sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None, plan_mode=lambda m=mode: m)
+            with mock.patch.object(L, "cursor_pages", return_value=([], False)):
+                f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)
+            self.assertEqual(sorted(i.number for i in f.issues), [128], mode)
 
 
 class Resolved(unittest.TestCase):

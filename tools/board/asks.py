@@ -32,6 +32,16 @@ An ask counts as answered only by a later post that addresses it (J-072: Muse's 
   - on the board or a thread that names no job: such a post only when its first line names the asker, it names no
     other post or job, and the addressee owes one ask there, not several.
 From anyone on the team: a line `/ack O-xxxxxxxx` with the ask's id settles it (the asker withdraws it so).
+A post whose text opens with `/ack` (after the bridge's header line) is an ack, never an ask.
+
+An ask to Claude (the integrator) that asks no question (no `?` outside links and code) and says no BLOCKED is
+mostly a status line from Muse's mail (11-11: 13 such "asks" sat ESCALATED on #384). Besides the answers above
+(Claude's post on a job's thread addressed to no one else, or a bridge record of Claude's mail, `CLAUDE_TO_MUSE:`,
+addressed back to Muse), it is closed by:
+  - a later post by the asker on the same thread or job (the job id in both openings) that is itself no ask,
+  - a PR it names (or its job's PR) merged or closed after it (`closed`, read by the caller from the issue events).
+A Claude post there addressed to someone else still answers nothing ("rule on the grip cap", the #360 replay).
+An ask to Claude with a question, or that says BLOCKED, stays until one of the answers above answers it.
 Any other later post, on the thread or not, is not an answer; the switchboard's own posts never are. Muse answers
 by mail; the bridge posts those as `**Muse (via email bridge)...`, which counts as Muse.
 
@@ -70,7 +80,8 @@ OPENS = re.compile(r"^" + _MARKS + r"To\s+(?:the\s+)?(?:" + TARGETS + r")\b")   
 SIGNED = re.compile(r"[ \t]*(?:\((?:from[ \t]+)?|:[ \t*_]*\(?(?:from[ \t]+)?)(" + _SIGNER + r")\b(?!['’]s)")
 VERDICT = re.compile(r"^\*\*(" + TARGETS + r")\b[^\n]*?review of #(\d+)", re.MULTILINE)
 PR_REF = re.compile(r"#(\d+)")
-MAX_PAGES = 10  # bounded: at most 1000 comments read
+MAX_PAGES = 10  # bounded: at most 1000 open issues read
+MAX_COMMENT_PAGES = 40  # bounded: at most 4000 comments read; a full last page is reported, never silent (11-14)
 NOISE = ("<!-- linear-linkback", "You have reached your Codex")
 LEDGER_MARK = "<!-- switchboard:ledger "   # in the switchboard ledger's notices (tools/switchboard/ledger.py)
 BRIDGE_POST = "**Muse (via email bridge)"   # the first line of every inbound bridge post: Muse writing to Claude
@@ -83,6 +94,10 @@ SWITCHBOARD_LOGIN = "github-actions[bot]"   # the switchboard's own login: its p
 # would turn into an ask to ChatGPT the hour ChatGPT's own ask left the stream.) An answer that comes more than
 # this after the ask it names can still be read as an ask in that gap.
 ASK_CONTEXT = dt.timedelta(days=1)
+INTEGRATOR = "Claude"   # the holder whose status asks close loosely (see the module docstring)
+PR_CLOSED = "its PR closed"   # the rule read() gives an ask closed by a PR it names merging or closing
+BLOCKED = re.compile(r"\bBLOCKED\b")   # the team's "BLOCKED: what, needs whom" is a real ask, question mark or not
+UNQUOTED = re.compile(r"https?://\S+|`[^`\n]*`")   # a `?` in a link or in code is no question
 MAY_NAME = re.compile(r"(?<!\d)\d{9,11}(?!\d)|(?<![\w-])O-[0-9a-f]{8}\b|^>\s?\S", re.MULTILINE)
 JOB_ID = re.compile(r"\bJ-\d{3,}[a-z]?\b")
 
@@ -138,6 +153,32 @@ def addressees(body: str) -> set[str]:
     return out
 
 
+def acks_only(body: str) -> bool:
+    """A post whose text opens with `/ack` (after the bridge's header line, for Muse's mail): an ack, never an ask
+    ("/ack O-f70eab45 To Claude: J-009 #377 Codex FIX in work", 6787162569 on #116)."""
+    text = body.lstrip()
+    if text.startswith(BRIDGE_POST):
+        text = text.split("\n", 1)[1].lstrip() if "\n" in text else ""
+    return text[:4].lower() == "/ack"
+
+
+def asks_anyone(body: str) -> bool:
+    """Is this post an ask to anyone (a `To <Name>`, `→ <Name>` or `cc <Name>` line, and not an ack)?"""
+    return not acks_only(body) and bool(ASK.search(body[:4000]))
+
+
+def jobs_named(body: str) -> set[str]:
+    """The job ids in a post's opening (Muse's mail subjects open with their job: `J-059 #343 FIX pushed`)."""
+    return set(JOB_ID.findall(body[:300]))
+
+
+def status_ask(ask: dict, holder: str, same) -> bool:
+    """An ask to the integrator that asks no question and says no BLOCKED: the loose closers apply (module docstring).
+    An ask whose text is not known is never one."""
+    body = UNQUOTED.sub("", (ask.get("body") or "")[:4000])
+    return holder == same(INTEGRATOR) and bool(body.strip()) and "?" not in body and not BLOCKED.search(body)
+
+
 def names_ask(reply: dict, ask: dict) -> bool:
     """Does `reply` name the ask itself: its comment id, its URL, the reconciler's id for it (`oid`: O-xxxxxxxx), or
     a quote (a `> ` line) of its text?"""
@@ -188,12 +229,16 @@ def answer_rule(reply: dict, ask: dict, target: str, refs: set[int], job_thread:
     oid = ask.get("oid")
     if oid and re.search(rf"^[ \t]*/ack\b[^\n]*(?<![\w-]){re.escape(oid)}\b", reply["body"], re.MULTILINE | re.IGNORECASE):
         return "/ack"   # the command, from any team post: the asker withdraws its own ask so
+    loose = status_ask(ask, holder, same)
+    asker = same(ask["a"]) if ask.get("a") else ""
     if same(reply["a"]) != holder:
+        if loose and asker and same(reply["a"]) == asker and not asks_anyone(reply["body"]) \
+                and (reply["n"] == ask["n"] or jobs_named(reply["body"]) & jobs_named(ask["body"])):
+            return "a later post by the asker, no ask"   # a status ask the asker followed with a non-ask (an ack)
         return ""
     if names_ask(reply, ask):
         return "reply naming it"
     to = {same(x) for x in addressees(reply["body"])}
-    asker = same(ask["a"]) if ask.get("a") else ""
     here = reply["n"] == ask["n"]
     if asker and asker in to and (here or re.search(rf"#{ask['n']}\b", reply["body"][:2000])):
         return "reply to the asker"
@@ -213,7 +258,7 @@ def answers(reply: dict, ask: dict, target: str, refs: set[int], **kw) -> bool:
 
 
 def read(comments: list[dict], open_threads: set[int], start: dt.datetime, job_threads=frozenset(), who=None,
-         oid=None, examined: set | None = None) -> list[dict]:
+         oid=None, examined: set | None = None, closed=None) -> list[dict]:
     """Every ask posted after `start` (how far back the stream reaches) on an open thread, oldest first, answered or
     not: the comment plus `target`,
     `a` (its author), `verdicts`, `refs`, `answer` (the rule that answered it, "" while it is open) and `by` (the
@@ -224,7 +269,9 @@ def read(comments: list[dict], open_threads: set[int], start: dt.datetime, job_t
     read as a possible ask (so a caller can tell "not an ask" from "not read"). Pure: the caller reads GitHub. The
     ledger's own notices are never asks, and a post that names an ask from its addressee is that ask's answer, not
     a new ask to that addressee; in the stream's oldest day (ASK_CONTEXT) a post that names anything is not listed,
-    since the ask it may answer can be out of the stream's reach."""
+    since the ask it may answer can be out of the stream's reach, and a post that opens with `/ack` never is.
+    `closed`, when given, maps a PR number to (when it merged or closed, its job id or ""): a status ask to the
+    integrator (status_ask) that names that PR, or names its job, and came before it is answered PR_CLOSED."""
     same = who or (lambda name: name)
     comments = sorted(comments, key=lambda c: c["t"])
     for c in comments:
@@ -254,6 +301,8 @@ def read(comments: list[dict], open_threads: set[int], start: dt.datetime, job_t
             continue   # it may be the answer to an ask the stream no longer reaches: not judged, not listed
         if examined is not None and c.get("id") is not None:
             examined.add(str(c["id"]))
+        if acks_only(c["body"]):
+            continue   # an ack, never an ask
         answered = {same(a["a"]) for a in hit   # whose asks to its author this post names: it is their answer
                     if a["answer"] == "reply naming it" and same(a["target"]) == same(c["a"])}
         refs = {int(r) for r in PR_REF.findall(c["body"][:600])} | {c["n"]}
@@ -265,6 +314,11 @@ def read(comments: list[dict], open_threads: set[int], start: dt.datetime, job_t
                 ask["oid"] = oid(c, target)
             live.append(ask)
             out.append(ask)
+    for a in live if closed else ():
+        jobs = jobs_named(a["body"])
+        if status_ask(a, same(a["target"]), same) and any(
+                t > a["t"] and (n in a["refs"] or (job and job in jobs)) for n, (t, job) in closed.items()):
+            a["answer"] = PR_CLOSED
     return out
 
 
@@ -296,8 +350,10 @@ def main() -> int:
             break
 
     comments = []
-    for page in range(1, MAX_PAGES + 1):
+    truncated = False
+    for page in range(1, MAX_COMMENT_PAGES + 1):
         batch = gh(f"repos/{args.repo}/issues/comments?since={since}&per_page=100&page={page}")
+        truncated = len(batch) == 100 and page == MAX_COMMENT_PAGES
         for c in batch:
             comments.append({
                 "id": str(c.get("id")),
@@ -324,6 +380,8 @@ def main() -> int:
     for _, _, text in sorted(open_asks, key=lambda x: (x[0], -x[1])):
         print(text)
     print(f"OPEN ASKS: {len(open_asks)} (posted after {since}, open threads only)")
+    if truncated:   # 11-14: a 7-day read hit the old 1000-comment cap and dropped every recent ask, silently
+        print(f"TRUNCATED: read stopped at {MAX_COMMENT_PAGES * 100} comments; newer asks are missing. Use a shorter --hours.")
     return 0
 
 

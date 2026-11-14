@@ -23,6 +23,7 @@
 #include "sim/forklift.hpp"
 #include "sim/yard_crane.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/stock_damage.hpp"
 #include "sim/impacts.hpp"
 #include "sim/zipline.hpp"
 #include "sim/corpse.hpp"
@@ -221,7 +222,19 @@ public:
         struck_closing_ = 0.0F;
         hit_closing_ = 0.0F;
         hit_toward_ = JPH::Vec3::sZero();
+        stock_hints_.clear();
         unlock();
+    }
+
+    // J-038 slice 1: this tick's pre-solve contact hints for stock
+    // bodies (point + normal, recorded without mutating physics).
+    // The damage post-step reads them after the solve, before the
+    // next tick clears them.
+    [[nodiscard]] std::vector<scraperx::sim::stock_damage::ContactHint> stock_hints() const noexcept {
+        lock();
+        const auto result = stock_hints_;
+        unlock();
+        return result;
     }
 
     // The hardest the body ran into anything, or was run into, this tick: of
@@ -321,6 +334,7 @@ public:
                         JPH::ContactSettings &settings) override {
         observe_support(first, second, manifold, settings);
         observe_hit(first, second, manifold);
+        observe_stock_hint(first, second, manifold);
     }
 
     void OnContactPersisted(const JPH::Body &first,
@@ -328,9 +342,46 @@ public:
                             const JPH::ContactManifold &manifold,
                             JPH::ContactSettings &settings) override {
         observe_support(first, second, manifold, settings);
+        observe_stock_hint(first, second, manifold);
     }
 
 private:
+    // J-038 slice 1: one hint per stock body in the pair, recorded
+    // without touching the solve. The normal points from the other
+    // body into the struck one: the direction a dent goes. The
+    // manifold's normal points from body 1 to body 2, so it is
+    // negated for a struck body 1 and kept for a struck body 2.
+    // Resting contacts are recorded too; their velocity change is
+    // ~0, so the damage post-step never uses them.
+    void observe_stock_hint(const JPH::Body &first, const JPH::Body &second,
+                            const JPH::ContactManifold &manifold) noexcept {
+        using namespace scraperx::sim;
+        if (manifold.mRelativeContactPointsOn1.size() == 0) {
+            return;
+        }
+        const std::uint64_t first_entity = first.GetUserData();
+        const std::uint64_t second_entity = second.GetUserData();
+        const bool first_stock = kit::is_stock_entity(first_entity);
+        const bool second_stock = kit::is_stock_entity(second_entity);
+        if (!first_stock && !second_stock) {
+            return;
+        }
+        const JPH::RVec3 at = manifold.GetWorldSpaceContactPointOn1(0);
+        const JPH::Vec3 normal = manifold.mWorldSpaceNormal;
+        lock();
+        if (first_stock) {
+            stock_hints_.push_back(stock_damage::ContactHint{
+                first_entity, static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                static_cast<float>(at.GetZ()), -normal.GetX(), -normal.GetY(), -normal.GetZ()});
+        }
+        if (second_stock) {
+            stock_hints_.push_back(stock_damage::ContactHint{
+                second_entity, static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                static_cast<float>(at.GetZ()), normal.GetX(), normal.GetY(), normal.GetZ()});
+        }
+        unlock();
+    }
+
     void observe_hit(const JPH::Body &first, const JPH::Body &second, const JPH::ContactManifold &manifold) noexcept {
         if (manifold.mRelativeContactPointsOn1.size() == 0) {
             return;
@@ -492,6 +543,7 @@ private:
     }
 
     mutable std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
+    std::vector<scraperx::sim::stock_damage::ContactHint> stock_hints_;
     SupportSample sample_{};
     float struck_closing_ = 0.0F;
     float hit_closing_ = 0.0F;
@@ -708,9 +760,12 @@ struct LedgeProbe final {
 };
 
 // Step 2 movement. A hold a hand has closed round: the point on the member's
-// axis, on the body the member belongs to.
+// axis, on the body the member belongs to. `level` is the member lying level
+// (its long axis horizontal, a bar or rail, not a pole): the matron's own bar
+// search uses the same slope (matron_found_climb.cpp).
 struct Grip final {
     bool valid = false;
+    bool level = false;
     JPH::BodyID body;
     std::uint64_t entity_id = 0;
     JPH::RVec3 point{JPH::RVec3::sZero()};
@@ -817,6 +872,15 @@ public:
         at_ += sizeof(T);
         return true;
     }
+    // The next word without consuming it: a section's mark, so the
+    // reader can tell one optional section from the next.
+    [[nodiscard]] bool peek(std::uint32_t &value) const noexcept {
+        if (size_ - at_ < sizeof(value)) {
+            return false;
+        }
+        std::memcpy(&value, data_ + at_, sizeof(value));
+        return true;
+    }
     // A list must be exactly as long as this build's: a save from another
     // world (more bodies, fewer bins) is refused.
     template <typename T>
@@ -849,8 +913,13 @@ public:
         return true;
     }
     bool bits(std::vector<bool> &values, std::size_t expected) {
+        return bits_up_to(values, expected) && values.size() == expected;
+    }
+    // Bits that a later build may have more of (the ropes built since), up
+    // to `most`.
+    bool bits_up_to(std::vector<bool> &values, std::size_t most) {
         std::uint32_t count = 0;
-        if (!pod(count) || count != expected) {
+        if (!pod(count) || count > most) {
             return false;
         }
         values.assign(count, false);

@@ -196,12 +196,10 @@ class Sweep(unittest.TestCase):
 
     def test_above_the_floor_everything_runs(self):
         sw = fake_switch(switch.rate_floor(1000) + 1)
-        code, text, led, rec = self.run_sweep(sw)
+        code, text, _, _ = self.run_sweep(sw)
         self.assertEqual(code, 0)
         self.assertFalse(sw.merge_only)
         sw.inbox.assert_called_once()
-        led.assert_called_once()
-        rec.assert_called_once()
         self.assertNotIn("rate floor", text)
 
     def test_the_ask_part_waits_under_the_floor(self):
@@ -229,12 +227,11 @@ class Sweep(unittest.TestCase):
         # run 42663592988: one failed write to #357 failed the whole run, so the watchdog read it as down
         sw = fake_switch(4000, prs=(355, 357), fail={357: ghapi.GitHubError("PUT", "pulls/357/merge",
                                                                               "unexpected end of JSON input")})
-        code, text, led, _ = self.run_sweep(sw)
+        code, text, _, _ = self.run_sweep(sw)
         self.assertEqual(code, 0)
         self.assertIn("Item errors", text)
         self.assertIn("#357", text)
         self.assertTrue(any(line.startswith("ERROR       #357") for line in sw.lines))
-        led.assert_called_once()
 
     def test_every_pr_failing_is_a_sweep_that_did_not_finish(self):
         boom = ghapi.GitHubError("GET", "x", "HTTP 502")

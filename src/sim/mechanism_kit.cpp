@@ -323,8 +323,13 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
     return GuideIndex{static_cast<std::uint32_t>(guides_.size() - 1U)};
 }
 
-void Kit::set_dogs(const GuideIndex guide, const float pitch) {
+void Kit::set_dogs(const GuideIndex guide, const float pitch, const float from) {
     guides_[guide.value].dog_pitch = pitch;
+    guides_[guide.value].dog_from = from;
+}
+
+void Kit::set_platform(const GuideIndex guide) {
+    guides_[guide.value].platform = true;
 }
 
 void Kit::set_guide_friction(const GuideIndex guide, const float max_friction_force) {
@@ -823,6 +828,9 @@ void Kit::pre_step(const float delta_seconds) {
             disconnect_rope(rope);
             rope.parted = true;
             rope.tension = 0.0F;
+            // What it held falls, though it slept hanging there (loose stock
+            // sleeps once at rest): taking the rope away wakes nothing.
+            system_.GetBodyInterface().ActivateBody(bodies_[rope.body1.value].id);
         }
     }
     for (Catch &catch_record : catches_) {
@@ -1407,7 +1415,7 @@ void Kit::engage_dogs(Guide &guide) {
     const float teeth_below_top =
         std::ceil((guide.max_travel - travel) / guide.dog_pitch - 1.0e-3F);
     const float tooth = guide.max_travel - teeth_below_top * guide.dog_pitch;
-    if (tooth > guide.dog_floor + 1.0e-4F) {
+    if (tooth >= guide.dog_from - 1.0e-4F && tooth > guide.dog_floor + 1.0e-4F) {
         guide.dog_floor = tooth;
     }
 }
@@ -1853,9 +1861,15 @@ void Kit::capture(Checkpoint &out) const {
 }
 
 void Kit::restore(const Checkpoint &in) {
-    if (in.bodies.size() != bodies_.size()) {
-        return;
-    }
+    // A checkpoint is a prefix of the kit when bodies were built since
+    // it was committed: a crate's break pieces are the only ones, eight
+    // per broken stock, appended last. Restoring the common prefix
+    // rewinds every body the checkpoint knew, and leaves the newer
+    // bodies as they are — refusing the whole restore instead would
+    // leave a death rewinding nothing at all. The ropes, grips and
+    // the rest are indexed by their own counts, which pieces never
+    // change, so they restore in full either way.
+    const std::size_t common = std::min(in.bodies.size(), bodies_.size());
     for (Rope &rope : ropes_) {
         disconnect_rope(rope);
     }
@@ -1866,7 +1880,7 @@ void Kit::restore(const Checkpoint &in) {
         unweld(grip);
     }
     auto &bodies = system_.GetBodyInterface();
-    for (std::size_t index = 0; index < bodies_.size(); ++index) {
+    for (std::size_t index = 0; index < common; ++index) {
         Body &record = bodies_[index];
         const BodyState &state = in.bodies[index];
         if (!record.dynamic) {
@@ -2321,7 +2335,9 @@ std::vector<Kit::HoistInfo> Kit::hoists() const {
                 }
             }
         }
-        if (caught) {
+        h.caught = caught;
+        h.platform = g.platform;
+        if (caught || g.platform) {
             out.push_back(std::move(h));
         }
     }

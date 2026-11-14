@@ -121,6 +121,15 @@
             "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_time.py"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -134,5 +143,5 @@
       }
     ]
   },
-  "autoCompactWindow": 833000
+  "autoCompactWindow": 600000
 }
