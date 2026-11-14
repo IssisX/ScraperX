@@ -92,6 +92,14 @@ MUSE_LABEL = "wake:muse"
 # names none and no sweep has found one (#340 opened 11-09, when #107 closed).
 BOARD_LABEL = "board"
 BOARD_ISSUE = 340
+# J-072 (#350): the board rolls itself (Switch.board_roll). The board went past its 100-comment cap three times (the
+# last at 235) waiting for a human to roll it. At BOARD_ROLL_AT comments a sweep opens the next board (labeled, the old
+# body, a BOARD_FROM mark naming the old one) and takes the label off the old one; a later sweep closes the old one
+# (work/CONTEXT.md: closing #340 mid-sweep let that sweep post on a closed board).
+BOARD_ROLL_AT = 90
+BOARD_FROM_MARK = "<!-- switchboard:board-from #{old} -->"
+BOARD_FROM = re.compile(r"^<!-- switchboard:board-from #(\d+) -->$", re.MULTILINE)
+BOARD_CONTINUES = re.compile(r"^_Continues #\d+[^\n]*_\n?", re.MULTILINE)
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
@@ -361,6 +369,23 @@ def plain(text: str) -> str:
 def no_verdict(text: str) -> str:
     """Outside text in an inbox line that cannot wake the switchboard: a colon before a verdict word becomes ' -'."""
     return VERDICT_TRIGGER.sub(" -", text)
+
+
+def board_next(old: dict) -> tuple[str, str]:
+    """The next board's (title, body) from the old one's listing item (board_roll): "Board: live jobs (5)" becomes
+    "(6)" (a title with no number gets " (2)"); the body is the old one's as it stands, its "# " heading (if it starts
+    with one) the new title, an earlier roll's mark and line taken out, and a line and BOARD_FROM mark naming the
+    board it continues put under the heading."""
+    number, title = old["number"], str(old.get("title") or "Board: live jobs").rstrip()
+    m = re.search(r"\((\d+)\)$", title)
+    new_title = f"{title[:m.start()].rstrip()} ({int(m.group(1)) + 1})" if m else f"{title} (2)"
+    body = BOARD_FROM.sub("", BOARD_CONTINUES.sub("", str(old.get("body") or ""))).lstrip("\n")
+    head = ""
+    if body.startswith("# "):   # the old heading names the old board: the new one's own name
+        head, body = f"# {new_title}\n\n", body.partition("\n")[2].lstrip("\n")
+    note = (f"_Continues #{number}, rolled by the switchboard at {old.get('comments')} comments; its comments stay "
+            f"there._\n{BOARD_FROM_MARK.format(old=number)}\n\n")
+    return new_title, head + note + body
 
 
 def hours(span: dt.timedelta) -> str:
@@ -791,6 +816,8 @@ class Switch:
                 raise
             got, why = [], f"the open issues labeled `{BOARD_LABEL}` could not be read ({plain(str(err)[:160])})"
         found = sorted(self._issue_numbers(got))
+        self._board_listing = {it["number"]: it for it in (got if isinstance(got, list) else [])   # board_roll's
+                               if isinstance(it, dict) and it.get("number") in found} or None   # count, no new read
         last = 0 if fresh else self._last_board()
         if found:
             board = found[-1]
@@ -835,8 +862,134 @@ class Switch:
         label = urllib.parse.quote(BOARD_LABEL, safe="")
         got = self.gh.get(f"repos/{self.gh.repo}/issues?labels={label}&state=closed&sort=created&direction=desc"
                           "&per_page=30")   # one page: the newest closed ones
-        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS)) - {self.board_issue()}
+        live = self.board_issue()
+        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS) | set(self.rolled_boards())) - {live}
         return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
+
+    # ---------- the board roll (J-072, #350) ----------
+    def rolled_boards(self) -> list[int]:
+        """The boards board_roll moved away from: they lose the label, so old_boards' closed listing misses them,
+        and their muse and plan marks must still count. The live board's BOARD_FROM mark (no state needed) and the
+        sweep state's roll record (the board before, and the ones before it)."""
+        item = (getattr(self, "_board_listing", None) or {}).get(getattr(self, "_board_issue", None)) or {}
+        m = BOARD_FROM.search(str(item.get("body") or ""))
+        rec = self._roll_record() or {}
+        return ([int(m.group(1))] if m else []) + ([rec["old"]] + rec["past"] if rec else [])
+
+    def _roll_record(self) -> dict | None:
+        """The sweep state's last roll, {old, new, closed, past}, or None when it holds none (or anything else)."""
+        rec = self.gh.state.get("board_roll") if isinstance(getattr(self.gh, "state", None), dict) else None
+        if not isinstance(rec, dict) or not all(type(rec.get(k)) is int and rec[k] > 0 for k in ("old", "new")):
+            return None
+        past = rec.get("past") if isinstance(rec.get("past"), list) else []
+        past = [n for n in past if type(n) is int and n > 0]
+        return {"old": rec["old"], "new": rec["new"], "closed": rec.get("closed") is True, "past": past}
+
+    def board_roll(self) -> None:
+        """#350: the switch rolls the board at BOARD_ROLL_AT comments, in steps a later sweep can finish. Each step
+        is decided from GitHub's listing of the open `board` issues, the read board_issue already made this run
+        (none made: only a recorded close can run), so a normal pass costs no call:
+        1. a roll an EARLIER sweep recorded: the old board is closed (never by the sweep that rolled, CONTEXT.md;
+           checked on GitHub first, _board_close);
+        2. the newest labeled board names (BOARD_FROM) another still labeled: a sweep died after opening it, so the
+           label comes off the old one, then the notices and the record (no second board is opened);
+        3. the live board names one no longer labeled and the state has no record of it: a sweep died after the
+           label came off, so only the record is written (the next sweep closes it);
+        4. one labeled board at BOARD_ROLL_AT comments or more: the next one is opened (labeled, board_next), then
+           step 2 runs at once.
+        Two labeled boards neither names stay as they are (board_issue's WARN). A dry run prints and records nothing."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
+        rec = self._roll_record()
+        if rec and not rec["closed"]:   # an earlier sweep's: a record is made only below, and this runs once a sweep
+            self._board_close(rec, state)
+            return
+        listing = getattr(self, "_board_listing", None)
+        if not listing:
+            return
+        live = max(listing)
+        item = listing[live]
+        m = BOARD_FROM.search(str(item.get("body") or ""))
+        src = int(m.group(1)) if m else 0
+        if src and src != live and src in listing:
+            self._board_unlabel(listing[src], live)
+            return
+        if src and src != live and not (rec and rec["old"] == src):
+            self._board_record(src, live, rec)
+            self.out(f"BOARD       #{live} continues #{src}, which no longer carries `{BOARD_LABEL}`: recorded; "
+                     "the next sweep closes it")
+            return
+        count = item.get("comments")
+        if len(listing) > 1 or type(count) is not int or count < BOARD_ROLL_AT:
+            return
+        title, body = board_next(item)
+        got = self.gh.write("POST", f"repos/{self.gh.repo}/issues", {"title": title, "body": body,
+                                                                      "labels": [BOARD_LABEL]},
+                            f"board: #{live} has {count} comments (roll at {BOARD_ROLL_AT}): open {title!r}")
+        new = got.get("number") if isinstance(got, dict) else None
+        if type(new) is not int or new <= 0:
+            self.out(f"BOARD       #{live} has {count} comments (roll at {BOARD_ROLL_AT}): " +
+                     ("would open the next board, take the label off this one, and close it next sweep (dry run)"
+                      if self.gh.dry_run else "no issue number came back; the next sweep looks again"))
+            return
+        self.out(f"BOARD       #{live} has {count} comments (roll at {BOARD_ROLL_AT}): opened #{new}")
+        self._board_unlabel(item, new)
+
+    def _board_close(self, rec: dict, state: dict | None) -> None:
+        """Roll step 1: close the board an earlier sweep rolled away from. The number comes from the sweep state or a
+        board body's mark, so it is checked on GitHub first (one read): never a pull request (the inbox), never an
+        issue that carries the board label again or is not older than the board it rolled to (a WARN, and the
+        record is done). A `wake:muse` still on it holds the close (the bridge reads only open issues, so a notice
+        the rolling sweep posted there would never be mailed); the next sweep looks again."""
+        old, new = rec["old"], rec["new"]
+        got = self.gh.get(f"repos/{self.gh.repo}/issues/{old}") if old < new else {}
+        got = got if isinstance(got, dict) else {}
+        names = {lb.get("name") for lb in got.get("labels") or [] if isinstance(lb, dict)}
+        why = (f"it is not older than #{new}" if old >= new else "it is a pull request" if "pull_request" in got
+               else f"it carries `{BOARD_LABEL}` again" if BOARD_LABEL in names else "")
+        if not why and MUSE_LABEL in names:
+            self.out(f"BOARD       #{old} stays open for now: `{MUSE_LABEL}` is still on it (a notice not mailed yet)")
+            return
+        if why:
+            self.out(f"WARN        board: #{old} (rolled to #{new}) is not closed: {why}")
+        elif got.get("state") != "closed":
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{old}", {"state": "closed", "state_reason": "completed"},
+                          f"board: close #{old}, rolled to #{new} by an earlier sweep")
+            self.out(f"BOARD       #{old} closed (rolled to #{new} by an earlier sweep)")
+        if not self.gh.dry_run and state is not None:
+            state["board_roll"] = dict(rec, closed=True)
+
+    def _board_unlabel(self, old: dict, new: int) -> None:
+        """Roll step 2: the label off the old board (already off: done), the record, then one line on the new board
+        and one inbox line."""
+        number = old["number"]
+        try:
+            label = urllib.parse.quote(BOARD_LABEL, safe="")
+            self.gh.write("DELETE", f"repos/{self.gh.repo}/issues/{number}/labels/{label}", None,
+                          f"board: take `{BOARD_LABEL}` off #{number}, rolled to #{new}")
+        except GitHubError as err:
+            if err.status != 404 and "HTTP 404" not in err.detail:
+                raise
+        self._board_record(number, new, self._roll_record())
+        count = old.get("comments")
+        self.gh.comment(new, f"Switchboard (board): this board continues #{number}, which reached {count} comments "
+                             f"(it rolls at {BOARD_ROLL_AT}); #{number} closes at the next sweep and its comments "
+                             "stay there.",
+                        f"board: #{new} names #{number}")
+        self.gh.comment(INBOX_PR, f"Switchboard (board): the board rolled from #{number} ({count} comments) to "
+                                  f"#{new}; #{number} closes at the next sweep. The new body is the old one's, its "
+                                  "heading renamed: any number in its text is the integrator's to edit.",
+                        f"inbox: the board rolled to #{new}")
+        self.out(f"BOARD       #{number} rolled to #{new}: label off; it closes at the next sweep")
+
+    def _board_record(self, old: int, new: int, rec: dict | None) -> None:
+        """The roll's record in the sweep state (the next sweep closes `old`), and the fallback board moved to the new
+        one (board_issue uses it when the listing fails). Never in a dry run."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
+        if self.gh.dry_run or state is None:
+            return
+        past = ([rec["old"]] + rec["past"] if rec and rec["old"] != old else (rec or {}).get("past") or [])
+        state["board_roll"] = {"old": old, "new": new, "closed": False, "past": past[:MAX_OLD_BOARDS]}
+        state["board"] = new
 
     def jobs(self) -> dict[str, dict]:
         """PR-review lookup, as before. The plan audit separately finds bare J-NNN issues."""
@@ -4056,6 +4209,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                       "version_at": iso_z(until) if until else None, "live": getattr(sw, "bridge_live", ""),
                       "wake": getattr(sw, "wake_numbers", None)}
     timers["pipe"] = pipe_state
+    if steer and not targeted and not sw.merge_only:   # #350: after every part that reads or posts on the board
+        part("board roll", sw.board_roll)
 
     if delta is None and (item_errors or deferred):
         not_done.add("prs")   # those PRs were not read: a full pass again
