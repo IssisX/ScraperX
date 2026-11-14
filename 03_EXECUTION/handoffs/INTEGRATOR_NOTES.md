@@ -8,9 +8,9 @@ Read through: 1794664120 (2026-11-14 mail+asks)
   10 min; check all he says, push back on waste. He welcomes a one-line nudge to be nicer, only when anger lands off the real problem (11-14). On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go; after it, fix obvious system problems as I see them, not only what alarms; no endless tweaking (Cory 11-14).
 - THE PLAN (11-14): Carbon's answer (verdict: targeted fixes, no rebuild; coordination signals become standing state). DONE TEST
   (Cory 11-14 "yes"): the next 6 Muse jobs each land within 1 h of going green, no hand fixes, trunk never red unowned.
-  Count: 3/6 = #544 J-040 repin, #495 J-080, #547 J-116 MAT1 (2-9 min green to merged); #472 J-040 feed passed Codex,
-  merges next sweep. Fable helper (background, the last one) on claude/integrate-candidate-scope: dispatched proofs
-  scoped + no duplicate full runs; old #517 already merged, so its push becomes a follow-up PR. Muse in flight:
+  Count: 5/6 = #544, #495, #547, #472 J-040 feed (15 min), #487 J-116 save (9 min). J-072 Fable found Muse dispatching
+  on top of each push (mailed; muse.md line on trunk 1aa910b0); its candidate-range removal (protected branch) lands via
+  switchboard; new Fable helper (harness ran it in background) scopes trunk's post-merge dispatch by HEAD^1. Muse in flight:
   J-014 J-040 J-053 J-078 J-100 J-116 (J-053: told to stage the dyno lower). Not taken: Carbon's 60-min expiry of a pause (it would override Cory). Later list:
   eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven; Carbon rank 4 (test lists to
   ci/shards.json, re-pin split rule, first FAIL in late notices). Likely next (Cory 11-14, after ours is judged): Muse and Claude talk through git files, email only a doorbell. Carbon/Astra designs: parts list, NOT built:
