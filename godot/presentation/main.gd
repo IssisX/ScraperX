@@ -171,6 +171,32 @@ func _ready() -> void:
 	add_child(_sky_cycle)
 	_sky_cycle.setup($Overcast, $SkyFill, ($Environment as WorldEnvironment).environment)
 	_sky_cycle.add_lamps(_light_rig)
+	_sky_cycle.add_lamp_fittings(_lamp_fittings)
+	# J-081: his helmet lamp -- a real spot on his head, aimed where he
+	# looks, on by itself as the light falls. A child of the eye, so it
+	# follows the head in first person and in the hold's third person.
+	var helmet_lamp := SpotLight3D.new()
+	helmet_lamp.name = "HelmetLamp"
+	helmet_lamp.position = Vector3(0.0, 0.18, -0.3)
+	helmet_lamp.light_color = Color(1.0, 0.92, 0.78)
+	# J-081: range 30, not 18 -- the steel ahead of him in the look
+	# pose sits ~20 m out, past an 18 m spot entirely (run 5's stills
+	# were pixel-identical to run 4's for exactly that reason). With
+	# range 30 a 0.3-albedo face reads lum 0.66 at 20 m, 0.45 at 25 m
+	# (calibrated 2026-11-11).
+	helmet_lamp.spot_range = 30.0
+	helmet_lamp.spot_angle = 55.0
+	helmet_lamp.spot_attenuation = 1.0
+	# J-081: the helmet lights the FAR batch too. The rig lamps above
+	# deliberately skip layer 2 (far sections are huge, 14 lamps each
+	# re-drawing them would cost), but the steel ahead of him at night
+	# is often far-batch -- with the default mask 1 it stayed pitch
+	# black at 16 m even at energy 60 (calibrated 2026-11-11: layer-2
+	# face lum 0.000 under a mask-1 spot, 0.822 under mask 3). One
+	# light with a 30 m range re-drawing the near far-batch is cheap.
+	helmet_lamp.light_cull_mask = 1 | BATCH_FAR_LAYER
+	_camera.add_child(helmet_lamp)
+	_sky_cycle.set_helmet_lamp(helmet_lamp)
 	_audio = AudioDirector.new()
 	_audio.name = "AudioDirector"
 	_audio.sky = _sky_cycle
@@ -330,7 +356,7 @@ func _ready() -> void:
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
 	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode and _audit == null) or
-			_uitest_scenario == "touch_title"):
+			_uitest_scenario == "touch_title" or _uitest_scenario == "touch_app_leave_title"):
 		_show_title()
 	# The microphone is asked about once, before anything is heard, over the
 	# title when there is one.
@@ -558,6 +584,9 @@ func _process(delta: float) -> void:
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
 		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
+		# J-130 stub: J-129's done flags (objective index -> bool) land here
+		# when the objective core is hooked up; until then no done line can fire.
+		"objectives_done": {},
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how
@@ -753,6 +782,12 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 			_save_climb(true)
 			_open_pause(true)
+		NOTIFICATION_APPLICATION_RESUMED:
+			# Coming back: the background gap is not play time. The load
+			# gap's one-tick cap (J-045) applies again, so the first frame
+			# back advances one native tick, not up to nine
+			# (MAX_SIM_FRAME_DELTA).
+			_capped_advances = 0
 		NOTIFICATION_WM_CLOSE_REQUEST:
 			_save_climb(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -835,7 +870,10 @@ func discard_saved_climb() -> void:
 func _open_pause(from_system: bool = false) -> void:
 	if _paused or _title_open or _consent_open or _ci_mode or _native == null:
 		return
-	if from_system and not _uitest_scenario.is_empty():
+	# A system pause is refused during a scripted run, so a stray focus-out
+	# cannot freeze an unrelated scenario mid-run -- except the app-leave
+	# scenarios (touch_app_leave_*), where the pause is what is tested.
+	if from_system and not _uitest_scenario.is_empty() and not _uitest_scenario.begins_with("touch_app_leave"):
 		return
 	_paused = true
 	_router.gameplay_active = false
@@ -845,7 +883,7 @@ func _open_pause(from_system: bool = false) -> void:
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
-		position.y, checkpoint.y, int(_ctx["deaths"])])
+		position.y, checkpoint.y, int(_ctx["deaths"])], _ctx.get("objectives", []))
 	get_tree().paused = true
 	_audio.ui_tap()
 

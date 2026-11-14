@@ -183,15 +183,11 @@ func build() -> void:
 
 
 # Each of the body's meshes gets its part's material (a mesh the look does
-# not know keeps the file's own, and says so). The music box she carried is
-# gone for good: a body built while she still had it loses it here.
+# not know keeps the file's own, and says so).
 func dress(root: Node) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		var part := String(mesh.name)
-		if part == "music_box":
-			mesh.free()
-			continue
 		if _parts.has(part):
 			mesh.material_override = _parts[part]
 		else:

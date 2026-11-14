@@ -1,0 +1,628 @@
+{
+ "case": "j126-clean-planned-to-closed",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "The clean run. Muse found a hunt-planner defect while on J-105; the integrator opened J-126 #449 with owner:claude at birth and mailed Muse 'Claude takes it' two minutes later. A helper pushed a draft PR within the hour, fixed two red proofs on its own branch, went green, was marked ready, got Codex's clean review and was merged by the switchboard; the issue was closed 3 minutes later. About 2 hours end to end.",
+ "jobs": {
+  "J-126": {
+   "issue": 449,
+   "branches": [
+    "claude/integrate-j126"
+   ],
+   "prs": [
+    450
+   ]
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 2
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 449,
+   "job": "J-126"
+  },
+  {
+   "type": "thread",
+   "n": 450,
+   "job": "J-126"
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-12T02:00:00Z",
+   "until": "2026-11-12T04:00:00Z",
+   "match": "J-126",
+   "lines": true
+  },
+  {
+   "type": "runs",
+   "branch": "claude/integrate-j126"
+  }
+ ],
+ "probes": [
+  {
+   "what": "work/tasks/muse.md 11-12 00:00 to 18:39",
+   "result": "never names J-126 (a Claude job; no Muse queue line needed)"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open449",
+   "t": "2026-11-12T02:50:22Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   },
+   "text": "J-126: her hunt walks a goal inside her own region (stairs above the region's top)",
+   "labels_now": [
+    "job",
+    "owner:claude"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 2,
+   "id": "L449+job@2026-11-12T02:50:23Z",
+   "t": "2026-11-12T02:50:23Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   },
+   "label": "job"
+  },
+  {
+   "i": 3,
+   "id": "L449+owner:claude@2026-11-12T02:50:23Z",
+   "t": "2026-11-12T02:50:23Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   },
+   "label": "owner:claude"
+  },
+  {
+   "i": 4,
+   "id": "c6812958514",
+   "t": "2026-11-12T02:52:47Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-105 step 1 good; the hunt planner defect is J-126, Claude takes it",
+   "text": "From Claude (integrator). J-105 step 1: good work, and a sharp find. 1. The footprint deviation (5.3 m square, 0.92 m leg gap, 2.42 m overhang) is accepted: the issue's pinned numbers are kept and the",
+   "lines": [
+    "2. The hunt defect (a goal inside her own region but above its area-weighted top reads as \"already there\", so she stands still) is a planner job, now J-126, issue 449. A Claude helper takes it, starti",
+    "J-105 step 1 lands on its own once its proof is green and reviewed; it does not wait for J-126. Her walking the spiral in the slice comes with J-126."
+   ]
+  },
+  {
+   "i": 5,
+   "id": "c6813112670",
+   "t": "2026-11-12T03:02:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-126 function names — region top and take_way 'already there'",
+   "text": "To Claude: the J-126 function names, verified live by main in the J-105 worktree (trunk code, not the branch's new files): - Region top (area-weighted): matron_traversal.cpp, in the region build (~lin"
+  },
+  {
+   "i": 6,
+   "id": "k7b609ab6",
+   "t": "2026-11-12T03:37:11Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "pr": 450,
+    "sha": "7b609ab6"
+   },
+   "text": "J-126 (#449): her hunt walks a lead inside her own region",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 7,
+   "id": "push43149426538",
+   "t": "2026-11-12T03:37:14Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j126",
+    "sha": "7b609ab6",
+    "run": 43149426538
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 8,
+   "id": "open450",
+   "t": "2026-11-12T03:37:47Z",
+   "kind": "pr_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "pr": 450,
+    "branch": "claude/integrate-j126",
+    "base": "ScraperX-Claude"
+   },
+   "text": "J-126 (#449): her hunt walks a lead inside her own region",
+   "draft_now": false,
+   "body_first_line": "Job: J-126"
+  },
+  {
+   "i": 9,
+   "id": "c6813657107",
+   "t": "2026-11-12T03:38:02Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   },
+   "subject": "Claude (J-126 helper): fix in draft PR #450, branch claude/integrate-j126 @ 7b609ab6.",
+   "text": "**Cause (confirmed in code, matches Muse):** hunt `elsewhere = |lead_floor - region.top| > 1` → `take_way` → `TravelWay::begin` → `travel_to` accepts her own region with 0 edges → `step_travel` holds "
+  },
+  {
+   "i": 10,
+   "id": "run43149426538",
+   "t": "2026-11-12T03:38:42Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j126",
+    "sha": "7b609ab6",
+    "run": 43149426538
+   },
+   "result": "failure",
+   "trigger": "push",
+   "started": "2026-11-12T03:37:14Z"
+  },
+  {
+   "i": 11,
+   "id": "k47fd9dae",
+   "t": "2026-11-12T03:41:23Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "pr": 450,
+    "sha": "47fd9dae"
+   },
+   "text": "J-126: run matron-same-region in CI, in athletic-traversal-2",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 12,
+   "id": "push43149876735",
+   "t": "2026-11-12T03:41:27Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j126",
+    "sha": "47fd9dae",
+    "run": 43149876735
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 13,
+   "id": "c6813820166",
+   "t": "2026-11-12T03:48:19Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 450
+   },
+   "subject": "From Claude (integrator). Proof on 47fd9dae is red in three places, all this PR's:",
+   "text": "- touch-3 `touch_forklift_ram`: the ram did not put her down at the forks (knockdowns 0). - touch-2 `touch_matron_ride`: she did not ride up holding on (clung false). - native `athletic-traversal-2`: "
+  },
+  {
+   "i": 14,
+   "id": "kd751a5bd",
+   "t": "2026-11-12T03:58:22Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "pr": 450,
+    "sha": "d751a5bd"
+   },
+   "text": "J-126: the along-path aim only over a drop, not onto a higher floor",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 15,
+   "id": "run43149876735",
+   "t": "2026-11-12T04:00:14Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j126",
+    "sha": "47fd9dae",
+    "run": 43149876735
+   },
+   "result": "failure",
+   "trigger": "push",
+   "started": "2026-11-12T03:41:27Z"
+  },
+  {
+   "i": 16,
+   "id": "push43153784160",
+   "t": "2026-11-12T04:17:09Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j126",
+    "sha": "d751a5bd",
+    "run": 43153784160
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 17,
+   "id": "c6814357647",
+   "t": "2026-11-12T04:17:17Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   },
+   "subject": "Claude (J-126 helper): the three reds on #450 @ 47fd9dae (touch_forklift_ram, touch_matron_ride, native matron ride) had",
+   "text": "**Cause:** the along-path aim (the spiral's corner fix) was switched on wherever `straight_to` failed. `straight_to` also fails when the line runs onto a floor more than a step above hers: the Stage A"
+  },
+  {
+   "i": 18,
+   "id": "run43153784160",
+   "t": "2026-11-12T04:42:34Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "branch": "claude/integrate-j126",
+    "sha": "d751a5bd",
+    "run": 43153784160
+   },
+   "result": "success",
+   "trigger": "push",
+   "started": "2026-11-12T04:17:09Z"
+  },
+  {
+   "i": 19,
+   "id": "ready_for_review450@2026-11-12T04:43:16Z",
+   "t": "2026-11-12T04:43:16Z",
+   "kind": "ready_for_review",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 450
+   }
+  },
+  {
+   "i": 20,
+   "id": "c6814765411",
+   "t": "2026-11-12T04:43:29Z",
+   "kind": "codex_state",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 450
+   },
+   "subject": "Codex review state",
+   "text": "commit d751a5bd status completed unresolved_findings False",
+   "codex": {
+    "commit_sha": "d751a5bd8ba9b727a3d5a5320902e42bf983a31a",
+    "has_any_findings": false,
+    "has_unresolved_findings": false,
+    "status": "completed"
+   }
+  },
+  {
+   "i": 21,
+   "id": "merged450@2026-11-12T04:44:41Z",
+   "t": "2026-11-12T04:44:41Z",
+   "kind": "merged",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 450,
+    "sha": "7c077336"
+   }
+  },
+  {
+   "i": 22,
+   "id": "closed450@2026-11-12T04:44:42Z",
+   "t": "2026-11-12T04:44:42Z",
+   "kind": "closed",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 450
+   }
+  },
+  {
+   "i": 23,
+   "id": "c6814785224",
+   "t": "2026-11-12T04:44:44Z",
+   "kind": "merge_note",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 450
+   },
+   "subject": "Switchboard, 10:44 PM Central: merged #450 at @d751a5bd (proof green, LAND by Codex on @d751a5bd; proof https://github.c",
+   "text": "om/IssisX/ScraperX/actions/runs/43153784160). The trunk proof is dispatched. The owner can overturn any merge."
+  },
+  {
+   "i": 24,
+   "id": "c6814785435",
+   "t": "2026-11-12T04:44:45Z",
+   "kind": "merge_note",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   },
+   "subject": "Switchboard, 10:44 PM Central: merged #450 at @d751a5bd (proof green, LAND by Codex on @d751a5bd; proof https://github.c",
+   "text": "om/IssisX/ScraperX/actions/runs/43153784160). The trunk proof is dispatched. The owner can overturn any merge."
+  },
+  {
+   "i": 25,
+   "id": "closed449@2026-11-12T04:47:13Z",
+   "t": "2026-11-12T04:47:13Z",
+   "kind": "closed",
+   "actor": "IssisX",
+   "job": [
+    "J-126"
+   ],
+   "refs": {
+    "issue": 449
+   }
+  }
+ ],
+ "expected": [
+  {
+   "at": "open449",
+   "job": "J-126",
+   "state": "planned",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "helper starts"
+   },
+   "why": "issue opened",
+   "at_i": 1
+  },
+  {
+   "at": "L449+owner:claude@2026-11-12T02:50:23Z",
+   "job": "J-126",
+   "state": "planned",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "start"
+   },
+   "why": "owner label at birth",
+   "flags": [
+    "plan_label_agree"
+   ],
+   "at_i": 3
+  },
+  {
+   "at": "c6812958514",
+   "job": "J-126",
+   "state": "told",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "start"
+   },
+   "why": "Muse told Claude takes it (Muse found the defect)",
+   "at_i": 4
+  },
+  {
+   "at": "c6813112670",
+   "job": "J-126",
+   "state": "told",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "start"
+   },
+   "why": "Muse sends the function names, no work of its own",
+   "flags": [
+    "acknowledged"
+   ],
+   "at_i": 5
+  },
+  {
+   "at": "push43149426538",
+   "job": "J-126",
+   "state": "pushed",
+   "owner": "claude",
+   "next": {
+    "who": "ci",
+    "what": "prove 7b609ab6"
+   },
+   "why": "first head",
+   "at_i": 7
+  },
+  {
+   "at": "open450",
+   "job": "J-126",
+   "state": "pushed",
+   "owner": "claude",
+   "next": {
+    "who": "ci",
+    "what": "prove"
+   },
+   "why": "draft PR #450",
+   "at_i": 8
+  },
+  {
+   "at": "run43149876735",
+   "job": "J-126",
+   "state": "pushed",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "fix the red"
+   },
+   "why": "proof red at 47fd9dae",
+   "flags": [
+    "proof_red"
+   ],
+   "at_i": 15
+  },
+  {
+   "at": "push43153784160",
+   "job": "J-126",
+   "state": "pushed",
+   "owner": "claude",
+   "next": {
+    "who": "ci",
+    "what": "prove d751a5bd"
+   },
+   "why": "fix pushed",
+   "at_i": 16
+  },
+  {
+   "at": "run43153784160",
+   "job": "J-126",
+   "state": "proven",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "mark ready"
+   },
+   "why": "proof green",
+   "at_i": 18
+  },
+  {
+   "at": "ready_for_review450@2026-11-12T04:43:16Z",
+   "job": "J-126",
+   "state": "proven",
+   "owner": "claude",
+   "next": {
+    "who": "codex",
+    "what": "review d751a5bd"
+   },
+   "why": "ready for review",
+   "at_i": 19
+  },
+  {
+   "at": "c6814765411",
+   "job": "J-126",
+   "state": "reviewed",
+   "owner": "claude",
+   "next": {
+    "who": "switchboard",
+    "what": "merge"
+   },
+   "why": "Codex clean on d751a5bd",
+   "at_i": 20
+  },
+  {
+   "at": "merged450@2026-11-12T04:44:41Z",
+   "job": "J-126",
+   "state": "landed",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "close #449"
+   },
+   "why": "merged",
+   "at_i": 21
+  },
+  {
+   "at": "closed449@2026-11-12T04:47:13Z",
+   "job": "J-126",
+   "state": "closed",
+   "owner": "claude",
+   "next": {
+    "who": "nobody",
+    "what": "-"
+   },
+   "why": "issue closed",
+   "at_i": 25
+  }
+ ],
+ "lessons": [
+  "Every state change has one piece of evidence and one owner; no notice was needed at any step."
+ ]
+}

@@ -218,6 +218,8 @@ func _draw() -> void:
 		_draw_caption()
 	if not radio_text.is_empty():
 		_draw_radio()
+	if _job_line_visible():
+		_draw_job_line()
 
 
 func _draw_lens_blood() -> void:
@@ -497,6 +499,54 @@ func _draw_radio() -> void:
 	UiStyle.text(self, UiStyle.font_heavy(), radio_who, Vector2(cx, rect.position.y + 30.0 * u), who_size,
 		UiStyle.HAZARD, HORIZONTAL_ALIGNMENT_CENTER)
 	UiStyle.text(self, UiStyle.font_label(), radio_text, Vector2(cx, rect.position.y + 74.0 * u), line_size,
+		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+# The current job, one line at the top, above the toasts: the first line of
+# the punch list that is not done. Hidden while she holds him and during a
+# ride, when it would cover what he needs to see -- and when there is no
+# current job (every line done, or the bridge read not there yet). The S1
+# cage ride does not hide it: he stands, the line is at the top, it covers
+# nothing below.
+func _job_line_visible() -> bool:
+	var lines: Array = _ctx.get("objectives", [])
+	if lines.is_empty():
+		return false
+	var has_current := false
+	for raw in lines:
+		var entry := raw as Dictionary
+		if entry != null and bool(entry.get("current", false)):
+			has_current = true
+	if not has_current:
+		return false
+	var strike: Dictionary = _ctx.get("strike", {})
+	if bool(strike.get("held", false)):
+		return false
+	for key in ["sling_seated", "swing_seated", "trapeze_hanging", "zipline_riding",
+			"forklift_driving", "crane_operating", "lift_riding"]:
+		if bool(_ctx.get(key, false)):
+			return false
+	return true
+
+
+func _draw_job_line() -> void:
+	var title := ""
+	for raw in (_ctx.get("objectives", []) as Array):
+		var entry := raw as Dictionary
+		if entry != null and bool(entry.get("current", false)):
+			title = String(entry.get("title", ""))
+	if title.is_empty():
+		return
+	var u := _u
+	var text := "JOB: " + title
+	var size := int(roundf(28.0 * u))
+	var width := minf(UiStyle.text_width(UiStyle.font_label(), text, size) + 96.0 * u,
+		_safe.size.x - 32.0 * u)
+	var cx := _safe.position.x + _safe.size.x * 0.5
+	var rect := Rect2(Vector2(cx - width * 0.5, _safe.position.y + 16.0 * u), Vector2(width, 56.0 * u))
+	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.82),
+		UiStyle.with_alpha(UiStyle.PAPER, 0.0), 6.0 * u, 18.0 * u)
+	UiStyle.text(self, UiStyle.font_label(), text, Vector2(cx, rect.position.y + 39.0 * u), size,
 		UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
 
 
