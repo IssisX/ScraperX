@@ -18,7 +18,7 @@ not reach is waste, fixed that run (11-14: dispatched proofs ran all 13 jobs).
 Helpers (sub-agents): at most four at a time, on the hardest jobs and long reads, never chores (11-06, 11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context. The integrator never hand-edits the board (the switchboard writes it from the plan).
 Every run, first: `get_session` (no id). Session effort is his call: mention it only when he throttles; ultracode on: tell him once (11-12).
 
-Overview: a scheduled task (trig_019Qy9rcek8tdRXTcpNjF1zs, 6:43 AM to 9:43 PM Central, every 3 h, 6 a day: Cory 11-14) has Claude send Cory a 6-line overview (11-11).
+Overview: a scheduled task (trig_01MM9rKhGLysfoz5W8f5bkon, 6:43 AM to 9:43 PM Central, every 3 h, 6 a day: Cory 11-14) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
 says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 168`, Claude's red branches, idle PRs over
 4 h) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
