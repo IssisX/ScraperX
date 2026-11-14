@@ -25,7 +25,7 @@ J-093 claude #411 hold: paused by Cory 11-13: Claude does no game code until the
 J-096 claude #414 | Things bend under weight: planks, boards and gratings flex by real load, spring back, and snap past their limit
 J-102 claude #421 | She chases him again (regression)
 J-109 claude #428 kept fb-bot/integrate-j109@7791c2a8830c hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | A wrecked machine leaves a way on: S1-S3, D-F and M-O (rule 51, gap 18)
-J-049 muse #278 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her mind runs on evidence: hiding from her truly works (rule 29, gap 4)
+J-049 claude #278 kept fb-bot/integrate-j049-pr1@ed151a6c kept fb-bot/integrate-protected-j049-pr1@2d99e906 kept fb-bot/integrate-protected-j049-pr1-r2@0e2a3a93 | Her mind runs on evidence: hiding from her truly works (rule 29, gap 4)
 J-053 claude #82 | The Void Crossing: parachute from the 750 m deck to the second tower
 J-078 muse #393 | Her motion never snaps: measured bone speeds and hand contacts across every scenario (rule 37)
 J-124 muse #446 hold: parked 11-14: steering cannot clear 550.25 E; the lip and grab rule are a design call (Muse's numbers on the issue) | The parachute is the way back from every height: a jump from each deck edge lands him alive
@@ -37,16 +37,16 @@ J-009 muse #116 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days
 J-014 muse #121 | Stock above 396 m (PE 2)
 J-036 muse #167 | Fight S5: slip
 J-040 muse #228 | Improvised weapons: brace carried bars and pipes against Matron
-J-054 muse #293 hold: parked in live issue; reconcile pushed work before release | The Counterweight Crossing: a service cradle tipped by weight
-J-055 muse #294 hold: parked in live issue; reconcile pushed work before release | The Blast Door Standoff: brace a steel door against her and wedge it
-J-060 muse #320 | Fight contact truth: every hit is a real limb contact, both bodies react
+J-054 muse #293 | The Counterweight Crossing: a service cradle tipped by weight
+J-055 muse #294 | The Blast Door Standoff: brace a steel door against her and wedge it
+J-060 claude #320 kept fb-bot/integrate-j060@b4ba543b | Fight contact truth: every hit is a real limb contact, both bodies react
 J-076 muse #391 | Loud machines draw her: every moving machine is heard by its measured energy (A7)
-J-083 muse #401 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | He works the machines with his hands: a forklift lever he grabs and moves (D4, gap 20)
+J-083 muse #401 | He works the machines with his hands: a forklift lever he grabs and moves (D4, gap 20)
 J-086 muse #404 hold: parked in live issue; reconcile pushed work before release | She pulls him off a ladder by the ankle, proven on every ladder kind in play (rule 35, gap 3)
-J-087 muse #405 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | Story radio cues fire in play: the foreman's lines reach him where they belong (B3, gap 12)
+J-087 muse #405 | Story radio cues fire in play: the foreman's lines reach him where they belong (B3, gap 12)
 J-088 muse #406 | Her hands close on what she holds: fingers wrap rungs, rails, his ankle; the pipe warning in CI (A6, gap 19)
-J-091 muse #409 hold: parked in live issue; reconcile pushed work before release | Turn her bay trap back on her: lure her onto the leaf at 154 m, trip its drive, dump her a full deck
-J-095 muse #413 hold: parked in live issue; reconcile pushed work before release | Pull the line out from under her: one keeper pin turns the zipline she is riding into a falling cable (Grok idea 2)
+J-091 muse #409 | Turn her bay trap back on her: lure her onto the leaf at 154 m, trip its drive, dump her a full deck
+J-095 muse #413 | Pull the line out from under her: one keeper pin turns the zipline she is riding into a falling cable (Grok idea 2)
 J-099 muse #417 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | Dents: shipping containers, barrels and steel boxes dent by the real impulse that hits them (J-038's second half)
 J-100 claude #418 | She reads a load hung over her and gets out from under it
 J-112 muse #431 | She shoves what he placed off an edge (A3, gap 9)

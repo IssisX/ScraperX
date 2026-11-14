@@ -1300,6 +1300,7 @@ struct Snapshot final {
     std::uint64_t strike_hit_count = 0;
     Vector3 strike_hit_point{};
     Vector3 strike_hit_normal{};
+    std::uint8_t strike_part = 255;  // J-060: the part of her it met (Matron::PartRegion: 0 trunk and head, 1 forearm, 2 upper arm, 3 leg), 255 none
     double strike_impulse_ns = 0.0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.

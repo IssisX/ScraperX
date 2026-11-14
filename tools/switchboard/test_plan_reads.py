@@ -155,6 +155,23 @@ class QueueSignal(unittest.TestCase):
         self.assertIn("J-101", item.line)
         self.assertNotIn("J-102", item.line)   # a held job is not ready work
 
+    def test_an_unrelated_plan_edit_does_not_relist_the_same_low_queue(self):
+        def item(text):
+            model = plan.parse(text)
+            issues = [{"number": n, "title": f"J-{n} job", "state": "open"} for n in (101, 102, 103)]
+            rows = machine.table(model, machine.collect(model, {"issues": issues}))
+            sw = switch.Switch.__new__(switch.Switch)
+            sw.plan_mode = lambda: "live"
+            sw.plan_table = lambda steered=(): (model, {}, machine.Mail(), rows)
+            return sw.queue_check()[0]
+        base = "limit muse 6\nJ-101 muse #101 | one\nJ-102 claude #102 | two\n"
+        before = item(base)
+        after = item(base + "J-103 claude #103 | three\n")   # a Claude job added: Muse's queue is the same
+        self.assertNotEqual(plan.parse(base).fingerprint(), plan.parse(base + "J-103 claude #103 | three\n").fingerprint())
+        self.assertEqual(before.head, after.head)
+        refilled = item(base.replace("J-102 claude", "J-102 muse"))
+        self.assertNotEqual(before.head, refilled.head)       # a changed queue is listed again
+
 
 class Whole(unittest.TestCase):
     """11-12: 647 branches, a 500-item paged() cap, and fb-bot/integrate-j109 was never seen."""

@@ -1183,6 +1183,11 @@ public:
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
+    // J-060: his limb (a sphere of `radius`) swept from `from` to `to` meets
+    // a part of her body before anything else (steel, stock): the point on
+    // her part, its outward normal and the part's region.
+    [[nodiscard]] bool limb_contact(JPH::RVec3 from, JPH::RVec3 to, float radius, JPH::RVec3 *point,
+                                    JPH::Vec3 *normal, Matron::PartRegion *region) const noexcept;
     bool strike_in_hand_ = false;   // this strike began with him in her hand
     StrikePhase strike_phase_ = StrikePhase::Guard;
     int strike_ticks_ = 0;
@@ -1193,6 +1198,8 @@ public:
     std::uint64_t strike_hit_count_ = 0;
     JPH::RVec3 strike_point_ = JPH::RVec3::sZero();
     JPH::Vec3 strike_normal_ = JPH::Vec3::sZero();
+    JPH::Vec3 strike_drive_ = JPH::Vec3::sZero();  // J-060: the way the landed limb was driven (its force's line)
+    std::uint8_t strike_part_ = 255;  // J-060: the part of her the blow met (Matron::PartRegion), 255 none
     float strike_impulse_ns_ = 0.0F;
     void grab_reset(JPH::BodyInterface &bodies) noexcept;
     void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;

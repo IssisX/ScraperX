@@ -78,6 +78,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
     build_stance_shapes();
+    build_part_shapes();
     // Her deck: down the middle of each band, the catwalk across, and in off
     // the north band round the ladder's west rail to its foot; her post in the
     // mouth of Stage A's cage, facing out over the band; the cage's eye on its
@@ -3797,14 +3798,27 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::ArmPlay:
     case State::Release:
     case State::Spare:
-    case State::Claimed:
+    case State::Claimed: {
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
-        // and her hands on it: a lead she has, seen, where it is.
-        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
-                  floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
-                  noise_heard_, Sense::Touch);
-        step_hold(dt, ev.felt_at);
+        // and her hands on it: a lead she has, seen, where it is. A reach
+        // tick without eyes or body on him (J-049) has only her ears: a lead
+        // where he is heard; nothing heard, the lead stays as it was and her
+        // hold has the last place she had him.
+        RVec3 had = ev.felt_at;
+        if (ev.touch) {
+            take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
+                      floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
+                      noise_heard_, Sense::Touch);
+        } else if (ev.heard()) {
+            had = ev.heard_at;
+            take_lead(float(had.GetX()), float(had.GetZ()), floor_at(float(had.GetX()), float(had.GetY()), float(had.GetZ())),
+                      noise_heard_, Sense::Hearing);
+        } else {
+            (void)ev.last_place(had);
+        }
+        step_hold(dt, had);
         break;
+    }
     case State::Staggering:
     case State::Down:
         // Knocked about: no eyes on the player, and every sound runs on
@@ -5378,11 +5392,14 @@ void Matron::take_blow(const float dt) {
         // the region it hits takes the dose, once (J-044a §D).
         // player_blow_at_ survives clear_player_blow() (it clears only the
         // impulse and the low flag), so the point is still here.
-        injury_.credit(injury::classify_contact(
-                           Vec3(static_cast<float>(player_blow_at_.GetX()),
-                                static_cast<float>(player_blow_at_.GetY()),
-                                static_cast<float>(player_blow_at_.GetZ())),
-                           eye_mid, eye_fwd),
+        // J-060: a blow her arm took is on her arm, which has no drawn
+        // region: unclassified, never the chest or face behind it.
+        injury_.credit(player_blow_on_arm_ ? injury::Region::Unclassified
+                                           : injury::classify_contact(
+                                                 Vec3(static_cast<float>(player_blow_at_.GetX()),
+                                                      static_cast<float>(player_blow_at_.GetY()),
+                                                      static_cast<float>(player_blow_at_.GetZ())),
+                                                 eye_mid, eye_fwd),
                        player_ns);
     }
     if (damage_lethal_at_ns(damage_ns_)) {
