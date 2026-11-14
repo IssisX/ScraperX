@@ -19,8 +19,9 @@ Read through: 1794664120 (2026-11-14 mail+asks)
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
   alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
-- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
-  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
+- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (the `advisor` tool is Fable, ~/.claude/settings.json):
+  for important calls, above all every design change to the collaboration system before it is built (Cory 11-14, asked ~10 times;
+  skipped on the clock and helper calls that day); also a 2nd failed fix and before "system done". Not for small first problems.
 - This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper; the app runs every helper in the background (host sets CLAUDE_AUTO_BACKGROUND_TASKS=true; CLAUDE.md, 11-14); Cory 11-14: a 2nd session for helper work until the cheaper way he means is found (he says it is not a session; ask him what it is). Open: RED-TRUNK missed a late-finishing red trunk run (#547 merge, touch-1 timeout): fix in session_01W3SSMz553jqjWF15r2ZH8f, branch claude/integrate-j072-trunk-alarm; Cory 11-14 "yes": SYSTEM DONE when that alarm fix lands with its replay test (no 6-landing recount), then banner; problems found in use get fixed. Parallel helpers OK (Cory 11-13: fast), max four. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
