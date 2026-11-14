@@ -17,7 +17,7 @@ the safe-looking long one (11-14: a helper's 6 h Muse-quiet alarm, passed on unc
 An agent's own blocker (memory, disk, a tool) gets the fix told that hour, never only a workaround (11-14: Muse's low
 memory got "push anyway"; Cory had to tell it to clear space).
 The machine obeys "only what changed" too: each run, look at the newest proof runs; one that ran groups its change does
-not reach is waste, fixed that run (11-14: dispatched proofs ran all 13 jobs; Claude called a 28 min run normal).
+not reach is waste, fixed that run (11-14: dispatched proofs ran all 13 jobs).
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Session effort is his call: mention it only when he throttles; ultracode on: tell him once (11-12).
 
