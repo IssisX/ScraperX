@@ -559,6 +559,18 @@ func _lid_for(region: String, mesh: ArrayMesh) -> MeshInstance3D:
 	return p
 
 
+# A checkpoint restore rewinds her doses: the cached maxima are stale, so
+# drop them and hide every patch and lid. The next update() rebuilds from
+# the restored dictionary; a later hit re-injures from scratch. Within a
+# run nothing calls this — the no-heal rule still holds there.
+func reset() -> void:
+	_seen.clear()
+	for region in _patches:
+		(_patches[region] as MeshInstance3D).visible = false
+	for region in _lids:
+		(_lids[region] as MeshInstance3D).visible = false
+
+
 func update(injury: Dictionary, rig: Variant, dt: float = 0.0) -> void:
 	_shown = true
 	_clock += dt

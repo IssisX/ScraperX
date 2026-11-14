@@ -238,6 +238,88 @@ class WorldGeometry(unittest.TestCase):
         self.assertIn(("BLOCK", "world-geometry"), _edit_findings("src/sim/world_solids.inc", old, new))
 
 
+def _const_resolver(uses):
+    """A stub usage resolver: constant name -> [(path, lineno, text, func)] of its uses at the head."""
+    def resolve(name):
+        return uses.get(name, [])
+    return resolve
+
+
+def _const_findings(path, old, new, uses, ctx=""):
+    """rule_check's findings for one file going from old to new, with a stub usage resolver."""
+    import difflib
+    rc = _load()
+    body = list(difflib.unified_diff(old, new, f"a/{path}", f"b/{path}", lineterm="", n=3))
+    if ctx:
+        body = [line + " " + ctx if line.startswith("@@") else line for line in body]
+    rc.check(rc.parse(f"diff --git a/{path} b/{path}\n" + "\n".join(body) + "\n"), _const_resolver(uses))
+    return [(level, rule) for level, _f, _n, rule, _t in rc.findings]
+
+
+TUNING_HPP = "src/sim/physics_world_tuning.hpp"
+RAIL_USE = ("src/sim/physics_world.cpp", 1445,
+            "                  JPH::RVec3(kHangRailX, kHangRailTopY - 0.5F * kHangRailSection,",
+            "void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {")
+RAIL_OLD = ["// the hang rail: a hold-sized beam along the crossing.",
+            "constexpr float kHangRailX = -2.15F;",
+            "constexpr float kHangRailSection = 0.12F;",
+            "constexpr float kHangRailTopY =",
+            "    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness;   // the 154 deck's soffit, 153.50",
+            "constexpr float kHangRailNorthZ = -129.35F;"]
+RAIL_NEW = ["// the hang rail: a hold-sized beam along the crossing.",
+            "constexpr float kHangRailX = -2.15F;",
+            "constexpr float kHangRailSection = 0.12F;",
+            "constexpr float kHangRailTopY =",
+            "    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;   // 0.50 m below the soffit, 153.00",
+            "constexpr float kHangRailNorthZ = -129.35F;"]
+
+
+class TuningHeaderGeometry(unittest.TestCase):
+    """J-135: a tuning-header constant that places a world body is a protected change, found by what uses it —
+    not by a hand list. J-043's rail drop (kHangRailTopY 153.50 -> 153.00) went through clean; it must BLOCK."""
+
+    def test_a_tuning_constant_used_to_place_a_body_blocks(self):
+        self.assertEqual(_const_findings(TUNING_HPP, RAIL_OLD, RAIL_NEW, {"kHangRailTopY": [RAIL_USE]}),
+                         [("BLOCK", "world-geometry-changed")])
+
+    def test_a_constant_used_through_another_constant_blocks(self):
+        # kStackLevelHeight moves the rail through kHangRailTopY's definition: the use is a continuation
+        # line of kHangRailTopY's multi-line definition, so its function context names that definition.
+        uses = {"kStackLevelHeight": [(TUNING_HPP, 804,
+                                       "    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;",
+                                       "constexpr float kHangRailTopY =")],
+                "kHangRailTopY": [RAIL_USE]}
+        old = ["constexpr float kStackLevelHeight = 11.0F;"]
+        new = ["constexpr float kStackLevelHeight = 11.5F;"]
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [("BLOCK", "world-geometry-changed")])
+
+    def test_a_non_geometry_tuning_change_does_not_block(self):
+        old = ["constexpr float kGripNewtons = 900.0F;"]
+        new = ["constexpr float kGripNewtons = 800.0F;"]
+        uses = {"kGripNewtons": [("src/sim/matron.cpp", 100, "    grip = kGripNewtons * hold;",
+                                  "void Matron::grip(const Input &input) {")]}
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [])
+
+    def test_a_comment_only_change_to_a_geometry_constant_is_clean(self):
+        said = list(RAIL_NEW)
+        said[4] = ("    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;"
+                   "   // 0.50 m below the soffit")
+        self.assertEqual(_const_findings(TUNING_HPP, RAIL_NEW, said, {"kHangRailTopY": [RAIL_USE]}), [])
+
+    def test_a_constant_used_only_in_another_build_function_is_review(self):
+        old = ["constexpr float kEndingPad = 0.40F;"]
+        new = ["constexpr float kEndingPad = 0.45F;"]
+        uses = {"kEndingPad": [("src/sim/summit.cpp", 10, "    const float pad = kEndingPad;",
+                                "void Summit::build_ending() {")]}
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [("REVIEW", "possible-world-geometry")])
+
+    def test_a_renamed_constant_is_not_a_value_change(self):
+        old = ["constexpr float kOldRailY = 153.50F;"]
+        new = ["constexpr float kNewRailY = 153.50F;"]
+        uses = {"kNewRailY": [RAIL_USE]}
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [])
+
+
 CLAUDE_MD = ["# Rules", "", "Intro.", "", "## Settled: never reopen (Cory's calls)", "", "- Trunk is `ScraperX-Claude`.",
              "- No per-job money cap.", "", "## Test only what a change reaches", "", "- Rerun only that test."]
 
@@ -296,6 +378,176 @@ class SettledCalls(unittest.TestCase):
         rc = _load()
         text = (pathlib.Path(__file__).resolve().parents[2] / rc.SETTLED_FILE).read_text(encoding="utf-8")
         self.assertEqual(sum(1 for line in text.splitlines() if line.startswith(rc.SETTLED_HEADING)), 1)
+
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+AUDIT = "tests/sim_tests_matron_budget.cpp"
+AUDIT_ROWS = ['    {"matron-mischief", Path::GrabArm, false, true, 252.0, 292.0},',
+              '    {"matron-damage", Path::GrabSpring, false, true, 1339.0, 2012.0},',
+              '    {"matron-damage", Path::GrabArm, false, true, 406.0, 389.0},',
+              '    {"strike", Path::GrabSpring, false, true, 2245.0, 3963.0},',
+              "};",
+              "",
+              "constexpr double kGrowth = 1.10;          // a listed leak may not grow past its measured peak by more than this",
+              "constexpr double kResidualN = 1.0;        // a force on her that no path recorded"]
+
+
+class BudgetAuditList(unittest.TestCase):
+    """J-138: the budget audit's list of known leaks is a protected limit. J-040 raised matron-damage's grab spring
+    from 1339 N / 2012 W to 1615 N / 3603 W (ede130b0) and the check said nothing."""
+
+    def edited(self, index, text, insert=False):
+        lines = list(AUDIT_ROWS)
+        if insert:
+            lines.insert(index, text)
+        elif text is None:
+            del lines[index]
+        else:
+            lines[index] = text
+        return _edit_findings(AUDIT, AUDIT_ROWS, lines)
+
+    def test_the_j040_raise_blocks(self):
+        self.assertEqual(self.edited(1, '    {"matron-damage", Path::GrabSpring, false, true, 1615.0, 3603.0},'),
+                         [("BLOCK", "budget-audit-loosened")])
+
+    def test_a_new_row_or_a_flag_turned_on_blocks_as_loosened(self):
+        self.assertEqual(self.edited(3, '    {"matron-new", Path::Knee, false, true, 900.0, 900.0},', insert=True),
+                         [("BLOCK", "budget-audit-loosened")])
+        self.assertEqual(self.edited(1, '    {"matron-damage", Path::GrabSpring, true, true, 1339.0, 2012.0},'),
+                         [("BLOCK", "budget-audit-loosened")])
+        self.assertEqual(self.edited(1, '    {"matron-damage", Path::GrabSpring, false, true, law::kLungeForceN, 2012.0},'),
+                         [("BLOCK", "budget-audit-loosened")])   # a peak no longer a number: read as looser
+
+    def test_a_lowered_peak_is_still_a_moved_limit(self):
+        self.assertEqual(self.edited(1, '    {"matron-damage", Path::GrabSpring, false, true, 1200.0, 2012.0},'),
+                         [("BLOCK", "budget-audit-changed")])
+
+    def test_an_audit_constant_changed_blocks(self):
+        self.assertEqual(self.edited(6, "constexpr double kGrowth = 1.25;          // a listed leak may not grow past its "
+                                        "measured peak by more than this"), [("BLOCK", "budget-audit-changed")])
+
+    def test_a_dropped_row_is_review_and_a_comment_or_a_move_is_clean(self):
+        self.assertEqual(self.edited(1, None), [("REVIEW", "budget-audit-entry-dropped")])
+        self.assertEqual(self.edited(1, AUDIT_ROWS[1] + "  // J-040: measured 11-05"), [])
+        moved = [AUDIT_ROWS[1], AUDIT_ROWS[0]] + AUDIT_ROWS[2:]
+        self.assertEqual(_edit_findings(AUDIT, AUDIT_ROWS, moved), [])
+
+    def test_the_real_list_is_read(self):
+        rc = _load()
+        text = (REPO / AUDIT).read_text(encoding="utf-8")
+        rows = rc.AUDIT_ROW.findall(text)
+        self.assertGreaterEqual(len(rows), 35)   # 39 on 11-13
+        self.assertIn(("matron-damage", "GrabSpring"), {(r[0], r[1]) for r in rows})
+
+
+KEY_FILE = ["namespace {",
+            "std::uint64_t save_format_key() noexcept {",
+            "    std::uint64_t key = 0x5358434C494D4233ULL;",
+            "    const std::size_t sizes[] = {sizeof(Slingshot::State), sizeof(JPH::RVec3)};",
+            "    return key;",
+            "}",
+            "} // namespace"]
+STATE_CPP = ["void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {",
+             "    w.pod(tick_);",
+             "    w.pod(matron_saved_);   // her injuries",
+             "    w.pod(slingshot_.state());",
+             "}",
+             "",
+             "void Simulation::PhysicsWorld::warm(int n) {",
+             "    if (sim.load_game(bytes.data(), bytes.size())) {",
+             "        warm_ = n;",
+             "    }",
+             "}"]
+SLINGSHOT_HPP = ["namespace scraperx::sim {",
+                 "class Slingshot final {",
+                 "  public:",
+                 "    struct State {",
+                 "        float stretch = 0.0F;",
+                 "        bool released = false;",
+                 "    };",
+                 "    struct Tuning {",
+                 "        float stiffness = 900.0F;",
+                 "    };",
+                 "};",
+                 "struct Saved {",
+                 "    float wound = 0.0F;",
+                 "};",
+                 "} // namespace scraperx::sim"]
+
+
+def _save_findings(path, old, new, key_file=KEY_FILE):
+    """rule_check's findings for one file going from old to new, with both sides' texts given to the save rule."""
+    import difflib
+    rc = _load()
+    body = list(difflib.unified_diff(old, new, f"a/{path}", f"b/{path}", lineterm="", n=3))
+    sides = {"old": old, "new": new}
+
+    def texts(side, p):
+        if p == path:
+            return "\n".join(sides[side])
+        return "\n".join(key_file) if p == rc.SAVE_KEY_FILE else None
+
+    rc.check(rc.parse(f"diff --git a/{path} b/{path}\n" + "\n".join(body) + "\n"), None, texts)
+    return [(level, rule) for level, _f, _n, rule, _t in rc.findings]
+
+
+class SaveLayout(unittest.TestCase):
+    """J-138: the save layout is protected (CLAUDE.md, AGENTS.md). Its readers and writers, the Saved* structs and
+    the types save_format_key saves whole are found in the file's own text; a code change in one is a BLOCK."""
+
+    BLOCK = [("BLOCK", "save-layout-changed")]
+    CPP = "src/sim/physics_world_state.cpp"
+    HPP = "src/sim/slingshot.hpp"
+
+    def edit(self, lines, index, text):
+        out = list(lines)
+        if text is None:
+            del out[index]
+        else:
+            out[index] = text
+        return out
+
+    def test_a_written_field_added_changed_reordered_or_removed_blocks(self):
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, STATE_CPP[:3] + ["    w.pod(extra_);"] + STATE_CPP[3:]),
+                         self.BLOCK)
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, self.edit(STATE_CPP, 2, "    w.pod(matron_.saved());")),
+                         self.BLOCK)
+        swapped = STATE_CPP[:2] + [STATE_CPP[3], STATE_CPP[2]] + STATE_CPP[4:]
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, swapped), self.BLOCK)   # the bytes move
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, self.edit(STATE_CPP, 3, None)), self.BLOCK)
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, STATE_CPP[5:]), self.BLOCK)   # the whole writer gone
+
+    def test_a_comment_a_call_site_or_another_function_is_clean(self):
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, self.edit(STATE_CPP, 2, "    w.pod(matron_saved_);   // all")), [])
+        self.assertEqual(_save_findings(self.CPP, STATE_CPP, self.edit(STATE_CPP, 8, "        warm_ = 2 * n;")), [])
+
+    def test_a_saved_struct_or_a_type_saved_whole_blocks_and_its_neighbour_does_not(self):
+        self.assertEqual(_save_findings(self.HPP, SLINGSHOT_HPP,
+                                        self.edit(SLINGSHOT_HPP, 5, "        bool released = false, held = false;")),
+                         self.BLOCK)   # Slingshot::State: in save_format_key's sizeof list
+        self.assertEqual(_save_findings(self.HPP, SLINGSHOT_HPP, self.edit(SLINGSHOT_HPP, 12, "    double wound = 0.0;")),
+                         self.BLOCK)   # Saved
+        self.assertEqual(_save_findings(self.HPP, SLINGSHOT_HPP,
+                                        self.edit(SLINGSHOT_HPP, 8, "        float stiffness = 950.0F;")), [])
+        # without State in the key's list it is an ordinary struct
+        self.assertEqual(_save_findings(self.HPP, SLINGSHOT_HPP,
+                                        self.edit(SLINGSHOT_HPP, 5, "        bool released = false, held = false;"),
+                                        key_file=KEY_FILE[:3] + KEY_FILE[4:]), [])
+
+    def test_the_real_save_code_is_found(self):
+        rc = _load()
+        keys = rc.save_key_types((REPO / rc.SAVE_KEY_FILE).read_text(encoding="utf-8"))
+        self.assertIn(("Slingshot", "State"), keys)
+
+        def found(path):
+            return {w for _a, _b, w in rc.save_regions((REPO / path).read_text(encoding="utf-8"), keys)}
+
+        self.assertIn("a reader or writer of the save", found("src/sim/physics_world_state.cpp"))
+        self.assertIn("a reader or writer of the save", found("src/sim/physics_world_fabricated.cpp"))
+        self.assertIn("a reader or writer of the save", found(rc.SAVE_KEY_FILE))
+        self.assertIn("Saved, a saved struct", found("src/sim/matron.hpp"))
+        self.assertIn("SaveWriter, a saved struct", found("src/sim/physics_world_support.hpp"))
+        self.assertIn("vertical::Command, saved whole (save_format_key)", found("src/sim/vertical/vertical_machine.hpp"))
 
 
 if __name__ == "__main__":

@@ -275,6 +275,38 @@ func _wet(device: int) -> bool:
 func _wet_state() -> Dictionary:
 	return _native().get_wet_state()
 
+# A mission's done flag (J-129, src/sim/objectives.hpp). `id` is the
+# Objectives::Id value: 0 is Mission 1 "Clock in", 1 is Mission 7 "Bring the
+# plant up". The bridge getter is_objective_done(id) lands with the
+# per-tick hook follow-up, after J-116 (#438); until then this fails
+# cleanly with the reason, no SCRIPT ERROR from a missing method.
+func _objective_done(id: int, timeout: float) -> bool:
+	if not _native().has_method("is_objective_done"):
+		return _fail("the bridge has no objective getter yet (the J-129 hook follow-up)")
+	var done: bool = await _wait_until(
+		func() -> bool: return bool(_native().is_objective_done(id)), timeout)
+	if not done:
+		return _fail("mission %d's done flag never turned true" % id)
+	return true
+
+# Mission 7 "Bring the plant up" (J-132, #458): touch_wet, 220 to 340 m —
+# D's float ram, E's chiller, F's accumulator, in order — and the mission's
+# done flag (J-129) must turn true. The legs are the same shared helpers
+# touch_wet plays, so the mission is the same play, not a second one.
+func _mission_7(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var deaths := int(_native().get_death_count())
+	if not (await _wet_d(device) and await _wet_e(device) and await _wet_f(device)):
+		return false
+	if int(_native().get_death_count()) != deaths:
+		return _fail("the climber died bringing the plant up")
+	# Objectives::Id::Mission7BringPlantUp is 1.
+	if not await _objective_done(1, 5.0):
+		return false
+	await _pose("mission_7_top")
+	_detail = "tp340_y=%.2f" % _position().y
+	return true
+
 # Faces the handle ahead at (x, z) along `facing`, GRABs `name` (entity
 # `handle`) and steps back with it until `done` holds, then lets go.
 func _pull_handle(device: int, at: Vector2, facing: Vector2, handle: int, name: String,

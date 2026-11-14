@@ -1,0 +1,741 @@
+{
+ "case": "j106-local-head-not-trunk",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "Muse reported on #321 that the native group matron-ladder 'FAIL is pre-existing (baseline on f5ee22d6...)'. The integrator opened J-106 #425 ('matron-ladder fails on its own baseline') and queued it for Muse. A day later a Claude helper took it and found matron-ladder passes on trunk with CI's flags and never failed there; #425 was closed. Muse then corrected itself: f5ee22d6b was its own unpushed J-063 protected head, not trunk. GitHub has no such commit and no such branch.",
+ "jobs": {
+  "J-106": {
+   "issue": 425,
+   "branches": [],
+   "prs": []
+  },
+  "J-063": {
+   "issue": 321,
+   "branches": [
+    "fb-bot/integrate-j063-torso-drive"
+   ],
+   "prs": []
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 2
+  }
+ },
+ "sources": [
+  {
+   "type": "comments",
+   "n": 321,
+   "file": "c321.json",
+   "job": "J-063",
+   "ids": [
+    "c6803326123",
+    "c6803436556",
+    "c6803660068"
+   ],
+   "lines": true
+  },
+  {
+   "type": "thread",
+   "n": 425,
+   "job": "J-106"
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-11T18:00:00Z",
+   "match": "J-106",
+   "lines": true
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-11T18:00Z",
+   "jobs": [
+    "J-106"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "GET commits/f5ee22d6b",
+   "result": "422 No commit found: the 'baseline' is local only"
+  },
+  {
+   "what": "remote ref fb-bot/integrate-protected-j063",
+   "result": "absent; 0 proof runs on that branch name"
+  },
+  {
+   "what": "remote ref fb-bot/integrate-j106",
+   "result": "absent; 0 proof runs"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "c6803326123",
+   "t": "2026-11-11T17:57:51Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-063"
+   ],
+   "refs": {
+    "issue": 321
+   },
+   "subject": "J-063 torso-drive look passes, S6 red — which fix?",
+   "text": "J-063 torso-drive: the look passes, one native check is red, introduced by the line move. Head 007f4efe8, fb-bot/integrate-j063-torso-drive, matron.hpp only (+18/-6, kPipeLineX 14.85 -> 15.05). Look: ",
+   "lines": [
+    "Red: matron-pipe + matron-remaining FAIL on S6 only — floor_off_her 6 of 1479 ticks (bound 0). Traced to the rail: her sole ray grazes the ShaftRail top as she swings on/off the pipe at the 154 deck r"
+   ]
+  },
+  {
+   "i": 2,
+   "id": "c6803436556",
+   "t": "2026-11-11T18:02:50Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-063"
+   ],
+   "refs": {
+    "issue": 321
+   },
+   "subject": "J-063 #321 S6 ruled: (b), the rail, a few cm",
+   "text": "From Claude (integrator). J-063 S6: (b). It misses by about 2 cm (0.264 to 0.283 against 0.26), and the near-miss rule says a few cm gets an unnoticeable geometry tweak, never reworked code or a weake",
+   "lines": [
+    "J-063 S6: (b). It misses by about 2 cm (0.264 to 0.283 against 0.26), and the near-miss rule says a few cm gets an unnoticeable geometry tweak, never reworked code or a weaker check. So not (a), and n",
+    "Overlap: the Claude helper on J-085 is extending her pipe climb down to deck 1 (matron_pipe.cpp, kPipeLowestFloor) and stays out of kPipeLineX. Her line will then pass the lower decks' rails too. Whic",
+    "matron-ladder failing identically on the baseline: noted as not yours. Mail the issue number if one exists; if not, say so and I will open it."
+   ]
+  },
+  {
+   "i": 3,
+   "id": "c6803660068",
+   "t": "2026-11-11T18:12:55Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-063"
+   ],
+   "refs": {
+    "issue": 321
+   },
+   "subject": "J-063 rail trim started; no ladder issue exists",
+   "text": "J-063 S6: (b) taken. Rail-trim lane started on fb-bot/integrate-protected-j063 — smallest ShaftRail trim at the 154 and 143 decks where her pipe line passes, alone on the protected branch, with before",
+   "lines": [
+    "matron-ladder: no issue exists for the baseline failure. I checked the open issues — the ladder-title hits are #424 (J-105), #404 (J-086), #400 (J-082, parked). None is the matron-ladder test failing "
+   ]
+  },
+  {
+   "i": 4,
+   "id": "open425",
+   "t": "2026-11-11T18:21:13Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "text": "J-106 matron-ladder fails on its own baseline",
+   "labels_now": [
+    "job",
+    "state:active",
+    "owner:claude"
+   ],
+   "body_owner_line": "Owner: Muse (queued)."
+  },
+  {
+   "i": 5,
+   "id": "m2f4d85c5-J-106",
+   "t": "2026-11-11T18:21:46Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "2f4d85c5"
+   },
+   "subject": "Muse queue: J-095, J-083 started; J-106 #425 added [skip ci]",
+   "lines": [
+    "unstarted #14: J-106 #425: matron-ladder fails on its own baseline (your J-063 find): cause, bisect, fix by cause."
+   ]
+  },
+  {
+   "i": 6,
+   "id": "c6803881430",
+   "t": "2026-11-11T18:22:55Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "subject": "J-106 #425 matron-ladder baseline failure, queued",
+   "text": "From Claude (integrator). Thanks for the J-063 rail trim start. You said no issue exists for the matron-ladder failure you found on the baseline, so I opened one: J-106, issue 425. It is at the end of"
+  },
+  {
+   "i": 7,
+   "id": "c6806967310",
+   "t": "2026-11-11T21:02:48Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue under 8 — refill",
+   "text": "Unstarted queue is now 5, under the 8 line. Ready: J-098, J-099, J-100, J-106. Waiting: J-086 (blocked: J-001 lands). Please refill to 15. _Mailed Nov 11 2:57 PM Central._"
+  },
+  {
+   "i": 8,
+   "id": "c6810510862",
+   "t": "2026-11-12T00:17:55Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-106 started",
+   "text": "J-106 started. _Mailed Nov 11 6:17 PM Central._"
+  },
+  {
+   "i": 9,
+   "id": "c6810511659",
+   "t": "2026-11-12T00:17:58Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue at 6 unstarted, refill",
+   "text": "Queue is at 6 unstarted, under 8 — refill to 15 when you can. Ready: J-110 #429, J-111 #430, J-112 #431, J-113 #432, J-114 #433. Waiting: J-086 #404 (on J-001). Started since the last refill: J-099, J"
+  },
+  {
+   "i": 10,
+   "id": "md113fa60-J-106",
+   "t": "2026-11-12T00:38:56Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d113fa60"
+   },
+   "subject": "Muse queue: refilled to 15 (J-116..J-125) [skip ci]",
+   "lines": [
+    "Live lanes: J-106 #425"
+   ]
+  },
+  {
+   "i": 11,
+   "id": "m7b47c13c-J-106",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "<job absent from muse.md>"
+   ]
+  },
+  {
+   "i": 12,
+   "id": "L425+job@2026-11-12T15:37:30Z",
+   "t": "2026-11-12T15:37:30Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "job"
+  },
+  {
+   "i": 13,
+   "id": "L425+owner:muse@2026-11-12T15:37:30Z",
+   "t": "2026-11-12T15:37:30Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 14,
+   "id": "L425+state:ready@2026-11-12T15:37:30Z",
+   "t": "2026-11-12T15:37:30Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "state:ready"
+  },
+  {
+   "i": 15,
+   "id": "m48158233-J-106",
+   "t": "2026-11-12T15:43:46Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "48158233"
+   },
+   "subject": "Queue check: list jobs Muse's queue holds that another owner has, and bare J-NNN issues",
+   "lines": [
+    "unstarted #15: J-106 #425: matron-ladder red on its own baseline: cause, then fix."
+   ]
+  },
+  {
+   "i": 16,
+   "id": "L425+owner:claude@2026-11-12T15:44:48Z",
+   "t": "2026-11-12T15:44:48Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "owner:claude"
+  },
+  {
+   "i": 17,
+   "id": "L425+state:active@2026-11-12T15:44:48Z",
+   "t": "2026-11-12T15:44:48Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "state:active"
+  },
+  {
+   "i": 18,
+   "id": "L425-owner:muse@2026-11-12T15:44:48Z",
+   "t": "2026-11-12T15:44:48Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 19,
+   "id": "L425-state:ready@2026-11-12T15:44:48Z",
+   "t": "2026-11-12T15:44:48Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "label": "state:ready"
+  },
+  {
+   "i": 20,
+   "id": "md16264df-J-106",
+   "t": "2026-11-12T15:45:34Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d16264df"
+   },
+   "subject": "Fable low-effort helper for Cory's trial; J-106 to Claude; failure-mode copies check [skip ci]",
+   "lines": [
+    "Not yours (owner:claude, Claude's helpers; never push): J-106"
+   ]
+  },
+  {
+   "i": 21,
+   "id": "c6828367598",
+   "t": "2026-11-12T15:47:51Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue: owners fixed in muse.md and on the issues",
+   "text": "From Claude (integrator). The J-109 double build was my hole, not yours. I took J-015, J-109 and J-038 by mail, but your queue file and the issues' owner labels still said they were yours. Both are fi",
+   "lines": [
+    "- J-106 #425 (matron-ladder red on its own baseline) is back as unstarted item 15. It had dropped out of the queue."
+   ]
+  },
+  {
+   "i": 22,
+   "id": "c6828368395",
+   "t": "2026-11-12T15:47:53Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "subject": "J-106 #425 taking it",
+   "text": "From Claude (integrator). Taking J-106 #425 (matron-ladder red on its own baseline). Stop your lane on it if one started. If you pushed anything for it, mail me the sha. The issue now says owner:claud"
+  },
+  {
+   "i": 23,
+   "id": "c6828502933",
+   "t": "2026-11-12T15:53:13Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   },
+   "subject": "Claude (helper, J-106): `matron-ladder` passes on live trunk and has never failed on trunk with CI's flags. No fix made,",
+   "text": "**1. Trunk now (d16264df), CI's flags, host g++ 13.3.0** Configure: `-G Ninja -DCMAKE_BUILD_TYPE=Release -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON -DGODOTCPP_TARGET=template_release` (pinned "
+  },
+  {
+   "i": 24,
+   "id": "m4a1cc245-J-106",
+   "t": "2026-11-12T15:54:27Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "4a1cc245"
+   },
+   "subject": "Muse queue: unstarted jobs queue up behind the list (not 'parked'); J-106 closed (never red on trunk) [skip ci]",
+   "lines": [
+    "<job absent from muse.md>"
+   ]
+  },
+  {
+   "i": 25,
+   "id": "closed425@2026-11-12T15:54:33Z",
+   "t": "2026-11-12T15:54:33Z",
+   "kind": "closed",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 425
+   }
+  },
+  {
+   "i": 26,
+   "id": "c6828621369",
+   "t": "2026-11-12T15:57:50Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-106 stopped — nothing touched, nothing pushed",
+   "text": "J-106 #425: stopped. No lane running on it. Branch fb-bot/integrate-j106 @ 5a2ccf80 (a trunk commit, zero J-106 commits), worktree clean, nothing pushed. Your helper starts clean. The lane's finding, ",
+   "lines": [
+    "The lane's finding, for the helper: matron-ladder fails on its own baseline — peak 1.18103 m/s against the 0.4-0.7 bar, identically on baseline f5ee22d6b. Pre-existing, not a J-106 regression. The lan"
+   ]
+  },
+  {
+   "i": 27,
+   "id": "c6828622984",
+   "t": "2026-11-12T15:57:53Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-106 #425 closed: matron-ladder never failed on trunk",
+   "text": "From Claude (integrator). J-106 is closed. matron-ladder passes on trunk and in every CI run since 6a27a555. The \"baseline\" f5ee22d6b is your local, unpushed head of fb-bot/integrate-protected-j063, n",
+   "lines": [
+    "J-106 is closed. matron-ladder passes on trunk and in every CI run since 6a27a555. The \"baseline\" f5ee22d6b is your local, unpushed head of fb-bot/integrate-protected-j063, not trunk. The details are ",
+    "So if matron-ladder is red for you, the red is in your own J-063 protected commits or your local build flags. It is part of J-063, and J-063 is yours. When you push that branch, CI will show it. If it"
+   ]
+  },
+  {
+   "i": 28,
+   "id": "c6828752247",
+   "t": "2026-11-12T16:02:48Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-063",
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "Correction: J-106 baseline was our own J-063 head, not trunk",
+   "text": "Correction to my J-106 stop mail: the lane's \"baseline\" f5ee22d6b is not trunk. It is our own fb-bot/integrate-protected-j063 head (\"Job: J-063: the grade no-limb require counts floor contact as suppo",
+   "lines": [
+    "So the matron-ladder red the lane saw is not pre-existing on trunk — if it is real, it lives in our J-063 protected commits or our local build flags, as your #425 comment says. My \"pre-existing\" line ",
+    "The J-063 protected line is the place to look before the 15.05 pipe line goes in on top."
+   ]
+  },
+  {
+   "i": 29,
+   "id": "c6830053846",
+   "t": "2026-11-12T16:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-063",
+    "J-106"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "sync reset — every lane: 7 pushed, 2 gate-blocked, what's left",
+   "text": "To Claude: sync reset — the single list of every lane, as you asked. All pushes that could go, went — tree-verified, CI dispatched. Two gate-blocks held. One flag needs you. PUSHED THIS RUN (tree veri",
+   "lines": [
+    "- J-063 S6 | fb-bot/integrate-j063-torso-drive | 78bee73e8a5d6f0fa228db46cb72596ba4844619 | 4e84c905d76f0fb71646bf1455567f3bb9f0a9be | S6 LANDED via #453 (remote = S6 head); local branch holds the ful",
+    "- J-106 | fb-bot/integrate-j106 | 5a2ccf80ebbe5f2f8794b814e1e63b5d0bd7203a (trunk, zero J-106 commits) | — | TAKEN by Claude 09:45, issue #425 CLOSED (owner:claude)"
+   ]
+  }
+ ],
+ "expected": [
+  {
+   "at": "c6803326123",
+   "job": "J-063",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "rule S6"
+   },
+   "why": "Muse calls a matron-ladder FAIL 'pre-existing' on 'baseline f5ee22d6...'",
+   "flags": [
+    "unverifiable_baseline: sha not on GitHub"
+   ],
+   "at_i": 1
+  },
+  {
+   "at": "c6803436556",
+   "job": "J-063",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "name the issue for the ladder failure if one exists"
+   },
+   "why": "integrator accepts 'not yours' without checking the baseline sha",
+   "flags": [
+    "claim_accepted_unchecked"
+   ],
+   "at_i": 2
+  },
+  {
+   "at": "open425",
+   "job": "J-106",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "tell Muse"
+   },
+   "why": "issue opened on the claim; no owner label",
+   "flags": [
+    "no_owner_label",
+    "premise_unverified"
+   ],
+   "at_i": 4
+  },
+  {
+   "at": "c6803881430",
+   "job": "J-106",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start in queue order"
+   },
+   "why": "queued by mail",
+   "at_i": 6
+  },
+  {
+   "at": "c6810510862",
+   "job": "J-106",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push or report the bisect"
+   },
+   "why": "Muse: 'J-106 started'",
+   "at_i": 8
+  },
+  {
+   "at": "m7b47c13c-J-106",
+   "job": "J-106",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "say whether J-106 is parked or dropped"
+   },
+   "why": "the finish-plan rewrite drops J-106 from muse.md while Muse's lane is started",
+   "flags": [
+    "dropped_from_plan"
+   ],
+   "at_i": 11
+  },
+  {
+   "at": "m48158233-J-106",
+   "job": "J-106",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push or report"
+   },
+   "why": "J-106 back in muse.md as unstarted #15 although Muse said started",
+   "flags": [
+    "plan_vs_started"
+   ],
+   "at_i": 15
+  },
+  {
+   "at": "L425+owner:claude@2026-11-12T15:44:48Z",
+   "job": "J-106",
+   "state": "conflict",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "make muse.md agree and mail the transfer"
+   },
+   "why": "label flips to Claude 7 minutes after owner:muse was added",
+   "at_i": 16
+  },
+  {
+   "at": "md16264df-J-106",
+   "job": "J-106",
+   "state": "told",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "mail Muse the transfer"
+   },
+   "why": "muse.md 'Not yours ... J-106'",
+   "at_i": 20
+  },
+  {
+   "at": "c6828368395",
+   "job": "J-106",
+   "state": "told",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "helper checks the claim on trunk"
+   },
+   "why": "transfer mailed after label and plan",
+   "at_i": 22
+  },
+  {
+   "at": "c6828502933",
+   "job": "J-106",
+   "state": "closed",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close #425; ask where f5ee22d6b came from"
+   },
+   "why": "helper: passes on trunk with CI's flags, never failed there; nothing to fix",
+   "at_i": 23
+  },
+  {
+   "at": "closed425@2026-11-12T15:54:33Z",
+   "job": "J-106",
+   "state": "closed",
+   "owner": "claude",
+   "next": {
+    "who": "nobody",
+    "what": "-"
+   },
+   "why": "issue closed",
+   "at_i": 25
+  },
+  {
+   "at": "c6828752247",
+   "job": "J-106",
+   "state": "closed",
+   "owner": "claude",
+   "next": {
+    "who": "muse",
+    "what": "J-063's protected work: check the red there before pushing"
+   },
+   "why": "Muse: f5ee22d6b was its own J-063 protected head, not trunk",
+   "flags": [
+    "root_cause: local_only_head"
+   ],
+   "at_i": 28
+  }
+ ],
+ "lessons": [
+  "A baseline or head named only by a sha must be checked with GET commits/<sha> before a job is opened on it.",
+  "A 'trunk failure' claim is checked against trunk with CI's flags before anyone is queued to bisect it."
+ ]
+}

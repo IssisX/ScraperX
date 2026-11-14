@@ -259,6 +259,41 @@ func _save(device: int) -> bool:
 	await _seconds(0.5)
 	if not bool(_native().is_player_grounded()) or _position().y < 44.0:
 		return _fail("not standing on deck 4 after the load (y %.2f)" % _position().y)
+	# A relaunch in the middle of the climb (J-116): ride S2 up to Deck 6,
+	# save there, ride C2 on to Deck 8, then load the Deck 6 save as a
+	# relaunch would: the player, S2's cage and the death count come back
+	# as saved, not as the climb left them.
+	if not await _stack_s2(device):
+		return false
+	_main._save_enabled = true
+	_main._save_climb(true)
+	if not FileAccess.file_exists(path):
+		return _fail("no save written on Deck 6")
+	var mid_saved: Vector3 = _native().get_checkpoint_position()
+	var mid_s2 := float(_native().get_stack_s2_cage_travel())
+	var mid_deaths := int(_native().get_death_count())
+	var mid_bytes := FileAccess.get_file_as_bytes(path)
+	# Pin the Deck 6 save: the game writes a save every frame the
+	# checkpoint commits change, so riding C2 with autosave on would
+	# overwrite this file with Deck 8 before the relaunch load reads it.
+	_main._save_enabled = false
+	if not await _stack_c2(device):
+		return false
+	if not _main.load_saved_climb():
+		return _fail("the mid-climb save was not loaded")
+	var mid_loaded := _position()
+	if mid_loaded.distance_to(mid_saved) > 0.05 or int(_native().get_death_count()) != mid_deaths:
+		return _fail("relaunch loaded at (%.2f, %.2f, %.2f), deaths %d; saved (%.2f, %.2f, %.2f), deaths %d" % [
+			mid_loaded.x, mid_loaded.y, mid_loaded.z, int(_native().get_death_count()), mid_saved.x, mid_saved.y, mid_saved.z, mid_deaths])
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or _position().y < 66.5:
+		return _fail("not standing on Deck 6 after the relaunch (y %.2f)" % _position().y)
+	if absf(float(_native().get_stack_s2_cage_travel()) - mid_s2) > 0.05:
+		return _fail("S2's cage travel %.2f after the relaunch, saved %.2f" % [
+			float(_native().get_stack_s2_cage_travel()), mid_s2])
+	# The cut-short test below truncates the mid-climb save.
+	bytes = mid_bytes
+	_main._save_enabled = false
 	var cut := FileAccess.open(path, FileAccess.WRITE)
 	cut.store_buffer(bytes.slice(0, bytes.size() >> 1))
 	cut.close()
@@ -277,7 +312,7 @@ func _save(device: int) -> bool:
 	if FileAccess.file_exists(path):
 		return _fail("NEW CLIMB's discard left the save")
 	DirAccess.remove_absolute(path + ".bad")
-	_detail = "bytes=%d saved_y=%.2f" % [bytes.size(), saved.y]
+	_detail = "bytes=%d saved_y=%.2f mid_y=%.2f mid_s2=%.2f" % [bytes.size(), saved.y, mid_saved.y, mid_s2]
 	return true
 
 # The Stack from the game's own start at grade to the 220 m ring, on the
@@ -320,10 +355,10 @@ func _touch_radio(device: int) -> bool:
 	return true
 
 
-func _stack(device: int) -> bool:
-	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	var body := _watch_body()
-	var started := int(_native().get_tick_index())
+# S1's first leg, yard to 22 m (J-132, #458): the water-balance hoist run and
+# ridden to deck 2. Shared by touch_stack and the mission-1 scenario, so the
+# two can never drift apart: the leg is the same statements in both.
+func _stack_s1_leg(device: int) -> bool:
 	# S1, the water-balance hoist.
 	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
 		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
@@ -362,6 +397,34 @@ func _stack(device: int) -> bool:
 	if int(_native().get_support_entity_id()) != TOWER_ENTITY or _position().y < 22.5:
 		return _fail("off S1, not standing on deck 2 (y %.2f, on %d)" % [_position().y,
 			int(_native().get_support_entity_id())])
+	return true
+
+
+# Mission 1 "Clock in" (J-132, #458): touch_stack's first leg, yard to 22 m,
+# and the mission's done flag (J-129, src/sim/objectives.hpp) must turn true.
+# The flag latches while the cage is ridden to the top; the rider only steps
+# off onto deck 2 after it has.
+func _mission_1(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var deaths := int(_native().get_death_count())
+	if not await _stack_s1_leg(device):
+		return false
+	if int(_native().get_death_count()) != deaths:
+		return _fail("the climber died on the way up S1")
+	# Objectives::Id::Mission1ClockIn is 0.
+	if not await _objective_done(0, 5.0):
+		return false
+	await _pose("mission_1_top")
+	_detail = "deck2_y=%.2f travel=%.2f" % [_position().y, float(_native().get_stack_s1_cage_travel())]
+	return true
+
+
+func _stack(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var body := _watch_body()
+	var started := int(_native().get_tick_index())
+	if not await _stack_s1_leg(device):
+		return false
 	var at_deck2 := _position().y
 	await _pose("stack_deck2")
 	# C1, the facade: out onto the landing, round the cabinet, up onto it.

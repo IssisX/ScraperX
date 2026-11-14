@@ -1,5 +1,5 @@
 # Run after each build of scraperx_sim_tests (CMakeLists.txt): the binary checks
-# its own registry at start-up (a repeated name or order key fails), and its
+# its own registry at start-up (a repeated name fails; an order key may repeat), and its
 # SCRAPERX_SLICE names must be the CTest slices CMake registered from the same
 # files. A mismatch fails the build: no slice is ever silently left out of CTest.
 #   cmake -DTEST_BINARY=<scraperx_sim_tests> -DEXPECTED_SLICES=a,b,c -P check_registry.cmake
