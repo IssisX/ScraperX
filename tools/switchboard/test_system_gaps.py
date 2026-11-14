@@ -2,6 +2,7 @@
 
 RedTrunk     trunk's full proof red pages its owners at once, once per red streak, until a green full proof (J-129's
              doubled order key 1100 sat red about a day, hidden by notes-only pushes whose runs skip the build).
+Merged       a merge the switch makes is one MERGED inbox line (11-14: #555 and #396 were found only by hand).
 Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'
 No network, no clock, no files beyond a temporary checkout: GitHub and the time are given.
 """
@@ -152,6 +153,70 @@ class RedTrunk(unittest.TestCase):
         self.assertIn("owner Claude. Claude fixes it", it.line)
         self.assertEqual(ti.make(gh).muse_items([], frozenset()), [])
 
+
+
+class MergeGH(ti.FakeGH):
+    """The inbox's GitHub, whose merge PUT answers merged (or refuses, with `refuse`)."""
+
+    def __init__(self, *a, refuse="", **kw):
+        super().__init__(*a, **kw)
+        self.refuse = refuse
+
+    def write(self, method, path, body=None, what=""):
+        if method == "PUT" and path.endswith("/merge"):
+            self.writes.append((method, path, body))
+            return {"merged": False, "message": self.refuse} if self.refuse else {"merged": True}
+        return super().write(method, path, body, what)
+
+
+class Merged(unittest.TestCase):
+    def merge(self, gh, ref, number=555, now=NOW):
+        s = ti.steered(number=number, ref=ref, verdicts=[ti.land()])
+        return ti.make(gh, now).merge(s.facts, s.ctx, s.decision)
+
+    def lines(self, gh):
+        return [line for _, body in gh.posts if _ == switch.INBOX_PR for line in body.splitlines()
+                if line.startswith(("- MERGED #", "- digest, nothing to decide: MERGED #"))]
+
+    def test_the_integrators_own_merge_posts_at_once_one_line(self):
+        gh = MergeGH()
+        self.assertEqual(self.merge(gh, "claude/integrate-j072-merge-notice"), "")
+        self.assertEqual(ti.make(gh).inbox([]), 1)                         # at once: no hold, no digest
+        (line,) = self.lines(gh)
+        self.assertIn("MERGED #555 `claude/integrate-j072-merge-notice` at " + ti.HEAD[:8], line)
+        self.assertIn("trunk's proof now runs (The trunk proof is dispatched)", line)
+        self.assertEqual(ti.later(gh, 60).inbox([]), 0)                    # one line per merge, never repeated
+        self.assertEqual(len(self.lines(gh)), 1)
+        self.assertEqual(gh.state["merged"], [])
+
+    def test_a_muse_merge_never_posts_alone_and_rides_the_next_post(self):
+        gh = MergeGH()
+        self.merge(gh, "fb-bot/integrate-j129-objective-core")
+        self.assertEqual(ti.make(gh).inbox([]), 0)                         # a report: never a post alone
+        self.assertEqual([n for n, _ in gh.posts if n == switch.INBOX_PR], [])
+        self.merge(gh, "claude/integrate-j072-merge-notice", number=556, now=ti.NOW)
+        self.assertEqual(ti.later(gh, 5).inbox([]), 2)                     # the next post carries it
+        self.assertEqual(sorted(l.split("MERGED ")[1].split()[0] for l in self.lines(gh)), ["#555", "#556"])
+        self.assertTrue(any(l.startswith("- digest, nothing to decide: MERGED #555") for l in self.lines(gh)))
+        self.assertEqual(ti.later(gh, 90).inbox([]), 0)
+        self.assertEqual(len(self.lines(gh)), 2)
+
+    def test_a_merge_in_a_sweep_that_posts_no_inbox_is_listed_by_the_next_post(self):
+        gh = MergeGH()
+        self.merge(gh, "claude/integrate-j072-merge-notice")              # a targeted or quiet sweep: no inbox part
+        sw = ti.later(gh, 10)
+        self.assertTrue(sw.inbox_clock())                                  # a quiet sweep's clock sees it due
+        self.assertEqual(sw.inbox([]), 1)
+        self.assertEqual(len(self.lines(gh)), 1)
+
+    def test_a_refused_merge_and_a_dry_run_list_nothing(self):
+        gh = MergeGH(refuse="Base branch was modified")
+        self.assertIn("merge not done", self.merge(gh, "claude/integrate-j072-merge-notice"))
+        dry = MergeGH(dry_run=True)
+        self.assertEqual(self.merge(dry, "claude/integrate-j072-merge-notice"), "")
+        for g in (gh, dry):
+            self.assertEqual(g.state.get("merged") or [], [])
+            self.assertEqual(ti.make(g).merged_items(), ())
 
 if __name__ == "__main__":
     unittest.main()

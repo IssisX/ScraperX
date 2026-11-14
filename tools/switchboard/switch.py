@@ -161,7 +161,7 @@ TRUNK_SKIPPED_KEPT = 50
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
-INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "MERGED", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
@@ -171,6 +171,10 @@ DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
 MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
                                                # are dropped and named in the run's log (keep_held)
+# J-072 (11-14: #555 and #396 merged and the integrator found each only by hand): a merge the switch makes is one
+# MERGED item, kept in the sweep state (gh.state["merged"]) until an inbox post lists it, so a sweep that posts no
+# inbox loses none. The integrator's own (claude/) merges post at once; Muse's ride the next post.
+MAX_MERGED_HELD = 50
 MAX_INBOX_HELD = 200                           # wake items held between sweeps (gh.state["inbox"]["held"]), likewise
 MAX_RERUN_HEADS = 200                          # heads re-run, kept between sweeps (timers["rerun"]): one re-run per head
 # A Muse bridge title that is only "J-NNN started" (J-040 take_blow started: one name may sit between), or a bare ack.
@@ -673,6 +677,8 @@ def inbox_class(it: InboxItem) -> str:
         return "ride"
     if it.kind == "PLAN":
         return "hold" if it.dest in PLAN_WAKES else "ride"
+    if it.kind == "MERGED":   # J-072: the integrator's own merge wakes it at once; Muse's rides the next post
+        return "ride" if it.dest == "muse" else "now"
     return "hold"   # Muse's FIX-STUCK and RED-TWICE too: a fix failed twice is the integrator's to route (CLAUDE.md)
 
 
@@ -1648,7 +1654,27 @@ class Switch:
         self.gh.comment(facts.number, line, f"merged-note on #{facts.number}")
         if ctx.get("issue"):
             self.gh.comment(ctx["issue"]["number"], line, f"merged-note on job issue #{ctx['issue']['number']}")
+        self.merged_notice(facts, proof)
         return ""
+
+    def merged_notice(self, facts: rules.PrFacts, proof: str) -> None:
+        """J-072: this merge as one MERGED inbox item, kept in the sweep state until an inbox post lists it (never
+        in a dry run). Its dest is the branch's owner: Muse's (fb-bot/) rides the next post, any other wakes at once."""
+        state = getattr(self.gh, "state", None)
+        if getattr(self.gh, "dry_run", False) or not isinstance(state, dict):
+            return
+        it = InboxItem("MERGED", f"#{facts.number}", facts.head_sha,
+                       f"MERGED #{facts.number} {untrusted(facts.head_ref)} at {facts.head_sha[:8]}: the switchboard "
+                       f"merged it; trunk's proof now runs ({proof.rstrip('.')})",
+                       "muse" if owner_of(facts.head_ref) == "muse" else "claude")
+        kept = [r for r in state.get("merged") or [] if isinstance(r, dict)
+                and (r.get("target"), r.get("head")) != (it.target, it.head)]
+        state["merged"] = (kept + [digest_record(it)])[-MAX_MERGED_HELD:]
+
+    def merged_items(self) -> tuple[InboxItem, ...]:
+        """The MERGED items no inbox post has listed yet (merged_notice), from the sweep state."""
+        state = getattr(self.gh, "state", None)
+        return held_of(state.get("merged"), frozenset({"now", "ride"})) if isinstance(state, dict) else ()
 
     # ---------- auto-open (J-047) ----------
     def prior_pr(self, branch: str, sha: str) -> bool:
@@ -1845,7 +1871,8 @@ class Switch:
     def inbox_clock(self) -> bool:
         """11-13: a quiet sweep's question: is a held wake item due by its clock alone (the digest never is)? Reads no GitHub."""
         box = self.inbox_box()
-        return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"}))), list(self.digest_held),
+        return self.inbox_due(list(held_of(box.get("held"), frozenset({"now", "hold"})))
+                              + [it for it in self.merged_items() if inbox_class(it) == "now"], list(self.digest_held),
                               parse_time(str(box.get("at") or "")))
 
     def inbox(self, steered: list[Steered], flush: bool = False) -> int:
@@ -1914,6 +1941,10 @@ class Switch:
             box["keys"] = list(dict.fromkeys(old + ring + [it.key for it in posted]))[-MAX_INBOX_KEYS:]
             box["at"] = when
             box["held"] = [digest_record(it) for it in wake[len(shown):][-MAX_INBOX_HELD:]]
+            listed = set(box["keys"])   # J-072: a MERGED item a post listed is never kept, nor listed, again
+            if isinstance(self.gh.state.get("merged"), list):
+                self.gh.state["merged"] = [r for r in self.gh.state["merged"] if not (isinstance(r, dict) and
+                                           inbox_key("MERGED", str(r.get("target")), str(r.get("head"))) in listed)]
         return len(shown) + len(carried)
 
     def keep_held(self, items: list[InboxItem], cap: int, what: str) -> tuple[InboxItem, ...]:
@@ -2273,6 +2304,7 @@ class Switch:
         if not prefix:
             items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
+            items += self.merged_items()   # J-072: merges no post has listed yet, a quiet or targeted sweep's too
         if ripe is None:
             audience = ("muse", "both") if prefix else ("claude", "both")
             items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
