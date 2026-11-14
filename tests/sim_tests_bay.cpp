@@ -58,6 +58,218 @@ void stand(Simulation &s, const double seconds) {
     }
 }
 
+// The stock piece lying near (x, z) on the 154 m deck: its entity, or 0.
+std::uint64_t stock_near(Simulation &s, const double x, const double z) {
+    for (std::uint32_t b = 0; b < s.kit_body_count(); ++b) {
+        const auto p = s.kit_body_position(b);
+        if (std::abs(p.x - x) < 0.6 && std::abs(p.y - Bay::kDeckTop) < 0.6 && std::abs(p.z - z) < 0.6) {
+            return s.kit_body_entity(b);
+        }
+    }
+    return 0;
+}
+
+// Pick up the stock piece `entity` and carry it to (x, z), then set it down.
+// True with the piece set down there.
+bool pick_up(Simulation &s, const std::uint64_t entity) {
+    const std::uint32_t body = s.kit_body_index(entity);
+    for (int i = 0; i < static_cast<int>(30.0 * Simulation::kTickRateHz) &&
+                    s.snapshot().carry_target_entity_id != entity;
+         ++i) {
+        const auto b = s.kit_body_position(body);
+        const auto p = s.snapshot().player_position;
+        const double dx = b.x - p.x, dz = b.z - p.z;
+        const double d = std::max(std::hypot(dx, dz), 1.0e-3);
+        (void)s.set_facing(dx / d, dz / d);
+        (void)s.set_look_pitch(-0.5);
+        (void)s.set_move_input(d > 0.7 ? 0.3 * dx / d : 0.0, d > 0.7 ? 0.3 * dz / d : 0.0);
+        tick(s);
+    }
+    require(s.snapshot().carry_target_entity_id == entity, "bay door: the beam is offered");
+    (void)s.request_pick_up();
+    (void)s.advance_frame(0.4);
+    require(s.snapshot().carrying_entity_id == entity, "bay door: the beam is picked up");
+    return true;
+}
+
+// Carry the carried piece `entity` to (x, z), then set it down. True with
+// the piece set down there.
+bool carry_carried(Simulation &s, const std::uint64_t entity, const double x, const double z) {
+    require(s.snapshot().carrying_entity_id == entity, "bay door: the beam is in hand");
+    require(go(s, x, z, 90.0, false, 0.3), "bay door: the beam is carried to the door");
+    (void)s.request_set_down();
+    (void)s.advance_frame(1.0);
+    require(s.snapshot().carrying_entity_id == 0, "bay door: the beam is set down");
+    return true;
+}
+
+bool carry_to(Simulation &s, const std::uint64_t entity, const double x, const double z) {
+    return pick_up(s, entity) && carry_carried(s, entity, x, z);
+}
+
+// From the deck, down onto the bracket east of the blast door (1.78 m down):
+// walk to the staging point west of the cut's edge, then step east off the
+// edge at a slow walk so the fall lands on the bracket (x -3.9..-2.9) instead
+// of carrying past it into the cut. The gap in the west waist rail at the
+// rungs' head is the way through (z -130.6..-129.75); the drop is at its
+// centre, the Matron's own drop point. True grounded on the bracket.
+bool drop_to_bracket(Simulation &s) {
+    (void)s.set_crouch_input(false);
+    // South of the deck-14 shaft rail (z -133), come back around it the way
+    // he came: west along the south band, north along the west band, east
+    // along the north band. North of it, straight to the drop point.
+    if (s.snapshot().player_position.z < -133.0) {
+        // With the beam in hand he carries at 0.25 m/s (a 70 kg load
+        // against the 720 N carry grip: top speed scaled by
+        // 1 - weight/grip, 5.5 * 0.046 = 0.25 m/s, measured), so the
+        // legs back around the rail budget distance / 0.25 with margin,
+        // not the 60 s an unloaded walk takes. The positions required
+        // are unchanged; only the time budget fits the measured carry.
+        require(go(s, -Matron::kBandX, Matron::kBandSouthZ, 140.0, false, 0.3),
+                "bay door: west along the south band with the beam");
+        // DIAG (temporary): where does the north carry-back stall?
+        if (s.snapshot().carrying_entity_id != 0) {
+            const std::uint64_t carried = s.snapshot().carrying_entity_id;
+            const std::uint32_t cb = s.kit_body_index(carried);
+            for (int i = 0; i < 250 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+                const auto p = s.snapshot().player_position;
+                if (i % 90 == 0) {
+                    const auto b = s.kit_body_position(cb);
+                    const auto q = s.kit_body_rotation(cb);
+                    // Beam long axis (local +x) rotated by q: yaw = atan2(-axis.z, axis.x).
+                    const double ax = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+                    const double az = 2.0 * (q.x * q.z - q.w * q.y);
+                    const auto m = s.matron_state().position;
+                    std::cout << "  DIAG carry-north t=" << (i / 90) << "s player (" << p.x << ", " << p.y << ", " << p.z
+                              << ") beam (" << b.x << ", " << b.y << ", " << b.z << ") yaw=" << std::atan2(-az, ax)
+                              << " matron (" << m.x << ", " << m.y << ", " << m.z << ") carrying=" << carried << "\n";
+                    for (std::uint32_t k = 0; k < s.kit_body_count(); ++k) {
+                        const auto kp = s.kit_body_position(k);
+                        if (std::hypot(kp.x - p.x, kp.z - p.z) < 3.0 && s.kit_body_entity(k) != carried) {
+                            std::cout << "    near stock entity " << s.kit_body_entity(k) << " at (" << kp.x << ", "
+                                      << kp.y << ", " << kp.z << ")\n";
+                        }
+                    }
+                }
+                const double dx = -Matron::kBandX - p.x, dz = Matron::kBandNorthZ - p.z;
+                const double len = std::hypot(dx, dz);
+                if (len < 0.3) {
+                    (void)s.set_move_input(0.0, 0.0);
+                    std::cout << "  DIAG carry-north reached in " << (i / 90) << "s\n";
+                    break;
+                }
+                (void)s.set_move_input(dx / len, dz / len);
+                (void)s.set_facing(dx / len, dz / len);
+                tick(s);
+            }
+            const auto p = s.snapshot().player_position;
+            require(std::hypot(p.x + Matron::kBandX, p.z - Matron::kBandNorthZ) < 0.3,
+                    "bay door: north along the west band with the beam");
+        } else {
+            require(go(s, -Matron::kBandX, Matron::kBandNorthZ, 250.0, false, 0.3),
+                    "bay door: north along the west band with the beam");
+        }
+        require(go(s, -6.0, Matron::kBandNorthZ, 95.0, false, 0.3),
+                "bay door: east along the north band with the beam");
+    }
+    require(go(s, -6.0, Bay::kDropZ, 20.0, false, 0.3), "bay door: to the drop point over the bracket");
+    (void)s.set_facing(1.0, 0.0);
+    for (int i = 0; i < 15 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        const auto p = s.snapshot().player_position;
+        // The pocket floor is the same height as the bracket (152.22), so the
+        // height alone cannot tell them apart: the bracket is x -3.9..-2.9.
+        if (s.snapshot().player_grounded && p.y < 153.5 && p.y > 152.5 && p.x > -3.8 && p.x < -3.0) {
+            (void)s.set_move_input(0.0, 0.0);
+            return true;
+        }
+        if (p.y < 150.0) {
+            (void)s.set_move_input(0.0, 0.0);
+            return false;
+        }
+        (void)s.set_move_input(0.15, 0.0);
+        (void)s.set_facing(1.0, 0.0);
+        tick(s);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
+}
+
+// Shove the door with the body: walk into it along x (`dir` -1 west, +1
+// east) until its angle passes `angle` (negative opens west, 0 is shut), or
+// `seconds` run out. True with the door past the angle.
+bool shove_door(Simulation &s, const double dir, const double angle, const double seconds) {
+    const auto ticks = static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (int i = 0; i < ticks; ++i) {
+        const double a = s.bay_state().door_angle;
+        if ((dir < 0 && a < angle) || (dir > 0 && a > angle)) {
+            (void)s.set_move_input(0.0, 0.0);
+            return true;
+        }
+        (void)s.set_move_input(dir, 0.0);
+        (void)s.set_facing(dir, 0.0);
+        tick(s);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
+}
+
+// Stage the wedge: round the shaft rail on the bands to the beam on the
+// south band, the beam picked up and carried back around the rail to the
+// drop, set down on the bracket while the door is shoved open from the
+// bracket (the door spans the bracket floor to the deck underside, so from
+// the deck he cannot touch it at all), the beam picked up again and carried
+// through the open doorway into the pocket and dropped at (x, z), the door
+// hauled shut from the pocket. Returns the beam's entity.
+std::uint64_t stage_door_shut(Simulation &s, const double x, const double z) {
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "bay door wedge: settle");
+    const std::uint64_t beam = stock_near(s, 2.0, -174.4);
+    require(beam != 0, "bay door wedge: the timber beam is on the south band");
+    // Round the deck-14 shaft rail to the beam: the rail runs east-west at
+    // z -133 and is crossed only around its ends, on the bands (a straight
+    // walk from spawn sticks against it at (-9.2, -132.4)). West along the
+    // north band, south along the west band, east along the south band.
+    require(go(s, -Matron::kBandX, Matron::kBandNorthZ, 60.0, false, 0.3),
+            "bay door wedge: west along the north band to the beam");
+    require(go(s, -Matron::kBandX, Matron::kBandSouthZ, 60.0, false, 0.3),
+            "bay door wedge: south along the west band to the beam");
+    require(go(s, 2.0, Matron::kBandSouthZ, 60.0, false, 0.3),
+            "bay door wedge: east along the south band to the beam");
+    // Uncrouched to the beam: his steps do not wake her (she hears impacts,
+    // running machines and the room-noise cue, not footsteps), and crouched
+    // the 48 m walk does not fit the pick-up loop's 30 s.
+    require(pick_up(s, beam), "bay door wedge: the beam is picked up");
+    require(drop_to_bracket(s), "bay door wedge: down onto the bracket with the beam");
+    require(s.snapshot().carrying_entity_id == beam, "bay door wedge: the beam came down with him");
+    (void)s.request_set_down();
+    (void)s.advance_frame(1.0);
+    require(s.snapshot().carrying_entity_id == 0, "bay door wedge: the beam is set down on the bracket");
+    require(shove_door(s, -1.0, -1.0, 10.0), "bay door wedge: the door is shoved open");
+    require(pick_up(s, beam), "bay door wedge: the beam is picked up again");
+    require(carry_carried(s, beam, x, z), "bay door wedge: the beam is carried into the pocket");
+    // The beam is under its swing, so the door stops on the beam, mostly shut
+    // (past -0.45 rad); the wedge tests measure from there.
+    require(shove_door(s, 1.0, -0.45, 10.0), "bay door wedge: the door is hauled shut onto the beam");
+    return beam;
+}
+
+// Wake her with a room-noise cue (she is asleep until then).
+void wake_her(Simulation &s) {
+    require(s.set_room_loudness(1.0), "bay door wedge: the room-noise cue");
+    (void)s.advance_frame(1.0);
+    require(s.set_room_loudness(0.0), "bay door wedge: quiet after the cue");
+}
+
+// The door's widest opening (most negative angle) over `seconds` of her push.
+double push_open(Simulation &s, const double seconds) {
+    double max_open = 0.0;
+    for (int i = 0; i < static_cast<int>(seconds * Simulation::kTickRateHz); ++i) {
+        tick(s);
+        max_open = std::min(max_open, s.bay_state().door_angle);
+    }
+    return max_open;
+}
+
 // Wakes her, then, crouched, west over the leaf and down the west band,
 // along the south band and up the east band, back along the north band to
 // stand east of the bay, while she, having lost the player at its west end,
@@ -271,6 +483,164 @@ void run_bay() {
                     t.matron_state().trap == 0,
                 "bay chain: loaded, the bay as at her release: the leaf driven level, the chain on its cleat");
         std::cout << "PASS scraperx_sim bay chain: chain_n=" << chain_n << " held_rad=" << held_low << "\n";
+    }
+    // ---- J-055 geometry: the doorway and the low opening in the west wall,
+    //      and the pocket floor behind it --------------------------------------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        const std::uint32_t frame = s.kit_body_index(Bay::kFrameEntity);
+        const auto at = s.kit_body_position(frame);
+        // The frame body sits at the origin with identity rotation, so a
+        // part's offset is its world centre; the collision shapes are the
+        // parts themselves, so no part in a volume means the volume is open.
+        require(std::abs(at.x) < 1e-6 && std::abs(at.y) < 1e-6 && std::abs(at.z) < 1e-6,
+                "bay door geometry: the frame body sits at the origin");
+        const auto overlaps = [&](const double x0, const double y0, const double z0, const double x1,
+                                  const double y1, const double z1) {
+            for (std::uint32_t p = 0; p < s.kit_body_part_count(frame); ++p) {
+                const auto part = s.kit_body_part(frame, p);
+                if (part.shape != 0) {
+                    continue;
+                }
+                const double px0 = part.offset.x - part.half.x;
+                const double px1 = part.offset.x + part.half.x;
+                const double py0 = part.offset.y - part.half.y;
+                const double py1 = part.offset.y + part.half.y;
+                const double pz0 = part.offset.z - part.half.z;
+                const double pz1 = part.offset.z + part.half.z;
+                if (px0 < x1 && x0 < px1 && py0 < y1 && y0 < py1 && pz0 < z1 && z0 < pz1) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        // The doorway and the opening, shrunk 1 cm a side so the piers that
+        // frame them (touching the boundary exactly) do not count.
+        const double inset = 0.01;
+        require(!overlaps(Bay::kWestX - 0.05 + inset, Bay::kBracketTop + inset, Bay::kDoorZ0 + inset,
+                          Bay::kWestX - inset, Bay::kDeckTop - 0.02 - inset, Bay::kDoorZ1 - inset),
+                "bay door geometry: no frame part reaches into the doorway");
+        require(!overlaps(Bay::kWestX - 0.05 + inset, Bay::kBracketTop + inset, Bay::kOpeningZ0 + inset,
+                          Bay::kWestX - inset, Bay::kOpeningTop - inset, Bay::kOpeningZ1 - inset),
+                "bay door geometry: no frame part reaches into the low opening");
+        // The pocket floor and the ledge: a solid part under a point just
+        // below their top surface.
+        const auto solid_at = [&](const double x, const double y, const double z) {
+            for (std::uint32_t p = 0; p < s.kit_body_part_count(frame); ++p) {
+                const auto part = s.kit_body_part(frame, p);
+                if (part.shape != 0) {
+                    continue;
+                }
+                if (part.offset.x - part.half.x <= x && x <= part.offset.x + part.half.x &&
+                    part.offset.y - part.half.y <= y && y <= part.offset.y + part.half.y &&
+                    part.offset.z - part.half.z <= z && z <= part.offset.z + part.half.z) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        require(solid_at(-4.9, Bay::kBracketTop - 0.01, -129.2),
+                "bay door geometry: the pocket floor is solid behind the wall");
+        require(solid_at(-3.45, Bay::kBracketTop - 0.01, -127.9),
+                "bay door geometry: the ledge is solid at the low opening");
+        std::cout << "PASS scraperx_sim bay door geometry: doorway " << (Bay::kDoorZ1 - Bay::kDoorZ0)
+                  << " m, opening " << (Bay::kOpeningZ1 - Bay::kOpeningZ0) << " m, pocket floor solid\n";
+    }
+    // ---- J-055: the wedge holds the door against her push ------------------
+    // The beam across the swing near the hinge: she leans and it stays shut.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        const std::uint64_t beam = stage_door_shut(s, -4.3, -130.9);
+        wake_her(s);
+        const double max_open = push_open(s, 20.0);
+        const auto beam_at = s.kit_body_position(s.kit_body_index(beam));
+        const auto her = s.matron_state().position;
+        std::cout << "  bay door wedge jam: the door opened to " << max_open << " rad under her push; the beam at ("
+                  << beam_at.x << ", " << beam_at.z << "); she at (" << her.x << ", " << her.z << ")\n";
+        require(max_open > -0.5, "bay door wedge jam: wedged, the door stays nearly shut under her push");
+        require(std::abs(her.x + 3.9) < 2.0 && std::abs(her.z + 130.6) < 2.0,
+                "bay door wedge jam: she is at the doorway pushing, not elsewhere");
+        std::cout << "PASS scraperx_sim bay door wedge jam: max_open_rad=" << max_open << "\n";
+    }
+    // ---- J-055: the wedge slips -------------------------------------------
+    // The same beam, clear of the jambs: she leans, the beam is pushed west
+    // across the floor, and the door comes open.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        (void)stage_door_shut(s, -4.6, -130.6);
+        wake_her(s);
+        const double max_open = push_open(s, 20.0);
+        const auto her = s.matron_state().position;
+        std::cout << "  bay door wedge slip: the door opened to " << max_open << " rad under her push; she at ("
+                  << her.x << ", " << her.z << ")\n";
+        require(max_open < -1.0, "bay door wedge slip: slipped, the door comes open under her push");
+        require(std::abs(her.x + 3.9) < 2.0 && std::abs(her.z + 130.6) < 2.0,
+                "bay door wedge slip: she is at the doorway pushing, not elsewhere");
+        std::cout << "PASS scraperx_sim bay door wedge slip: max_open_rad=" << max_open << "\n";
+    }
+    // ---- J-055: the beam out while she pushes ------------------------------
+    // Wedged; then, while she pushes, he carries the beam clear, and the
+    // door follows the net torque open.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        const std::uint64_t beam = stage_door_shut(s, -4.3, -130.9);
+        wake_her(s);
+        const double held = push_open(s, 5.0);
+        require(held > -0.5, "bay door beam out: wedged, the door holds while she pushes");
+        require(carry_to(s, beam, -5.5, -128.0), "bay door beam out: the beam is pulled clear");
+        const double max_open = push_open(s, 10.0);
+        std::cout << "  bay door beam out: held at " << held << " rad, then open to " << max_open << " rad\n";
+        require(max_open < -1.0, "bay door beam out: the beam out, the door follows her push open");
+        std::cout << "PASS scraperx_sim bay door beam out: held_rad=" << held << " open_rad=" << max_open << "\n";
+    }
+    // ---- J-055: the door and the beam persist through save and load --------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        const std::uint64_t beam = stage_door_shut(s, -4.3, -130.9);
+        const double angle_before = s.bay_state().door_angle;
+        const auto beam_before = s.kit_body_position(s.kit_body_index(beam));
+        const std::vector<std::uint8_t> saved = s.save_game();
+        Simulation t(InitialSpawn::Deck154);
+        t.place_matron_home(154.0F);
+        require(t.load_game(saved.data(), saved.size()), "bay door reload: the save loads");
+        (void)t.advance_frame(0.5);
+        const double angle_after = t.bay_state().door_angle;
+        const auto beam_after = t.kit_body_position(t.kit_body_index(beam));
+        std::cout << "  bay door reload: angle " << angle_before << " -> " << angle_after << " rad; the beam ("
+                  << beam_before.x << ", " << beam_before.z << ") -> (" << beam_after.x << ", " << beam_after.z << ")\n";
+        require(std::abs(angle_after - angle_before) < 0.05, "bay door reload: the door angle persists");
+        require(std::hypot(beam_after.x - beam_before.x, beam_after.z - beam_before.z) < 0.1,
+                "bay door reload: the beam position persists");
+        std::cout << "PASS scraperx_sim bay door reload: angle=" << angle_after << "\n";
+    }
+    // ---- J-055: he hauls the door shut by its far edge ---------------------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "bay door haul: settle");
+        require(drop_to_bracket(s), "bay door haul: down onto the bracket");
+        require(shove_door(s, -1.0, -1.0, 10.0), "bay door haul: the door is shoved open");
+        const double open_angle = s.bay_state().door_angle;
+        require(open_angle < -0.8, "bay door haul: the door stands open");
+        // Step to the door's far edge and take it.
+        require(go(s, -3.6, -130.4, 10.0, false, 0.3), "bay door haul: to the door's far edge");
+        (void)s.set_facing(-1.0, 0.0);
+        (void)s.request_traversal();
+        (void)s.advance_frame(0.4);
+        require(s.bay_state().door_grabbed, "bay door haul: the grab button takes the door");
+        // Walk it shut (east), then let go.
+        bool shut = false;
+        for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !shut; ++i) {
+            (void)s.set_move_input(1.0, 0.0);
+            (void)s.set_facing(1.0, 0.0);
+            tick(s);
+            shut = s.bay_state().door_angle > -0.05;
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        const double shut_angle = s.bay_state().door_angle;
+        std::cout << "  bay door haul: open " << open_angle << " rad, hauled to " << shut_angle << " rad\n";
+        require(shut, "bay door haul: hauled, the door comes shut");
+        std::cout << "PASS scraperx_sim bay door haul: shut_angle=" << shut_angle << "\n";
     }
 }
 SCRAPERX_GROUP("bay", 970, run_bay);

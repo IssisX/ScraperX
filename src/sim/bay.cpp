@@ -71,8 +71,29 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
     std::vector<Part> frame;
     // The bay's west wall, plated down past the bracket; its east wall behind
     // the drive's housing and the fan.
-    frame.push_back(span({kWestX - 0.05F, bracket_top - 0.35F, -131.4F}, {kWestX, kTop - 0.02F, -127.0F},
+    // J-055: the west wall carries a doorway (kDoorZ0..kDoorZ1, bracket floor
+    // to the deck underside) and a low maintenance opening (kOpeningZ0..
+    // kOpeningZ1, bracket floor to kOpeningTop), both into a service pocket
+    // behind the wall. The plate is split around them: a sill strip under
+    // both, a pier south of the doorway, a pier between the two, a lintel
+    // over the opening, and a pier north of it. The doorway has no lintel;
+    // it runs to the wall's top.
+    frame.push_back(span({kWestX - 0.05F, bracket_top - 0.35F, -131.4F}, {kWestX, bracket_top, -127.0F},
                          Material::Rust));
+    frame.push_back(span({kWestX - 0.05F, bracket_top, -131.4F}, {kWestX, kTop - 0.02F, kDoorZ0},
+                         Material::Rust));
+    frame.push_back(span({kWestX - 0.05F, bracket_top, kDoorZ1}, {kWestX, kTop - 0.02F, kOpeningZ0},
+                         Material::Rust));
+    frame.push_back(span({kWestX - 0.05F, kOpeningTop, kOpeningZ0}, {kWestX, kTop - 0.02F, kOpeningZ1},
+                         Material::Rust));
+    frame.push_back(span({kWestX - 0.05F, bracket_top, kOpeningZ1}, {kWestX, kTop - 0.02F, -127.0F},
+                         Material::Rust));
+    // The pocket's floor behind the wall, and a ledge on the bay side at the
+    // opening (the bracket spans z -131.25..-129.35 only).
+    frame.push_back(span({kPocketX0, bracket_top - 0.12F, -131.4F}, {kWestX, bracket_top, -127.0F},
+                         Material::Galvanised));
+    frame.push_back(span({kWestX, bracket_top - 0.12F, kOpeningZ0}, {kWestX + 0.9F, bracket_top, kOpeningZ1},
+                         Material::Galvanised));
     frame.push_back(span({kEastX, kTop - 1.6F, -130.4F}, {kEastX + 0.05F, kTop - 0.02F, -125.4F}, Material::Rust));
     // The bracket, on two struts back to the wall.
     frame.push_back(span({kWestX, bracket_top - 0.12F, -131.25F}, {kWestX + 1.0F, bracket_top, -129.35F},
@@ -214,6 +235,19 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
     // As found: made fast on the cleat.
     (void)kit_.hook(kShackleEntity, cleat_);
 
+    // ---- the blast door (J-055): a steel panel in the doorway, hinged on
+    //      its south jamb, opening west into the pocket (shut 0, open
+    //      kDoorOpenAngle). Heavy (620 kg), a little hinge friction: she
+    //      pushes it open by leaning on it, a beam under it jams it.
+    const JPH::RVec3 door_at(kDoorX, kDoorY, kDoorZ);
+    door_ = kit_.add_body(kDoorEntity,
+                          {box({0.5F * kDoorThick, 0.5F * (kDeckTop - 0.02F - kBracketTop), 0.5F * (kDoorZ1 - kDoorZ0)},
+                               JPH::Vec3::sZero(), Material::Steel, 620.0F)},
+                          door_at, JPH::Quat::sIdentity(), 620.0F, 0.8F);
+    kit_.disable_collision(door_, frame_);
+    door_hinge_ = world_hinge(system_, kit_.body_id(door_), JPH::RVec3(kDoorX, kDoorY, kDoorZ0),
+                              JPH::Vec3::sAxisY(), JPH::Vec3::sAxisX(), kDoorOpenAngle, 0.0F, kDoorFrictionNm, 24);
+
     // ---- the district -------------------------------------------------------
     SharedSurvival::Support support;
     support.structure = kit_.body_id(leaf_);
@@ -230,7 +264,7 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
 
 Bay::~Bay() {
     district_.reset();
-    for (JPH::Ref<JPH::HingeConstraint> *hinge : {&leaf_hinge_, &guard_hinge_, &fan_hinge_}) {
+    for (JPH::Ref<JPH::HingeConstraint> *hinge : {&leaf_hinge_, &guard_hinge_, &fan_hinge_, &door_hinge_}) {
         if (*hinge != nullptr) {
             system_.RemoveConstraint(hinge->GetPtr());
             *hinge = nullptr;
@@ -304,6 +338,7 @@ void Bay::post_step() {
         ++view_.trips;
     }
     was_hands_ = hands.hands_busy;
+    view_.door_angle = door_hinge_->GetCurrentAngle();
 }
 
 Bay::State Bay::capture() const noexcept {

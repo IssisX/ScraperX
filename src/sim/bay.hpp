@@ -44,6 +44,7 @@ public:
     static constexpr std::uint64_t kGuardEntity = 2651;
     static constexpr std::uint64_t kFanEntity = 2652;
     static constexpr std::uint64_t kShackleEntity = 2653;
+    static constexpr std::uint64_t kDoorEntity = 2654;
 
     static constexpr float kDeckTop = 154.0F;
     // The cut: across the whole band, the shaft's edge to the tower's face.
@@ -89,6 +90,32 @@ public:
     static constexpr float kHandUp = 0.65F;
     static constexpr float kHandForward = 0.65F;
 
+    // The blast door (J-055): a doorway in the west wall, and a low
+    // maintenance opening beside it, into a service pocket behind the wall.
+    // The doorway runs from the bracket floor to the deck underside; the
+    // opening is a crawl hole 0.6 m high. The pocket's floor is the bracket's
+    // level, its ceiling the deck.
+    static constexpr float kDoorZ0 = -131.1F;
+    static constexpr float kDoorZ1 = -130.2F;
+    static constexpr float kOpeningZ0 = -128.3F;
+    static constexpr float kOpeningZ1 = -127.5F;
+    static constexpr float kOpeningTop = kBracketTop + 0.6F;
+    static constexpr float kPocketX0 = -5.9F;
+
+    // The door itself: a steel panel in the doorway, hinged on its south
+    // jamb, opening west into the pocket. Shut is 0; open is negative (the
+    // hinge axis is +Y, so a westward swing is a negative angle about it).
+    // Its centre is the doorway's centre; its far (north) edge is the
+    // grab: a hand there, at chest height above the centre, hauls it shut.
+    static constexpr float kDoorThick = 0.05F;
+    static constexpr float kDoorX = kWestX - 0.025F;
+    static constexpr float kDoorY = 0.5F * (kBracketTop + (kDeckTop - 0.02F));
+    static constexpr float kDoorZ = 0.5F * (kDoorZ0 + kDoorZ1);
+    static constexpr float kDoorOpenAngle = -1.5F;   // rad, open into the pocket
+    static constexpr float kDoorFrictionNm = 20.0F;
+    static constexpr float kDoorGrabUp = 0.42F;     // chest height above the door centre
+    static constexpr float kDoorGrabZ = 0.45F;      // the far edge, from the centre
+
     // The chain: from a hanger under the pipe bridge straight down to the
     // leaf's eye, 0.8 m from its hinge, and a centimetre longer than that.
     static constexpr float kEyeX = kLeafEastX - 0.8F;
@@ -131,6 +158,8 @@ public:
         float hand_x = 0.0F, hand_y = 0.0F, hand_z = 0.0F;
         std::uint32_t trips = 0;      // times the district stopped with hands in it
         std::uint32_t restarts = 0;
+        float door_angle = 0.0F;      // rad, 0 shut, negative open into the pocket
+        bool door_grabbed = false;    // a hand on the door (the PhysicsWorld sets it)
     };
 
     Bay(JPH::PhysicsSystem &system, kit::Kit &kit);
@@ -154,7 +183,15 @@ public:
     [[nodiscard]] const View &view() const noexcept { return view_; }
     [[nodiscard]] kit::BodyIndex leaf_body() const noexcept { return leaf_; }
     [[nodiscard]] kit::BodyIndex shackle_body() const noexcept { return shackle_; }
+    [[nodiscard]] kit::BodyIndex door_body() const noexcept { return door_; }
     [[nodiscard]] kit::RopeIndex chain() const noexcept { return chain_; }
+    // The door's grab point, in the door body's own frame: its far edge at
+    // chest height. A hand constraint tied there hauls it on its hinge.
+    [[nodiscard]] static JPH::Vec3 door_grab_local() noexcept {
+        return JPH::Vec3(0.0F, kDoorGrabUp, kDoorGrabZ);
+    }
+    // The PhysicsWorld tells the view when a hand is on the door.
+    void set_door_grabbed(const bool grabbed) noexcept { view_.door_grabbed = grabbed; }
 
     [[nodiscard]] State capture() const noexcept;
     // After the kit's own restore: the motors as they were.
@@ -168,12 +205,14 @@ private:
     kit::BodyIndex guard_;
     kit::BodyIndex fan_;
     kit::BodyIndex shackle_;
+    kit::BodyIndex door_;
     kit::AnchorIndex eye_;
     kit::AnchorIndex cleat_;
     kit::RopeIndex chain_;
     JPH::Ref<JPH::HingeConstraint> leaf_hinge_;
     JPH::Ref<JPH::HingeConstraint> guard_hinge_;
     JPH::Ref<JPH::HingeConstraint> fan_hinge_;
+    JPH::Ref<JPH::HingeConstraint> door_hinge_;
     std::unique_ptr<SharedSurvival> district_;
     std::size_t leaf_channel_ = 0;
     std::size_t fan_channel_ = 0;

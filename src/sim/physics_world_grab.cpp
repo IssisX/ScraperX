@@ -179,6 +179,11 @@ void Simulation::PhysicsWorld::grab_reset(JPH::BodyInterface &bodies) noexcept {
     destroy_grab_constraint(brace_);
     destroy_grab_constraint(snag_);
     destroy_grab_constraint(hand_arm_);
+    if (door_grab_ != nullptr) {
+        physics_system_.RemoveConstraint(door_grab_);
+        door_grab_ = nullptr;
+        bay().set_door_grabbed(false);
+    }
     if (!hand_id_.IsInvalid()) {
         remove_and_destroy(bodies, hand_id_);
         hand_id_ = JPH::BodyID();
@@ -261,6 +266,48 @@ bool Simulation::PhysicsWorld::grab_pre_step(JPH::BodyInterface &bodies, StepCom
     }
     if (brace_ != nullptr && commands.release_requested) {
         destroy_grab_constraint(brace_);
+    }
+    // A hand on the blast door (J-055): the grab button with the door's far
+    // edge at the chest, while free (not held, not climbing). A point
+    // constraint, LocalToBodyCOM on both, so the door turns on its hinge as
+    // he hauls it. Let go with release; she taking him lets go too.
+    if (door_grab_ == nullptr && !held && traversal_state_ != TraversalState::Climbing &&
+        commands.traversal_requested) {
+        const JPH::BodyID door_id = kit_->body_id(bay().door_body());
+        if (!door_id.IsInvalid()) {
+            const JPH::RVec3 grab_world = bodies.GetCenterOfMassTransform(door_id) * Bay::door_grab_local();
+            const JPH::RVec3 hands = bodies.GetPosition(player_id_) + carry_hand_offset(facing_);
+            const JPH::Vec3 gap(grab_world - hands);
+            if (gap.Length() < kDoorGrabReachM) {
+                const JPH::Vec3 offset = carry_hand_offset(facing_);
+                door_grab_entry_offset_ = gap;
+                JPH::PointConstraintSettings grab;
+                grab.mSpace = JPH::EConstraintSpace::LocalToBodyCOM;
+                grab.mPoint1 = JPH::RVec3(offset + door_grab_entry_offset_);
+                grab.mPoint2 = JPH::RVec3(Bay::door_grab_local());
+                door_grab_ = static_cast<JPH::PointConstraint *>(create_constraint(grab, player_id_, door_id, false));
+                if (door_grab_ != nullptr) {
+                    ++door_grab_count_;
+                    bay().set_door_grabbed(true);
+                }
+            }
+        }
+    }
+    if (door_grab_ != nullptr) {
+        if (commands.release_requested || held) {
+            physics_system_.RemoveConstraint(door_grab_);
+            door_grab_ = nullptr;
+            bay().set_door_grabbed(false);
+        } else {
+            // Draw the hands onto the door's grab point, as a carry draws a
+            // handle in: never in one tick.
+            const float pull_in = kCarryPullInSpeed * dt;
+            const float gap = door_grab_entry_offset_.Length();
+            door_grab_entry_offset_ =
+                gap > pull_in ? door_grab_entry_offset_ * ((gap - pull_in) / gap) : JPH::Vec3::sZero();
+            door_grab_->SetPoint1(JPH::EConstraintSpace::LocalToBodyCOM,
+                                  JPH::RVec3(carry_hand_offset(facing_) + door_grab_entry_offset_));
+        }
     }
     const bool ladder_grip = traversal_state_ == TraversalState::Climbing;
     if ((held && !ladder_grip) || player_free_rot_ || matron_->claimed()) {

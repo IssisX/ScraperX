@@ -821,6 +821,9 @@ constexpr float kCarrySwingRate = 12.0F;
 // one tick: taken where it is, E's door handle was pulled to the hands and
 // the 60 kg leaf swung open at 6 m/s.
 constexpr float kCarryPullInSpeed = 3.0F;
+// A hand on the blast door (J-055): how far the door's grab point may be
+// from the hands when the grab button is pressed (the brace's reach).
+constexpr float kDoorGrabReachM = 1.0F;
 // The throw (the owner, 2026-10-19: knock her down, then throw what you
 // carry): the arms put up to kThrowEnergyJ into the load, at most
 // kThrowMaxMps, along the view raised kThrowRaiseRad, on top of the body's own

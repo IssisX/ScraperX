@@ -208,7 +208,7 @@ void run_wet_e_guard(const bool expect) {
         bodies.add(world.kit_body_entity(i));
     }
     const std::uint64_t kSince[] = {Bay::kFrameEntity, Bay::kLeafEntity, Bay::kGuardEntity, Bay::kFanEntity,
-                                    Bay::kShackleEntity, scraperx::sim::TwinTower::kFrameEntity,
+                                    Bay::kShackleEntity, Bay::kDoorEntity, scraperx::sim::TwinTower::kFrameEntity,
                                     scraperx::sim::TwinTower::kLeafEntity, scraperx::sim::TwinTower::kFlagEntity,
                                     scraperx::sim::Summit::kLeftBearingEntity,
                                     scraperx::sim::Summit::kRightBearingEntity,
@@ -219,6 +219,9 @@ void run_wet_e_guard(const bool expect) {
     // and their bodies built last, after the summit. The bay, twin and summit
     // bodies still follow the original 595 in order; only the total grows
     // by 137, so the sequence check covers exactly those twelve bodies.
+    // J-055: the blast door is the bay's sixth body, built after the
+    // shackle and before the twin bodies, so the sequence is thirteen and
+    // the forklift sits one place later (745, kinds 825, total 827).
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
     constexpr std::uint32_t kNewEastWest = 137;
@@ -330,7 +333,7 @@ void run_wet_e_guard(const bool expect) {
     // 4824050261233220131, now 3514033760028014323.
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
+    require(since_after, "E guard: the original 595 bodies precede exactly six bay, three twin, four summit and two deck-154 forklift bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is

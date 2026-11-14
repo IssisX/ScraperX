@@ -1020,6 +1020,13 @@ public:
     JPH::Ref<JPH::TwoBodyConstraint> hand_arm_;
     JPH::Ref<JPH::TwoBodyConstraint> grip_;
     JPH::Ref<JPH::TwoBodyConstraint> brace_;   // the player's hands on a rail against her pull
+    // A hand on the blast door (J-055): a point constraint from the hands to
+    // the door's grab point, so he hauls it shut on its hinge. Rotation is
+    // left free, as in a carry; the entry offset keeps the first tick from
+    // yanking him to the door.
+    JPH::Ref<JPH::PointConstraint> door_grab_;
+    JPH::Vec3 door_grab_entry_offset_ = JPH::Vec3::sZero();
+    std::uint64_t door_grab_count_ = 0;
     bool player_free_rot_ = false;
     bool grip_swing_ = false;   // the grip's hinge taken on (else a bare point)
     // Where her fingers hold him, in his body's frame (set as they close,

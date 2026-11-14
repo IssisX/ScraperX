@@ -110,9 +110,17 @@ Spec make_spec(const K kind) {
         s.friction = 0.06F;
         break;
     case K::TimberBeam:
-        s.parts = {box(Vec3(2.0F, 0.13F, 0.13F), Vec3::sZero(), Material::Timber, 70.0F)};
+        // 2.0 m overall: the half-extent along x is 1.0 m (the pocket is
+        // 2.0 m deep; a wedge he carries and swings into place). Mass stays
+        // 70 kg — that is already the mass of a 2 m timber of this section
+        // (2.0 x 0.26 x 0.26 m at ~520 kg/m^3); only the length was wrong.
+        s.parts = {box(Vec3(1.0F, 0.13F, 0.13F), Vec3::sZero(), Material::Timber, 70.0F)};
         s.half_height = 0.13F;
         s.friction = 0.7F;
+        // Carried by its top, as the drum by its rim and the pallet by its
+        // deck: without this the beam is never a carry candidate at all.
+        s.carried = true;
+        s.handle = Vec3(0.0F, 0.13F, 0.0F);
         break;
     case K::Drum:
         // Rolled steel, a rolling hoop round its middle; lifted by its rim.
