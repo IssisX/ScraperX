@@ -712,20 +712,22 @@ void pitch_up(Simulation &h, double from_top, double need_y) {
                   << int(n.traversal_state) << ", up " << int(n.up_move) << ", hook " << int(n.hook_state)
                   << '\n';
         if (n.traversal_state != TraversalState::Hanging) {
-            // J-053 (Claude 2026-11-13): the P4 route — the old dyno with
-            // the two missing inputs supplied. Face the wall and hold the
-            // stick toward it for the whole flight (try_begin_hang catches
-            // a lip only with stick intent of at least 0.3 toward the
-            // facing), let the line go, and jump for the lip. At the
-            // jump's apex, press up again: the dyno's catch is timed to
-            // the dead point. The stick stays held until the pitch ends
-            // (stand() clears it). Checks unchanged.
+            // J-053 (Claude 2026-11-14, ruling (b)): the dyno re-staged.
+            // The old dyno pressed up at the stall, while the swing still
+            // rose at 5 m/s: the launch threw the hands above the lip, and
+            // the 27-tick regrab lockout plus the 2.5 m/s rising gate kept
+            // try_begin_hang shut for the whole rise past it, so he landed
+            // on the deck without hanging. No up press now: face the wall
+            // and hold the stick toward it for the whole flight
+            // (try_begin_hang catches a lip only with stick intent of at
+            // least 0.3 toward the facing), let the line go, and let the
+            // swing's own momentum carry him up. He falls back past the
+            // lip with the hands below it, and the hang catch takes it on
+            // the way down once the lockout clears. The stick stays held
+            // until the pitch ends (stand() clears it). Checks unchanged.
             require(h.set_facing(0.0, -1.0), "twin pitch: face the wall for the dyno");
             (void)h.set_move_input(0.0, -1.0);
             require(h.request_hook_release(), "twin pitch: let the line go for the dyno");
-            require(h.request_up(), "twin pitch: jump for the lip");
-            bool rose = false;
-            bool pressed_apex = false;
             bool reached = false;
             for (int tick = 0; tick < 90 * 5; ++tick) {
                 if (!h.advance_frame(Simulation::kFixedStepSeconds).accepted)
@@ -733,12 +735,6 @@ void pitch_up(Simulation &h, double from_top, double need_y) {
                 const auto m = h.snapshot();
                 if (m.player_position.y > max_centre)
                     max_centre = m.player_position.y;
-                if (m.player_linear_velocity.y > 0.5)
-                    rose = true;
-                if (rose && !pressed_apex && m.player_linear_velocity.y <= 0.0) {
-                    (void)h.request_up();
-                    pressed_apex = true;
-                }
                 if (m.traversal_state == TraversalState::Hanging || m.player_grounded) {
                     reached = true;
                     break;
@@ -749,8 +745,7 @@ void pitch_up(Simulation &h, double from_top, double need_y) {
             std::cout << "  twin pitch dyno: centre " << after.player_position.y << " m at "
                       << after.player_position.x << ',' << after.player_position.z << ", trav "
                       << int(after.traversal_state) << ", grounded " << after.player_grounded
-                      << ", deaths " << after.death_count << ", apex press "
-                      << (pressed_apex ? "yes" : "no") << '\n';
+                      << ", deaths " << after.death_count << '\n';
         }
         require(h.snapshot().traversal_state == TraversalState::Hanging,
                 "twin pitch: the hands took the lip at the top of the pitch");
