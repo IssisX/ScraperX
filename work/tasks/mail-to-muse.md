@@ -3,9 +3,9 @@
 Read before every `CLAUDE_TO_MUSE:` mail. Muse reads mail as a tool result, and its prompt-injection
 check refuses a tool result that reads like an outsider taking Muse over. Cory 11-07: *"identify the
 shape of and the type of things that Muse is avoiding and rejecting, and not send ones that look like
-that anymore"*. One mail has been refused so far (9:15 AM 11-07, `1a1b694924c9ca16`); a mail with
-numbered checks and measured numbers went through 20 minutes later. So this list is that one mail's
-shape plus how such checks usually judge: a best guess, not tested. A new refusal adds its shape here
+that anymore"*. The first refused mail (9:15 AM 11-07, `1a1b694924c9ca16`) had a script in it; a mail with
+numbered checks and measured numbers went through 20 minutes later. So this list is the refused mails'
+shapes plus how such checks usually judge: a best guess, not tested. A new refusal adds its shape here
 the same hour.
 
 ## Never in a mail
@@ -29,9 +29,9 @@ the same hour.
    names branches plainly and gives no order. The GitHub comment keeps its marker (the ledger dedupes by it).
 
 ## Every mail
-- Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line `From Claude (integrator).` and no time:
-  Gmail stamps every mail, and a typed time was wrong three times on 11-11. No clock time anywhere in a mail;
-  name a moment by its issue, comment or sha.
+- Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line `From Claude (integrator).` with no sending
+  time: Gmail stamps every mail. Any other time is read from the clock or copied from the record, never from
+  memory (11-14); an issue, comment or sha names a moment best.
 - The job, the goal, the result wanted, and where the facts are (issue, PR, file and line); measured
   numbers stated as facts. Long orders go in `work/tasks/muse.md`, pointed to.
 - One job per mail where it can be.

@@ -33,7 +33,10 @@
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 
@@ -44,6 +47,19 @@ namespace {
 constexpr float kTwoPi = 6.28318530718F;
 Matron::ShapeAudit g_shape_audit{};
 bool g_shape_audit_on = false;
+
+// Her parts (J-060): tools/matron_probe/parts_fit.py, her drawn rig's limb
+// segments per stance (the median over its recorded frames).
+struct PartRow {
+    int stance;
+    int region;
+    float a[3];
+    float b[3];
+    float radius;
+};
+constexpr PartRow kPartRows[] = {
+#include "sim/matron_parts.inc"
+};
 } // namespace
 
 void Matron::audit_shapes(const bool on) noexcept {
@@ -115,6 +131,88 @@ void Matron::build_stance_shapes() {
                 new OffsetCenterOfMassShape(placed, -placed->GetCenterOfMass());
         }
     }
+}
+
+// Her parts, what a blow meets (J-060): for each stance her drawn rig's
+// limb segments (the median of the frames recorded in that stance: the
+// probe groups her frames by the stance her body has, stance_, so her parts
+// follow it, and with it its dwell) as capsules on her body (a compound in her body frame about
+// her middle, unturned: a blow's cast turns it by her yaw). Down has none:
+// she is not struck lying (the strike's own gate), and her down body is
+// lie_down's.
+void Matron::build_part_shapes() {
+    for (int s = 0; s < kStanceCount; ++s) {
+        StaticCompoundShapeSettings parts;
+        std::vector<PartRegion> regions;
+        for (const PartRow &row : kPartRows) {
+            if (row.stance != s) {
+                continue;
+            }
+            const Vec3 a(row.a[0], row.a[1], row.a[2]);
+            const Vec3 b(row.b[0], row.b[1], row.b[2]);
+            const Vec3 axis = b - a;
+            const float length = axis.Length();
+            if (length > 1.0e-3F) {
+                parts.AddShape(0.5F * (a + b), Quat::sFromTo(Vec3::sAxisY(), axis / length),
+                               new CapsuleShape(0.5F * length, row.radius));
+            } else {
+                parts.AddShape(a, Quat::sIdentity(), new SphereShape(row.radius));
+            }
+            regions.push_back(static_cast<PartRegion>(row.region));
+            part_axes_[static_cast<std::size_t>(s)].emplace_back(a, b);
+        }
+        if (regions.empty()) {
+            continue;
+        }
+        const ShapeSettings::ShapeResult made = parts.Create();
+        if (made.IsValid()) {
+            part_shapes_[static_cast<std::size_t>(s)] = made.Get();
+            part_regions_[static_cast<std::size_t>(s)] = std::move(regions);
+        }
+    }
+}
+
+const Shape *Matron::strike_parts() const {
+    if (lying_ || dead_) {
+        return nullptr;
+    }
+    return part_shapes_[static_cast<std::size_t>(stance_)].GetPtr();
+}
+
+Quat Matron::strike_parts_rotation() const noexcept { return Quat::sRotation(Vec3::sAxisY(), yaw_); }
+
+RVec3 Matron::strike_aim(const RVec3 from) const {
+    const RVec3 at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : RVec3::sZero();
+    if (strike_parts() == nullptr) {
+        return at;
+    }
+    const Quat turn = strike_parts_rotation();
+    RVec3 best = at;
+    double best_d = 1.0e30;
+    for (const auto &[la, lb] : part_axes_[static_cast<std::size_t>(stance_)]) {
+        const RVec3 a = at + turn * la;
+        const Vec3 ab = turn * (lb - la);
+        const float l2 = ab.LengthSq();
+        const float t = l2 > 1.0e-8F ? std::clamp(Vec3(from - a).Dot(ab) / l2, 0.0F, 1.0F) : 0.0F;
+        const RVec3 q = a + ab * t;
+        const double d = Vec3(from - q).LengthSq();
+        if (d < best_d) {
+            best_d = d;
+            best = q;
+        }
+    }
+    return best;
+}
+
+Matron::PartRegion Matron::strike_part_region(const SubShapeID sub) const {
+    const std::size_t s = static_cast<std::size_t>(stance_);
+    const Shape *parts = part_shapes_[s].GetPtr();
+    if (parts == nullptr) {
+        return PartRegion::Trunk;
+    }
+    SubShapeID rest;
+    const std::uint32_t i = static_cast<const StaticCompoundShape *>(parts)->GetSubShapeIndexFromID(sub, rest);
+    return i < part_regions_[s].size() ? part_regions_[s][i] : PartRegion::Trunk;
 }
 
 int Matron::stance_bin(const float yaw) noexcept {

@@ -117,6 +117,7 @@
 #include <array>
 #include <memory>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace scraperx::sim {
@@ -624,6 +625,20 @@ public:
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
     // (patch Item 3; moved here from matron.cpp so matron_found_climb.cpp can use the same value).
     static constexpr float kRampStallS = 3.0F;
+    // A load hung over her (J-100 #418): heavy enough to kill her, overhead,
+    // seen. Standing under one costs in her route choice while she sees it
+    // and him near its release; a falling one she sees with time to clear,
+    // she steps clear of.
+    static constexpr float kHungLoadMinKg = 500.0F;   // a load this heavy, hung, is read
+    static constexpr float kHungLoadOverheadM = 1.0F; // its bottom this far over her head
+    static constexpr float kHungLoadCeilingM = 22.0F; // and no higher than this over her feet: the
+                                                       // production hang's bottom sits 20.45 m over
+                                                       // deck 154 (SlabCell::kSlabUnderside 174.45 m)
+    static constexpr float kHungLoadReleaseM = 4.0F;  // him within this of its release: it may fall on her
+    static constexpr float kHungLoadHeardS = 1.0F;    // a heard release stays fresh this long
+    static constexpr float kHungLoadFallMps = 1.0F;   // falling this fast: it is falling
+    static constexpr float kHungLoadMarginM = 0.3F;   // past her radius, past its half-diagonal
+    static constexpr float kHungLoadSupportM = 0.2F;  // a support ray this long under its bottom
 
     // Her stages (the owner, 2026-10-19): a pest, dangerous, and fully
     // changed. Her rage moves her between them, both ways: only sound that
@@ -1699,6 +1714,15 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Tests only: her switched off for a run that climbs without her (a test's
+    // start, never a move in play): dead as a fall leaves her, her body out of
+    // the world, so nothing of hers senses, moves or touches.
+    void switch_off_for_test() {
+        dead_ = true;
+        state_ = State::Dead;
+        remove_body();
+        refresh_view();
+    }
     // Tests only: her head and body turned to face `yaw` (a test's start: her
     // heading, never a force or a pose of her body).
     void face_for_test(float yaw) noexcept { yaw_ = yaw; look_s_ = 0.0F; }
@@ -1751,6 +1775,10 @@ public:
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
+    // J-076: the world tells her whether the player stands on a machine, so
+    // the checkpoint freeze (below) reads a rider as up a machine, not on
+    // her deck.
+    void set_player_on_machine(const bool on_machine) noexcept { player_on_machine_ = on_machine; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
     // S1 measurement: the grab world reports both centres and the held
@@ -2083,6 +2111,9 @@ private:
     // false when no such path reaches it (she then heads straight for it).
     bool route_toward(float fx, float fz, float tx, float tz, bool allow_catwalk, float &wx, float &wz,
                       bool allow_gaps = false) const;
+    // A point out of every costed hung load's footprint (J-100): the rim she
+    // stops at, not the load's centre.
+    void clamp_out_of_footprint(float &x, float &z) const;
     // Nothing built standing between (fx, fz) and (tx, tz) at her hips, across
     // her width, on her floor (a post, a frame): she could walk it straight.
     // Her width is swept, not sampled: a post thinner than the space between
@@ -2093,6 +2124,10 @@ private:
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
     void walk_toward(float dt, float wx, float wz, float speed, float foot_accel = kFootAccel,
                      bool turn_moves = false);
+    // A falling hung load she sees with time to clear (J-100): her walk's
+    // target and speed are retargeted at the quickest way out of its
+    // footprint (false: no dodge — she walks on as called).
+    bool hung_load_dodge(float &wx, float &wz, float &go);
     // matron_moves.cpp: her pace chosen for this tick of the hunt; a crumb of
     // the player's way; the next crumb on from where she is; the stall
     // watchdog's tick (true: a sidestep target set); silence for silence.
@@ -2213,10 +2248,14 @@ public:
     // The player's fist on her (physics_world_strike.cpp): the impulse it
     // gave her body, read as a blow in take_blow against her balance like
     // any striker's (the force itself is already on her body).
-    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low) noexcept {
+    // `on_arm`: the blow met her arm (J-060): her arm takes it, not the
+    // region of her head or trunk behind it.
+    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low,
+                          const bool on_arm = false) noexcept {
         player_blow_ns_ += impulse_ns;
         player_blow_at_ = fist;
         player_blow_low_ = player_blow_low_ || low;
+        player_blow_on_arm_ = on_arm;
         // Tagged as his own: before the rip begins it frees him (take_blow).
         player_blow_landed();
     }
@@ -2228,6 +2267,7 @@ private:
     JPH::Vec3 player_blow_ns_ = JPH::Vec3::sZero();
     JPH::RVec3 player_blow_at_ = JPH::RVec3::sZero();
     bool player_blow_low_ = false;
+    bool player_blow_on_arm_ = false;
     // Her report of the pipe and of her cables (refresh_view), and both set
     // back for a restore (matron_pipe.cpp, matron_line.cpp).
     void report_pipe();
@@ -2487,6 +2527,9 @@ private:
     // read after the step (take_blow); and her staggering and lying there
     // (step_knocked), down onto the steel and up off it.
     void sense_near();
+    // The heavy loads hung overhead she can see (J-100): rebuilt every tick,
+    // costed while she sees one and him near its release.
+    void sense_hung_loads();
     void take_blow(float dt);
     void step_knocked(float dt);
     void lie_down(float fall_x, float fall_z);
@@ -2495,7 +2538,25 @@ private:
     [[nodiscard]] bool shape_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
     // Her collision body by stance (matron_shape.cpp).
     void build_stance_shapes();
+    void build_part_shapes();
     [[nodiscard]] Stance wanted_stance() const;
+public:
+    // Her body's parts, what a blow meets (J-060, matron_shape.cpp): her
+    // drawn rig's limb segments for the stance her body is in (stance_, the
+    // family her drawn frames were recorded under), each a capsule rigid on her body,
+    // in her body frame about her middle; turned by her yaw where a blow is
+    // cast at them (strike_parts_rotation). They collide with nothing:
+    // only a blow's cast reads them. Null where she has none (down).
+    enum class PartRegion : std::uint8_t { Trunk = 0, Forearm = 1, UpperArm = 2, Leg = 3 };
+    [[nodiscard]] const JPH::Shape *strike_parts() const;
+    [[nodiscard]] JPH::Quat strike_parts_rotation() const noexcept;
+    // Which part a cast met (its sub-shape on the parts shape strike_parts gave).
+    [[nodiscard]] PartRegion strike_part_region(JPH::SubShapeID sub) const;
+    // The nearest point of her parts (on a part's axis) to `from`, in the
+    // world: where a blow thrown at her from there is aimed. Her middle
+    // where she has none.
+    [[nodiscard]] JPH::RVec3 strike_aim(JPH::RVec3 from) const;
+private:
     [[nodiscard]] const JPH::Shape *stance_shape(Stance stance, float yaw) const;
     void step_stance(float dt);
     [[nodiscard]] bool on_planning_shape() const;
@@ -2664,6 +2725,7 @@ private:
     bool grip_was_on_ = false;
     bool player_braced_ = false;
     bool player_on_ladder_ = false;
+    bool player_on_machine_ = false;  // J-076: standing on a machine, not her deck
     float thrash_ = 0.0F;
     float pull_n_ = kHandReachPullN;
     float arm_reach_m_ = kArmReachM;
@@ -2998,6 +3060,21 @@ private:
     };
     std::array<Near, kMaxNear> near_{};
     std::size_t near_count_ = 0;
+    // A heavy load hung overhead she has read (sense_hung_loads, rebuilt every
+    // tick): its body, where it hangs, how fast it falls, whether she sees it
+    // and whether it is costed in her route choice. Sorted by body id.
+    struct HungLoad {
+        JPH::BodyID body;
+        float x = 0.0F, z = 0.0F;
+        float bottom_y = 0.0F;
+        float centre_y = 0.0F;
+        float vy = 0.0F;
+        float footprint_r = 0.0F;
+        bool seen = false;
+        bool costed = false;
+        bool falling = false;
+    };
+    std::vector<HungLoad> hung_loads_;
     JPH::Vec3 set_velocity_ = JPH::Vec3::sZero();   // hers after she moved, before the step
     // The blow being dealt (above): her change, the strikers' impulse on her
     // mass (horizontal), and a weight's come down on her; since the last
@@ -3054,6 +3131,9 @@ private:
     std::uint32_t stance_switches_ = 0;
     int steel_ticks_ = 0;   // ticks running her shape has been in the steel (the audit's)
     std::array<std::array<JPH::Ref<JPH::Shape>, kStanceYawBins>, kStanceCount> stance_shapes_;
+    std::array<JPH::Ref<JPH::Shape>, kStanceCount> part_shapes_;   // J-060: her parts by stance (null: none)
+    std::array<std::vector<PartRegion>, kStanceCount> part_regions_;   // each part's region, in its shape's order
+    std::array<std::vector<std::pair<JPH::Vec3, JPH::Vec3>>, kStanceCount> part_axes_;   // each part's axis ends, body frame
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
     float blow_mps_ = 0.0F;

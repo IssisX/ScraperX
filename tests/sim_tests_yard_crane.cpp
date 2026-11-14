@@ -931,14 +931,20 @@ void run_yard_crane_magnet() {
     // those three, as the kit's very last bodies (run_wet_e_guard pins the
     // same order). J-108 (#427) then appends the bait lift's platforms, A
     // then B, after the cell: re-pinned, before "the slab cell last", now
-    // "the slab cell, then A, then B, last", each body pinned.
+    // "the slab cell, then A, then B, last", each body pinned. J-014 then
+    // appends the hightower toolboxes after B: re-pinned, the cell, then A,
+    // then B, then each toolbox by entity, last.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
     const std::uint64_t kSlabCell[] = {SlabCell::kFrameEntity, SlabCell::kTriggerEntity, SlabCell::kHandleEntity};
     const std::uint64_t kBait[] = {Simulation::kServiceBaitAEntityId, Simulation::kServiceBaitBEntityId};
     constexpr auto kBaitBodies = static_cast<std::uint32_t>(std::size(kBait));
     constexpr auto kCellBodies = static_cast<std::uint32_t>(std::size(kSlabCell));
-    constexpr auto kTailBodies = kCellBodies + kBaitBodies;
+    // The hightower toolboxes trail the bait lift: the tail is the cell,
+    // then A, then B, then each toolbox by entity.
+    const std::uint32_t hightower_begin = s.loose_stock_hightower_begin();
+    const std::uint32_t toolboxes = s.loose_stock_count() - hightower_begin;
+    const auto kTailBodies = kCellBodies + kBaitBodies + toolboxes;
     std::uint32_t fork = last;
     for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
         fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
@@ -953,10 +959,14 @@ void run_yard_crane_magnet() {
         later_stock = s.kit_body_entity(last - kTailBodies + i) == kSlabCell[i];
     }
     for (std::uint32_t i = 0; later_stock && i < kBaitBodies; ++i) {
-        later_stock = s.kit_body_entity(last - kBaitBodies + i) == kBait[i];
+        later_stock = s.kit_body_entity(last - kBaitBodies - toolboxes + i) == kBait[i];
+    }
+    for (std::uint32_t i = 0; later_stock && i < toolboxes; ++i) {
+        later_stock = s.kit_body_entity(last - toolboxes + i) ==
+                      Simulation::kLooseStockFirstEntity + hightower_begin + i;
     }
     require(later_stock,
-            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B: the kit's last bodies");
+            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B, then each hightower toolbox by entity: the kit's last bodies");
     const auto tail = fork - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {

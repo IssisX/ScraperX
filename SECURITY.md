@@ -29,13 +29,24 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   `set -x`, debug dumps and uploaded logs.
 
 ### Proof scope (`ci/proof_scope.py`)
+- One exception to the next bullet's "trunk runs the whole proof" (J-072): the trunk proof the switchboard dispatches
+  after a workflow-token merge, which starts no push run, is scoped as the push of that merge, HEAD^1..HEAD. It is
+  told apart by what no PR, comment or dispatch input can set: the runner's `GITHUB_ACTOR` and
+  `GITHUB_TRIGGERING_ACTOR` are both `github-actions[bot]`, and HEAD is a two-parent merge whose author and
+  committer are the ones GitHub writes for that token. The commit message is never read (it carries the PR's branch
+  name). A person's dispatch or re-run, any other HEAD, or a first parent that cannot be fetched runs the whole
+  proof. The range is the merge's whole diff against the trunk it landed on, so nothing in the PR can narrow it.
+  The dispatch names no commit, so when the commits below HEAD on its first parents are such merges too the range
+  starts below all of them (at most 20 in a row, else the whole proof): a merge whose dispatch read a later HEAD is
+  still in that run's range.
 - A skipped proof group counts as passing, so what decides the scope is a merge gate. It takes no input but the
-  event, the ref and the git graph: no dispatch input, no text from a PR or comment. A dispatch is scoped only on a
-  `switchboard/candidate-*` ref (the range merge-base(HEAD's two parents)..HEAD, the merged tree itself, so extra
-  content pushed there with the right parents is still compared) or an `*/integrate-*` ref (as its push); trunk,
-  any other ref, a candidate that is not a two-parent merge, or any git failure runs the whole proof. The switch
-  merges on a candidate only when its parents are exactly the PR's head and trunk (`switch.py read_candidate`).
-  A path where something an outsider writes can narrow the scope is P1.
+  event, the ref and the git graph: no dispatch input, no text from a PR or comment. A dispatch is scoped only on an
+  `*/integrate-*` ref, by the same range as that branch's push (merge-base(trunk, HEAD)..HEAD); trunk, any other
+  ref or any git failure runs the whole proof. The switch reads a head's newest proof run by its sha alone
+  (`switch.py head_runs`), whatever ref it ran on, so a ref name must never pick a narrower range than the push's:
+  a `switchboard/candidate-*` ref did (merge-base(HEAD's two parents)..HEAD) until the switch stopped making
+  candidates and with them its check of those parents. A path where something an outsider writes can narrow the
+  scope is P1.
 
 ### APK signing
 - `SCRAPERX_APK_KEYSTORE_B64` and `SCRAPERX_APK_KEYSTORE_PASSWORD` are used only in the signing
