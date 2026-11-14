@@ -25,8 +25,9 @@ public:
     enum class Id : std::uint8_t {
         Mission1ClockIn = 0,       // S1 run and ridden to 22 m
         Mission7BringPlantUp = 1,  // float ram, chiller, accumulator, in order
+        Mission8TopOut = 2,        // summit ending Home and the searchlight lit
     };
-    static constexpr std::size_t kObjectiveCount = 2;
+    static constexpr std::size_t kObjectiveCount = 3;
 
     Objectives() = default;
 

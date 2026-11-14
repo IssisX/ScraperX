@@ -305,6 +305,10 @@ void run_hard_blow_punch() {
             tick(s);
         }
         require(s.matron_state().state == kStateHunting, "hard blow punch: she hunts (setup)");
+        // She hunts him, so she faces him: launched, she faces away (yaw 0).
+        // J-060: a blow lands only on her body's parts, and her drawn back,
+        // 0.28 m behind her middle, is out of a 1.05 m punch's reach.
+        s.debug_face_matron(3.141592653589793);
         s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
         bool entered = false;
         for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !entered; ++i) {
