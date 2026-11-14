@@ -118,8 +118,10 @@ class Classes(unittest.TestCase):
         for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "hold"),
                            ("reviewer", "ride")):
             self.assertEqual(switch.inbox_class(self.item("PLAN", owner)), cls, owner)
+        for dest, cls in (("claude", "now"), ("muse", "ride")):   # J-072: its own merge wakes it; Muse's rides
+            self.assertEqual(switch.inbox_class(self.item("MERGED", dest)), cls, dest)
         for kind in switch.INBOX_ORDER:   # every other kind is the integrator's work: it holds, never only rides
-            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "RED-TRUNK", "PLAN"):
+            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "RED-TRUNK", "PLAN", "MERGED"):
                 for dest in ("claude", "both"):
                     self.assertEqual(switch.inbox_class(self.item(kind, dest)), "hold", (kind, dest))
 
