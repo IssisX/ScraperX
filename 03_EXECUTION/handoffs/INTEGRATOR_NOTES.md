@@ -8,10 +8,12 @@ Read through: 1794622612 (2026-11-14 mail+asks)
   take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
-  done = the real test passing. NOW: test 1 FAILED; its 3 fixes landed (#541-#543). Test 2 window from 23:44Z 11-13: Muse pushed NOTHING overnight,
-  so not judged; send_later trig_015RP6SsCBYqRubSAivQi7p1 (13:45Z 11-14) re-checks; if Muse is still idle, find out why (mail it). REAL TEST = plan sec 5 table read
-  over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven (3 trunk reds 11-13: key 1090, voice picks, J-098 picks).
+- THE PLAN (11-14): Carbon's answer (verdict: targeted fixes, no rebuild; coordination signals become standing state). DONE TEST
+  (Cory 11-14 "yes"): the next 6 Muse jobs each land within 1 h of going green, no hand fixes, trunk never red unowned.
+  Count: 1/6 = #544 J-040 repin (green 12:08Z, merged 12:16Z, 8 min). In flight: #545 quiet-asks, proof-unittests,
+  carbon-fixes, delete-dead, board-roll. Not taken: Carbon's 60-min expiry of a pause (it would override Cory). Later list:
+  eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven; Carbon rank 4 (test lists to
+  ci/shards.json, re-pin split rule, first FAIL in late notices) after proof-unittests lands. Paid reviewer spent to 12-01.
 - System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
