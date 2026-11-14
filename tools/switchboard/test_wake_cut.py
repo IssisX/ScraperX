@@ -115,11 +115,14 @@ class Classes(unittest.TestCase):
             self.assertEqual(switch.inbox_class(self.item(kind)), "now", kind)
         for kind in ("FYI", "STARTED", "ACK", "RERUN"):
             self.assertEqual(switch.inbox_class(self.item(kind)), "ride", kind)
-        for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "ride"),
+        for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "hold"),
                            ("reviewer", "ride")):
             self.assertEqual(switch.inbox_class(self.item("PLAN", owner)), cls, owner)
+        for dest, cls in (("claude", "now"), ("muse", "ride")):   # J-072: its own merge wakes it; Muse's rides
+            self.assertEqual(switch.inbox_class(self.item("MERGED", dest)), cls, dest)
+        self.assertEqual(switch.inbox_class(self.item("TAKE")), "now")   # J-072: a Muse job failed twice, Claude's now
         for kind in switch.INBOX_ORDER:   # every other kind is the integrator's work: it holds, never only rides
-            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "RED-TRUNK", "PLAN"):
+            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "RED-TRUNK", "PLAN", "MERGED", "TAKE"):
                 for dest in ("claude", "both"):
                     self.assertEqual(switch.inbox_class(self.item(kind, dest)), "hold", (kind, dest))
 
@@ -249,9 +252,9 @@ class Hold(unittest.TestCase):
     def test_other_owners_late_jobs_ride_and_the_integrators_hold(self):
         gh = ti.FakeGH()
         sw = at(gh, 0)
-        sw.plan_items = (switch.InboxItem("PLAN", "J-059", "k1", "PLAN J-059: belongs to switchboard", "switchboard"),
+        sw.plan_items = (switch.InboxItem("PLAN", "J-058", "k0", "PLAN J-058: belongs to grok", "grok"),
                          switch.InboxItem("PLAN", "J-043", "k2", "PLAN J-043: belongs to muse", "muse"))
-        self.assertEqual(sw.inbox([]), 0, "nobody's step but the integrator's wakes it")
+        self.assertEqual(sw.inbox([]), 0, "nobody's step but the integrator's (or the switch's own) wakes it")
         self.assertEqual(len(sw.digest_held), 2)
         sw2 = at(gh, 1)
         sw2.digest_held = sw.digest_held
@@ -259,7 +262,16 @@ class Hold(unittest.TestCase):
         self.assertEqual(sw2.inbox([]), 3)
         body = gh.posts[0][1]
         self.assertIn("- PLAN J-125: belongs to integrator", body)
-        self.assertIn("- digest, nothing to decide: PLAN J-059: belongs to switchboard; PLAN J-043: belongs to muse", body)
+        self.assertIn("- digest, nothing to decide: PLAN J-058: belongs to grok; PLAN J-043: belongs to muse", body)
+
+    def test_a_step_the_switchboard_owes_itself_wakes_the_integrator(self):   # #350: J-049, J-072 reached nobody
+        gh = ti.FakeGH()
+        sw = at(gh, 0)
+        sw.plan_items = (switch.InboxItem("PLAN", "J-059", "k1", "PLAN J-059: belongs to switchboard", "switchboard"),)
+        self.assertEqual(switch.inbox_class(sw.plan_items[0]), "hold")
+        self.assertEqual(sw.inbox([]), 1)
+        self.assertIn("- PLAN J-059: belongs to switchboard", gh.posts[0][1])
+        self.assertEqual(sw.digest_held, ())
 
 
 class Keys(unittest.TestCase):

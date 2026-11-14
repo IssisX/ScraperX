@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Every cross-agent ask with no answer yet, so none is left waiting.
 
-This file is the one judge of asks (J-072): the ledger (tools/switchboard/ledger.py read_feed) and the reconciler
-(reconciler.py stream_asks, acks_by_reply) both call read() and answer_rule(), so the two cannot disagree on what
-an ask is or on what answers it.
+This file is the one judge of asks (J-072): what an ask is and what answers it. The ledger and the reconciler that
+also called read() and answer_rule() are deleted (J-072, after #530); their old notices and O-ids stay in comments.
 
 An ask is a comment on an open issue or PR that addresses another agent: a line that opens `To <Name>` (after
 quote, list and emphasis marks `> - + * _`, and at most one signature such as `Claude (integrator):` or the
@@ -83,7 +82,7 @@ PR_REF = re.compile(r"#(\d+)")
 MAX_PAGES = 10  # bounded: at most 1000 open issues read
 MAX_COMMENT_PAGES = 40  # bounded: at most 4000 comments read; a full last page is reported, never silent (11-14)
 NOISE = ("<!-- linear-linkback", "You have reached your Codex")
-LEDGER_MARK = "<!-- switchboard:ledger "   # in the switchboard ledger's notices (tools/switchboard/ledger.py)
+LEDGER_MARK = "<!-- switchboard:ledger "   # in the old switchboard ledger's notices (ledger.py, deleted)
 BRIDGE_POST = "**Muse (via email bridge)"   # the first line of every inbound bridge post: Muse writing to Claude
 QUOTE = re.compile(r"^>\s?(.+)$", re.MULTILINE)
 MIN_QUOTE = 12   # characters of quoted text that must appear in the ask for a quote to name it

@@ -1,30 +1,30 @@
 # Integrator notes
-
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794622612 (2026-11-14 mail+asks)
-## Now (11-13)
-- System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
-  take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
+Read through: 1794669349 (2026-11-14 mail+asks)
+## Now
+- System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
-  10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
-- THE PLAN: `03_EXECUTION/SYSTEM_PLAN.md` (Fable max). Section-5 order, one helper at a time (I pick the effort, tell him one line);
-  done = the real test passing. NOW: test 1 FAILED; its 3 fixes landed (#541-#543). Test 2 window from 23:44Z 11-13: Muse pushed NOTHING overnight,
-  so not judged; send_later trig_015RP6SsCBYqRubSAivQi7p1 (13:45Z 11-14) re-checks; if Muse is still idle, find out why (mail it). REAL TEST = plan sec 5 table read
-  over one live window after all land: Muse PR opened <=15 min, merged <=45, red trunk owned <=15, no MERGE-BY-HAND, notices name tests, meter >800. After #526 watch #484 #494 #488 #523 merge. Paid reviewer spent to 12-01. Later list: eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven (3 trunk reds 11-13: key 1090, voice picks, J-098 picks).
-- System work (Cory 11-13): ONLY Fable's plan, in order. Off-plan: a measured break of Muse landing gets one small fix, told in one line; all else goes on a later list, no asks to Cory.
+  10 min; check all he says, push back on waste. He welcomes a one-line nudge to be nicer, only when anger lands off the real problem (11-14). On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go; after it, fix obvious system problems as I see them, not only what alarms; no endless tweaking (Cory 11-14).
+- THE PLAN (11-14): Carbon's answer (verdict: targeted fixes, no rebuild; coordination signals become standing state). DONE TEST
+  (Cory 11-14 "yes"): the next 6 Muse jobs each land within 1 h of going green, no hand fixes, trunk never red unowned.
+  Count: 5/6 = #544, #495, #547, #472 J-040 feed (15 min), #487 J-116 save (9 min). J-072 Fable found Muse dispatching
+  on top of each push (mailed; muse.md line on trunk 1aa910b0); its candidate-range removal (protected branch) lands via
+  switchboard; new Fable helper (harness ran it in background) scopes trunk's post-merge dispatch by HEAD^1. Muse in flight:
+  J-014 J-040 J-053 J-078 J-100 J-116 (J-053: told to stage the dyno lower). Not taken: Carbon's 60-min expiry of a pause (it would override Cory). Later list:
+  eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven; Carbon rank 4 (test lists to
+  ci/shards.json, re-pin split rule, first FAIL in late notices). Likely next (Cory 11-14, after ours is judged): Muse and Claude talk through git files, email only a doorbell. Carbon/Astra designs: parts list, NOT built:
+  03_EXECUTION/CARBON_REDESIGN_11-14.md, ASTRA_REDESIGN_11-14.md, ASTRA_REDESIGN_2_11-14.md (picks: merge the tested tree,
+  file locks, Muse (Meta) reviews Claude's code, work leases, dispatch workflows explicitly, untrusted PR code gets no tokens); cap its 20-min re-wakes if built. Paid reviewer spent to 12-01.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
-- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
-  alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
-- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
-  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
-- This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper. Parallel helpers OK (Cory 11-13: fast), max four. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
+- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest, alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
+- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (the `advisor` tool is Fable, ~/.claude/settings.json):
+  for important calls, above all every design change to the collaboration system before it is built (Cory 11-14, asked ~10 times;
+  skipped on the clock and helper calls that day); also a 2nd failed fix and before "system done". Not for small first problems.
+- This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper; the app runs every helper in the background (host sets CLAUDE_AUTO_BACKGROUND_TASKS=true; CLAUDE.md, 11-14); Cory 11-14: a 2nd session for helper work until the cheaper way he means is found (he says it is not a session; ask him what it is). Open: RED-TRUNK missed a late-finishing red trunk run (#547 merge, touch-1 timeout): fix in session_01W3SSMz553jqjWF15r2ZH8f, branch claude/integrate-j072-trunk-alarm; SYSTEM DONE 11-14: alarm fix #553 + #555 merged, banner sent; it means normal use now, problems fixed as they show (Cory 11-14), and game code waits for his go. Cory 11-14: a Muse job failed 2+ times is Claude's AT ONCE (the routing rule I skipped). 11-14 sessions: Cory allows ONE other session (the switchboard one, session_01W3SSMz553jqjWF15r2ZH8f); the rest archived. J-053 done (claude/integrate-protected-j053, Launch top-out, plan=claude). J-014 back to Muse with the named fix (#121). J-100 Claude's on Muse's ack; cause on #418 (budgeted Turn crate shove); build via an in-process helper. Fork mode off in settings (foreground helpers from next session start). Muse needs easy jobs (queue 0; session_01W3SSN1VZEuDT8CnAvWn1fu writing 6). GIT FILES (Cory 11-14 "do git files now"): step 1 = work/to-muse/0001-git-channel.md + doorbell mail; live only after a real message each way; Muse's half (fb-bot/state files) built after its 0001 reply, by the TAKE session (same switch.py); ownership still moves only via plan.py. Parallel helpers OK (Cory 11-13: fast), max four. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
 
 ## Traps
-- My PR merges and branch deletes are refused by the safety check; never work around it. Direct trunk pushes of tooling and docs work.
+- My PR merges and branch deletes are refused by the safety check; never work around it. Direct trunk pushes of tooling and docs work. The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.
 - Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
-- Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
-- Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused. Keep a helper's worktree until its PR lands: removing it kills the resume (11-12, #469).
-- Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.
-- sweep.py shows only the latest verdict and misses an earlier unfixed P1 from another vendor.
-- The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.
+- Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue. Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused. Keep a helper's worktree until its PR lands: removing it kills the resume (11-12, #469).
+- Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's. sweep.py shows only the latest verdict and misses an earlier unfixed P1 from another vendor.

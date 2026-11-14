@@ -117,6 +117,24 @@ jobs:
           (cd ci && python3 -m unittest -q test_proof_scope)
           python3 ci/proof_scope.py
 
+      # J-072: the switchboard's and the board tools' unit tests (tools/switchboard/test_*.py), on every push. The
+      # proof skips the game jobs for a switchboard-only change, and switchboard.yml's selftest never starts on a PR
+      # its bot opens (GitHub holds it for approval), so without this a "proof green" there tested nothing. The same
+      # hash-pinned wheels as the selftest (tools/switchboard/requirements.txt), so the SDK-gated tests run too.
+      - name: Install the switchboard's hash-pinned dependencies (wheels only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/switchboard-venv"
+          "$RUNNER_TEMP/switchboard-venv/bin/pip" install --quiet --disable-pip-version-check --require-hashes \
+            --only-binary=:all: -r tools/switchboard/requirements.txt
+
+      - name: Test the switchboard and board tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/switchboard-venv/bin/python" -m unittest discover -s tools/switchboard -p 'test_*.py'
+
       - name: Verify every proof job is gated on its own scope output
         shell: bash
         run: |
@@ -745,7 +763,8 @@ jobs:
 
       # Her drawn body, not the sim's: the probe records the skeleton the renderer poses for her (and her hair)
       # frame by frame while a scenario plays, and check.py fails on a bone drawn longer than its rest length
-      # by more than 5%, a drawn hand more than 3 cm off the grip the sim says it holds, a foot that slides
+      # by more than 5%, a drawn hand more than 3 cm off the grip the sim says it holds, a drawn joint
+      # turning faster than 20 rad/s (rule 37), a foot that slides
       # more than 5 cm while she stands, and hair or skirt more than 3 mm inside her body. A known defect is
       # an expected failure there, naming the exit-board item that fixes it. The owner, 2026-10-29: "I don't
       # think her arms should have passed the tests. That means the tests weren't sufficient."

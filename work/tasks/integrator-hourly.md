@@ -1,18 +1,25 @@
 # Integrator: the hourly check
 
 It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
-5:17 PM, 9:17 PM), every run full. It is a backstop (11-10): the switchboard inbox wakes the integrator on every Muse mail,
-red proof, review and merge; these runs catch what no event raised.
+5:17 PM, 9:17 PM). A backstop (11-10): the inbox wakes the integrator at once on Muse mail, trunk red and Claude's merges;
+branch reds and reviews within 30 min; Muse's merges ride.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace: no throttling, no pace prediction, no meter asks, no quiet runs (11-10).
-Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
-How: helpers get the important work and long reads, never chores (11-06); the integrator runs its own check-in lean and never hand-edits the board (the switchboard writes it from the plan). No coding inline.
-Fewer, batched calls.
+Pace: no throttling, pace prediction, meter asks or quiet runs (11-10).
+Specs, ruling math and research go to an outside agent first; the integrator checks them (11-06).
+How: helpers get the important work and long reads, never chores (11-06); the integrator never hand-edits the board (the switchboard writes it from the plan).
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
+Docs stay true (11-14): a contradiction or stale fact seen while working, or left behind by a change that landed, is
+fixed that run, never listed for later; no hunting through every file for them.
+Every wait, alarm or limit a helper or I pick is checked against the measured rhythm before it ships, never
+the safe-looking long one (11-14: a 6 h Muse-quiet alarm; Muse posts about every 30 min).
+An agent's own blocker (memory, disk, a tool) gets the fix told that hour, never only a workaround (11-14: Muse's low
+memory got "push anyway"; Cory had to tell it to clear space).
+The machine obeys "only what changed" too: each run, look at the newest proof runs; one that ran groups its change does
+not reach is waste, fixed that run (11-14: dispatched proofs ran all 13 jobs).
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
+Every run, first: `get_session` (no id). Session effort is his call: mention it only when he throttles; ultracode on: tell him once (11-12).
 
 Overview: a scheduled task (trig_019Qy9rcek8tdRXTcpNjF1zs, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
@@ -51,7 +58,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    and my helpers' jobs too: a job red twice, or a red Muse's branches share, gets a question mailed to Muse that run, and climbs CLAUDE.md's ladder at once (CLAUDE.md, 11-12); one outside agent per question, a second only if needed (11-11: "Not AND"); nothing waits on Grok's run (Cory 11-11, 11-12).
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
-6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM) unless a system keeps failing (11-09). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+6. **Stop waste seen this run; no searching for new tools or setups** (11-06) unless a system keeps failing (11-09). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).

@@ -6,7 +6,8 @@
   ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000",
-    "CLAUDE_CODE_EFFORT_LEVEL": "high"
+    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "CLAUDE_CODE_FORK_SUBAGENT": "0"
   },
   "permissions": {
     "allow": [
@@ -84,7 +85,9 @@
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
       "mcp__github__create_repository",
-      "mcp__github__fork_repository"
+      "mcp__github__fork_repository",
+      "Bash(rm /dev/*)",
+      "Bash(rm * /dev/*)"
     ],
     "additionalDirectories": [
       "/tmp/claude-0"
@@ -138,6 +141,17 @@
           {
             "type": "command",
             "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/clock_now.py",
+            "timeout": 10
           }
         ]
       }

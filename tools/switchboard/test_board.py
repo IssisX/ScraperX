@@ -243,14 +243,6 @@ class Sweep(unittest.TestCase):
         self.assertEqual(status, 0, sw.lines)
         self.assertEqual([c for c in gh.calls if "labels=board" in c], [], gh.calls)
 
-    def test_the_dry_run_tools_ask_the_switch_for_the_board(self):
-        # ledger.py and reconciler.py's own main() (a dry run by hand) use the board the switch resolves
-        for name in ("ledger.py", "reconciler.py"):
-            src = (HERE / name).read_text(encoding="utf-8")
-            main = src[src.index("\ndef main() -> int:"):]
-            self.assertNotIn("switch.BOARD_ISSUE", main, name)
-            self.assertIn("sw.board_issue()", main, name)
-
 
 if __name__ == "__main__":
     unittest.main()
