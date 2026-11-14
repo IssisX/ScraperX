@@ -131,6 +131,20 @@ class RedTrunk(unittest.TestCase):
         self.assertIn("red on native-tests", it.line)
         self.assertEqual(gh.state["trunk_proof"]["checked"], gh.runs[3]["created_at"])   # nothing unfinished: judged
 
+    def test_more_skip_the_build_runs_than_one_sweep_reads_are_walked_past_to_the_red_run(self):
+        # 11-14: 8 finished notes-only runs above a finished red built run, with 6 reads a sweep, read the same newest
+        # 6 every sweep and never reached the red one; a run judged skip-the-build is remembered and never read again
+        notes = [ti.run(50 + k, TRUNK, f"{k:x}" * 40, 1 - 0.1 * k, conclusion="success") for k in range(8)]
+        gh = self.gh([ti.run(41, TRUNK, BROKE, 2)] + notes, {41: BUILT_RED, **{r["id"]: SKIPPED for r in notes}})
+        self.assertGreater(len(notes), switch.TRUNK_RUN_READS)
+        fired = [ti.later(gh, 25 * n).trunk_items(gh.runs, frozenset()) for n in range(3)]
+        self.assertTrue(any(fired), "RED-TRUNK never fired")
+        (it,) = next(f for f in fired if f)
+        self.assertEqual((it.kind, it.head), ("RED-TRUNK", BROKE))
+        for r in notes:   # each skip-the-build run's jobs were read once, never again
+            self.assertEqual(sum(f"/actions/runs/{r['id']}/jobs" in g for g in gh.gets), 1, r["id"])
+        self.assertLessEqual(len(gh.state["trunk_skipped"]), switch.TRUNK_SKIPPED_KEPT)
+
     def test_claudes_own_trunk_push_pages_only_the_integrator(self):
         gh = self.gh([ti.run(41, TRUNK, "e" * 40, 5)], {41: BUILT_RED})
         (it,) = ti.make(gh).trunk_items(gh.runs, frozenset())
