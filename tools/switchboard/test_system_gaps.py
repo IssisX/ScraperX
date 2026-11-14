@@ -3,6 +3,7 @@
 RedTrunk     trunk's full proof red pages its owners at once, once per red streak, until a green full proof (J-129's
              doubled order key 1100 sat red about a day, hidden by notes-only pushes whose runs skip the build).
 Merged       a merge the switch makes is one MERGED inbox line (11-14: #555 and #396 were found only by hand).
+Held         a job held in the plan gets no idle nag (QUIET, FIX-STUCK, RED-STUCK); its new red or FIX still shows.
 Take         a Muse job red twice on the same failure is Claude's: Muse is mailed once, the integrator told until the
              plan says claude (11-14: J-100 and J-014 sat in Muse's hands, missed).
 Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'
@@ -332,6 +333,41 @@ class Take(unittest.TestCase):
         dry.sweep("a" * 40, 1, tests)
         dry.sweep("b" * 40, 2, tests)
         self.assertNotIn("takes", dry.gh.state)
+
+
+class Held(unittest.TestCase):
+    """Inbox post 6880167407: QUIET #466 claude/integrate-protected-j015 (J-015) for 3.1 h, while work/plan.md holds
+    J-015 ("paused by Cory 11-13")."""
+
+    def sw(self, hold):
+        root = pathlib.Path(tempfile.mkdtemp())
+        (root / "work").mkdir()
+        (root / "work/plan.md").write_text("limit claude 4\nlimit muse 10\nJ-015 claude #122" + (
+            " hold: paused by Cory 11-13" if hold else "") + " | Stock\nJ-100 muse #418" + (
+            " hold: parked" if hold else "") + " | Hung load\n", encoding="utf-8")
+        sw = ti.make(ti.FakeGH())
+        sw.root = root
+        return sw
+
+    def kinds(self, s, hold, muse=False):
+        sw = self.sw(hold)
+        return [it.kind for it in (sw.muse_items if muse else sw.inbox_items)([s], frozenset())]
+
+    def test_a_held_jobs_idle_pr_gets_no_quiet_and_the_same_pr_unheld_still_does(self):
+        quiet = ti.steered(number=466, ref="claude/integrate-protected-j015", job="J-015", proof="none",
+                           updated_at=ti.ago(3.1), proof_done_at="", run_id=0)
+        self.assertEqual(self.kinds(quiet, hold=True), [])
+        self.assertEqual(self.kinds(quiet, hold=False), ["QUIET"])
+
+    def test_a_held_jobs_new_red_or_fix_still_shows_but_never_the_stuck_nag(self):
+        red = ti.steered(number=478, ref="fb-bot/integrate-j100", job="J-100", proof="red: native-tests",
+                         committed=ti.ago(6), updated_at=ti.ago(5))
+        self.assertEqual(self.kinds(red, hold=False, muse=True), ["RED", "RED-STUCK"])
+        self.assertEqual(self.kinds(red, hold=True, muse=True), ["RED"])
+        fix = ti.steered(number=478, ref="fb-bot/integrate-j100", job="J-100", verdicts=[ti.fix(hours=7)],
+                         committed=ti.ago(8), updated_at=ti.ago(7))
+        self.assertEqual(self.kinds(fix, hold=False, muse=True), ["FIX", "FIX-STUCK"])
+        self.assertEqual(self.kinds(fix, hold=True, muse=True), ["FIX"])
 
 if __name__ == "__main__":
     unittest.main()
