@@ -21,6 +21,10 @@ from pathlib import Path
 
 FRESH_MIN = 10
 TIME = re.compile(r"\b(1[0-2]|0?[1-9])(:[0-5]\d)?\s*[AaPp]\.?\s*[Mm]\b")
+# Cory 11-14: "about 10 minutes" for a helper 5 minutes old passed, since only clock times were checked. A reply that
+# states an elapsed time (N minutes/hours, "an hour", "half an hour") needs a `date` read since his last message.
+DURATION = re.compile(r"\b(\d+(\.\d+)?\s*(-|to)?\s*\d*\s*(min|mins|minutes?|hours?|hrs?|h)\b|(an?|half an?)\s+(few\s+)?"
+                      r"(minutes?|hours?)\b)", re.I)
 DATE_CALL = re.compile(r"(^|[\s;&|(])(TZ=\S+\s+)?date(\s|$|;|\)|&|\|)")
 TEXT_KEYS = ("content", "new_string", "command", "body", "title", "subject", "message")
 FIX = "Run `TZ=America/Chicago date` now, then write every time from that reading."
@@ -112,6 +116,18 @@ def main():
     else:
         text = call_text(data.get("tool_input") or {})
     found = TIME.search(text or "")
+    if not found and event == "Stop":
+        span = DURATION.search(text or "")
+        if not span or (data.get("stop_hook_active") and rows is None):
+            return 0   # nothing timed, or a second stop on an unreadable transcript: never loop
+        read = last_clock_read(rows) if rows else None
+        if read is not None and (datetime.now(timezone.utc) - read).total_seconds() <= FRESH_MIN * 60:
+            return 0
+        print(json.dumps({"decision": "block", "reason": (
+            f"BLOCKED by .claude/hooks/check_clock_read.py: the reply states '{span.group(0)}' but no `date` ran "
+            f"since Cory's last message (or it is over {FRESH_MIN} min old). Run `date -u` now, check every elapsed "
+            "time against it and the record, and correct the reply (Cory 11-14: never guess a time).")}))
+        return 0
     if not found:
         return 0
 
