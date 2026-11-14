@@ -434,10 +434,18 @@ class BudgetAuditList(unittest.TestCase):
 
     def test_the_real_list_is_read(self):
         rc = _load()
-        text = (REPO / AUDIT).read_text(encoding="utf-8")
-        rows = rc.AUDIT_ROW.findall(text)
+        # A real-size list: trunk's kExpected as it was on a93e549b (11-14), frozen, so the
+        # parser is still proven on 35+ rows once a branch shortens the live list.
+        frozen = (pathlib.Path(__file__).resolve().parent / "fixture_budget_audit_trunk.txt").read_text(encoding="utf-8")
+        rows = rc.AUDIT_ROW.findall(frozen)
         self.assertGreaterEqual(len(rows), 35)   # 39 on 11-13
         self.assertIn(("matron-damage", "GrabSpring"), {(r[0], r[1]) for r in rows})
+        # The live list parses to exactly its rows (J-001: her limbs charged, their rows off).
+        live = rc.AUDIT_ROW.findall((REPO / AUDIT).read_text(encoding="utf-8"))
+        self.assertEqual([(r[0], r[1]) for r in live],
+                         [("matron-grab", "Shove"), ("matron-arm", "Budget"), ("matron-arm", "Shove"),
+                          ("matron-grab", "CrateShove"), ("matron-fatality", "CrateShove"),
+                          ("forklift-matron", "Budget"), ("matron-jab", "Shove")])
 
 
 KEY_FILE = ["namespace {",
