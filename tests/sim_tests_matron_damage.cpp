@@ -62,11 +62,26 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
     if (test_down) {
         require(out.down, "damage: environmental blow puts her Down");
         out.down_damage = out.total;
-        const Vector3 her = m.position;
-        s.debug_launch_kit_body(piece, {her.x, her.y + 0.9, her.z + 0.5}, {0.0, 0.0, -7.0});
-        for (int i = 0; i < 15; ++i) tick(s);
-        require(std::abs(s.matron_state().damage_ns - out.down_damage) < 0.001,
-                "damage: impacts while Down accrue no damage");
+        // J-040: the second impact is aimed at her lying body (the capsule
+        // the snapshot reports), not over it. The old launch at her standing
+        // middle + 0.9 m sailed about 1.3 m above her lying top and never
+        // touched her, so the old "no damage" require was vacuous as well as
+        // wrong: a blow while Down must count, and it must not restart the
+        // time she lies there.
+        const auto lying = s.matron_state();
+        const double mid_x = 0.5 * (lying.shape_a.x + lying.shape_b.x);
+        const double mid_y = 0.5 * (lying.shape_a.y + lying.shape_b.y);
+        const double mid_z = 0.5 * (lying.shape_a.z + lying.shape_b.z);
+        const double left_before = lying.down_left_s;
+        require(left_before > 0.0, "damage: she lies there with time left");
+        s.debug_launch_kit_body(piece, {mid_x, mid_y, mid_z + 1.0}, {0.0, 0.0, -7.0});
+        for (int i = 0; i < 30; ++i) tick(s);
+        const auto after = s.matron_state();
+        require(after.damage_ns > out.down_damage,
+                "damage: an impact while Down adds damage");
+        const double elapsed = 30.0 / static_cast<double>(Simulation::kTickRateHz);
+        require(std::abs(after.down_left_s - (left_before - elapsed)) < 0.05,
+                "damage: a blow while Down does not restart her down timer");
     }
     if (punch && !test_down) {
         std::cout << "damage attribution trace: total=" << out.total
@@ -314,7 +329,7 @@ void run_matron_damage() {
     std::cout << "PASS matron-damage environment mixed\n";
     const Hit down = hit(false, true, true);
     require(down.down, "damage: Down trial reached the real Down state");
-    std::cout << "PASS matron-damage Down pause\n";
+    std::cout << "PASS matron-damage Down blow (damage counts, timer counts down)\n";
     slab_on_down();
     blow_while_emerging();
     own_contacts_add_nothing();
