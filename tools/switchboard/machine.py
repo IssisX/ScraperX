@@ -39,7 +39,7 @@ or a wip head with no lane granted is told to park, on no clock; nothing is cut.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import datetime as dt
 import hashlib
 import re
@@ -55,6 +55,9 @@ COMMITTED = frozenset({"pushed", "proven", "reviewed"})   # pushed work: its lan
 RANK = {"pushed": 0, "proven": 1, "reviewed": 2}           # how far a Work is: a job is as far as its least advanced
 OWNER, SWITCH, INTEGRATOR, CI, REVIEWER, NOBODY, AHEAD = "owner", "switchboard", "integrator", "ci", "reviewer", "", "ahead"
 NOW = dt.timedelta(0)
+# #350 (J-124, J-078): an open ask to Claude on a job is Claude's to answer within the hour (CLAUDE.md: a `To <you>:`
+# ask is answered before your next step); until a Claude comment or mail names the job, the job waits on it.
+ASK_LIMIT = dt.timedelta(hours=1)
 
 
 def hours(n: float) -> dt.timedelta:
@@ -189,6 +192,8 @@ class Evidence:
     handover_ver: str = ""                     # that owner's present version, the one it answers
     handover_at: dt.datetime | None = None     # when the notice that dropped the job went to it
     mail_unread: int = 0                       # >0: the job's mail thread was past the reader's bound (that bound)
+    asked_at: dt.datetime | None = None        # #350: the oldest ask to Claude on the job no Claude post has answered
+    asked: str = ""                            # that ask's link
 
     @property
     def work(self) -> Work | None:
@@ -288,7 +293,19 @@ def clashes(ev: Evidence) -> list[str]:
 def step(ev: Evidence, lane: str = "", ahead: str = "") -> Step:
     """One job's state and next step, from its evidence alone. `lane`: why the owner holds no lane for it ("" when
     it does or needs none): the table grants lanes from every other job's state (table()). `ahead`: who owns the
-    job it waits on."""
+    job it waits on. #350: a step its owner owes waits on Claude while an ask to Claude on the job is open (J-124:
+    "push a head that fixes the red proof: belongs to muse" while Muse waited 37 h on a ruling); its state and gate
+    stay, so the lanes, the queue and the notice read it as before."""
+    row = _gated(ev, lane, ahead)
+    if (ev.asked_at is None or not row.owner or row.owner in SELF_TOLD or row.owes != row.owner
+            or row.state in ("closed", "held", "conflict")):
+        return row
+    return replace(row, owes=INTEGRATOR, since=ev.asked_at, limit=ASK_LIMIT,
+                   next=f"answer the open ask on {ev.job} ({ev.asked}): it waits on Claude's answer, not on "
+                        f"{row.owner}; then {row.owner}: {row.next}")
+
+
+def _gated(ev: Evidence, lane: str, ahead: str) -> Step:
     row = _step(ev, ahead)
     if lane and (row.state == "started" or row.gate == "claimed"):
         # a wip head or a mailed start with no lane granted: refused a clock, never cut
@@ -850,14 +867,16 @@ def _unpushed(ln: P.Line, mail: Mail, named: tuple[Post, tuple[str, ...]] | None
 
 
 def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None, mail: Mail | None = None,
-            planned_at: dt.datetime | None = None) -> dict[str, Evidence]:
+            planned_at: dt.datetime | None = None,
+            asks: dict[str, tuple[dt.datetime, str]] | None = None) -> dict[str, Evidence]:
     """One Evidence per job the evidence names: every plan line, and every job with no line that an open issue,
     a head proven unlanded, an open PR or a mailed start names (a lettered id is its base line's job when only
     the base has one). `reads` is plan.observe's answer: the open issues, every branch, the open PRs, `inactive`
     (landed heads), `merged_at` (job -> when a `Job:` PR of it merged), `head_at` (sha -> its commit time, for the
     heads a compare proved unlanded) and `closed` (the jobs whose plan issue was read closed). `works`: head sha ->
     its Work, for the heads whose proof the switch read this pass. A head of a job with no line, no base line, no
-    open issue and no PR (a job tidied out of the plan) is a row only once a compare proved it unlanded."""
+    open issue and no PR (a job tidied out of the plan) is a row only once a compare proved it unlanded. `asks`:
+    job -> (when, link) of an ask to Claude no Claude post has answered (#350, the switch's open asks)."""
     works, mail = works or {}, mail or Mail()
     by_job = model.by_job()
 
@@ -898,6 +917,10 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
     wrong = mail_clashes(model, mail, planned_at)
     starts, hands = started_posts(mail, job_of), answered(mail, job_of)
     named = {job_of(j): v for j, v in named_shas(mail, {ln.issue: ln.job for ln in model.lines}).items()}
+    asked: dict[str, tuple[dt.datetime, str]] = {}
+    for j, (t, link) in (asks or {}).items():   # the oldest open ask per job
+        if job_of(j) not in asked or t < asked[job_of(j)][0]:
+            asked[job_of(j)] = (t, link)
     out: dict[str, Evidence] = {}
     for ln in model.lines:
         mine = [h for h in heads.get(ln.job, []) if owns(ln.owner, h.ref)]
@@ -927,7 +950,8 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
             heads=tuple(heads.get(ln.job, [])), works=tuple(ws), merged_at=merged.get(ln.job),
             clashes=tuple(wrong.get(ln.job, [])),
             **(dict(handover=moved[0], handover_ver=moved[1], handover_at=moved[2]) if moved else {}),
-            mail_unread=mail.bound if ln.owner == mail.worker and ln.job in mail.unread else 0)
+            mail_unread=mail.bound if ln.owner == mail.worker and ln.job in mail.unread else 0,
+            **(dict(asked_at=asked[ln.job][0], asked=asked[ln.job][1]) if ln.job in asked else {}))
     for job in sorted((set(titled) | set(heads) | set(wrong)) - set(by_job)):
         out[job] = Evidence(job=job, issues=tuple(sorted(int(i["number"]) for i in titled.get(job, []))),
                             heads=tuple(heads.get(job, [])), clashes=tuple(wrong.get(job, [])))
