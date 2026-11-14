@@ -101,10 +101,13 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     // (J-049): her fingers not yet on him, she has him so only by her eyes
     // on him or her body against his. A tick with neither is her ears' alone
     // (below); with nothing heard she reaches for where she last had him.
+    // Let go (Release, J-049): her hand is off him; only his body against
+    // hers is touch, and her eyes and ears (below) are what she has.
     const bool reaching = m.state_ == State::Grab && !m.grip_on_;
-    if ((Matron::holding_state(m.state_) || m.state_ == State::Release) &&
-        (!reaching || (m.body_in_world_ && !m.player_.IsInvalid() && m.physics_.WereBodiesInContact(m.body_, m.player_)) ||
-         m.look_at(player - RVec3(0.0, 0.3, 0.0), Matron::kEyeRangeM) == Matron::Glimpse::Sight)) {
+    const bool against = m.body_in_world_ && !m.player_.IsInvalid() && m.physics_.WereBodiesInContact(m.body_, m.player_);
+    if ((Matron::holding_state(m.state_) &&
+         (!reaching || against || m.look_at(player - RVec3(0.0, 0.3, 0.0), Matron::kEyeRangeM) == Matron::Glimpse::Sight)) ||
+        (m.state_ == State::Release && against)) {
         ev.touch = true;
         ev.felt_at = player;
         ev.felt_age_s = 0.0F;
@@ -148,7 +151,8 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     // Her eyes, awake and on her feet about the world.
     const bool looking = m.body_in_world_ && (m.state_ == State::Hunting || m.state_ == State::Searching ||
                                               m.state_ == State::Shuffling || m.state_ == State::Guarding ||
-                                              m.state_ == State::Peering || m.state_ == State::Unrigging);
+                                              m.state_ == State::Peering || m.state_ == State::Unrigging ||
+                                              m.state_ == State::Release);
     if (looking) {
         // Seen on her level, or on a climb from either side (the straight line to the
         // player mostly up it).

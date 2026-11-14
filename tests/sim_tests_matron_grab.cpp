@@ -367,6 +367,118 @@ void hide_where_last_sensed() {
         std::cout << "PASS scraperx_sim matron heard reach: her lead follows his noise\n";
     }
 }
+
+// J-049 (11-14): let go (Release), her hand is off him: what she has of him
+// is her eyes (from her head, their range, the solids) and her ears (his
+// landing by its real loudness), else the last place she had him.
+// The thrash hold (run_matron_grab) until his kicks tear him out of her hand
+// and she stands, hand out (Release). She is turned toward the deck spot
+// (-4, -130) or away from it (`facing`), and he is put down there (`up` over
+// the deck: 0 a soft set-down, else a drop that lands loud). What lead does
+// she have when her hand out is over?
+struct ReleaseRun {
+    scraperx::sim::Vector3 had{}, put{}, end{};
+    scraperx::sim::MatronSnapshot m{};
+    double low_y = 1.0e9;
+    double nearest = 1.0e9;
+    double off_eye_deg = 0.0;
+};
+ReleaseRun release_then(const bool facing, const double up) {
+    ReleaseRun out;
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    meet_her(s, -6.0, -129.0);
+    s.debug_matron_hold(0, 6.0);
+    bool released = false;
+    for (int i = 0; i < 60 * 90 && !released; ++i) {
+        const auto m = s.matron_state();
+        (void)s.set_move_input(m.grip_on ? ((i / 11) % 2 == 0 ? 1.0 : -1.0) : 0.0, 0.0);
+        tick(s);
+        released = s.matron_state().state == kRelease && !s.snapshot().held_by_matron;
+    }
+    require(released, "matron release: his kicks tear him out of her hand; her hand stays out (Release)");
+    // Down from her hand onto the deck (that fall is a sound, as it should be) before he moves.
+    for (int i = 0; i < 20 && s.matron_state().state == kRelease; ++i) {
+        (void)s.set_move_input(0.0, 0.0);
+        tick(s);
+    }
+    require(s.matron_state().state == kRelease, "matron release: still her hand out");
+    out.had = s.snapshot().player_position;
+    out.put = scraperx::sim::Vector3{-4.0, 154.95 + up, -130.0};
+    const auto her = s.matron_state();
+    const double to = std::atan2(out.put.x - her.position.x, out.put.z - her.position.z);
+    s.debug_face_matron(facing ? to : to + 3.141592653589793);
+    (void)s.debug_launch_player(out.put, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+    for (int i = 0; i < 2 * 90 && (i < 2 || s.matron_state().state == kRelease); ++i) {
+        (void)s.set_move_input(0.0, 0.0);
+        tick(s);
+        const auto m = s.matron_state();
+        const auto p = s.snapshot().player_position;
+        if (i == 0) {
+            out.off_eye_deg = std::abs(std::remainder(std::atan2(p.x - m.eye.x, p.z - m.eye.z) - m.eye_yaw,
+                                                      2.0 * 3.141592653589793)) * 180.0 / 3.141592653589793;
+        }
+        if (i > 0) {
+            // He may lie on the deck, not stand (free of her hand): a centre
+            // over 153.9 is on her deck (154.0), no fall through it.
+            out.low_y = std::min(out.low_y, p.y);
+            out.nearest = std::min(out.nearest, std::hypot(m.position.x - p.x, m.position.z - p.z));
+        }
+    }
+    out.m = s.matron_state();
+    out.end = s.snapshot().player_position;
+    return out;
+}
+
+void release_where_last_sensed() {
+    const auto say = [](const char *name, const ReleaseRun &r) {
+        std::cout << "  " << name << ": put at (" << r.put.x << "," << r.put.y << "," << r.put.z << ") "
+                  << r.off_eye_deg << " deg off her eyes; lead " << std::hypot(r.m.lead_x - r.had.x, r.m.lead_z - r.had.z)
+                  << " m from where she let go of him, " << std::hypot(r.m.lead_x - r.end.x, r.m.lead_z - r.end.z)
+                  << " m from him (sense " << int(r.m.lead_sense) << "), state " << int(r.m.state) << ", nearest "
+                  << r.nearest << " m, lowest y " << r.low_y << "\n";
+    };
+    // Unseen, unheard: set down softly behind her back, past her breath.
+    {
+        std::array<double, 2> first{};
+        for (int pass = 0; pass < 2; ++pass) {
+            const ReleaseRun r = release_then(false, 0.0);
+            say("matron release unseen", r);
+            require(r.low_y > 153.9 && r.nearest > static_cast<double>(Matron::kBreathM) && r.off_eye_deg > 120.0,
+                    "matron release unseen: the setup holds -- set down silent on the deck, behind her, past her breath");
+            require(r.m.state != kRelease, "matron release unseen: her hand out is over");
+            require(std::hypot(r.m.lead_x - r.had.x, r.m.lead_z - r.had.z) < 1.0 &&
+                        std::hypot(r.m.lead_x - r.end.x, r.m.lead_z - r.end.z) > 3.0,
+                    "matron release unseen: her lead is where she last had him, not where he is");
+            const std::array<double, 2> run{r.m.lead_x, r.m.lead_z};
+            if (pass == 0) {
+                first = run;
+            } else {
+                require(run == first, "matron release unseen: the same run twice, the same lead (deterministic)");
+            }
+        }
+        std::cout << "PASS scraperx_sim matron release unseen: her lead stays where she let go of him\n";
+    }
+    // Seen: put down before her eyes, on her deck, past her breath; she has him there.
+    {
+        const ReleaseRun r = release_then(true, 0.0);
+        say("matron release seen", r);
+        require(r.low_y > 153.9 && r.off_eye_deg < 30.0 && r.nearest > static_cast<double>(Matron::kBreathM),
+                "matron release seen: the setup holds -- on the deck, before her eyes, past her breath");
+        require(std::hypot(r.m.lead_x - r.end.x, r.m.lead_z - r.end.z) < 0.5 && r.m.lead_sense == 1,
+                "matron release seen: she sees him on her deck and her lead is on him");
+        std::cout << "PASS scraperx_sim matron release seen: her lead on him by her eyes\n";
+    }
+    // Heard: dropped 2 m behind her back, his landing loud; she has him by it.
+    {
+        const ReleaseRun r = release_then(false, 2.0);
+        say("matron release heard", r);
+        require(r.low_y > 153.9 && r.off_eye_deg > 120.0, "matron release heard: the setup holds -- landed on the deck, behind her");
+        require(std::hypot(r.m.lead_x - r.end.x, r.m.lead_z - r.end.z) < 0.5 && r.m.lead_sense == 3,
+                "matron release heard: his landing reaches her ear and her lead is on him");
+        std::cout << "PASS scraperx_sim matron release heard: her lead on him by his landing\n";
+    }
+}
 } // namespace
 
 void run_matron_grab() {
@@ -1102,6 +1214,7 @@ void run_matron_grab() {
         std::cout << "PASS scraperx_sim matron sprint sight: no catch, no shove, 0.3 s sight at 0.8 m, true 3.0 m\n";
     }
     hide_where_last_sensed();
+    release_where_last_sensed();
 }
 // run_matron_grab, run_matron_arm, run_matron_fatality: not in the default
 // sequence but this ctest slice, as matron-chase, since her fatality's runs
