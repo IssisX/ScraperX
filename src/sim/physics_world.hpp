@@ -1341,6 +1341,8 @@ private:
     // her over its bends as sheaves (attach_hook_line_to_bite).
     bool hook_bite_moves_ = false;
     std::uint64_t hook_matron_bite_count_ = 0;
+    // Ticks the line into her ran at the tines' hold, its pull limit.
+    std::uint64_t hook_held_ticks_ = 0;
     JPH::Ref<kit::RopeConstraint> hook_line_;
     // The J-100 test slab (hang_slab_for_test): its body and its pin.
     JPH::BodyID hung_slab_;

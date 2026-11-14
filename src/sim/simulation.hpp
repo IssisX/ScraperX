@@ -1032,6 +1032,9 @@ struct Snapshot final {
     std::uint64_t hook_matron_bite_count = 0;
     // Ticks the reel has turned at its whole kHookReelForceN: stalled.
     std::uint64_t hook_stall_ticks = 0;
+    // Ticks the line into her ran at the tines' hold (kHookHoldForceN): a
+    // jolt asked more, and the line passed no more than the hold.
+    std::uint64_t hook_held_ticks = 0;
     // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
     std::array<WorkerView, 14> workers{};

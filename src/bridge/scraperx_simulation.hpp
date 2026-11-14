@@ -248,6 +248,7 @@ public:
     void debug_place_matron(godot::Vector3 feet);
     void debug_set_matron_stage(std::int64_t stage);
     void debug_hold_matron_hands(double seconds);
+    void debug_face_matron(double yaw);
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down);
     void debug_matron_hear(godot::Vector3 at);
     void debug_launch_player(godot::Vector3 at, godot::Vector3 velocity);

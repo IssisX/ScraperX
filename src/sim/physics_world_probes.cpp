@@ -911,6 +911,13 @@ void Simulation::PhysicsWorld::hook_pre_step(JPH::BodyInterface &bodies, const S
         } else {
             hook_line_->SetMotor(0.0F, 0.0F);
         }
+        // J-090: the line into her passes no more than the tines hold
+        // (kHookHoldForceN): what a jolt asks past it is the tines giving,
+        // counted against their slip and tear in hook_post_step, never force
+        // on her body.
+        if (hook_bite_moves_) {
+            hook_line_->SetPullLimit(kHookHoldForceN * dt);
+        }
     }
 }
 
@@ -977,10 +984,27 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
             stow_hook(bodies);   // her body out of the world: nothing holds the tines
             return;
         }
-        // The tines' hold on the member (kHookHoldForceN).
-        if (hook_tension_n_ > kHookHoldForceN) {
+        // The tines' hold on the member (kHookHoldForceN). In her, the line
+        // passes no more than the hold; the pull its ends asked for is what
+        // the tines bear.
+        const bool held = hook_bite_moves_ && hook_line_ != nullptr && hook_line_->AtPullLimit();
+        const float asked_n = hook_bite_moves_ && hook_line_ != nullptr ? hook_line_->GetPullDemand() / dt
+                                                                       : hook_tension_n_;
+        if (held) {
+            ++hook_held_ticks_;
+            // Held at the hold, the rope ran out past its length: the line is
+            // as long as it now lies, and is not drawn back.
+            hook_line_->SetMaxLength(std::min(kHookLineMaxM, std::max(hook_line_->GetMaxLength(), hook_line_lies(bodies))));
+        }
+        if (asked_n > kHookHoldForceN) {
             ++hook_over_ticks_;
-            hook_over_impulse_ += (hook_tension_n_ - kHookHoldForceN) * dt;
+            // Past the hold, a line that passes all it is asked has given the
+            // jolt that much more: the impulses add up. The line into her,
+            // held at the hold, has not: what it was asked past the hold is
+            // the jolt still unmet, carried from tick to tick, so it is the
+            // whole of the pull past the hold, not a part of it to add.
+            const float past = (asked_n - kHookHoldForceN) * dt;
+            hook_over_impulse_ = hook_bite_moves_ ? past : hook_over_impulse_ + past;
         } else {
             hook_over_ticks_ = 0;
             hook_over_impulse_ = 0.0F;

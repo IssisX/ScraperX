@@ -104,7 +104,8 @@ struct Tug {
     bool he_died = false;
     std::uint64_t tears = 0;
     std::uint64_t stalls = 0;
-    int first_over_tick = -1;   // the first tick past the tines' hold
+    std::uint64_t held = 0;     // ticks the line ran at the tines' hold: a jolt asked more
+    int first_held_tick = -1;   // the first of them
     int tear_tick = -1;
     bool torn_free = false;     // on the tear tick: the hook out of her and in flight
     int ticks = 0;
@@ -120,6 +121,7 @@ Tug pull(Simulation &s, const int ticks, Each each) {
     const Vector3 him0 = prev.player_position;
     const std::uint64_t tears0 = prev.hook_tear_count;
     const std::uint64_t stalls0 = prev.hook_stall_ticks;
+    const std::uint64_t held0 = prev.hook_held_ticks;
     for (int i = 0; i < ticks; ++i) {
         each(i);
         require(s.advance_frame(kDt).accepted, "matron-hook: tick");
@@ -130,7 +132,7 @@ Tug pull(Simulation &s, const int ticks, Each each) {
             break;
         }
         t.peak_tension_n = std::max(t.peak_tension_n, n.hook_tension_n);
-        if (t.first_over_tick < 0 && n.hook_tension_n > static_cast<double>(tuning::kHookHoldForceN)) t.first_over_tick = i;
+        if (t.first_held_tick < 0 && n.hook_held_ticks > held0) t.first_held_tick = i;
         if (t.tear_tick < 0 && n.hook_tear_count > tears0) {
             t.tear_tick = i;
             t.torn_free = n.hook_state == 1 && !n.hook_in_matron;
@@ -156,23 +158,28 @@ Tug pull(Simulation &s, const int ticks, Each each) {
     }
     t.tears = prev.hook_tear_count - tears0;
     t.stalls = prev.hook_stall_ticks - stalls0;
+    t.held = prev.hook_held_ticks - held0;
     return t;
 }
 
 void print(const char *name, const Tug &t) {
     std::printf("  %s: ticks=%d peak_tension_n=%.0f peak_feet_n=%.0f stalls=%llu tears=%llu her_moved_m=%.2f "
-                "his_moved_m=%.2f his_lowest_y=%.2f bends=%u her_step_m=%.3f his_jump_m=%.3f supported=%d died=%d\n",
+                "his_moved_m=%.2f his_lowest_y=%.2f bends=%u her_step_m=%.3f his_jump_m=%.3f supported=%d died=%d held=%llu\n",
                 name, t.ticks, t.peak_tension_n, t.peak_feet_n, static_cast<unsigned long long>(t.stalls),
                 static_cast<unsigned long long>(t.tears), t.her_moved_m, t.his_moved_m, t.his_lowest_y, t.most_bends,
-                t.her_step_m, t.his_jump_m, t.her_supported ? 1 : 0, t.he_died ? 1 : 0);
+                t.her_step_m, t.his_jump_m, t.her_supported ? 1 : 0, t.he_died ? 1 : 0,
+                static_cast<unsigned long long>(t.held));
     std::fflush(stdout);
 }
 
 // Every tick of every pull: her one budget, her gravity on, no jump in her
 // place or his (no position write: a tick at her 6.8 m/s hunt is 0.076 m;
-// his moves are what his speed carries him).
+// his moves are what his speed carries him), and the line into her never
+// passing more than the tines hold (a jolt past it is the tines giving).
 void laws(const Tug &t, const std::string &what) {
     require(t.ticks > 0, (what + ": the pull ran").c_str());
+    require(t.peak_tension_n <= static_cast<double>(tuning::kHookHoldForceN) * 1.001,
+            (what + ": the line into her passes no more than the tines' hold (kHookHoldForceN)").c_str());
     require(t.peak_feet_n <= static_cast<double>(law::kForceN) + 0.5, (what + ": her feet within her 8 kN").c_str());
     require(t.her_gravity_on, (what + ": her gravity stays on").c_str());
     require(t.her_step_m <= 0.2, (what + ": her every tick moves her at most 0.2 m: nothing writes her place").c_str());
@@ -249,8 +256,7 @@ void crossing() {
     print("crossing", t);
     laws(t, "crossing");
     require(t.her_moved_m > 1.0, "crossing: she carries on, the line on her");
-    require(t.peak_tension_n > static_cast<double>(tuning::kHookHoldForceN),
-            "crossing: the snatch passes the tines' hold");
+    require(t.held >= 1, "crossing: the snatch asks the line for more than the tines' hold, and it holds at the hold");
     require(t.tears == 0, "crossing: a snatch short of kHookTearImpulseNs past the hold does not tear the bite");
     require(t.her_supported, "crossing: she keeps her feet");
 }
@@ -283,11 +289,12 @@ void tear() {
         if (i == 0) face(s, {-14.6, kRingTop, -140.0});
     });
     print("tear", t);
-    std::printf("  tear: %.2f m of rope, first past the hold at tick %d, torn at tick %d\n", rope, t.first_over_tick, t.tear_tick);
+    std::printf("  tear: %.2f m of rope, first held at the hold at tick %d, torn at tick %d\n", rope, t.first_held_tick, t.tear_tick);
     laws(t, "tear");
     require(t.tears == 1, "tear: the fall on the line tears the hook out of her");
-    require(t.first_over_tick >= 0 && t.tear_tick == t.first_over_tick,
-            "tear: torn on the jolt past the tines' hold (kHookHoldForceN, kHookTearImpulseNs), as off structure");
+    require(t.first_held_tick >= 0 && t.tear_tick >= t.first_held_tick &&
+                t.tear_tick - t.first_held_tick + 1 < tuning::kHookSlipTicks,
+            "tear: torn by the jolt asked past the tines' hold (kHookTearImpulseNs), before a slip's kHookSlipTicks");
     require(t.torn_free, "tear: torn out of her, the hook springs back in flight (free to catch again)");
 }
 } // namespace

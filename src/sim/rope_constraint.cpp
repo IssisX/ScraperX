@@ -137,6 +137,8 @@ void RopeConstraint::SetupVelocityConstraint(const float delta_time) {
     if (!update_mass()) {
         total_lambda_ = 0.0F;
     }
+    at_pull_limit_ = false;
+    pull_demand_ = 0.0F;
     // The winch pulls only on a rope working at its length.
     motor_impulse_max_ = motor_force_ * delta_time;
     if (motor_rate_ <= 0.0F || side_ != Side::Pull || effective_mass_ == 0.0F) {
@@ -167,17 +169,30 @@ bool RopeConstraint::SolveVelocityConstraint(const float /*delta_time*/) {
         motor_lambda_ = motor;
     }
     constexpr float kNone = std::numeric_limits<float>::max();
-    const float low = side_ == Side::Push ? 0.0F : -kNone;
+    float low = side_ == Side::Push ? 0.0F : -kNone;
     const float high = side_ == Side::Pull ? 0.0F : kNone;
+    // A pull limit bounds the rope's pull and the winch's together.
+    const bool limited = pull_limit_ < kNone && side_ == Side::Pull;
+    if (limited) {
+        low = std::min(0.0F, -pull_limit_ - motor_lambda_);
+    }
     // lambda = -K^-1 (J v - allowed): nothing while the rope runs out no
     // more than its slack this step.
-    const float total = std::clamp(total_lambda_ - effective_mass_ * (rate() - allowed_rate_), low, high);
+    const float wanted = total_lambda_ - effective_mass_ * (rate() - allowed_rate_);
+    const float total = std::clamp(wanted, low, high);
+    if (limited) {
+        at_pull_limit_ = wanted < low;
+        pull_demand_ = -(std::min(wanted, 0.0F) + motor_lambda_);
+    }
     const float lambda = total - total_lambda_;
     total_lambda_ = total;
     return apply_impulse(lambda) || applied;
 }
 
 bool RopeConstraint::SolvePositionConstraint(const float /*delta_time*/, const float baumgarte) {
+    if (at_pull_limit_) {
+        return false;   // held at its pull limit, the rope runs out this step
+    }
     const float length = update_geometry();
     float error = 0.0F;
     if (length < min_length_) {
