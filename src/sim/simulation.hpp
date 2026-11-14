@@ -242,10 +242,24 @@ struct MatronSnapshot final {
     Vector3 contact_hand{};
     std::uint32_t contact_hand_body = 0xffffffffU;
     std::uint32_t contact_hand_sub = 0xffffffffU;
+    // The surface each grip closes round (leaf_surface, J-088): kind 0 box,
+    // 1 cylinder, 2 capsule; size the box's half extents or (radius, half
+    // height, 0); centre and rot the leaf shape's world frame. Valid only
+    // while the grip is held.
+    std::uint8_t contact_hand_shape = 0;
+    Vector3 contact_hand_size{};
+    Vector3 contact_hand_centre{};
+    double contact_hand_rot_x = 0.0, contact_hand_rot_y = 0.0, contact_hand_rot_z = 0.0,
+           contact_hand_rot_w = 1.0;
     bool contact_hand2_held = false;
     Vector3 contact_hand2{};
     std::uint32_t contact_hand2_body = 0xffffffffU;
     std::uint32_t contact_hand2_sub = 0xffffffffU;
+    std::uint8_t contact_hand2_shape = 0;
+    Vector3 contact_hand2_size{};
+    Vector3 contact_hand2_centre{};
+    double contact_hand2_rot_x = 0.0, contact_hand2_rot_y = 0.0, contact_hand2_rot_z = 0.0,
+           contact_hand2_rot_w = 1.0;
     bool contact_line = false;
     // On her pipe: the riser's face her feet press against.
     bool contact_braced = false;
@@ -1171,6 +1185,15 @@ struct Snapshot final {
     Vector3 matron_hand{};
     bool matron_hand_present = false;
     Vector3 held_ankle{};
+    // The surface her fingers close round at the held ankle (leaf_surface,
+    // J-088): his body's capsule, kind 2, size (radius, half height of the
+    // cylinder part, 0), centre and rot his body's world frame. Valid only
+    // while the grip holds him; the rip hand on his arm wraps the same body.
+    std::uint8_t held_ankle_shape = 0;
+    Vector3 held_ankle_size{};
+    Vector3 held_ankle_centre{};
+    double held_ankle_rot_x = 0.0, held_ankle_rot_y = 0.0, held_ankle_rot_z = 0.0,
+           held_ankle_rot_w = 1.0;
     // Arms (physics_world_arm.cpp): lost per side until a death or a
     // restart; the severed arm's body; her win.
     bool left_arm_lost = false;

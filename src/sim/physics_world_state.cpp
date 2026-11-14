@@ -2,6 +2,9 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include "sim/physics_world_support.hpp"
+
+#include <Jolt/Physics/Body/BodyLock.h>
 
 namespace scraperx::sim {
 
@@ -838,6 +841,32 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         if (grip_ != nullptr) {
             const JPH::RVec3 held = bodies.GetWorldTransform(player_id_) * grip_on_body_;
             state_.held_ankle = Vector3{held.GetX(), held.GetY(), held.GetZ()};
+        }
+        // The surface her fingers close round at the held ankle (J-088):
+        // his body's capsule, for the presentation's finger wrap and the
+        // probe's finger check. Cleared with the ankle when they let go.
+        state_.held_ankle_shape = 0;
+        state_.held_ankle_size = Vector3{};
+        state_.held_ankle_centre = Vector3{};
+        state_.held_ankle_rot_x = 0.0;
+        state_.held_ankle_rot_y = 0.0;
+        state_.held_ankle_rot_z = 0.0;
+        state_.held_ankle_rot_w = 1.0;
+        if (grip_ != nullptr) {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
+            if (lock.Succeeded()) {
+                detail::LeafSurface surface;
+                if (detail::leaf_surface(lock.GetBody(), JPH::SubShapeID(), surface)) {
+                    state_.held_ankle_shape = surface.kind;
+                    state_.held_ankle_size =
+                        Vector3{surface.size.GetX(), surface.size.GetY(), surface.size.GetZ()};
+                    state_.held_ankle_centre = to_vector3(surface.centre);
+                    state_.held_ankle_rot_x = surface.rot.GetX();
+                    state_.held_ankle_rot_y = surface.rot.GetY();
+                    state_.held_ankle_rot_z = surface.rot.GetZ();
+                    state_.held_ankle_rot_w = surface.rot.GetW();
+                }
+            }
         }
         if (!hand2_id_.IsInvalid()) {
             const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);

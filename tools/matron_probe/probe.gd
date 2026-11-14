@@ -249,6 +249,19 @@ class Recorder extends Node:
 		rec[k] = float(_rig.get("_wind_clock"))
 		_bin.store_buffer(rec.to_byte_array())
 
+	# One held surface (leaf_surface, J-088) as 11 row values: kind, size,
+	# centre and rot, blank from a native without them.
+	func _surface_row(source: Dictionary, prefix: String) -> Array:
+		if not source.has(prefix + "_shape"):
+			return ["", "", "", "", "", "", "", "", "", "", ""]
+		var size: Vector3 = source.get(prefix + "_size", Vector3.ZERO)
+		var centre: Vector3 = source.get(prefix + "_centre", Vector3.ZERO)
+		var rot: Quaternion = source.get(prefix + "_rot", Quaternion.IDENTITY)
+		return [int(source.get(prefix + "_shape", 0)),
+			"%.5f" % size.x, "%.5f" % size.y, "%.5f" % size.z,
+			"%.5f" % centre.x, "%.5f" % centre.y, "%.5f" % centre.z,
+			"%.5f" % rot.x, "%.5f" % rot.y, "%.5f" % rot.z, "%.5f" % rot.w]
+
 	func _write_row(main: Node, view: Object, native: Object, data: Dictionary, hold: Dictionary, delta: float,
 			vis: bool, rec: int) -> void:
 		var pos: Vector3 = data.get("position", Vector3.ZERO)
@@ -285,6 +298,7 @@ class Recorder extends Node:
 			surf[0], surf[1], surf[2], surf[3], "" if burst == null else str(int(bool(burst))),
 			int(bool(data.get("contact_hand2_held", false))),
 			"%.5f" % contact_hand2.x, "%.5f" % contact_hand2.y, "%.5f" % contact_hand2.z]
+		row.append_array(_surface_row(data, "contact_hand2"))
 		# Her collision capsule as the native exports it (matron_shape.cpp), blank before it did.
 		if data.has("shape_r"):
 			var sa: Vector3 = data["shape_a"]
@@ -300,6 +314,7 @@ class Recorder extends Node:
 		var contact_hand: Vector3 = data.get("contact_hand", Vector3.ZERO)
 		row.append_array([int(bool(data.get("contact_hand_held", false))),
 			"%.5f" % contact_hand.x, "%.5f" % contact_hand.y, "%.5f" % contact_hand.z])
+		row.append_array(_surface_row(data, "contact_hand"))
 		# Which stock reach of hers is active (matron_rig.gd: 1 carrying, 2 seeking a handle), and whether it is
 		# her two-handed one: a reach draws her arms to the handle, as a hold does.
 		var carrying_stock := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
@@ -317,6 +332,7 @@ class Recorder extends Node:
 			row.append_array(["%.5f" % ankle.x, "%.5f" % ankle.y, "%.5f" % ankle.z])
 		else:
 			row.append_array(["", "", ""])
+		row.append_array(_surface_row(hold, "held_ankle"))
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -387,6 +403,15 @@ class Recorder extends Node:
 		"hx", "hy", "hz", "h2x", "h2y", "h2z", "ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z",
 		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
+		"contact_hand2_shape", "contact_hand2_sizex", "contact_hand2_sizey", "contact_hand2_sizez",
+		"contact_hand2_centrex", "contact_hand2_centrey", "contact_hand2_centrez",
+		"contact_hand2_rotx", "contact_hand2_roty", "contact_hand2_rotz", "contact_hand2_rotw",
 		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
 		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz",
-		"stock_reach", "stock_two_hands", "hold_weight", "held_anklex", "held_ankley", "held_anklez"]
+		"contact_hand_shape", "contact_hand_sizex", "contact_hand_sizey", "contact_hand_sizez",
+		"contact_hand_centrex", "contact_hand_centrey", "contact_hand_centrez",
+		"contact_hand_rotx", "contact_hand_roty", "contact_hand_rotz", "contact_hand_rotw",
+		"stock_reach", "stock_two_hands", "hold_weight", "held_anklex", "held_ankley", "held_anklez",
+		"held_ankle_shape", "held_ankle_sizex", "held_ankle_sizey", "held_ankle_sizez",
+		"held_ankle_centrex", "held_ankle_centrey", "held_ankle_centrez",
+		"held_ankle_rotx", "held_ankle_roty", "held_ankle_rotz", "held_ankle_rotw"]

@@ -8,6 +8,7 @@
 
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
+#include "sim/physics_world_support.hpp"
 
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/CastResult.h>
@@ -19,6 +20,28 @@
 namespace scraperx::sim {
 using namespace JPH;
 
+namespace {
+// The surface a grip closes round (leaf_surface, J-088): the held body's
+// shape at the grip, for the presentation's finger wrap and the probe's
+// finger check. Leaves the fields as they were when the body has no box,
+// cylinder or capsule leaf there.
+void fill_grip_surface(PhysicsSystem &physics, const BodyID body, const SubShapeID sub,
+                       std::uint8_t &kind, Vec3 &size, RVec3 &centre, Quat &rot) noexcept {
+    const BodyLockRead lock(physics.GetBodyLockInterface(), body);
+    if (!lock.Succeeded()) {
+        return;
+    }
+    detail::LeafSurface surface;
+    if (!detail::leaf_surface(lock.GetBody(), sub, surface)) {
+        return;
+    }
+    kind = surface.kind;
+    size = surface.size;
+    centre = surface.centre;
+    rot = surface.rot;
+}
+}
+
 void Matron::refresh_contact_view() {
     view_.contact_supported = false;
     view_.contact_feet_body = BodyID();
@@ -29,10 +52,18 @@ void Matron::refresh_contact_view() {
     view_.contact_hand_body = BodyID();
     view_.contact_hand_sub = SubShapeID();
     view_.contact_hand = RVec3::sZero();
+    view_.contact_hand_shape = 0;
+    view_.contact_hand_size = Vec3::sZero();
+    view_.contact_hand_centre = RVec3::sZero();
+    view_.contact_hand_rot = Quat::sIdentity();
     view_.contact_hand2_held = false;
     view_.contact_hand2_body = BodyID();
     view_.contact_hand2_sub = SubShapeID();
     view_.contact_hand2 = RVec3::sZero();
+    view_.contact_hand2_shape = 0;
+    view_.contact_hand2_size = Vec3::sZero();
+    view_.contact_hand2_centre = RVec3::sZero();
+    view_.contact_hand2_rot = Quat::sIdentity();
     view_.contact_line = on_line_;
     view_.contact_braced = false;
     view_.contact_brace_body = BodyID();
@@ -89,6 +120,8 @@ void Matron::refresh_contact_view() {
         view_.contact_hand_body = body;
         view_.contact_hand_sub = sub;
         view_.contact_hand = bodies.GetCenterOfMassTransform(body) * local;
+        fill_grip_surface(physics_, body, sub, view_.contact_hand_shape, view_.contact_hand_size,
+                          view_.contact_hand_centre, view_.contact_hand_rot);
     }
     // Her second grip (M5d): only the climber's validated second hold, on a
     // rung climb, reported exactly while it is held. The fields above were
@@ -103,6 +136,9 @@ void Matron::refresh_contact_view() {
             view_.contact_hand2_body = second.body;
             view_.contact_hand2_sub = second.sub;
             view_.contact_hand2 = bodies.GetCenterOfMassTransform(second.body) * second.local;
+            fill_grip_surface(physics_, second.body, second.sub, view_.contact_hand2_shape,
+                              view_.contact_hand2_size, view_.contact_hand2_centre,
+                              view_.contact_hand2_rot);
         }
     }
     // On her pipe, hand over hand (her hand on its face): her squeeze is her

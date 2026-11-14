@@ -89,6 +89,12 @@ const UNWIND_AFTER_S := 1.5
 const UNWIND_RAD_S := 1.2
 # Her fingers' spring (rad/s), and her twist laid on her neck and chest.
 const FINGER_W := 18.0
+# A hand holding nothing rests at one neutral curl, not a curl per state (J-088).
+const FINGER_REST := 0.35
+# The wrap round what a hand holds (J-088): the most one finger joint bends
+# (rad) and the samples over it when the tip looks for the surface.
+const WRAP_MAX := 2.4
+const WRAP_STEPS := 48
 const TWIST_W := 14.0
 const HOLD_BLEND_W := 16.0
 # On all fours only above FOURS_ON_MPS, back up below FOURS_OFF_MPS, and
@@ -1395,6 +1401,103 @@ func perceived_target(data: Dictionary, player_position: Vector3) -> Vector3:
 	return _figure.global_position + _figure.global_basis.z * 5.0
 
 
+# A held surface (leaf_surface, J-088) as the wrap and the probe read it:
+# kind 0 box, 1 cylinder, 2 capsule; size the box's half extents or
+# (radius, half height, 0); centre and rot the leaf shape's world frame;
+# inv the frame's inverse, for the distance. Empty when the data has no
+# surface for that grip.
+func _grip_surface(source: Dictionary, prefix: String) -> Dictionary:
+	if not source.has(prefix + "_shape"):
+		return {}
+	var kind := int(source.get(prefix + "_shape", 0))
+	if kind < 0 or kind > 2:
+		return {}
+	var size: Vector3 = source.get(prefix + "_size", Vector3.ZERO)
+	if size.length_squared() <= 1.0e-12:
+		return {}
+	var rot: Quaternion = source.get(prefix + "_rot", Quaternion.IDENTITY)
+	return {"kind": kind, "size": size, "centre": source.get(prefix + "_centre", Vector3.ZERO),
+		"inv": Basis(rot).inverse()}
+
+
+# A point's signed distance to a held surface: negative inside the steel,
+# positive outside it.
+func _surface_dist(point: Vector3, surf: Dictionary) -> float:
+	var local: Vector3 = (surf["inv"] as Basis) * (point - (surf["centre"] as Vector3))
+	var size: Vector3 = surf["size"]
+	var kind := int(surf["kind"])
+	if kind == 0:  # a box: the rung or rail she grips
+		var q := local.abs() - size
+		return q.max(Vector3.ZERO).length() + minf(maxf(q.x, maxf(q.y, q.z)), 0.0)
+	if kind == 1:  # a cylinder along local y: the pipe she grips
+		var radial := Vector2(local.x, local.z).length() - size.x
+		var axial := absf(local.y) - size.y
+		return Vector2(maxf(radial, 0.0), maxf(axial, 0.0)).length() + minf(maxf(radial, axial), 0.0)
+	# A capsule along local y (his body): the distance to its segment, minus the radius.
+	var along := clampf(local.y, -size.y, size.y)
+	return (local - Vector3(0.0, along, 0.0)).length() - size.x
+
+
+# One finger joint's bend round what the hand holds: the first entry of
+# the tip's arc into the surface (the tip lands on it), or the closest
+# approach when the arc never reaches it. The bend is a rotation about
+# the wrist's x (the knuckle line); a negative rotation.x curls the
+# finger toward the palm, so the bend returns positive.
+func _wrap_angle(joint: Vector3, dir_prev: Vector3, axis: Vector3, seg_len: float, surf: Dictionary) -> float:
+	var step := WRAP_MAX / float(WRAP_STEPS)
+	var prev_d := _surface_dist(joint + dir_prev * seg_len, surf)
+	var prev_a := 0.0
+	var best_a := 0.0
+	var best_d := prev_d
+	for k in range(1, WRAP_STEPS + 1):
+		var a := step * float(k)
+		var d := _surface_dist(joint + dir_prev.rotated(axis, -a) * seg_len, surf)
+		if absf(d) < absf(best_d):
+			best_d = d
+			best_a = a
+		if prev_d >= 0.0 and d < 0.0:
+			# The tip entered the surface: bisect the crossing.
+			var lo := prev_a
+			var hi := a
+			for _b in range(8):
+				var mid := (lo + hi) * 0.5
+				var md := _surface_dist(joint + dir_prev.rotated(axis, -mid) * seg_len, surf)
+				if md >= 0.0:
+					lo = mid
+				else:
+					hi = mid
+			return (lo + hi) * 0.5
+		prev_d = d
+		prev_a = a
+	return best_a
+
+
+# Whether her hand is on the climber this frame (the hold, matron_view.gd
+# _hold_gate): a hold state with a hand target.
+func _holding(data: Dictionary) -> bool:
+	var state := int(data.get("state", 0))
+	return state >= STATE_GRAB and state <= STATE_SPARE and _hold.has("hand")
+
+
+# The surface a hand's fingers close round this frame (J-088): the right
+# hand on the climb or pipe grip, or on the held ankle in a hold; the left
+# on the second hold or on the pipe's same surface. The left hand in the
+# rip (ArmPlay) is on his arm, and the sim exports no arm surface, so it
+# rests (it must not curl toward the ankle, ~0.7 m away).
+func _hand_surface(data: Dictionary, hand: String, on_pipe: bool) -> Dictionary:
+	if hand == "r":
+		if bool(data.get("contact_hand_held", false)):
+			return _grip_surface(data, "contact_hand")
+		if _holding(data):
+			return _grip_surface(_hold, "held_ankle")
+		return {}
+	if bool(data.get("contact_hand2_held", false)):
+		return _grip_surface(data, "contact_hand2")
+	if on_pipe and bool(data.get("contact_hand_held", false)):
+		return _grip_surface(data, "contact_hand")
+	return {}
+
+
 func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bool) -> void:
 	var state := int(data["state"])
 	var speed := float(data["speed"])
@@ -2301,33 +2404,41 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		_box_rot = bs[0]
 		_box_v = bs[1]
 	_p["box_cord"].rotation = _box_rot
-	# Fingers: relaxed hooks that curl into claws on the hunt, twitching in the Turn.
-	var curl := 0.35
-	if state == STATE_HUNTING:
-		curl = 1.0
-	elif state == STATE_SEARCHING:
-		curl = 0.7
-	elif state == STATE_EMERGING:
-		curl = 1.3
-	if falling:
-		curl = 0.05
+	# Fingers: each curls until it meets what the hand holds (J-088), the
+	# wrap's spring easing it there, never a snap. A hand holding nothing
+	# rests at one neutral curl, not a curl per state. The wrap walks the
+	# chain from the knuckle: each joint's bend lands its tip on the
+	# surface, and the next joint starts from there.
 	var beat_f := int(floorf(_clock * 1.5))
+	var on_pipe := bool(data.get("on_pipe", false))
 	for hand in ["l", "r"]:
+		var surf := _hand_surface(data, hand, on_pipe)
 		var fingers: Array = _p["fingers_" + hand]
+		# The wrist as drawn last frame: the knuckle line is its x, the
+		# finger's rest direction its -y.
+		var wrist_xf: Transform3D = _rig.bone_world("wr_" + hand)
+		var axis := wrist_xf.basis.x.normalized()
+		var rest_dir := -wrist_xf.basis.y.normalized()
+		var side := 1.0 if hand == "r" else -1.0
 		for f in fingers.size():
-			var c := curl
-			if turn > 0:
-				c = 0.1 + 1.5 * _noise(_clock * 1.6 + float(f * 3 + (0 if hand == "l" else 11)) * 13.0)
-			elif state == STATE_HUNTING and _fours:
-				# The planted hand spreads, the lifted one claws.
-				var phase := cos(_gait_phase + (0.5 * PI if hand == "l" else 1.5 * PI))
-				c = lerpf(0.5, 1.4, 0.5 + 0.5 * phase)
 			var chain: Array = fingers[f]
+			var seg_len := 0.035 if f == fingers.size() - 1 else 0.04
+			var base := Vector3(-0.0225 + 0.015 * float(f), -0.092, 0.0) if f < 4 \
+				else Vector3(side * 0.03, -0.045, 0.0)
+			var joint: Vector3 = wrist_xf.origin + wrist_xf.basis * base
+			var dir := rest_dir
 			for seg in chain.size():
 				# on a spring like her other joints (a state's change of
 				# grip, never a frame's)
 				var node := chain[seg] as Node3D
-				var want_c := -c * (1.0 + 0.15 * float(seg)) * (0.8 if f == fingers.size() - 1 else 1.0)
+				var want_c := 0.0
+				if surf.is_empty():
+					want_c = -FINGER_REST * (1.0 + 0.15 * float(seg)) * (0.8 if f == fingers.size() - 1 else 1.0)
+				else:
+					var a := _wrap_angle(joint, dir, axis, seg_len, surf)
+					want_c = -a
+					dir = dir.rotated(axis, -a)
+					joint = joint + dir * seg_len
 				var fs: Array = _finger_shown.get(node, [want_c, 0.0])
 				if not _pose_fresh:
 					fs = spring(float(fs[0]), float(fs[1]), want_c, FINGER_W, delta)

@@ -1829,12 +1829,24 @@ void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Ma
                                          static_cast<real_t>(state.contact_hand.z));
     out[keys("contact_hand_body")] = static_cast<std::int64_t>(state.contact_hand_body);
     out[keys("contact_hand_sub")] = static_cast<std::int64_t>(state.contact_hand_sub);
+    // The surface each grip closes round (J-088): the held body's shape at
+    // the grip, for the presentation's finger wrap and the probe's finger check.
+    out[keys("contact_hand_shape")] = static_cast<std::int64_t>(state.contact_hand_shape);
+    out[keys("contact_hand_size")] = to_godot(state.contact_hand_size);
+    out[keys("contact_hand_centre")] = to_godot(state.contact_hand_centre);
+    out[keys("contact_hand_rot")] = to_godot(sim::Quaternion{state.contact_hand_rot_x, state.contact_hand_rot_y,
+                                                             state.contact_hand_rot_z, state.contact_hand_rot_w});
     out[keys("contact_hand2_held")] = state.contact_hand2_held;
     out[keys("contact_hand2")] = godot::Vector3(static_cast<real_t>(state.contact_hand2.x),
                                           static_cast<real_t>(state.contact_hand2.y),
                                           static_cast<real_t>(state.contact_hand2.z));
     out[keys("contact_hand2_body")] = static_cast<std::int64_t>(state.contact_hand2_body);
     out[keys("contact_hand2_sub")] = static_cast<std::int64_t>(state.contact_hand2_sub);
+    out[keys("contact_hand2_shape")] = static_cast<std::int64_t>(state.contact_hand2_shape);
+    out[keys("contact_hand2_size")] = to_godot(state.contact_hand2_size);
+    out[keys("contact_hand2_centre")] = to_godot(state.contact_hand2_centre);
+    out[keys("contact_hand2_rot")] = to_godot(sim::Quaternion{state.contact_hand2_rot_x, state.contact_hand2_rot_y,
+                                                              state.contact_hand2_rot_z, state.contact_hand2_rot_w});
     out[keys("contact_line")] = state.contact_line;
     out[keys("contact_braced")] = state.contact_braced;
     out[keys("contact_brace")] = godot::Vector3(static_cast<real_t>(state.contact_brace.x),
@@ -1992,6 +2004,14 @@ void ScraperXSimulation::fill_matron_hold(godot::Dictionary &out, const sim::Sna
     // out) and the held ankle point (where her fingers hold him, while they do).
     out[keys("matron_hand_present")] = p.matron_hand_present;
     out[keys("held_ankle")] = to_godot(p.held_ankle);
+    // The surface her fingers close round at the held ankle (J-088): his
+    // body's capsule, for the presentation's finger wrap and the probe's
+    // finger check.
+    out[keys("held_ankle_shape")] = static_cast<std::int64_t>(p.held_ankle_shape);
+    out[keys("held_ankle_size")] = to_godot(p.held_ankle_size);
+    out[keys("held_ankle_centre")] = to_godot(p.held_ankle_centre);
+    out[keys("held_ankle_rot")] =
+        to_godot_quat(p.held_ankle_rot_x, p.held_ankle_rot_y, p.held_ankle_rot_z, p.held_ankle_rot_w);
     out[keys("held")] = p.held_by_matron;
     out[keys("free_rotation")] = p.player_free_rotation;
     out[keys("body_rotation")] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);
