@@ -6,7 +6,7 @@ Read through: 1794658801 (2026-11-14 mail+asks)
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers
   take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
-  10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go.
+  10 min; check all he says, push back on waste. On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go; after it, keep checking the system every run and fix any measured break (Cory 11-14).
 - THE PLAN (11-14): Carbon's answer (verdict: targeted fixes, no rebuild; coordination signals become standing state). DONE TEST
   (Cory 11-14 "yes"): the next 6 Muse jobs each land within 1 h of going green, no hand fixes, trunk never red unowned.
   Count: 2/6 = #544 J-040 repin (8 min green to merged), #547 J-116 MAT1 (9 min). In flight: #545 quiet-asks, proof-unittests,
