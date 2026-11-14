@@ -1,6 +1,6 @@
 ---
 name: helper-max
-description: "The same Opus helper at max effort, for a job that failed on helper or helper-physics (a red proof it could not fix, or a real review finding). Cory 11-06 11:30 AM: non-physics helpers run at high, physics helpers at xhigh, and failures are redone at max."
+description: "The same Opus helper at max effort, for a job that failed on helper or helper-physics (a red proof it could not fix, or a real review finding). The second step of CLAUDE.md's settled ladder."
 model: inherit
 effort: max
 ---
