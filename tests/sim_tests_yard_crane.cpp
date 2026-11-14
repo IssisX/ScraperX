@@ -852,6 +852,40 @@ std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
     return n;
 }
 
+// The grips' two lists, read out: the held body per grip
+// (kNone for a grip holding nothing) and its rating. Empty when the save
+// does not hold them as the layout lays them out.
+struct SavedGrips {
+    std::vector<std::uint32_t> loads;
+    std::vector<float> ratings;
+};
+SavedGrips saved_grips_lists(const std::vector<std::uint8_t> &bytes) {
+    const std::size_t at = saved_grips_at(bytes);
+    SavedGrips out;
+    if (at == bytes.size()) {
+        return out;
+    }
+    std::uint32_t n = 0;
+    std::memcpy(&n, bytes.data() + at, 4);
+    out.loads.resize(n);
+    out.ratings.resize(n);
+    std::memcpy(out.loads.data(), bytes.data() + at + 4, 4 * n);
+    std::memcpy(out.ratings.data(), bytes.data() + at + 8 + 4 * n, 4 * n);
+    return out;
+}
+
+// A kit body's index by its entity (the kit's body list, build order), or
+// kNone when the world has no such body.
+std::uint32_t body_index(const Simulation &s, const std::uint64_t entity) {
+    const std::uint32_t count = s.kit_body_count();
+    for (std::uint32_t i = 0; i < count; ++i) {
+        if (s.kit_body_entity(i) == entity) {
+            return i;
+        }
+    }
+    return scraperx::sim::kit::kNone;
+}
+
 // The save as an older build wrote it: without the world's last `drop` kit
 // bodies (their entities and states) and with only its first `keep` grips (0:
 // from before the grips, its lists ending at the lifts' targets). The layout
@@ -899,6 +933,135 @@ std::vector<std::uint8_t> older_save(const std::vector<std::uint8_t> &bytes, con
 
 } // namespace
 
+// The save as the build before the S2 drain fix wrote it (J-015 slice 1):
+// the drain's bodies (the striker and the tank), its bin, its latch and its
+// grip are absent, and every list after them holds the entries that
+// followed. The layout is Simulation::save_game's, walked with a cursor:
+// the bodies' entities and states, the ropes' anchors, the dogs' floors,
+// the bins' contents, the ropes parted, the catches latched, the latches
+// set, then the rest to the grips, the grips, and the tail. Each drain
+// entry is found by what it is, not by counting: the bodies by their
+// entities, the bin by its 1250 kg of water (the only bin holding that
+// much while the tank is full), the latch by being the second of the
+// world's two (S1's pawl first), the grip by the body it holds and its
+// rating of 0 (bolted, it never lets go). Exact for a checkpoint taken
+// before the tank drains (water 1250, drained 0): then the parent build's
+// lists are the world's without the drain's entries, and the bytes are
+// what the parent build would have written for the same checkpoint.
+std::vector<std::uint8_t> parent_save(const std::vector<std::uint8_t> &bytes, const Simulation &s) {
+    const std::size_t head = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
+    std::uint32_t entities = 0;
+    std::memcpy(&entities, bytes.data() + head, 4);
+    const std::size_t states_at = head + 4 + 8 * std::size_t{entities};
+    std::uint32_t states = 0;
+    std::memcpy(&states, bytes.data() + states_at, 4);
+    const std::size_t rest_at = states_at + 4 + sizeof(scraperx::sim::kit::Kit::BodyState) * std::size_t{states};
+    require(states == entities && rest_at <= bytes.size(),
+            "parent save: the save's body lists read as the writer lays them out");
+    const std::uint32_t striker = body_index(s, Simulation::kStackS2DrainStrikerEntityId);
+    const std::uint32_t cart = body_index(s, Simulation::kStackS2CartEntityId);
+    require(striker != scraperx::sim::kit::kNone && cart != scraperx::sim::kit::kNone && striker != cart &&
+                striker < entities && cart < entities,
+            "parent save: the drain's striker and tank are built");
+    const auto *entity = reinterpret_cast<const std::uint64_t *>(bytes.data() + head + 4);
+    require(entity[striker] == Simulation::kStackS2DrainStrikerEntityId &&
+                entity[cart] == Simulation::kStackS2CartEntityId,
+            "parent save: the drain's bodies sit where the kit has them");
+    const std::size_t grips_at = saved_grips_at(bytes);
+    const std::size_t grips = saved_grips(bytes);
+    const SavedGrips saved = saved_grips_lists(bytes);
+    require(grips_at < bytes.size() && saved.loads.size() == grips && saved.ratings.size() == grips,
+            "parent save: the save ends in the grips as the layout lays them out");
+    std::size_t cart_grip = grips;
+    for (std::size_t i = 0; i < grips; ++i) {
+        if (saved.loads[i] == cart && saved.ratings[i] == 0.0F) {
+            require(cart_grip == grips, "parent save: one grip holds the tank, bolted");
+            cart_grip = i;
+        }
+    }
+    require(cart_grip < grips, "parent save: the tank's bolted grip is in the save");
+    // Walk the lists the bodies' states end at, to the bins and the latch.
+    std::size_t at = rest_at;
+    const auto list_count = [&bytes](const std::size_t pos) {
+        std::uint32_t count = 0;
+        std::memcpy(&count, bytes.data() + pos, 4);
+        return count;
+    };
+    at += 4 + 4 * std::size_t{list_count(at)};  // the ropes' anchors
+    at += 4 + 4 * std::size_t{list_count(at)};  // the dogs' floors
+    const std::size_t bins_at = at;
+    const std::uint32_t bins = list_count(bins_at);
+    std::size_t cart_bin = bins;
+    for (std::uint32_t i = 0; i < bins; ++i) {
+        float contents = 0.0F;
+        std::memcpy(&contents, bytes.data() + bins_at + 4 + 4 * std::size_t{i}, 4);
+        if (contents == 1250.0F) {
+            require(cart_bin == bins, "parent save: one bin holds 1250 kg of water");
+            cart_bin = i;
+        }
+    }
+    require(cart_bin < bins, "parent save: the tank's water is in the save");
+    at += 4 + 4 * std::size_t{bins};             // the bins' contents
+    at += 4 + std::size_t{list_count(at)};      // the ropes parted
+    at += 4 + std::size_t{list_count(at)};      // the catches latched
+    const std::size_t latch_at = at;
+    const std::uint32_t latches = list_count(latch_at);
+    require(latches == 2, "parent save: the world holds two latches, S1's pawl and the drain's");
+    const std::size_t latch_end = latch_at + 4 + std::size_t{latches};
+    const auto append_u32 = [](std::vector<std::uint8_t> &out, const std::uint32_t value) {
+        const auto *p = reinterpret_cast<const std::uint8_t *>(&value);
+        out.insert(out.end(), p, p + 4);
+    };
+    std::vector<std::uint8_t> out(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(head));
+    append_u32(out, entities - 2);
+    for (std::uint32_t i = 0; i < entities; ++i) {
+        if (i != striker && i != cart) {
+            const auto *p = reinterpret_cast<const std::uint8_t *>(&entity[i]);
+            out.insert(out.end(), p, p + 8);
+        }
+    }
+    append_u32(out, states - 2);
+    const std::size_t state_size = sizeof(scraperx::sim::kit::Kit::BodyState);
+    for (std::uint32_t i = 0; i < states; ++i) {
+        if (i != striker && i != cart) {
+            out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(states_at + 4 + state_size * i),
+                       bytes.begin() + static_cast<std::ptrdiff_t>(states_at + 4 + state_size * (i + 1)));
+        }
+    }
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(rest_at),
+               bytes.begin() + static_cast<std::ptrdiff_t>(bins_at));
+    append_u32(out, bins - 1);
+    for (std::uint32_t i = 0; i < bins; ++i) {
+        if (i != cart_bin) {
+            out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(bins_at + 4 + 4 * i),
+                       bytes.begin() + static_cast<std::ptrdiff_t>(bins_at + 4 + 4 * (i + 1)));
+        }
+    }
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(bins_at + 4 + 4 * bins),
+               bytes.begin() + static_cast<std::ptrdiff_t>(latch_at));
+    append_u32(out, latches - 1);
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(latch_at + 4),
+               bytes.begin() + static_cast<std::ptrdiff_t>(latch_at + 4 + (latches - 1)));
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(latch_end),
+               bytes.begin() + static_cast<std::ptrdiff_t>(grips_at));
+    append_u32(out, static_cast<std::uint32_t>(grips - 1));
+    for (std::size_t i = 0; i < grips; ++i) {
+        if (i != cart_grip) {
+            const auto *p = reinterpret_cast<const std::uint8_t *>(&saved.loads[i]);
+            out.insert(out.end(), p, p + 4);
+        }
+    }
+    append_u32(out, static_cast<std::uint32_t>(grips - 1));
+    for (std::size_t i = 0; i < grips; ++i) {
+        if (i != cart_grip) {
+            const auto *p = reinterpret_cast<const std::uint8_t *>(&saved.ratings[i]);
+            out.insert(out.end(), p, p + 4);
+        }
+    }
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(grips_at + 8 + 8 * grips), bytes.end());
+    return out;
+}
+
 // The yard crane's lifting magnet (yard_crane.hpp): rigged by HOOKing the
 // sling on its bail; switched on from the remote, lowered on to the two slabs,
 // it takes the top one (steel flat under its whole face) and lifts it alone;
@@ -928,10 +1091,12 @@ void run_yard_crane_magnet() {
     // body appended at the end; so the tower/summit tail sits 137 bodies
     // before the forklift, and the 137 after it are stock entities. J-092
     // (#410) then appends the slab cell's frame, trigger and handle, exactly
-    // those three, as the kit's very last bodies (run_wet_e_guard pins the
-    // same order). J-108 (#427) then appends the bait lift's platforms, A
-    // then B, after the cell: re-pinned, before "the slab cell last", now
-    // "the slab cell, then A, then B, last", each body pinned.
+    // those three (run_wet_e_guard pins the same order). J-108 (#427) then
+    // appends the bait lift's platforms, A then B, after the cell; and last
+    // the S2 drain (J-015: its striker and bolted tank, built after every
+    // other body so a save from before the drain still lines up), the kit's
+    // very last two: "the slab cell, then A, then B, then the drain's two,
+    // last", each body pinned.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
     const std::uint64_t kSlabCell[] = {SlabCell::kFrameEntity, SlabCell::kTriggerEntity, SlabCell::kHandleEntity};
@@ -945,18 +1110,22 @@ void run_yard_crane_magnet() {
     }
     require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
             "magnet: the deck-154 forklift's frame and forks, side by side");
-    bool later_stock = fork + 2 + kTailBodies <= last;
-    for (std::uint32_t i = fork + 2; later_stock && i < last - kTailBodies; ++i) {
+    constexpr std::uint32_t kDrainBodies = 2;
+    bool later_stock = fork + 2 + kTailBodies + kDrainBodies <= last;
+    for (std::uint32_t i = fork + 2; later_stock && i < last - kTailBodies - kDrainBodies; ++i) {
         later_stock = scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
     }
     for (std::uint32_t i = 0; later_stock && i < kCellBodies; ++i) {
-        later_stock = s.kit_body_entity(last - kTailBodies + i) == kSlabCell[i];
+        later_stock = s.kit_body_entity(last - kDrainBodies - kTailBodies + i) == kSlabCell[i];
     }
     for (std::uint32_t i = 0; later_stock && i < kBaitBodies; ++i) {
-        later_stock = s.kit_body_entity(last - kBaitBodies + i) == kBait[i];
+        later_stock = s.kit_body_entity(last - kDrainBodies - kBaitBodies + i) == kBait[i];
     }
     require(later_stock,
-            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B: the kit's last bodies");
+            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B");
+    require(s.kit_body_entity(last - 2) == Simulation::kStackS2DrainStrikerEntityId &&
+                s.kit_body_entity(last - 1) == Simulation::kStackS2CartEntityId,
+            "magnet: the kit's last two bodies are the S2 drain's striker and tank");
     const auto tail = fork - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
@@ -1031,7 +1200,25 @@ void run_yard_crane_magnet() {
         require(loaded.yard_crane_state().holding_entity == top && loaded.yard_crane_state().magnet_on &&
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
-        require(saved_grips(bytes) == 2, "magnet: the save holds its two grips (the magnet's, the spreader's)");
+        // The save ends in the magnet's and the spreader's grips: find each
+        // by the body it holds, not by counting the grips. The S2 drain fix
+        // adds a third, bolted cart grip (rating 0, it never lets go), which
+        // a count would mistake for one of the two.
+        const auto grips = saved_grips_lists(bytes);
+        const std::uint32_t top_body = body_index(s, top);
+        bool magnet_grip = false;
+        bool spreader_grip = false;
+        for (std::size_t i = 0; i < grips.loads.size(); ++i) {
+            if (grips.loads[i] == top_body && std::abs(grips.ratings[i] - YardCrane::kMagnetRatedN) < 1.0F) {
+                magnet_grip = true;
+            }
+            if (grips.loads[i] == scraperx::sim::kit::kNone &&
+                std::abs(grips.ratings[i] - 4.0F * YardCrane::kTwistlockRatedN) < 1.0F) {
+                spreader_grip = true;
+            }
+        }
+        require(magnet_grip, "magnet: the save ends in the magnet's grip, holding the top slab");
+        require(spreader_grip, "magnet: the save ends in the spreader's grip, holding nothing");
         // As the spreader's build saved it: no machines' weights. Loaded, the
         // slab still hangs on the magnet.
         const std::vector<std::uint8_t> two = older_save(bytes, weights, 2);
@@ -1041,11 +1228,14 @@ void run_yard_crane_magnet() {
         require(spreader_build.yard_crane_state().holding_entity == top &&
                     std::abs(body_at(spreader_build, top).y - here.y) < 0.05,
                 "magnet: loaded from a save from before the machines' weights, it holds the slab");
-        // As the magnet's build saved it: no spreader, one grip. Loaded, the
+        // As the magnet's build saved it: no spreader, and no bolted cart
+        // grip either (the drain fix's grip sits last now, after the
+        // spreader's, so the magnet's is the only grip kept). Loaded, the
         // slab still hangs on the magnet and the spreader lies as built.
-        const std::vector<std::uint8_t> one = older_save(bytes, 1 + weights, 1);
+        const std::vector<std::uint8_t> pre_spreader = older_save(bytes, 1 + weights, 1);
         Simulation magnet_build(scraperx::sim::InitialSpawn::ExteriorGrade);
-        require(magnet_build.load_game(one.data(), one.size()), "magnet: a save from before the spreader loads");
+        require(magnet_build.load_game(pre_spreader.data(), pre_spreader.size()),
+                "magnet: a save from before the spreader loads");
         (void)magnet_build.advance_frame(2.0);
         const auto spreader = body_at(magnet_build, YardCrane::kSpreaderEntity);
         require(magnet_build.yard_crane_state().holding_entity == top &&
@@ -1066,6 +1256,31 @@ void run_yard_crane_magnet() {
                     std::hypot(laid.x - slab0.x, laid.z - slab0.z) < 0.02 && std::abs(lying.y - at.y) < 0.02 &&
                     std::hypot(lying.x - at.x, lying.z - at.z) < 0.02,
                 "magnet: loaded from a save from before the grips, the slabs and the magnet lie as built");
+        // As the build before the S2 drain fix saved it: the drain's bodies,
+        // bin, latch and grip absent. Loaded, the slab still hangs on the
+        // magnet, and the S2 machine is migrated: the beam at rest, the cage
+        // home, the tank full and bolted to the beam, its gate shut.
+        const auto cart0 = body_at(s, Simulation::kStackS2CartEntityId);
+        const std::vector<std::uint8_t> parent = parent_save(bytes, s);
+        Simulation parent_build(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(parent_build.load_game(parent.data(), parent.size()),
+                "magnet: a save from before the S2 drain fix loads");
+        (void)parent_build.advance_frame(2.0);
+        const auto kept = parent_build.stack_state();
+        const auto cart_at = body_at(parent_build, Simulation::kStackS2CartEntityId);
+        std::cout << "  magnet: from the parent save, the slab hangs at y " << body_at(parent_build, top).y
+                  << ", the beam at " << kept.s2_beam_angle << ", the cage at " << kept.s2_cage_travel
+                  << ", the tank holding " << kept.s2_cart_water_kg << " kg, pawled "
+                  << (kept.s2_drain_pawled ? 1 : 0) << '\n';
+        require(parent_build.yard_crane_state().holding_entity == top &&
+                    std::abs(body_at(parent_build, top).y - here.y) < 0.05 &&
+                    std::abs(kept.s2_beam_angle) < 0.01 && std::abs(kept.s2_cage_travel) < 0.02 &&
+                    std::abs(kept.s2_cart_water_kg - 1250.0) < 1.0 && !kept.s2_drain_pawled &&
+                    std::abs(kept.s2_drain_striker_angle) < 0.01 &&
+                    std::abs(cart_at.x - cart0.x) < 0.05 && std::abs(cart_at.y - cart0.y) < 0.05 &&
+                    std::abs(cart_at.z - cart0.z) < 0.05,
+                "magnet: loaded from a save from before the S2 drain fix, it holds the slab and the S2 machine "
+                "is migrated: the beam at rest, the cage home, the tank full and bolted, its gate shut");
     }
     // Off: the slab falls where it hangs.
     require(magnet(s, false), "magnet: MAGNET OFF");

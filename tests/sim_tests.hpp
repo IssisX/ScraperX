@@ -904,6 +904,13 @@ bool climb_c1_to_monorail(scraperx::sim::Simulation &simulation);
 bool shove_s2_bolt(scraperx::sim::Simulation &simulation);
 bool s2_bolt_at_rest(const scraperx::sim::Simulation &simulation);
 S2Ride ride_s2(scraperx::sim::Simulation &simulation, const double seconds);
+// The save as the build before the S2 drain fix wrote it (J-015 slice 1):
+// the drain's bodies, bin, latch and grip absent, every list after them
+// holding the entries that followed. Built from a save of the world as it
+// stands; the bytes are what the parent build would have written for the
+// same checkpoint (sim_tests_yard_crane.cpp).
+std::vector<std::uint8_t> parent_save(const std::vector<std::uint8_t> &bytes,
+                                      const scraperx::sim::Simulation &simulation);
 bool climb_c2(scraperx::sim::Simulation &simulation, C2Notes *notes = nullptr);
 bool load_s3_pan(scraperx::sim::Simulation &simulation);
 bool s3_pan_at_rest(const scraperx::sim::Simulation &simulation);

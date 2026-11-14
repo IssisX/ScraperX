@@ -1046,6 +1046,10 @@ public:
     JPH::RVec3 checkpoint_position_{JPH::RVec3::sZero()};
     bool checkpoint_crouched_ = false;
     MachineCheckpoint checkpoint_{};
+    // The kit as the world was built, before its first tick: what a save
+    // from an older build takes for the bodies, bins, grips, ropes and
+    // latches built since (read_save), whatever this world has done since.
+    scraperx::sim::kit::Kit::Checkpoint as_built_{};
     std::uint64_t checkpoint_commit_count_ = 0;
     std::uint64_t death_count_ = 0;
     // J-059 #343 P1: checkpoint-restore generation, watched by the injury

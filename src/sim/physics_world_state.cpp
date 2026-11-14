@@ -494,9 +494,15 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // by this entity, not by its saved kit index: a fabricated object
     // made before a crate breaks holds a saved index below the
     // pieces, and a fresh load makes the pieces first, so the index
-    // would weld the magnet to a timber piece instead.
-    if (std::any_of(k.grip_load.begin(), k.grip_load.end(),
-                    [](const std::uint32_t load) { return load != kit::kNone; })) {
+    // would weld the magnet to a timber piece instead. Only a load past
+    // the bodies built with the world (a piece or a fabricated object)
+    // needs its entity: a built body's index never moves, and the cart's
+    // bolt holds one as built (J-015), so a save holding only those is
+    // byte for byte what it was.
+    const std::size_t built_bodies = as_built_.bodies.size();
+    if (std::any_of(k.grip_load.begin(), k.grip_load.end(), [built_bodies](const std::uint32_t load) {
+            return load != kit::kNone && load >= built_bodies;
+        })) {
         std::vector<std::uint64_t> grip_entities;
         grip_entities.reserve(k.grip_load.size());
         for (const std::uint32_t load : k.grip_load) {
@@ -532,6 +538,10 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     std::uint64_t commits = 0, deaths = 0;
     auto &k = loaded.kit;
     const auto &c = current.kit;
+    // What the save lacks (built since it was written) starts as this world
+    // was built, not as the running world has it now: a tank it has drained
+    // since is full again on a save from before the tank (J-015 #466).
+    const auto &b = as_built_;
     // The saved world's bodies built with it, by entity, must be this
     // world's first ones in the same order: then every saved state is
     // its body's. A world grown since (bodies built last) starts the
@@ -556,7 +566,16 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                                           here[built_prefix] >= stock_damage::kPieceEntityLimit)) {
         ++built_prefix;
     }
-    bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
+    // Every list is as long as it was built: the built bodies (not the
+    // break pieces or fabricated objects after them) and the rest.
+    const bool as_built = b.bodies.size() >= built_prefix && b.bin_contents.size() == c.bin_contents.size() &&
+                          b.rope_anchor.size() == c.rope_anchor.size() &&
+                          b.rope_parted.size() == c.rope_parted.size() &&
+                          b.dog_floor.size() == c.dog_floor.size() &&
+                          b.latch_set.size() == c.latch_set.size() &&
+                          b.grip_load.size() == c.grip_load.size() &&
+                          b.grip_rating.size() == c.grip_rating.size();
+    bool ok = as_built && r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
               r.pod(loaded.carrying_entity) &&
               r.list_up_to(entities, here.size() + 8 * loose_stock_->placed().size()) &&
               (entities.size() >= built_prefix
@@ -574,7 +593,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               // Fewer guides, likewise: those built since (J-108's bait
               // lift, built with the last bodies).
               (k.dog_floor.size() == c.dog_floor.size() || entities.size() < here.size()) &&
-              r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
+              r.bits(k.catch_latched, c.catch_latched.size()) && r.bits_up_to(k.latch_set, c.latch_set.size()) &&
               r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
               r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
               r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing) && r.pod(loaded.bay) &&
@@ -860,16 +879,20 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         fail("no room");
     }
     for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
-        k.bin_contents.push_back(c.bin_contents[index]);
+        k.bin_contents.push_back(b.bin_contents[index]);
     }
     // Ropes built since the save start as built, as the bodies they hold do.
     for (std::size_t index = k.rope_anchor.size(); ok && index < c.rope_anchor.size(); ++index) {
-        k.rope_anchor.push_back(c.rope_anchor[index]);
-        k.rope_parted.push_back(c.rope_parted[index]);
+        k.rope_anchor.push_back(b.rope_anchor[index]);
+        k.rope_parted.push_back(b.rope_parted[index]);
+    }
+    // A latch built since the save (the drain pawl) starts as built: shut.
+    for (std::size_t index = k.latch_set.size(); ok && index < c.latch_set.size(); ++index) {
+        k.latch_set.push_back(b.latch_set[index]);
     }
     // Guides built since start on their dogs as built.
     for (std::size_t index = k.dog_floor.size(); ok && index < c.dog_floor.size(); ++index) {
-        k.dog_floor.push_back(c.dog_floor[index]);
+        k.dog_floor.push_back(b.dog_floor[index]);
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {
@@ -1001,16 +1024,34 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // late, gives piece 0's state to it, and shifts every piece by
     // one. Each saved state goes to the kit index of the body whose
     // entity it belongs to; a fabricated state goes to its object's
-    // own kit index; a body the save does not name — a piece the
-    // save predates, or one built since — keeps its fresh state.
+    // own kit index; a piece the save does not name (one the save
+    // predates) keeps its fresh state, and a body built with this world
+    // since the save starts as built (J-015 #466), below.
     kit::Kit::Checkpoint fresh;
     kit_->capture(fresh);
     std::vector<kit::Kit::BodyState> ordered = fresh.bodies;
+    std::vector<bool> named(ordered.size(), false);  // a state from the save
     for (std::size_t j = 0; j < entities.size() && j < k.bodies.size(); ++j) {
         const kit::BodyIndex body = kit_->body_for_entity(entities[j]);
         if (body.valid()) {
             ordered[body.value] = k.bodies[j];
+            named[body.value] = true;
         }
+    }
+    // Bodies built with this world since the save was written (always
+    // built last, after every body before them, and before any piece or
+    // fabricated object) start as built, not as the running world has
+    // them now: a tank drained since is full again.
+    for (std::size_t index = 0; index < built_prefix; ++index) {
+        if (!named[index]) {
+            ordered[index] = b.bodies[index];
+        }
+    }
+    // But the S2 drain's striker, from a save from before it: at its open
+    // stop, not on its stop inside a tank the save has at the lower station.
+    const std::uint32_t striker = stack_.s2_drain_striker_body.value;
+    if (stack_.s2_drain_striker_body.valid() && striker < built_prefix && !named[striker]) {
+        scraperx::sim::bands::pose_s2_drain_striker_open(ordered[striker]);
     }
     for (std::size_t i = 0; i < saved.size() && i < fabricated_.size(); ++i) {
         ordered[fabricated_[i].body.value] = saved[i].state;
@@ -1033,6 +1074,39 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                 ordered[piece_body.value].enabled = false;
             }
         }
+    }
+    // Grips built since the save (the cart's bolt among them) hold as
+    // built: the cart stays bolted to the beam, while a player grip holds
+    // nothing until it is made, as a save from before the grips pins.
+    // After both remaps above, which are for the save's own grips: an
+    // as-built load is a built body's kit index, which nothing shifts.
+    for (std::size_t index = k.grip_load.size(); index < c.grip_load.size(); ++index) {
+        k.grip_load.push_back(b.grip_load[index]);
+        k.grip_rating.push_back(b.grip_rating[index]);
+    }
+    // A body built since the save that a grip holds rides its device: its
+    // filled pose is where it lay as built, so it is set from the device's
+    // loaded pose composed with the two as they lay at the build, or the
+    // weld would pin it where the device has left (the tank, mid-ride).
+    for (std::size_t grip = 0; grip < k.grip_load.size(); ++grip) {
+        const std::uint32_t load = k.grip_load[grip];
+        if (load == kit::kNone || load >= built_prefix || named[load]) {
+            continue;
+        }
+        const kit::BodyIndex device = kit_->grip_device(kit::GripIndex{static_cast<std::uint32_t>(grip)});
+        if (!device.valid() || device.value >= built_prefix || !named[device.value]) {
+            continue;
+        }
+        const kit::Kit::BodyState &held = b.bodies[load];
+        const kit::Kit::BodyState &at = ordered[device.value];
+        const kit::Kit::BodyState &was = b.bodies[device.value];
+        const JPH::Quat back = was.rotation.Conjugated();
+        const JPH::Vec3 rel = back * JPH::Vec3(held.position - was.position);
+        kit::Kit::BodyState &state = ordered[load];
+        state.position = at.position + JPH::RVec3(at.rotation * rel);
+        state.rotation = at.rotation * (back * held.rotation);
+        state.linear = at.linear + at.angular.Cross(at.rotation * rel);
+        state.angular = at.angular;
     }
     k.bodies = std::move(ordered);
     checkpoint_position_ = position;

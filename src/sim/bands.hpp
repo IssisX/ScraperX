@@ -317,18 +317,23 @@ struct Stack final {
     kit::PoolIndex s1_tank;
     kit::PipeIndex s1_fill;
 
-    // S2, the walking beam hoist with fixed ballast cart: deck 4 -> deck 6.
+    // S2, the walking beam hoist with water-ballast tank: deck 4 -> deck 6.
     kit::BodyIndex s2_cage;
     kit::BodyIndex s2_beam;
     kit::BodyIndex s2_cart;
     kit::BodyIndex s2_bolt;           // the shoot bolt the rider shoves out
     kit::GuideIndex s2_bolt_guide;
     kit::GuideIndex s2_cage_guide;
-    kit::GuideIndex s2_cart_guide;
+    kit::GuideIndex s2_cart_guide;    // unused: the cart rides the beam on its weld, not a guide
+    kit::BinIndex s2_cart_bin;        // the tank's water, 1250 kg when full
+    kit::GripIndex s2_cart_grip;      // the bolts holding the tank to the beam
     kit::RopeIndex s2_rope;
     kit::LeverIndex s2_beam_hinge;
     kit::CatchIndex s2_catch;
     kit::CatchIndex s2_cage_catch;
+    kit::BodyIndex s2_drain_striker_body;
+    kit::LeverIndex s2_drain_striker;
+    kit::LatchIndex s2_drain_pawl;
 
     // S3, the brake-override hoist: deck 8 -> deck 12.
     kit::BodyIndex s3_cage;
@@ -344,5 +349,12 @@ struct Stack final {
 };
 
 void build_stack(kit::Kit &kit, Stack &stack);
+// The S2 drain (striker + bolted water tank), built after every other body
+// so saves from before the drain still line up; called at the end of the
+// world's build, before the first checkpoint is taken.
+void build_s2_drain(kit::Kit &kit, Stack &stack);
+// The drain striker's state for a save from before the drain: at its open
+// stop, under the tank wherever the save left the beam (see read_save).
+void pose_s2_drain_striker_open(kit::Kit::BodyState &striker);
 
 } // namespace scraperx::sim::bands

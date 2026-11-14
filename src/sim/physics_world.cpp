@@ -488,9 +488,14 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(slab, ImpactSound::HeavySteel);
         slab_cell_.build(*kit_, slab);
     }
-    // J-108 (#427): the bait lift's two platforms, the kit's last bodies, so
+    // J-108 (#427): the bait lift's two platforms, after the slab cell, so
     // every body before them keeps its place and older saves line up.
     scraperx::sim::bands::build_bait_lift(*kit_, service_);
+    // J-015: the S2 drain is built last, after every other body (the slab
+    // cell and the bait lift among them: trunk's saves hold the lift and no
+    // drain), so a save from before it still lines up with this world's
+    // bodies in order.
+    scraperx::sim::bands::build_s2_drain(*kit_, stack_);
     give_matron_stock();
 
     // J-094 (#412): the probe plate/pan/stop rig -- proving ground only.
@@ -538,6 +543,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
 
     checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
     commit_machine_checkpoint();
+    as_built_ = checkpoint_.kit;
 
     read_state();
 }

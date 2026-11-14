@@ -842,15 +842,19 @@ struct StackState final {
     double s1_plate_travel = 0.0;   // the scale plate, from where it hangs proud of the floor
     double s1_rope_tension = 0.0;
 
-    // S2, the walking beam hoist with fixed ballast cart.
+    // S2, the walking beam hoist with water-ballast tank.
     double s2_cage_travel = 0.0;
     double s2_cage_peak_speed = 0.0;
     double s2_cart_travel = 0.0;
+    double s2_cart_water_kg = 0.0;  // the tank's water, 1250 kg when full
     double s2_beam_angle = 0.0;
     double s2_bolt_travel = 0.0;    // how far the shoot bolt is shoved out
     bool s2_bolt_shot = false;      // the bolt holds the beam
     bool s2_cage_latched = false;
     double s2_rope_tension = 0.0;
+    double s2_drain_striker_angle = 0.0;  // the drain striker's lever angle
+    bool s2_drain_pawled = false;         // the drain latch holds the gate open
+    double s2_drained_kg = 0.0;           // water the S2 tank has drained away
 
     // S3, the brake-override hoist.
     double s3_cage_travel = 0.0;
@@ -1566,6 +1570,7 @@ public:
     static constexpr std::uint64_t kStackS2BeamEntityId = 2211;
     static constexpr std::uint64_t kStackS2CartEntityId = 2212;
     static constexpr std::uint64_t kStackS2BoltEntityId = 2213;
+    static constexpr std::uint64_t kStackS2DrainStrikerEntityId = 2214;
     // S3, the brake-override elevator hoist.
     static constexpr std::uint64_t kStackS3CageEntityId = 2220;
     static constexpr std::uint64_t kStackS3CarEntityId = 2221;

@@ -824,15 +824,15 @@ void build_c1(std::vector<Part> &route) {
     build_c1_traversal_enhancements(route);
 }
 
-// ---- S2, the walking beam hoist with fixed ballast cart (archetype 18 mutated)
+// ---- S2, the walking beam hoist with water-ballast tank (archetype 18 mutated)
 //
 // Bridges Deck 4 (44.0 m) to Deck 6 (66.0 m) across the southern edge of the
 // 34 m central shaft. A 24 m steel walking beam is balanced on a central
 // trunnion fulcrum at +55 m (kS2Pivot).
 // At rest, the walking beam is held tilted by a safety chock catch: its west
-// arm (carrying a 1500 kg pig-iron ballast cart, 2400 kg total beam assembly)
-// sits high at deck 6 elevation (Y = 66.05), while its east arm sits low at
-// deck 4 (Y = 44.05).
+// arm (carrying a closed water tank bolted to it, 1500 kg wet; 2400 kg total
+// wet beam assembly) sits high at deck 6 elevation (Y = 66.05), while its
+// east arm sits low at deck 4 (Y = 44.05).
 // A tow cable runs from the west arm over headframe sheaves to a passenger cage
 // at the east arm.
 // Beam and cage are held by one shoot bolt: a 140 kg steel bolt on a slide on
@@ -841,7 +841,7 @@ void build_c1(std::vector<Part> &route) {
 // 11) and nothing the route has asked of the body before: the rider walks
 // into the plate and shoves the bolt out along its slide (its shoes hold it
 // with 900 N, so it goes only while shoved), and once its nose is clear of the cage the beam and the cage
-// are free: the 1500 kg ballast cart drives the walking beam down, tilting the
+// are free: the 1500 kg full tank drives the walking beam down, tilting the
 // massive girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
 // the cage 22 m up to deck 6 under its 2.5 m/s brake governor. At deck 6,
 // safety dogs engage, and the rider walks off across the upper gangway onto
@@ -866,7 +866,49 @@ const JPH::Vec3 kS2CageEyeLocal(-kS2CageHalfX - 0.12F, 0.80F, 0.0F);
 
 // The walking beam pivot (fulcrum):
 const JPH::RVec3 kS2Pivot(0.0, kDeck5Top, -141.0);
-constexpr float kS2BeamMassKg = 2400.0F; // 1500 kg ballast cart + 900 kg steel frame
+constexpr float kS2BeamMassKg = 900.0F; // steel frame only; the tank is its own body
+// The cart's water tank (J-015 slice 1): a closed tank bolted to the west arm,
+// 250 kg dry shell holding 1250 kg of water (1.25 m^3) when full, so the wet
+// cart is 1500 kg and the wet beam assembly is 2400 kg as before.
+constexpr float kS2CartDryMassKg = 250.0F;
+constexpr float kS2CartWaterKg = 1250.0F;
+constexpr float kS2CartWaterCapacityKg = 1250.0F;
+// The drain (J-015 slice 1 fix): the empty cage comes back down because the
+// tank empties at the lower station. Measured on the slice-1 head: at the top
+// of the ride the beam sits at 1.65976 rad and the tank's centre at
+// (-7.095, 47.353, -141); its mouth (local (0, 0.44, 0)) is then at about
+// (-7.42, 47.65, -141), 0.916 m from the striker pivot. At 1.2 m the mouth
+// was already in reach at beam 1.577 (travel 21.14 m), so the gate opened
+// 0.76 m short of the top and the tank lost 130 kg in the first second —
+// water spent before the top, not the cause of the 21.36 m stall (that was
+// the sump's west wall, see kS2SumpFloorY). At 1.0 m the mouth is in reach
+// only in the last ~0.04 rad, so the tank keeps its water to the top.
+// (At 2.5 m the tank drained mid-ride and the ride stalled at 16.76 m with
+// the tank dry, measured on the slice-2 tree.)
+constexpr float kS2DrainRate = 125.0F;  // kg/s, the spec's 10 s drain target
+constexpr float kS2DrainGateOpen = 0.12F;
+// 1.0 m, not 1.2: the mouth is 0.916 m from the striker pivot at the top of
+// the ride, and at 1.2 m it was already in reach at beam 1.577 (travel
+// 21.14 m), so the gate opened 0.76 m short of the top and the tank lost
+// 130 kg in the first second. At 1.0 m the mouth is in reach only in the
+// last ~0.04 rad, so the tank keeps its water to the top.
+constexpr float kS2DrainGateReach = 1.0F;
+constexpr float kS2DrainLatch = 0.15F;  // past the gate, so the pawl holds it open
+constexpr float kS2DrainPawlKnock = 0.5F;  // the cage back within 0.5 m of deck 4
+// The drain striker's arm rests just over the tank's floor at the lower
+// station, so the tank presses it down as it settles; its pivot stands on
+// a bracket from the shaft's south wall.
+const JPH::RVec3 kS2DrainStrikerPivot(-7.42F, 47.82F, -140.10F);
+constexpr float kS2DrainStrikerOpenStop = 0.6F;  // its lever's far stop, rad
+// The sump basin, its floor below the mouth at the lower station, on a
+// bracket from the shaft's south wall; the drain stream lands on it and
+// runs away. Floor at 45.00, not 46.20: the beam's lower chord sweeps down
+// through y 46.53 at x -8.17 as the beam nears the top (measured: the cage
+// stalled at 21.3565 m / beam 1.59774 rad with the tank full and the gate
+// shut), so a sump at 46.20 puts its west wall in the chord's path. At
+// 45.00 the chord's lowest pass (bottom edge 45.64 at x -8.17) clears the
+// walls by 0.32 m, and the tank's lowest corner (46.59) clears by 1.26 m.
+constexpr float kS2SumpFloorY = 45.00F;
 const JPH::Vec3 kS2BeamWestEye(-10.0F, 11.05F, 0.0F); // local to beam at angle 0
 
 // The shoot bolt: on a slide on the gangway's west side, along z, its nose
@@ -940,18 +982,34 @@ constexpr float kS2GangwayHalfX = 1.40F;
         beam.push_back(strut(pt - normal * 0.35F, pt + normal * 0.35F, 0.05F, Material::Steel));
     }
 
-    // West Arm Ballast Cart (pig-iron trolley, 1500 kg):
-    // Mounted directly on the outer west arm (centered at t = 0.15, R ~ 12 m from fulcrum)
-    const JPH::Vec3 cart_center = west_pt * 0.85F + east_pt * 0.15F;
-    beam.push_back(box(JPH::Vec3(1.10F, 0.60F, 0.22F), cart_center + normal * 0.50F, Material::Concrete));
-    beam.push_back(box(JPH::Vec3(1.20F, 0.12F, 0.24F), cart_center + normal * 0.10F, Material::Rust));
-
     // Eye plate on west tip
     beam.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.15F), west_pt, Material::Hazard));
 
     // East Arm tip & eye plate
     beam.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.15F), east_pt, Material::Hazard));
     return beam;
+}
+
+// The cart's water tank (J-015 slice 1): a closed rectangular tank bolted to
+// the west arm, its floor resting on the upper chord. Interior 2.80 x 0.62 x
+// 0.72 m = 1.25 m^3, holding 1250 kg of water when full; dry shell 250 kg.
+// The body is built with its axes on the beam (x along the arm, y across
+// it), its origin at the cart's centre on the arm, so these parts are
+// axis-aligned in its own frame. Heights are out from the beam's axis: the
+// floor's underside at 0.44 m sits on the upper chord's top face, the walls
+// run 0.50 to 1.22 m, the lid 1.22 to 1.28 m.
+[[nodiscard]] std::vector<Part> s2_cart_parts() {
+    std::vector<Part> tank;
+    // Floor first: the bin's water lies on it, and its underside is the bin's mouth.
+    tank.push_back(box(JPH::Vec3(1.45F, 0.03F, 0.36F), JPH::Vec3(0.0F, 0.47F, 0.0F), Material::Rust));
+    // Walls: 0.05 m plate, floor top (0.50) to lid underside (1.22).
+    for (const float side : {-1.0F, 1.0F}) {
+        tank.push_back(box(JPH::Vec3(0.025F, 0.36F, 0.31F), JPH::Vec3(side * 1.425F, 0.86F, 0.0F), Material::Rust));
+        tank.push_back(box(JPH::Vec3(1.45F, 0.36F, 0.025F), JPH::Vec3(0.0F, 0.86F, side * 0.335F), Material::Rust));
+    }
+    // Lid: closed, so the water stays in while the beam tilts.
+    tank.push_back(box(JPH::Vec3(1.45F, 0.03F, 0.36F), JPH::Vec3(0.0F, 1.25F, 0.0F), Material::Rust));
+    return tank;
 }
 
 [[maybe_unused]] void build_crossover_gangway(std::vector<Part> &frame, const float deck_top) {
@@ -1092,6 +1150,36 @@ void build_s2_frame(std::vector<Part> &frame) {
                         Material::Hazard));
 }
 
+void build_s2_water_frame(std::vector<Part> &frame) {
+    // ---- The sump basin under the tank's mouth at the lower station ----------
+    // A shallow open tray on a bracket from the shaft's south wall; the
+    // drain stream lands on its floor and runs away.
+    frame.push_back(box(JPH::Vec3(0.75F, 0.025F, 0.70F),
+                        JPH::Vec3(-7.42F, kS2SumpFloorY, -141.0F), Material::Rust));
+    frame.push_back(box(JPH::Vec3(0.75F, 0.15F, 0.025F),
+                        JPH::Vec3(-7.42F, kS2SumpFloorY + 0.175F, -140.30F), Material::Rust));
+    frame.push_back(box(JPH::Vec3(0.75F, 0.15F, 0.025F),
+                        JPH::Vec3(-7.42F, kS2SumpFloorY + 0.175F, -141.70F), Material::Rust));
+    frame.push_back(box(JPH::Vec3(0.025F, 0.15F, 0.70F),
+                        JPH::Vec3(-8.17F, kS2SumpFloorY + 0.175F, -141.0F), Material::Rust));
+    frame.push_back(box(JPH::Vec3(0.025F, 0.15F, 0.70F),
+                        JPH::Vec3(-6.67F, kS2SumpFloorY + 0.175F, -141.0F), Material::Rust));
+    // Its bracket: two struts from the shaft wall under the tray.
+    frame.push_back(strut(JPH::Vec3(-8.17F, kS2SumpFloorY - 0.05F, -141.50F),
+                          JPH::Vec3(-8.17F, kS2SumpFloorY - 0.05F, -140.30F), 0.04F, Material::Steel));
+    frame.push_back(strut(JPH::Vec3(-6.67F, kS2SumpFloorY - 0.05F, -141.50F),
+                          JPH::Vec3(-6.67F, kS2SumpFloorY - 0.05F, -140.30F), 0.04F, Material::Steel));
+    // ---- The drain striker's bracket -----------------------------------------
+    // One brace from the pivot down to the south, clear of the beam's swing:
+    // the beam's lower chord sweeps the plane z = -141 (its struts reach
+    // z -141.09..-140.91) and the tank's south face is at z -140.64, so a
+    // bracket crossing z -141 stops the beam at ~1.55 rad (measured on the
+    // slice-1 fix head: cage 20.8871 m, beam 1.55336 rad, tank full, drain
+    // never opened). This brace stays south of z -140.10, clear of both.
+    frame.push_back(strut(JPH::Vec3(-7.42F, 47.82F, -140.10F),
+                          JPH::Vec3(-7.42F, kS2SumpFloorY, -139.60F), 0.04F, Material::Steel));
+}
+
 void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     using Sim = Simulation;
 
@@ -1145,6 +1233,7 @@ void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     }
 
     build_s2_frame(frame);
+    build_s2_water_frame(frame);
 }
 
 // ---- C2, the East Machinery Hall & Pipe Rack (66 -> 88 m) -------------------
@@ -1704,6 +1793,74 @@ void build_stack(kit::Kit &kit, Stack &stack) {
     build_c3(c3_route);
     (void)kit.add_body(Sim::kStackC3RouteEntityId, c3_route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(),
                        0.0F, 0.8F);
+}
+
+// The S2 drain, built last: the striker and the bolted water tank are new
+// since the build before them, so they are built after every other body —
+// a save from that build still lines up with this world's bodies in order
+// (read_save takes the saved bodies as this world's first ones), and the
+// drain starts as built on an old save: the tank full, the gate shut, the
+// cart bolted where it lay on the beam.
+void build_s2_drain(kit::Kit &kit, Stack &stack) {
+    using Sim = Simulation;
+
+    // ---- The drain striker and the tank's drain ------------------------------
+    // Its arm reaches north under the tank's floor at the lower station; a
+    // block south holds it up on its stop until the tank sits on it. About
+    // -x, so the arm's end going down is positive. The pawl holds the gate
+    // open once tripped, and the cage coming home knocks it out.
+    stack.s2_drain_striker_body = kit.add_body(
+        Sim::kStackS2DrainStrikerEntityId,
+        {box(JPH::Vec3(0.05F, 0.03F, 0.35F), JPH::Vec3(0.0F, 0.0F, -0.45F), Material::Hazard),
+         box(JPH::Vec3(0.12F, 0.12F, 0.12F), JPH::Vec3(0.0F, 0.0F, 0.25F), Material::Rust)},
+        kS2DrainStrikerPivot, JPH::Quat::sIdentity(), 12.0F, 0.5F);
+    stack.s2_drain_striker = kit.add_lever(stack.s2_drain_striker_body, kS2DrainStrikerPivot,
+                                           -JPH::Vec3::sAxisX(), -JPH::Vec3::sAxisZ(), 0.0F,
+                                           kS2DrainStrikerOpenStop);
+    stack.s2_drain_pawl = kit.add_latch(stack.s2_drain_striker, kS2DrainLatch, stack.s2_cage_guide,
+                                        kS2DrainPawlKnock);
+
+    // ---- The water tank, bolted to the west arm (J-015 slice 1) --------------
+    // Its own body, so the water's mass can leave it: dry shell 250 kg, a
+    // 1250 kg bin of water when full, 1500 kg wet at the cart's old place on
+    // the arm (t = 0.15, its centre 10.43 m from the fulcrum). The body is
+    // built on the beam's axes, and a grip welds it to the beam, rating 0:
+    // bolted, it never lets go. Its drain gate is the striker above: the
+    // tank sitting at the lower station presses it open, and the water
+    // runs out of the bin's mouth into the sump below.
+    {
+        const JPH::Vec3 west_pt(-10.0F, 11.05F, 0.0F);
+        const JPH::Vec3 east_pt(10.0F, -11.05F, 0.0F);
+        const JPH::Vec3 cart_centre = west_pt * 0.85F + east_pt * 0.15F;
+        const JPH::Vec3 along = (east_pt - west_pt).Normalized();
+        const JPH::Vec3 normal(-along.GetY(), along.GetX(), 0.0F);
+        const JPH::Quat cart_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), along);
+        stack.s2_cart = kit.add_body(Sim::kStackS2CartEntityId, s2_cart_parts(),
+                                     kS2Pivot + JPH::RVec3(cart_centre), cart_rotation,
+                                     kS2CartDryMassKg, 0.5F);
+        stack.s2_cart_bin = kit.add_bin(stack.s2_cart, kS2CartWaterKg, kS2CartWaterCapacityKg,
+                                        JPH::Vec3(0.0F, 0.44F, 0.0F), stack.s2_drain_striker,
+                                        kS2DrainGateOpen, kS2DrainGateReach, kS2DrainRate);
+        kit.set_bin_water(stack.s2_cart_bin);
+        const JPH::Vec3 to_cart = cart_centre + normal * 0.86F;
+        stack.s2_cart_grip = kit.add_grip(stack.s2_beam, 0.0F, to_cart.Normalized());
+        (void)kit.grip(stack.s2_cart_grip, stack.s2_cart);
+    }
+}
+
+// A save from before the drain has no striker. As built, the striker stands
+// on its stop, where the tank at the lower station (the cage up at deck 6)
+// already lies: started there it is caught inside the tank, and it holds the
+// beam up (a save from the build before, taken with the cage at deck 6,
+// loaded with the cage held at 21.98 m for 150 s, the tank drained dry). It
+// starts at its open stop instead, clear under the tank wherever the beam
+// lies: a tank at the lower station then sets it as one arriving does, and
+// with the tank away its block lifts it back onto its stop.
+void pose_s2_drain_striker_open(kit::Kit::BodyState &striker) {
+    striker.position = kS2DrainStrikerPivot;
+    striker.rotation = JPH::Quat::sRotation(-JPH::Vec3::sAxisX(), kS2DrainStrikerOpenStop);
+    striker.linear = JPH::Vec3::sZero();
+    striker.angular = JPH::Vec3::sZero();
 }
 
 } // namespace scraperx::sim::bands
