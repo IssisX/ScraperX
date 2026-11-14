@@ -643,48 +643,49 @@ func _stack_above_deck4(device: int, body: Dictionary, started: int, at_deck2: f
 
 
 # J-084 #402: one scenario plays the whole climb, from the ground to the
-# summit, on the canonical route (rules 56, 27) -- the Stack, the Well, the
-# swing, C6 and the mast, pitman and helix to TP-340, then the Plate Shop,
-# the Facade Crane, the service lifts and climbs, and the crown gondola and
-# derrick to the summit. The stages from TP-340 to the 750 deck (AS-008 to
-# AS-010) are non-canonical and are named so at every checkpoint: they are
-# the only way up today, and J-082 replaces them band by band. Each stage reached prints a CHECKPOINT line,
+# summit, on the canonical route (rules 56, 27; since 11-12 the route the
+# game plays through touch is the canonical climb) -- the Stack, the Well,
+# the swing, C6 and the mast, pitman and helix to TP-340, then the Plate
+# Shop, the Facade Crane, the service lifts and climbs, and the crown
+# gondola and derrick to the summit. The stages from TP-340 to the 750 deck
+# (AS-008 to AS-010) are the only way up today and the bands J-082 rebuilds
+# as new physical actions; their checkpoints say "J-082-band". Each stage reached prints a CHECKPOINT line,
 # so a run that stops names its stage in the log; the detail line carries
 # every stage's height at the end.
 func _canonical_ascent(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	var body := _watch_body()
 	var started := int(_native().get_tick_index())
-	# The canonical Stack: S1, C1, S2, C2, S3, C3, grade to deck 14.
+	# The Stack: S1, C1, S2, C2, S3, C3, grade to deck 14.
 	if not await _stack_s1_leg(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent S1 deck 2 y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent S1 deck 2 y=%.2f" % _position().y)
 	if not await _stack_c1(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent C1 deck 4 y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent C1 deck 4 y=%.2f" % _position().y)
 	if not await _stack_s2(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent S2 deck 6 y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent S2 deck 6 y=%.2f" % _position().y)
 	if not await _stack_c2(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent C2 deck 8 y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent C2 deck 8 y=%.2f" % _position().y)
 	if not await _stack_s3(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent S3 deck 12 y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent S3 deck 12 y=%.2f" % _position().y)
 	if not await _stack_c3(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent C3 deck 14 y=%.2f canonical" % _position().y)
-	# The canonical Counterweight Well: A, B, C to the 220 ring.
+	print("CHECKPOINT touch-canonical-ascent C3 deck 14 y=%.2f" % _position().y)
+	# The Counterweight Well: A, B, C to the 220 ring.
 	if not await _well_stage_a(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Well A 176 ring y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent Well A 176 ring y=%.2f" % _position().y)
 	if not await _well_stage_b(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Well B 198 ring y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent Well B 198 ring y=%.2f" % _position().y)
 	if not await _well_stage_c(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Well C 220 ring y=%.2f canonical" % _position().y)
-	# The canonical swing and west band: AS-012 to the 242 ring, C6 to 264.
+	print("CHECKPOINT touch-canonical-ascent Well C 220 ring y=%.2f" % _position().y)
+	# The swing and west band: AS-012 to the 242 ring, C6 to 264.
 	# The sideways watch rests through the swing: strapped in, the seat
 	# carries the rider up its 28.8 m arc at its own speed, about 21 m/s at
 	# the bottom (0.24 m a native tick, 0.49 m in a two-tick frame,
@@ -700,58 +701,58 @@ func _canonical_ascent(device: int) -> bool:
 	var lift_before_swing := float(body["lift"])
 	var at_before_swing := str(body.get("at", ""))
 	body = _watch_body()
-	print("CHECKPOINT touch-canonical-ascent AS-012 swing 242 ring y=%.2f canonical" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent AS-012 swing 242 ring y=%.2f" % _position().y)
 	if not await _c6(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent C6 264 ring y=%.2f canonical" % _position().y)
-	# The canonical machines: the cascade mast, the pitman lift and the
-	# barrel helix to TP-340. The canonical route ends here.
+	print("CHECKPOINT touch-canonical-ascent C6 264 ring y=%.2f" % _position().y)
+	# The machines: the cascade mast, the pitman lift and the barrel helix
+	# to TP-340.
 	if not await _machines(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent TP-340 y=%.2f canonical (route ends here)" % _position().y)
-	# Not canonical: the Plate Shop, G, H, I, and the ladder to the 484 ring.
+	print("CHECKPOINT touch-canonical-ascent TP-340 y=%.2f" % _position().y)
+	# J-082's band: the Plate Shop, G, H, I, and the ladder to the 484 ring.
 	if not await _shop_g(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Shop G 374 ring y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent Shop G 374 ring y=%.2f J-082-band" % _position().y)
 	if not await _shop_h(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Shop H 418 ring y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent Shop H 418 ring y=%.2f J-082-band" % _position().y)
 	if not await _shop_i(device):
 		return false
 	if not await _shop_ladder(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Plate Shop 484 ring y=%.2f NON-CANONICAL" % _position().y)
-	# Not canonical: the Facade Crane Stack, J, K, L, into TP-640.
+	print("CHECKPOINT touch-canonical-ascent Plate Shop 484 ring y=%.2f J-082-band" % _position().y)
+	# J-082's band: the Facade Crane Stack, J, K, L, into TP-640.
 	if not await _crane_j(device):
 		return false
 	if not await _crane_k(device):
 		return false
 	if not await _crane_l(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Facade Crane TP-640 y=%.2f NON-CANONICAL" % _position().y)
-	# Not canonical: the service lifts and climbs, TP-640 to the 750 deck.
+	print("CHECKPOINT touch-canonical-ascent Facade Crane TP-640 y=%.2f J-082-band" % _position().y)
+	# J-082's band: the service lifts and climbs, TP-640 to the 750 deck.
 	if not await _service_m(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Service M 662 deck y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent Service M 662 deck y=%.2f J-082-band" % _position().y)
 	if not await _service_c4(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent C4 684 deck y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent C4 684 deck y=%.2f J-082-band" % _position().y)
 	if not await _service_n(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Service N 706 deck y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent Service N 706 deck y=%.2f J-082-band" % _position().y)
 	if not await _service_c5(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent C5 728 deck y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent C5 728 deck y=%.2f J-082-band" % _position().y)
 	if not await _service_o(device):
 		return false
-	print("CHECKPOINT touch-canonical-ascent Service O 750 deck y=%.2f NON-CANONICAL" % _position().y)
-	# Canonical again: the owner's crown gondola and luffing derrick to the
+	print("CHECKPOINT touch-canonical-ascent Service O 750 deck y=%.2f J-082-band" % _position().y)
+	# Above J-082's bands: the owner's crown gondola and luffing derrick to the
 	# route's top.
 	if not await _high_legs(device):
 		return false
 	if not _standing_above(803.3):
 		return _fail("canonical-ascent: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
-	print("CHECKPOINT touch-canonical-ascent crown gondola and luffing derrick, the route's top y=%.2f canonical" %
+	print("CHECKPOINT touch-canonical-ascent crown gondola and luffing derrick, the route's top y=%.2f" %
 		_position().y)
 	var worst_step := _stop_watch(body)
 	if before_swing > worst_step:

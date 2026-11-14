@@ -1,16 +1,17 @@
 // J-084 #402: one scenario plays the whole climb, from the ground to the
-// summit, on the canonical route (rules 56, 27). Today no scenario does:
-// run_stack ends at TP-340 through AS-007, run_ascent runs 154 to TP-640
-// through AS-007, and the legs above 340 m are only ever played from their
-// own spawns. This chains all twenty-one stages in one Simulation, the way
-// a player would climb it, with real inputs and no teleports: the canonical
-// Stack, Well, swing, C6, mast, pitman and helix to TP-340, then the
-// non-canonical Plate Shop, Facade Crane, service lifts and climbs (AS-008
-// to AS-010, the only way from 340 to 750 m today), and the owner's crown
-// gondola and luffing derrick to the summit. Each stage it reaches is a
-// checkpoint in the log; a stage it cannot pass prints where it stopped,
-// with its numbers, and that list becomes the next jobs. Do not route
-// around a broken stage: J-082 replaces the upper ladders band by band.
+// summit, on the canonical route (rules 56, 27). Rule 56 since 11-12: the
+// route the game plays, grade to the summit through touch, is the canonical
+// climb. Before this, run_stack ended at TP-340 through AS-007, run_ascent
+// ran 154 to TP-640 through AS-007, and the legs above 340 m were only ever
+// played from their own spawns. This chains every stage in one Simulation,
+// the way a player would climb it, with real inputs and no teleports: the
+// Stack, Well, swing, C6, mast, pitman and helix to TP-340, then the Plate
+// Shop, Facade Crane, service lifts and climbs (AS-008 to AS-010, the only
+// way from 340 to 750 m today, the bands J-082 rebuilds as new physical
+// actions; marked "J-082-band"), and the owner's crown gondola and luffing
+// derrick to the summit. Each stage it reaches is a checkpoint in the log;
+// a stage it cannot pass prints where it stopped, with its numbers, and
+// that list becomes the next jobs. Do not route around a broken stage.
 
 #include "sim_tests.hpp"
 
@@ -19,13 +20,13 @@
 namespace {
 
 // A leg that fails prints where it stopped, with the numbers, then fails
-// the run: the stage, whether rule 56 calls it canonical, the height, the
-// clock and the deaths.
-bool require_leg(scraperx::sim::Simulation &s, const bool ok, const char *leg, const bool canonical) {
+// the run: the stage, whether it is one of the bands J-082 rebuilds
+// (outside_j082 false), the height, the clock and the deaths.
+bool require_leg(scraperx::sim::Simulation &s, const bool ok, const char *leg, const bool outside_j082) {
     if (!ok) {
         const auto state = s.snapshot();
-        std::cerr << "canonical-ascent: stopped at " << leg << " ("
-                  << (canonical ? "canonical" : "NON-CANONICAL") << "), y=" << state.player_position.y
+        std::cerr << "canonical-ascent: stopped at " << leg << (outside_j082 ? "" : " (J-082-band)")
+                  << ", y=" << state.player_position.y
                   << ", t=" << state.simulation_time_seconds << ", deaths=" << state.death_count << '\n';
     }
     require(ok, leg);
@@ -38,7 +39,7 @@ bool require_leg(scraperx::sim::Simulation &s, const bool ok, const char *leg, c
 double g_worst_step_m = 0.0;
 std::string g_worst_step_stage;
 
-void checkpoint(scraperx::sim::Simulation &s, const double start, const char *stage, const bool canonical) {
+void checkpoint(scraperx::sim::Simulation &s, const double start, const char *stage, const bool outside_j082) {
     const auto state = s.snapshot();
     const auto her = s.matron_state();
     std::cout << "CHECKPOINT canonical-ascent " << stage << " y=" << state.player_position.y
@@ -47,7 +48,7 @@ void checkpoint(scraperx::sim::Simulation &s, const double start, const char *st
               << g_path_watch.worst_at.y << ", " << g_path_watch.worst_at.z
               << ") traversal=" << g_path_watch.worst_traversal << " her_state=" << int(her.state)
               << " her_y=" << her.position.y << " her_catches=" << her.catches
-              << (canonical ? " canonical" : " NON-CANONICAL") << '\n';
+              << (outside_j082 ? "" : " J-082-band") << '\n';
     if (g_path_watch.worst > g_worst_step_m) {
         g_worst_step_m = g_path_watch.worst;
         g_worst_step_stage = stage;
@@ -61,7 +62,7 @@ void checkpoint(scraperx::sim::Simulation &s, const double start, const char *st
 bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
     using scraperx::sim::Snapshot;
 
-    // ---- The canonical Stack: S1, C1, S2, C2, S3, C3, grade to deck 14 ----
+    // ---- The Stack: S1, C1, S2, C2, S3, C3, grade to deck 14 ----
     if (!require_leg(s, board_s1(s), "S1 boarded", true)) {
         return false;
     }
@@ -108,7 +109,7 @@ bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
     }
     checkpoint(s, start, "C3 deck 14", true);
 
-    // ---- The canonical Counterweight Well: A, B, C to the 220 ring --------
+    // ---- The Counterweight Well: A, B, C to the 220 ring --------
     if (!require_leg(s, board_well_a(s) && rig_well_a(s) && pull_well_a(s, 0.5, 3.0), "Well A rigged and tripped",
                      true)) {
         return false;
@@ -151,7 +152,7 @@ bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
     }
     checkpoint(s, start, "Well C 220 ring", true);
 
-    // ---- The canonical swing and west band: AS-012, C6, to the 264 ring --
+    // ---- The swing and west band: AS-012, C6, to the 264 ring --
     // The sideways watch is off for the swing (its gangway walk included, as
     // swing_ride walks it): strapped in, the seat carries the rider up its
     // 28.8 m arc to the 242 ring at the seat's own speed, about 21 m/s at the
@@ -176,7 +177,7 @@ bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
     }
     checkpoint(s, start, "C6 264 ring", true);
 
-    // ---- The canonical machines: mast, pitman, helix, to TP-340 ----------
+    // ---- The machines: mast, pitman, helix, to TP-340 ----------
     const MastRide mast = mast_ride(s);
     if (!require_leg(s, mast.on_exit && mast.end.death_count == 0 && mast.end.player_grounded &&
                          mast.end.player_position.y > 292.0 && mast.end.player_position.y < 292.4,
@@ -206,9 +207,9 @@ bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
                      "standing on TP-340, alive", true)) {
         return false;
     }
-    checkpoint(s, start, "TP-340 (canonical route ends here)", true);
+    checkpoint(s, start, "TP-340", true);
 
-    // ---- Not canonical: the Plate Shop, G, H, I, and the ladder to 484 ---
+    // ---- J-082's band: the Plate Shop, G, H, I, and the ladder to 484 ---
     if (!require_leg(s, walk_to_shop_cleat(s) && rig_shop_g(s) && pull_shop_g(s), "Shop G rigged and its pin pulled",
                      false)) {
         return false;
@@ -247,13 +248,13 @@ bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
     }
     checkpoint(s, start, "Plate Shop 484 ring", false);
 
-    // ---- Not canonical: the Facade Crane Stack, J, K, L, to TP-640 --------
+    // ---- J-082's band: the Facade Crane Stack, J, K, L, to TP-640 --------
     if (!require_leg(s, climb_crane_band(s), "Facade Crane J, K and L to standing on TP-640", false)) {
         return false;
     }
     checkpoint(s, start, "Facade Crane TP-640", false);
 
-    // ---- Not canonical: the service lifts and climbs, TP-640 to 750 -------
+    // ---- J-082's band: the service lifts and climbs, TP-640 to 750 -------
     if (!require_leg(s, rig_service_m(s), "M's shackle hooked on the cage's eye", false)) {
         return false;
     }
@@ -310,7 +311,7 @@ bool climb_whole_route(scraperx::sim::Simulation &s, const double start) {
     }
     checkpoint(s, start, "Service O 750 deck", false);
 
-    // ---- Canonical again: the owner's crown gondola and luffing derrick ---
+    // ---- Above J-082's bands: the owner's crown gondola and luffing derrick ---
     const HighRide high = high_ride(s);
     const auto &e = high.end;
     if (!require_leg(s, high.vaulted, "vault over the 750 deck's east parapet onto the crown's receiver", true)) {

@@ -290,8 +290,8 @@ const SCENARIOS := {
 	"touch_stack_ending": 8,
 	# J-084 #402: the whole climb from the ground to the summit on the
 	# canonical route (rules 56, 27): the Stack, the Well, the swing, C6
-	# and the mast, pitman and helix to TP-340, then the non-canonical
-	# Plate Shop, Facade Crane, service lifts and climbs, and the crown
+	# and the mast, pitman and helix to TP-340, then J-082's bands (the
+	# Plate Shop, Facade Crane, service lifts and climbs), and the crown
 	# gondola and derrick to the summit.
 	"touch_canonical_ascent": 8,
 	# The foreman's radio: his first line as the climber steps into S1's cage.
