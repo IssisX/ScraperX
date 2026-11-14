@@ -39,4 +39,4 @@ Move it to a helper (mail Muse "taking it") the moment one of these turns true:
 - the cause turns out to cross systems, or Q2 or Q3 turns yes;
 - Muse asks "stuck", "ruling needed" or "which is it" twice on the same failure;
 - its second fix for the same failure fails (the 11-12 rule).
-Moving is no cure: J-001 stayed red through five helper passes. The helper names the cause; Muse builds.
+Moving is no cure: J-001 stayed red through five helper passes. The helper names the cause and builds the fix (Cory 11-14).

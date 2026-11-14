@@ -139,5 +139,6 @@
       }
     ]
   },
-  "autoCompactWindow": 600000
+  "autoCompactWindow": 600000,
+  "advisorModel": "claude-fable-5-2"
 }

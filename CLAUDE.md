@@ -86,8 +86,8 @@ it to match, never ask him again.
 - **Strengths (11-12):** Muse is free, so most work goes to it, debugging included; it is weaker at finding
   causes and can fail several times first. Claude's helpers take the hardest jobs, scored by `work/tasks/job-routing.md`: an
   unknown cause that blocks 2+ jobs or the climb or her chase, a Muse fix failed twice on the same failure, or
-  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; `plan.py give`); Muse
-  builds the fix they name. Never say "wait longer". Grok: math and risk. ChatGPT: research, specs,
+  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; `plan.py give`); Claude's
+  helpers build those fixes too; Muse keeps the easier work (11-14). Grok: math and risk. ChatGPT: research, specs,
   review. Slots full: the first slot that frees.
 - **Board:** the switchboard generates it from work/plan.md and remote work; nobody hand-edits ownership.
   Plan changes use tools/board/plan.py, refused mid-flight without a stop-and-push handoff.
