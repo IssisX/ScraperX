@@ -390,6 +390,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("get_save_game"), &ScraperXSimulation::get_save_game);
     godot::ClassDB::bind_method(godot::D_METHOD("load_save_game", "bytes"), &ScraperXSimulation::load_save_game);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_save_reject_reason"), &ScraperXSimulation::get_save_reject_reason);
     godot::ClassDB::bind_method(godot::D_METHOD("add_fabricated", "hull", "signature", "model", "at", "yaw"),
                                 &ScraperXSimulation::add_fabricated);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fabricated_refusal"), &ScraperXSimulation::get_fabricated_refusal);
@@ -1757,11 +1758,12 @@ godot::Dictionary ScraperXSimulation::get_death_state() const {
 
 godot::Dictionary ScraperXSimulation::get_matron_state() const {
     godot::Dictionary out;
-    fill_matron_state(out, simulation_->matron_state());
+    fill_matron_state(out, simulation_->snapshot(), simulation_->matron_state());
     return out;
 }
 
-void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::MatronSnapshot &state) const {
+void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Snapshot &p,
+                                           const sim::MatronSnapshot &state) const {
     MatronKeys &keys = state_keys_;
     keys.begin();
     out[keys("state")] = static_cast<std::int64_t>(state.state);
@@ -1894,6 +1896,24 @@ void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Ma
     out[keys("blow_low")] = state.blow_low;
     out[keys("riding")] = state.riding;
     out[keys("damage_ns")] = state.damage_ns;
+    // J-059 #343 P1: the checkpoint-restore generation the injury view
+    // watches (matron_view.gd) — a change means the sim rewound her doses,
+    // so the view's maxima cache must reset. Runtime-only, never saved.
+    out[keys("restores")] = static_cast<std::int64_t>(p.restores);
+    // J-059 #307: per-region injury (J-044a §D), the feed matron_injury.gd
+    // draws in real play: region -> {j_region, j_event}, only regions with
+    // a dose; the view's own thresholds turn the dose into a mark.
+    {
+        godot::Dictionary injury;
+        for (std::size_t i = 0; i < sim::injury::kRegions; ++i) {
+            if (state.injury_j_region[i] <= 0.0) continue;
+            godot::Dictionary region;
+            region[keys("j_region")] = state.injury_j_region[i];
+            region[keys("j_event")] = state.injury_j_event[i];
+            injury[keys(sim::injury::kRegionNames[i])] = region;
+        }
+        out[keys("injury")] = injury;
+    }
     out[keys("fall")] =godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
     out[keys("kneeling")] = state.kneeling;
     out[keys("down_s")] = state.down_s;
@@ -1944,7 +1964,7 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
 godot::Array ScraperXSimulation::get_matron_frame() const {
     const sim::MatronSnapshot m = simulation_->matron_state();
     godot::Dictionary state;
-    fill_matron_state(state, m);
+    fill_matron_state(state, simulation_->snapshot(), m);
     godot::Dictionary hold;
     fill_matron_hold(hold, simulation_->snapshot(), m);
     godot::Array out;
@@ -2223,6 +2243,10 @@ godot::PackedByteArray ScraperXSimulation::get_save_game() const {
 
 bool ScraperXSimulation::load_save_game(const godot::PackedByteArray &bytes) {
     return simulation_->load_game(bytes.ptr(), static_cast<std::size_t>(bytes.size()));
+}
+
+godot::String ScraperXSimulation::get_save_reject_reason() const {
+    return godot::String(simulation_->save_reject_reason().c_str());
 }
 
 godot::Dictionary ScraperXSimulation::get_lift_state() const {

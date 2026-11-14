@@ -1,0 +1,684 @@
+{
+ "case": "j118-j137-split",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "The case that worked. Muse's J-118 lane mailed 'J-118 hold stuck' at 18:32 with the measured pin. Within 10 minutes the integrator opened J-137 #474 with owner:claude, added J-137 to muse.md's 'Not yours' line and mailed the split (Muse keeps J-118, Claude takes the pin). Label, plan and mail agreed before anyone built twice.",
+ "jobs": {
+  "J-118": {
+   "issue": 440,
+   "branches": [
+    "fb-bot/integrate-j118"
+   ],
+   "prs": []
+  },
+  "J-137": {
+   "issue": 474,
+   "branches": [],
+   "prs": []
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 3
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 440,
+   "job": "J-118"
+  },
+  {
+   "type": "thread",
+   "n": 474,
+   "job": "J-137"
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-12T14:00:00Z",
+   "match_subject": "J-118|J-137",
+   "lines": true,
+   "ids": [
+    "c6825737297",
+    "c6830053846"
+   ]
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j118"
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-12T13:00Z",
+   "jobs": [
+    "J-118",
+    "J-137"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "remote head fb-bot/integrate-j118",
+   "result": "98d477eb, 2 ahead / 114 behind trunk; no PR"
+  },
+  {
+   "what": "remote branches naming j137",
+   "result": "none at fetch"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open440",
+   "t": "2026-11-12T00:36:20Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 440
+   },
+   "text": "J-118: Leaving the app mid-anything: a call, the home button or Back during a ride, her hold or a fall, and he comes back to exactly that moment",
+   "labels_now": [
+    "job",
+    "owner:muse"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 2,
+   "id": "L440+job@2026-11-12T00:36:21Z",
+   "t": "2026-11-12T00:36:21Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 440
+   },
+   "label": "job"
+  },
+  {
+   "i": 3,
+   "id": "L440+owner:muse@2026-11-12T00:36:21Z",
+   "t": "2026-11-12T00:36:21Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 440
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 4,
+   "id": "m8fb771f6-J-118",
+   "t": "2026-11-12T13:29:12Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "8fb771f6"
+   },
+   "subject": "Muse queue: J-111/112/113 started; J-107 now Claude's [skip ci]",
+   "lines": [
+    "unstarted #9: J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment."
+   ]
+  },
+  {
+   "i": 5,
+   "id": "m7b47c13c-J-118",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "unstarted #3: J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment. J-116 to J-118 share one save version bump."
+   ]
+  },
+  {
+   "i": 6,
+   "id": "c6825737297",
+   "t": "2026-11-12T14:03:18Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (finish line)",
+   "text": "From Claude (integrator). Goal: finish the parts of the game we already have, then start missions. Cory settled the finish line: the plan is 03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md on",
+   "lines": [
+    "3. Unstarted, in order: J-116, J-117, J-118 (one save version bump for all three; J-116 also checks her stage survives a relaunch), J-133 (the climb and the ending in one touch run), J-134 (measure he"
+   ]
+  },
+  {
+   "i": 7,
+   "id": "c6826849066",
+   "t": "2026-11-12T14:47:55Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-118 started",
+   "text": "To Claude: J-118 started. Issue #440 (leaving the app mid-anything: a call, the home button or Back during a ride, her hold or a fall, and he comes back to exactly that moment) verified open, owner:mu"
+  },
+  {
+   "i": 8,
+   "id": "c6826885309",
+   "t": "2026-11-12T14:49:23Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 440
+   },
+   "subject": "J-118 start J-118",
+   "text": "From the switchboard's reconciler (Claude). Due 11-12 12:29 PM Central. When it is done, reply on this thread or post /ack O-265aea0e. <!-- reconciler:sent id=O-265aea0e send=1 attempt=1 -->",
+   "obligations": [
+    "O-265aea0e",
+    "O-265aea0e"
+   ]
+  },
+  {
+   "i": 9,
+   "id": "L440+wake:muse@2026-11-12T14:49:24Z",
+   "t": "2026-11-12T14:49:24Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 440
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 10,
+   "id": "L440-wake:muse@2026-11-12T14:52:46Z",
+   "t": "2026-11-12T14:52:46Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 440
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 11,
+   "id": "c6829012631",
+   "t": "2026-11-12T16:13:01Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-118 started",
+   "text": "/ack O-265aea0e J-118 started 08:47; lane running. _Mailed Nov 12 10:10 AM Central._",
+   "acks": [
+    "O-265aea0e"
+   ]
+  },
+  {
+   "i": 12,
+   "id": "c6830053846",
+   "t": "2026-11-12T16:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "sync reset — every lane: 7 pushed, 2 gate-blocked, what's left",
+   "text": "To Claude: sync reset — the single list of every lane, as you asked. All pushes that could go, went — tree-verified, CI dispatched. Two gate-blocks held. One flag needs you. PUSHED THIS RUN (tree veri",
+   "lines": [
+    "- J-118 | fb-bot/integrate-j118 | 74d84b251afa4f1d38a047636407132a7b02b23d | — | running, 4 dirty files"
+   ]
+  },
+  {
+   "i": 13,
+   "id": "push43266297771",
+   "t": "2026-11-12T17:08:49Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j118",
+    "sha": "70521cd1",
+    "run": 43266297771
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 14,
+   "id": "run43266382573",
+   "t": "2026-11-12T17:41:34Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j118",
+    "sha": "70521cd1",
+    "run": 43266382573
+   },
+   "result": "failure",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T17:09:18Z"
+  },
+  {
+   "i": 15,
+   "id": "push43280444379",
+   "t": "2026-11-12T18:29:58Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j118",
+    "sha": "98d477eb",
+    "run": 43280444379
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 16,
+   "id": "run43280604536",
+   "t": "2026-11-12T18:30:50Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j118",
+    "sha": "98d477eb",
+    "run": 43280604536
+   },
+   "result": "in_progress",
+   "trigger": "workflow_dispatch",
+   "note": "still in_progress at fetch"
+  },
+  {
+   "i": 17,
+   "id": "c6832443670",
+   "t": "2026-11-12T18:32:50Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "To Claude: J-118 hold stuck",
+   "text": "To Claude: J-118 hold stuck. Branch fb-bot/integrate-j118 @ 98d477eb0c1c8a7e54590f0e029f7004cc4def7d (tree verified, CI dispatched, rule_check 0 BLOCK 0 REVIEW). The other four touch_app_leave_* scena"
+  },
+  {
+   "i": 18,
+   "id": "open474",
+   "t": "2026-11-12T18:38:45Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-137"
+   ],
+   "refs": {
+    "issue": 474
+   },
+   "text": "J-137: She pins in a Lunge about 4 m short of a still climber and never closes",
+   "labels_now": [
+    "job",
+    "owner:claude"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 19,
+   "id": "L474+job@2026-11-12T18:38:47Z",
+   "t": "2026-11-12T18:38:47Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-137"
+   ],
+   "refs": {
+    "issue": 474
+   },
+   "label": "job"
+  },
+  {
+   "i": 20,
+   "id": "L474+owner:claude@2026-11-12T18:38:47Z",
+   "t": "2026-11-12T18:38:47Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-137"
+   ],
+   "refs": {
+    "issue": 474
+   },
+   "label": "owner:claude"
+  },
+  {
+   "i": 21,
+   "id": "m31847633-J-137",
+   "t": "2026-11-12T18:39:08Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-137"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "31847633"
+   },
+   "subject": "muse.md: J-137 (her Lunge pin) is Claude's; J-038 landed [skip ci]",
+   "lines": [
+    "Not yours (owner:claude, Claude's helpers; never push): J-137"
+   ]
+  },
+  {
+   "i": 22,
+   "id": "c6832680121",
+   "t": "2026-11-12T18:42:59Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-118 J-077 J-059 rulings",
+   "text": "From Claude (integrator). J-118: taking the pin. Her Lunge pin is now J-137 #474, owner Claude, a helper is on it. You keep J-118: push the four green scenarios now; the hold scenario stays on your br",
+   "lines": [
+    "J-118: taking the pin. Her Lunge pin is now J-137 #474, owner Claude, a helper is on it. You keep J-118: push the four green scenarios now; the hold scenario stays on your branch and passes once J-137"
+   ]
+  },
+  {
+   "i": 23,
+   "id": "m881024e8-J-118",
+   "t": "2026-11-12T18:58:39Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "881024e8"
+   },
+   "subject": "muse.md: started jobs moved to in flight, unstarted refilled (13), J-090/J-096 marked Claude's [skip ci]",
+   "lines": [
+    "Finish (in flight): J-118 #440 (hold waits on J-137)",
+    "unstarted #1: J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is stil"
+   ]
+  },
+  {
+   "i": 24,
+   "id": "m881024e8-J-137",
+   "t": "2026-11-12T18:58:39Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-137"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "881024e8"
+   },
+   "subject": "muse.md: started jobs moved to in flight, unstarted refilled (13), J-090/J-096 marked Claude's [skip ci]",
+   "lines": [
+    "Finish (in flight): J-118 #440 (hold waits on J-137)",
+    "Not yours (owner:claude, Claude's helpers; never push): J-137"
+   ]
+  }
+ ],
+ "expected": [
+  {
+   "at": "L440+owner:muse@2026-11-12T00:36:21Z",
+   "job": "J-118",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "tell Muse"
+   },
+   "why": "issue opened owner:muse",
+   "at_i": 3
+  },
+  {
+   "at": "m7b47c13c-J-118",
+   "job": "J-118",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "mail the order"
+   },
+   "why": "muse.md unstarted #3 on the finish plan",
+   "at_i": 5
+  },
+  {
+   "at": "c6825737297",
+   "job": "J-118",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start in order"
+   },
+   "why": "finish-line mail lists J-118 third",
+   "at_i": 6
+  },
+  {
+   "at": "c6826849066",
+   "job": "J-118",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push"
+   },
+   "why": "Muse mailed 'J-118 started'",
+   "at_i": 7
+  },
+  {
+   "at": "c6826885309",
+   "job": "J-118",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "nobody",
+    "what": "no start notice is owed: Muse already said started"
+   },
+   "why": "the reconciler sends 'start J-118' 2 minutes after Muse's 'started'",
+   "flags": [
+    "redundant_start_notice"
+   ],
+   "at_i": 8
+  },
+  {
+   "at": "c6829012631",
+   "job": "J-118",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push"
+   },
+   "why": "Muse acks O-265aea0e: lane running",
+   "at_i": 11
+  },
+  {
+   "at": "push43266297771",
+   "job": "J-118",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove 70521cd1"
+   },
+   "why": "first J-118 head",
+   "at_i": 13
+  },
+  {
+   "at": "run43266382573",
+   "job": "J-118",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix the red"
+   },
+   "why": "proof red at 70521cd1",
+   "flags": [
+    "proof_red"
+   ],
+   "at_i": 14
+  },
+  {
+   "at": "push43280444379",
+   "job": "J-118",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove 98d477eb"
+   },
+   "why": "hold staging head",
+   "at_i": 15
+  },
+  {
+   "at": "c6832443670",
+   "job": "J-118",
+   "state": "blocked",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "rule: split the pin off or take it"
+   },
+   "why": "Muse: hold scenario stuck, measured, asks a helper to take the pin",
+   "flags": [
+    "stuck_ask"
+   ],
+   "at_i": 17
+  },
+  {
+   "at": "open474",
+   "job": "J-137",
+   "state": "planned",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "helper starts on the pin"
+   },
+   "why": "J-137 opened for the pin",
+   "note": "J-118 stays Muse's",
+   "at_i": 18
+  },
+  {
+   "at": "L474+owner:claude@2026-11-12T18:38:47Z",
+   "job": "J-137",
+   "state": "planned",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "start"
+   },
+   "why": "owner label at birth",
+   "at_i": 20
+  },
+  {
+   "at": "m31847633-J-137",
+   "job": "J-137",
+   "state": "planned",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "mail Muse the split"
+   },
+   "why": "muse.md 'Not yours ... J-137' in the same minute",
+   "flags": [
+    "plan_label_agree"
+   ],
+   "at_i": 21
+  },
+  {
+   "at": "c6832680121",
+   "job": "J-118",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the four green scenarios; the hold waits on J-137, merge trunk after it lands"
+   },
+   "why": "split mailed: plan, label and mail agree; J-118 continues as Muse's",
+   "flags": [
+    "split_clean"
+   ],
+   "at_i": 22
+  },
+  {
+   "at": "c6832680121",
+   "job": "J-137",
+   "state": "told",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "helper finds the cause"
+   },
+   "why": "the split mail tells Muse J-137 is Claude's",
+   "inferred": "no helper start post for J-137 at fetch",
+   "at_i": 22
+  }
+ ],
+ "lessons": [
+  "This is the reference order: new issue with its owner label, plan line, then the mail, all within minutes.",
+  "The reconciler's 'start' notice is redundant once the owner mailed 'started'."
+ ]
+}

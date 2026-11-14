@@ -6,7 +6,7 @@
 // the seat, STRAP IN and KICK THE TRIP; the ram comes down and strikes the
 // seat's buffer, the seat swings up to the 242 ring's edge and the rack holds
 // it; UNBUCKLE and step off north onto the ring.
-// (SwingRide lives in sim_tests.hpp, so the whole-climb scenario can read it.)
+// (SwingRide lives in sim_tests.hpp, so the chase-measurement and whole-climb scenarios can read it.)
 
 bool swing_board(scraperx::sim::Simulation &s) {
     return walk_to(s, -13.35, -127.5, 20.0) && walk_to(s, -13.35, -98.8, 25.0) &&
@@ -173,7 +173,7 @@ SCRAPERX_SELECT("swing", run_swing);
 
 // C6, the west band: from the 242 ring to the 264 ring on player inputs, no
 // ladder and no standpipe. What the climb saw, for its falsifiers.
-// (C6Notes lives in sim_tests.hpp, so the whole-climb scenario can read it.)
+// (C6Notes lives in sim_tests.hpp, so the chase-measurement and whole-climb scenarios can read it.)
 
 bool report_c6(const scraperx::sim::Simulation &simulation, const char *leg) {
     const auto state = simulation.snapshot();
@@ -183,7 +183,7 @@ bool report_c6(const scraperx::sim::Simulation &simulation, const char *leg) {
     return false;
 }
 
-bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes) {
+bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes = nullptr) {
     using scraperx::sim::Snapshot;
     using scraperx::sim::TraversalState;
     C6Notes seen;
@@ -340,7 +340,7 @@ SCRAPERX_SELECT("C6", run_c6);
 // 264 ring: the cascade mast. Its 110 kN slider raises the outer stage 9 m;
 // one rope makes the inner stage rise twice that and a second makes the deck
 // rise three times, 27 m, to its upper receiver at 291.25 m.
-// (MastRide lives in sim_tests.hpp, so the whole-climb scenario can read it.)
+// (MastRide lives in sim_tests.hpp, so the chase-measurement and whole-climb scenarios can read it.)
 
 constexpr double kMastX = -10.65;      // the deck's centre
 constexpr double kMastEntryX = -16.0;  // on the lower and upper receivers

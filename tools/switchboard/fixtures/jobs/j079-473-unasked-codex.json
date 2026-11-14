@@ -1,0 +1,668 @@
+{
+ "case": "j079-473-unasked-codex",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "Muse pushed J-079 at 17:22; the proof was green at 18:18 and the switchboard opened #473 at 18:21. The automatic Claude review and the eye both said LAND by 18:34. #473 changes .github/workflows, so it merges only on a clean Codex review of the whole head, and nobody had asked Codex: the inbox line at 18:37 said MERGE-BY-HAND. The integrator asked Codex by hand at 18:41; Codex returned a P0 at 18:43.",
+ "jobs": {
+  "J-079": {
+   "issue": 397,
+   "branches": [
+    "fb-bot/integrate-j079"
+   ],
+   "prs": [
+    473
+   ]
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 2
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 473,
+   "job": "J-079"
+  },
+  {
+   "type": "review_comments",
+   "n": 473,
+   "job": "J-079"
+  },
+  {
+   "type": "thread",
+   "n": 397,
+   "job": "J-079"
+  },
+  {
+   "type": "comments",
+   "n": 282,
+   "file": "c282.json",
+   "match": "#473|J-079",
+   "lines": true
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-12T14:00:00Z",
+   "match": "J-079",
+   "lines": true,
+   "kinds": [
+    "mail_in",
+    "mail_out"
+   ]
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j079"
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-12T13:00Z",
+   "jobs": [
+    "J-079"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "#473 files",
+   "result": ".github/workflows/wo000-delivery-spine.yml plus 7 godot files"
+  },
+  {
+   "what": "switchboard ask-codex marker on #473",
+   "result": "none; the only '@codex review' (18:41:23) has no switchboard:ask-codex marker"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open397",
+   "t": "2026-11-11T12:42:33Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "text": "J-079 Her hold is a cinematic: a shot per beat, from her grab to his release or death (rule 33, gap 8)",
+   "labels_now": [
+    "job",
+    "owner:muse",
+    "state:ready",
+    "needs:eyes"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 2,
+   "id": "L397+job@2026-11-11T12:42:34Z",
+   "t": "2026-11-11T12:42:34Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "label": "job"
+  },
+  {
+   "i": 3,
+   "id": "L397+owner:muse@2026-11-11T12:42:35Z",
+   "t": "2026-11-11T12:42:35Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 4,
+   "id": "L397+state:ready@2026-11-11T12:42:35Z",
+   "t": "2026-11-11T12:42:35Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "label": "state:ready"
+  },
+  {
+   "i": 5,
+   "id": "L397+needs:eyes@2026-11-11T13:34:41Z",
+   "t": "2026-11-11T13:34:41Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "label": "needs:eyes"
+  },
+  {
+   "i": 6,
+   "id": "m8fb771f6-J-079",
+   "t": "2026-11-12T13:29:12Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "8fb771f6"
+   },
+   "subject": "Muse queue: J-111/112/113 started; J-107 now Claude's [skip ci]",
+   "lines": [
+    "In flight (finish these): J-079 #397"
+   ]
+  },
+  {
+   "i": 7,
+   "id": "m7b47c13c-J-079",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "Finish (in flight): J-079 #397"
+   ]
+  },
+  {
+   "i": 8,
+   "id": "c6825737297",
+   "t": "2026-11-12T14:03:18Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (finish line)",
+   "text": "From Claude (integrator). Goal: finish the parts of the game we already have, then start missions. Cory settled the finish line: the plan is 03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md on",
+   "lines": [
+    "1. Finish what you have in flight on the plan: the J-043 rail move, J-038 crates break (dents out), J-059, J-063, J-015 with J-109 as one job, J-049 parts 2 and 3, J-098, J-105 step 1 only, J-045, J-0"
+   ]
+  },
+  {
+   "i": 9,
+   "id": "c6826559745",
+   "t": "2026-11-12T14:36:30Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "subject": "J-079 start J-079",
+   "text": "From the switchboard's reconciler (Claude). Due 11-12 12:29 PM Central. When it is done, reply on this thread or post /ack O-ba6513b7. <!-- reconciler:sent id=O-ba6513b7 send=1 attempt=1 -->",
+   "obligations": [
+    "O-ba6513b7",
+    "O-ba6513b7"
+   ]
+  },
+  {
+   "i": 10,
+   "id": "L397+wake:muse@2026-11-12T14:36:31Z",
+   "t": "2026-11-12T14:36:31Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 11,
+   "id": "L397-wake:muse@2026-11-12T14:37:55Z",
+   "t": "2026-11-12T14:37:55Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 12,
+   "id": "c6830053846",
+   "t": "2026-11-12T16:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "sync reset — every lane: 7 pushed, 2 gate-blocked, what's left",
+   "text": "To Claude: sync reset — the single list of every lane, as you asked. All pushes that could go, went — tree-verified, CI dispatched. Two gate-blocks held. One flag needs you. PUSHED THIS RUN (tree veri",
+   "lines": [
+    "- J-079 | fb-bot/integrate-j079 | 0b2f39aadf3aa1d921dc80cea2b5b61cc5e3dcca | — | committed-unpushed (+ 5 stills)"
+   ]
+  },
+  {
+   "i": 13,
+   "id": "kd982c18b",
+   "t": "2026-11-12T17:22:32Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "pr": 473,
+    "sha": "d982c18b"
+   },
+   "text": "Job: J-079: her hold is a cinematic, a shot per beat",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 14,
+   "id": "push43268770324",
+   "t": "2026-11-12T17:22:36Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j079",
+    "sha": "d982c18b",
+    "run": 43268770324
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 15,
+   "id": "c6830931487",
+   "t": "2026-11-12T17:27:58Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 397
+   },
+   "subject": "J-079 pushed @ d982c18b — hold cinematic, 5 beat stills",
+   "text": "To Claude: J-079 pushed, one PR's worth, on fb-bot/integrate-j079. Remote head: d982c18bff0182e7ebc36445ea818ff4fe155adb (tree 92d23475, matches local head 0b2f39aad exactly; parent c6ecc113, live tru"
+  },
+  {
+   "i": 16,
+   "id": "c6831398393",
+   "t": "2026-11-12T17:47:22Z",
+   "kind": "inbox",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 282
+   },
+   "subject": "Switchboard (inbox):",
+   "text": "8 new for the integrator at 11:45 AM Central (each is listed once per head): - TO-CLAUDE #307 **Muse (via email bridge): #343 + J-044c pushed — heads + Codex thread answer** https://github.com/IssisX/",
+   "lines": [
+    "- TO-CLAUDE #397 **Muse (via email bridge): J-079 pushed d982c18b — hold cinematic, 5 beat stills** https://github.com/IssisX/ScraperX/issues/397#issuecomment-6830931487"
+   ]
+  },
+  {
+   "i": 17,
+   "id": "run43268830347",
+   "t": "2026-11-12T18:18:26Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j079",
+    "sha": "d982c18b",
+    "run": 43268830347
+   },
+   "result": "success",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T17:22:57Z"
+  },
+  {
+   "i": 18,
+   "id": "open473",
+   "t": "2026-11-12T18:21:14Z",
+   "kind": "pr_opened",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "pr": 473,
+    "branch": "fb-bot/integrate-j079",
+    "base": "ScraperX-Claude"
+   },
+   "text": "Job: J-079: her hold is a cinematic, a shot per beat",
+   "draft_now": false,
+   "body_first_line": "Job: J-079"
+  },
+  {
+   "i": 19,
+   "id": "c6832452993",
+   "t": "2026-11-12T18:33:15Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 473
+   },
+   "subject": "Claude automatic review of #473 @ d982c18b: LAND",
+   "text": "The only workflow change is one Godot probe step that mirrors the rip_shot_probe step beside it, and it touches no `${{ }}` input, permission, secret, environment, action or download, so no security g",
+   "verdict": {
+    "by": "claude-api",
+    "pr": 473,
+    "sha": "d982c18b",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 20,
+   "id": "c6832471420",
+   "t": "2026-11-12T18:34:02Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 473
+   },
+   "subject": "Claude eye (look of #473 @ d982c18b): LAND",
+   "text": "- approach: LAND; rubric: \"\"; frame `screenshots/wo006-approach-and-machine.png`. All seven lines hold. The camera is at ground level on asphalt with yellow lines, and the rust-red tower stands ahead ",
+   "verdict": {
+    "by": "claude-eye",
+    "pr": 473,
+    "sha": "d982c18b",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 21,
+   "id": "c6832558192",
+   "t": "2026-11-12T18:37:39Z",
+   "kind": "inbox",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 282
+   },
+   "subject": "Switchboard (inbox):",
+   "text": "6 new for the integrator at 12:35 PM Central (each is listed once per head): - MERGE-BY-HAND [#473](https://github.com/IssisX/ScraperX/pull/473) `fb-bot/integrate-j079` head d982c18b, J-079: green, LA",
+   "lines": [
+    "- MERGE-BY-HAND [#473](https://github.com/IssisX/ScraperX/pull/473) `fb-bot/integrate-j079` head d982c18b, J-079: green, LAND by Claude, but the switchboard will not merge it: ready, but it changes .g"
+   ]
+  },
+  {
+   "i": 22,
+   "id": "c6832643514",
+   "t": "2026-11-12T18:41:23Z",
+   "kind": "codex_ask",
+   "actor": "IssisX",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 473
+   },
+   "subject": "@codex review",
+   "text": "Head d982c18b changes .github/workflows (one probe step), so it merges only on a clean Codex review of the whole head. --- _Generated by [Claude Code](https://claude.ai/code)_",
+   "asked_by": "integrator (by hand)"
+  },
+  {
+   "i": 23,
+   "id": "c6832651575",
+   "t": "2026-11-12T18:41:43Z",
+   "kind": "codex_state",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 473
+   },
+   "subject": "Codex review state",
+   "text": "commit d982c18b status completed unresolved_findings True",
+   "codex": {
+    "commit_sha": "d982c18bff0182e7ebc36445ea818ff4fe155adb",
+    "has_any_findings": true,
+    "has_unresolved_findings": true,
+    "status": "completed"
+   }
+  },
+  {
+   "i": 24,
+   "id": "r5880103676",
+   "t": "2026-11-12T18:43:45Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "issue": 473,
+    "sha": "d982c18b"
+   },
+   "subject": "Codex review: findings",
+   "text": "findings on d982c18bff",
+   "verdict": "FIX"
+  },
+  {
+   "i": 25,
+   "id": "rc4554795470",
+   "t": "2026-11-12T18:43:45Z",
+   "kind": "codex_finding",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-079"
+   ],
+   "refs": {
+    "pr": 473,
+    "thread": 4554795470,
+    "path": "godot/presentation/audio/audio_director.gd",
+    "sha": "d982c18b"
+   },
+   "subject": "P0: Remove the hold mixer effect when its director exits",
+   "text": "Restarting through the pause menu reloads the scene (`main.gd`), destroying this director but leaving its effect attached to the global AudioServer bus: `_exit_tree()` never removes it, and `_ready()`"
+  }
+ ],
+ "expected": [
+  {
+   "at": "L397+owner:muse@2026-11-11T12:42:35Z",
+   "job": "J-079",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "tell Muse"
+   },
+   "why": "issue owner:muse",
+   "at_i": 3
+  },
+  {
+   "at": "c6825737297",
+   "job": "J-079",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push J-079"
+   },
+   "why": "finish-line mail: push J-077 to J-080",
+   "at_i": 8
+  },
+  {
+   "at": "c6826559745",
+   "job": "J-079",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start"
+   },
+   "why": "reconciler 'start J-079'",
+   "flags": [
+    "start_notice_for_inflight_job"
+   ],
+   "inferred": "Muse never mailed 'J-079 started'; the 16:52 sync reports it committed",
+   "at_i": 9
+  },
+  {
+   "at": "c6830053846",
+   "job": "J-079",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push"
+   },
+   "why": "Muse: committed, unpushed, 5 stills",
+   "flags": [
+    "acknowledged"
+   ],
+   "at_i": 12
+  },
+  {
+   "at": "push43268770324",
+   "job": "J-079",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove d982c18b"
+   },
+   "why": "J-079 pushed",
+   "at_i": 14
+  },
+  {
+   "at": "run43268830347",
+   "job": "J-079",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "switchboard",
+    "what": "open the PR"
+   },
+   "why": "proof green",
+   "at_i": 17
+  },
+  {
+   "at": "open473",
+   "job": "J-079",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "switchboard",
+    "what": "ask the eye, the automatic review and, because it changes .github/workflows, Codex"
+   },
+   "why": "switchboard opens #473",
+   "at_i": 18
+  },
+  {
+   "at": "c6832471420",
+   "job": "J-079",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "switchboard",
+    "what": "ask Codex: the merge rule needs it"
+   },
+   "why": "automatic review and eye both LAND; Codex never asked",
+   "flags": [
+    "review_owed_not_asked"
+   ],
+   "at_i": 20
+  },
+  {
+   "at": "c6832558192",
+   "job": "J-079",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "switchboard",
+    "what": "ask Codex now"
+   },
+   "why": "inbox MERGE-BY-HAND: no clean Codex review of the whole head",
+   "flags": [
+    "review_owed_not_asked"
+   ],
+   "at_i": 21
+  },
+  {
+   "at": "c6832643514",
+   "job": "J-079",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "codex",
+    "what": "review d982c18b"
+   },
+   "why": "integrator asks Codex by hand",
+   "at_i": 22
+  },
+  {
+   "at": "r5880103676",
+   "job": "J-079",
+   "state": "reviewed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix the Codex P0 (hold mixer effect left on the bus)"
+   },
+   "why": "Codex review with findings",
+   "flags": [
+    "fix_open"
+   ],
+   "at_i": 24
+  }
+ ],
+ "lessons": [
+  "Every review a PR's merge rule needs is an obligation the moment the PR opens; for a workflow PR that is Codex on the full head."
+ ]
+}

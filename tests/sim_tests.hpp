@@ -740,10 +740,11 @@ struct S3Ride final {
     double worst_margin_j = std::numeric_limits<double>::infinity();
 };
 
-// ---- The canonical climb above 221 m (J-084, #402) --------------------------
-// These ride results live here, not in sim_tests_rides.cpp, so the one
-// whole-climb scenario (sim_tests_canonical_ascent.cpp) can read them
-// without duplicating the structs.
+// ---- The climb above 221 m (J-134, #460) -------------------------------------
+// These ride results live here, not in sim_tests_rides.cpp, so the
+// chase-measurement scenario (sim_tests_matron_chase_bands.cpp) and the
+// whole-climb scenario (sim_tests_canonical_ascent.cpp, J-084) can read
+// them without duplicating the structs.
 
 // What one swing of AS-012 saw, from the strap-in to the rack at the 242
 // ring: the seat left on the trip, and the rider ended the ride on the ring.
@@ -815,6 +816,7 @@ bool couple_wet_hose(scraperx::sim::Simulation &simulation);
 bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation);
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity);
 void run_loose_stock();
+void run_stock_damage();
 void run_look_target();
 void run_body_order();
 void run_fabricated();
@@ -892,10 +894,10 @@ void run_derrick();
 void run_high();
 bool swing_board(scraperx::sim::Simulation &simulation);
 SwingRide swing_ride(scraperx::sim::Simulation &simulation);
-bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes = nullptr);
+bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes);
 MastRide mast_ride(scraperx::sim::Simulation &simulation);
-bool pitman_ride(scraperx::sim::Simulation &simulation, double *ride_seconds);
-bool helix_ride(scraperx::sim::Simulation &simulation, double *ride_seconds);
+bool pitman_ride(scraperx::sim::Simulation &simulation, double *ride_seconds = nullptr);
+bool helix_ride(scraperx::sim::Simulation &simulation, double *ride_seconds = nullptr);
 HighRide high_ride(scraperx::sim::Simulation &simulation);
 void run_canonical_ascent();
 void run_canonical_ascent_matron();
@@ -927,6 +929,7 @@ bool climb_c3(scraperx::sim::Simulation &simulation);
 void run_stack();
 void run_wet_handling();
 void run_brachiation();
+void run_hang_rail();
 void run_pipe_gallery();
 void run_slide();
 void run_speed_vault();
@@ -973,12 +976,14 @@ void run_ammo();   // J-042: her ammo, your ammo (sim_tests_ammo.cpp)
 void run_matron_capacity(); // J-044b H.4: the capacity test, five falsifiers, no motor code (sim_tests_matron_capacity.cpp)
 void run_strike();
 void run_matron_damage();
+void run_matron_injury();  // J-059 #307: per-region injury feed (sim_tests_matron_injury.cpp)
 void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();
 void run_matron_jab();
 void run_matron_traverse();
 void run_matron_pursuit();
+void run_matron_hung_load();
 void run_matron_chase();
 void run_matron_stand();
 void run_matron_shape();
@@ -986,6 +991,8 @@ void start_matron_shape_audit();
 void check_matron_shape_audit();
 void run_matron_ring_descent();
 void run_matron_ways();
+void run_matron_same_region();
+void run_matron_heard_lead();
 void run_matron_arm();
 void run_matron_fatality();
 void run_one_arm_route();
@@ -1004,6 +1011,7 @@ void run_matron_mischief();
 void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
+void run_hard_blow();  // J-077: a hard blow puts her down, a bare punch does not (sim_tests_hard_blow.cpp)
 void run_matron_pipe();
 void run_matron_hoist();   // J-007: she rides the hoists her scan finds (sim_tests_matron_hoist.cpp)
 void run_matron_room();
@@ -1027,6 +1035,9 @@ void run_step2_movement();
 void run_twin();
 void run_twin_geometry();
 void run_twin_balconies();
+void run_twin_pitch();
+void run_twin_pitch_probe();
+void run_twin_pitch_probe_pump();
 void run_matron_remaining();
 
 void run_matron_player_independence();

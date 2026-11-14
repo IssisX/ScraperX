@@ -170,6 +170,11 @@ func _pose(pose: String) -> void:
 
 func _act_pose(pose: String) -> void:
 	await _pose(pose)
+	# The frame helpers (_act_frame_her, _act_frame_box) hold the simulation
+	# still for this shot. The act's _pose lets it go; the base _pose, used
+	# outside the act (_act_running false: J-118's hold, J-137), does not,
+	# and the world stayed frozen with her mid-Lunge 4 m short of him.
+	_main.freeze_sim = false
 	if not is_nan(_act_view_back.x):
 		_main._yaw = _act_view_back.x
 		_main._pitch = _act_view_back.y
@@ -360,6 +365,19 @@ func _act_cam_watch() -> void:
 		_act_cam["clear_min"] = minf(float(_act_cam["clear_min"]), float(cam.clearance))
 	if int(cam.rip_holds) > 0 and bool(cam.rip_active):
 		_act_snap("act_hold_rip")
+	# J-079: a still at each beat of her hold (down, drag, over, hang, pin),
+	# taken the frame its shot is cut to.
+	var beat := int(cam.beat)
+	if beat == 0:
+		_act_snap("act_hold_beat_down")
+	elif beat == 1:
+		_act_snap("act_hold_beat_drag")
+	elif beat == 2:
+		_act_snap("act_hold_beat_over")
+	elif beat == 3:
+		_act_snap("act_hold_beat_hang")
+	elif beat == 4:
+		_act_snap("act_hold_beat_pin")
 	if bool(hold["fatal_hang"]) and float(hold["fatal_window_s"]) >= 0.6:
 		_act_snap("act_hold_hang_window")
 	if int(cam.lets_go_seen) > 0 and float(cam.black()) < 0.05:
@@ -816,6 +834,22 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		_act_cam_watch()
 		return float(_main._hold_cam.black()) < 0.01, 3.0, "fade_in")
 	_act_cam_log()
+	# J-079: third person from her grab to his release or death, and one cut
+	# per beat of her hold. The watch counts the held frames it saw; the
+	# camera counts every beat it entered, whatever the watch's gaps.
+	var cam: RefCounted = _main._hold_cam
+	var entries: PackedInt64Array = cam.beat_entries
+	var cuts := 0
+	for n in entries:
+		cuts += n
+	if int(_act_cam["held"]) == 0 or int(_act_cam["third"]) != int(_act_cam["held"]):
+		return _fail("her hold left first person on %d of %d held frames" % [
+			int(_act_cam["held"]) - int(_act_cam["third"]), int(_act_cam["held"])])
+	for b in 5:
+		if int(entries[b]) < 1:
+			return _fail("her hold never cut to beat %d (entries %s)" % [b, str(entries)])
+	if int(cam.beat_cuts) != cuts:
+		return _fail("her hold's cuts (%d) are not one per beat entry (%d)" % [int(cam.beat_cuts), cuts])
 	if not died:
 		return _fail("fully changed, her second catch never ended in the fatality's death (tears %d, path %d, released %s)" % [
 			int(seen["tears"]), int(seen["path"]), str(seen["released"])])
@@ -1595,6 +1629,71 @@ func _perf_fight() -> bool:
 	return true
 
 
+const PERF_NIGHT_FRAMES := 40
+
+
+# perf_night (J-081): renders only, not in CI: the helmet lamp's frame cost
+# on the phone path, measured as the wall/process/draw delta of the same
+# still midnight climb pose with the lamp on and off. The lamp is toggled
+# on its node directly, so no production debug switch is needed; it is on
+# again before the scenario returns. The native step keeps running in both
+# halves, so its cost is the same either side and the delta is the lamp's.
+func _perf_night() -> bool:
+	_main._sky_cycle.set_hour(0.0)
+	_main._sky_cycle.day_minutes = 0.0
+	_main._sky_cycle.set_passed_height(77.0)
+	var hud := _main.get_node("HUD") as CanvasLayer
+	hud.visible = false
+	var held := HeldView.new(_main._camera)
+	add_child(held)
+	held.pose = Transform3D(Basis(), Vector3(0.0, 78.7, -138.0)).looking_at(Vector3(16.4, 79.4, -150.0), Vector3.UP)
+	held.fov = 55.0
+	await _frames(8)
+	var lamp := _main._camera.get_node("HelmetLamp") as SpotLight3D
+	if lamp == null:
+		held.queue_free()
+		hud.visible = true
+		_main._sky_cycle.day_minutes = 24.0
+		return _fail("no HelmetLamp on the camera")
+	var halves := {}
+	for state in [true, false]:
+		lamp.light_energy = 4.0 if state else 0.0
+		lamp.shadow_enabled = state
+		await _frames(6)
+		var series := {"frame_wall_ms": [], "process_ms": [], "draw_calls": []}
+		var frame_started := Time.get_ticks_usec()
+		var frame := 0
+		while frame < PERF_NIGHT_FRAMES:
+			await get_tree().process_frame
+			frame += 1
+			var now := Time.get_ticks_usec()
+			series["frame_wall_ms"].append(float(now - frame_started) / 1000.0)
+			frame_started = now
+			series["process_ms"].append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+			series["draw_calls"].append(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+		halves[state] = series
+	# The lamp back on, as the game left it.
+	lamp.light_energy = 4.0
+	lamp.shadow_enabled = true
+	held.queue_free()
+	hud.visible = true
+	_main._sky_cycle.day_minutes = 24.0
+	for state in [true, false]:
+		var series: Dictionary = halves[state]
+		for key in series:
+			var s := _perf_series_summary(series[key])
+			print("SCRAPERX_PERF perf_night lamp_%s %s n=%d min=%.3f mean=%.3f p95=%.3f max=%.3f" % ["on" if state else "off", key, int(s["n"]), float(s["min"]), float(s["mean"]), float(s["p95"]), float(s["max"])])
+	var on_wall: Dictionary = _perf_series_summary((halves[true] as Dictionary)["frame_wall_ms"])
+	var off_wall: Dictionary = _perf_series_summary((halves[false] as Dictionary)["frame_wall_ms"])
+	var on_draws: Dictionary = _perf_series_summary((halves[true] as Dictionary)["draw_calls"])
+	var off_draws: Dictionary = _perf_series_summary((halves[false] as Dictionary)["draw_calls"])
+	print("SCRAPERX_PERF perf_night delta frame_wall_ms_p95=%.3f draw_calls_max=%d" % [float(on_wall["p95"]) - float(off_wall["p95"]), int(on_draws["max"]) - int(off_draws["max"])])
+	if int((halves[true] as Dictionary)["process_ms"].size()) < PERF_NIGHT_FRAMES or int((halves[false] as Dictionary)["process_ms"].size()) < PERF_NIGHT_FRAMES:
+		return _fail("only %d/%d frames were measured" % [int((halves[true] as Dictionary)["process_ms"].size()), int((halves[false] as Dictionary)["process_ms"].size())])
+	_detail = "frames=%d lamp_on_wall_p95=%.2f lamp_off_wall_p95=%.2f delta_wall_p95=%.2f draws_on_max=%d draws_off_max=%d" % [PERF_NIGHT_FRAMES, float(on_wall["p95"]), float(off_wall["p95"]), float(on_wall["p95"]) - float(off_wall["p95"]), int(on_draws["max"]), int(off_draws["max"])]
+	return true
+
+
 func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):
@@ -1895,6 +1994,25 @@ func _play_summit_ending() -> bool:
 		return _fail("ending: the final radio line repeated during the descent")
 	await _pose("ending_home")
 	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
+	return true
+
+# J-133 (#459): the climb and the ending in one touch run — grade through
+# the summit and the ending to the Home phase, zero deaths. Joins the two
+# existing scripts: _stack plays grade to the derrick's upper receiver
+# (803 m), and _summit_ending plays the ending from where the climber
+# stands there. No summit spawn and no state reset between the halves, so
+# a failure here names the state handed across the join (his position, a
+# machine state, her stage) before anything is changed. This lives here,
+# not in ui_test_stack.gd: the act sees _stack through its base chain
+# (act -> chase -> stack), while the stack cannot see _summit_ending.
+func _stack_ending(device: int) -> bool:
+	if not await _stack(device):
+		return false
+	var stack_detail := _detail
+	if not await _summit_ending():
+		return false
+	_detail = "stack[%s] ending[%s] deaths=%d" % [stack_detail, _detail,
+		int(_native().get_death_count())]
 	return true
 
 # J-045 (#248), phone stability: a per-frame recorder for rendered runs, and

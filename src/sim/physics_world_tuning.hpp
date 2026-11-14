@@ -583,7 +583,15 @@ constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
 // last. Monkey bars a metre apart are out of reach from a dead hang (1.14 m)
 // and in reach at the front of a swing: the swing is what carries the body.
 constexpr float kSwingMinHandRise = 0.75F;
-constexpr float kSwingCatchAimRise = 1.10F;
+// J-043 (#241, Claude 2026-11-11): the bar search — the swing catch in
+// try_begin_hang — aims at the middle of its band, 0.70 m over the
+// centre: the band runs from about waist height (the centre) to the
+// overhead top (1.40 m over the centre), so a rail passing his chest or
+// hip while he falls past it is seen. Before this the aim was 1.10 m
+// (kSwingCatchAimRise) and the band stopped 0.80 m over the centre, so a
+// rail below his chest was invisible until he landed on it. The swing
+// gate (kSwingMinHandRise) still decides whether the hands close.
+constexpr float kBarSearchAimRise = 0.70F;
 constexpr float kSwingCatchAimAhead = 0.15F;
 constexpr float kSwingKipForceN = 160.0F;
 constexpr float kSwingKipFromRestMps = 0.05F;
@@ -666,9 +674,30 @@ constexpr double kSprintMaximumAngleCos = 0.7071;
 constexpr float kGripMaxSection = 0.18F;
 constexpr float kGripMinLength = 0.25F;
 constexpr float kGripMinBodyMassKg = 400.0F;
+// A bar or rail lies level: its long axis is this close to horizontal. The
+// matron's own bar search uses the same 0.05 slope.
+constexpr float kBarLevelSlope = 0.05F;
+// A hold with a wall face this far behind it is a hold on a wall (a rung or a
+// pipe on a wall): the climb keeps it. Further than this, the hold is a bar or
+// rail in open air, a swing target, not a climb.
+constexpr float kGripWallBehindM = 0.5F;
+// A ladder's rungs are this far apart: every ladder in the world spaces its
+// rungs 0.30 m apart. A level hold with a sibling hold a rung-spacing above or
+// below it is a rung, not a bar: the climb keeps it (J-043 red-fix). The bars
+// the hang is for stand alone -- the hang rail, and the pipe gallery's pipes
+// at 1.0 m apart.
+constexpr float kLadderRungSpacing = 0.30F;
 // Where a hand looks for a hold: a box this big (across, up, along the
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
+// J-043 (#241, Claude 2026-11-10 + 2026-11-11): the bar search's own box.
+// Sideways half-width 0.45 m (the climb's 0.30): a rail 0.45-0.5 m beside
+// his line is inside his real arm reach (arm 0.60 m from the shoulder).
+// The band is 0.70 m tall, so with the aim at kBarSearchAimRise it runs
+// from about waist height to the overhead top — the rail is seen while it
+// passes his chest or hip, not only over his head. Forward stays 0.35 m.
+// The climb search keeps kGripSearchHalf.
+const JPH::Vec3 kBarSearchHalf(0.45F, 0.70F, 0.35F);
 // Climbing: the body moves at these rates. Its hands aim this high over its
 // centre, this far in front of it and this far to either side; one hand
 // moves at a time.
@@ -761,6 +790,27 @@ constexpr int kStackLevelCount = 14;           // decks at 11..154 m; level 0 is
 constexpr float kStackDeckHalfThickness = 0.25F;
 constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
+
+// J-043 (#241, Claude 2026-11-08 06:07): the hang rail under deck 154's
+// north band, along the crossing from the bay to the shaft edge. A
+// hold-sized beam per find_grip (section at most kGripMaxSection 0.18 m);
+// 0.12 m keeps her scanner blind to it too (no patch: under 0.18 m wide;
+// no bar: over 0.10 m tall; no pole or riser). Top 0.50 m below the deck's
+// soffit (154.00 - 0.50 - 0.50 = 153.00): flush, his capsule top rode at
+// 153.29, inside the ShaftEdgeBeam (y 153.00-153.90), and the beam's north
+// face (z -132.75) pinned his shoulders at z -132.400 — the rail's last
+// 0.25 m and the -132.95 bar sat inside the beam's footprint. At 153.00
+// his capsule top rides 0.21 m under the beam's bottom and his shoulders
+// 0.66 m under it, so he swings the rail to the shaft edge; north end
+// 0.05 m clear of the leaf's south edge (z -129.30) so the leaf's swing
+// never meets it; south end at the shaft edge (z -133.00). She still
+// cannot follow underneath: headroom under the deck is unchanged.
+constexpr float kHangRailX = -2.15F;              // the bay's centre: (Bay::kWestX + Bay::kEastX) / 2
+constexpr float kHangRailSection = 0.12F;
+constexpr float kHangRailTopY =
+    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;   // 0.50 m below the soffit, 153.00
+constexpr float kHangRailNorthZ = -129.35F;       // 0.05 m south of the leaf's south edge
+constexpr float kHangRailSouthZ = -133.00F;      // the shaft edge
 
 // The carry (AS-003 §8.4.3). A carryable is picked up within kCarryReach of
 // the body's centre, at rest, in front of it; it hangs by the middle of its

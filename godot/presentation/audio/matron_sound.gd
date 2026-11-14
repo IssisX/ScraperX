@@ -127,6 +127,8 @@ var _holding := false
 var _laughed := false
 var _carries_seen := -1
 var _dangles_seen := -1
+var _grabs_seen := -1
+var _armplays_seen := -1
 var _beat_seen := -1
 var _tears_seen := -1
 var _leg_tears_seen := -1
@@ -386,6 +388,12 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 # most once; nothing on a clock, and no loop of her voice: a steady hold is
 # quiet.
 func hear_hold(hold: Dictionary) -> void:
+	# The hold's mix, every frame (the duck eases out when the hold ends):
+	# the world ducks under her while her hands have him.
+	if _audio != null and _audio.has_method("hold_mix"):
+		var holding_now := not hold.is_empty() and int(hold.get("state", 0)) >= STATE_GRAB \
+			and int(hold.get("state", 0)) <= STATE_CLAIMED
+		_audio.hold_mix(_dt, holding_now)
 	if hold.is_empty():
 		return
 	var on := _on
@@ -433,7 +441,13 @@ func hear_hold(hold: Dictionary) -> void:
 		_say_later(0.0, &"last", 0, SAY_LAST)
 	_waste_seen = waste
 	_audio.matron_encounter = _encounter if holding else 0
-	# Lifted (a carry), then held out (a dangle): a breath each.
+	# Lifted (a carry), then held out (a dangle): a breath each. Taken down
+	# (her fingers closing) and at the rail pin (her other hand on the arm):
+	# a breath each too, one per beat of the hold.
+	var grabs := int(hold.get("grabs", 0))
+	if on and _grabs_seen >= 0 and grabs > _grabs_seen:
+		_cue(&"matron_breath", _head, -2.0, 1.0)
+	_grabs_seen = grabs
 	var carries := int(hold.get("carries", 0))
 	if on and _carries_seen >= 0 and carries > _carries_seen:
 		_cue(&"matron_breath", _head, -2.0, 1.0)
@@ -459,6 +473,11 @@ func hear_hold(hold: Dictionary) -> void:
 	if on and beat == 2 and _beat_seen >= 0 and _beat_seen != 2:
 		_audio.matron_cue_one_of([&"matron_sniff", &"matron_swallow"], _head, 0.0)
 	_beat_seen = beat
+	# The rail pin: her other hand on the arm, a breath as it closes.
+	var armplays := int(hold.get("armplays", 0))
+	if on and _armplays_seen >= 0 and armplays > _armplays_seen:
+		_cue(&"matron_breath", _head, -2.0, 1.0)
+	_armplays_seen = armplays
 	# An arm torn off: the rip where it parted, his crack and his cry, then
 	# (the hold's one) her laugh.
 	if on and _tears_seen >= 0 and tears > _tears_seen:
@@ -474,10 +493,15 @@ func hear_hold(hold: Dictionary) -> void:
 	if on and _leg_tears_seen >= 0 and leg_tears > _leg_tears_seen:
 		_cue(&"matron_rip", hand, 4.0, 1.0)
 	_leg_tears_seen = leg_tears
-	# Over the drop in her fatality, hung by the ankle: her effort.
-	var hang := bool(hold.get("fatal_hang", false))
+	# Over the drop, hung by the ankle: her effort. The ordinary hang (Dangle,
+	# her hand below her head: the body below the deck's edge) is the rail
+	# taking his weight: steel creaking, and her breath.
+	var hang := bool(hold.get("fatal_hang", false)) or (state == STATE_DANGLE \
+		and bool(hold.get("matron_hand_present", false)) and hand.y <= _head.y)
 	if on and hang and not _hang_seen:
 		_cue(&"matron_effort", _head, -3.0, 1.0)
+		_cue(&"creak", hand, -6.0, randf_range(0.65, 0.85))
+		_cue(&"matron_breath", _head, -4.0, 1.0)
 	_hang_seen = hang
 	# Let go over the drop, at a ledge, set back on the deck, or claimed: the
 	# hold's laugh if it has not had it, else a breath.

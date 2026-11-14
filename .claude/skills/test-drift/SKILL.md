@@ -32,6 +32,8 @@ The danger is hiding a real bug, so step 1 decides which it is, and step 3 limit
 4. **Rerun** the group alone, then the full native suite when the change reaches the whole world
    (the start file's "No redundant test runs" row).
 5. **Commit** the script fix with what the old physics did for it and the test's PASS line.
+6. **A new world body** must sit clear of every scripted walk and carry path. To prove drift from one, build
+   without the new piece and compare to trunk tick for tick (01c70e98, J-092's handle).
 
 Done this way after the planted grip (2026-10-20): the derrick steps in to each iron pig until
 PICK UP is offered (`55c5189`); the Matron's "no way" run steps off the bridge's rim gently

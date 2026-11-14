@@ -31,8 +31,9 @@ sets:
       - screenshots/injury/injury_cheek_front.png
   ladder_descent:
     rubric: work/looks/ladder_descent.md
-    # Her hands open and her body beside the rungs (seen 2026-11-08) are J-063's to fix.
-    known_defect: J-063
+    # Her hands open above the rungs (seen 2026-11-08) are J-088's to fix: its fingers-wrap lane owns them (the
+    # integrator's ruling on #453, 11-12). J-063's slices (#453, the torso drive) do not reach her hands.
+    known_defect: J-088
     frames:
       - screenshots/ladder_grade_ladder_down.png
       - screenshots/ladder_grade_ladder_down_side.png

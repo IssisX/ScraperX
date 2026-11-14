@@ -64,7 +64,7 @@ const MIRROR := [
 	"SkinRung", "BayBack", "BaySide", "BayJamb", "BayLintel", "MidLanding",
 	"UpperFlightSlab", "HallDeckNorth", "HallDeckSouth", "HallDeckEast", "HallDeckWest",
 	"SkinWalkway", "KernelDeck", "NativeVaultRail", "NativeMantleLedge", "NativeHangLedge",
-	"NativeBlockedLedge", "NativeBlockedCanopy", "NativeCrawlBeam", "NativeCrawlPost", "Catwalk",
+	"HangRail", "NativeBlockedLedge", "NativeBlockedCanopy", "NativeCrawlBeam", "NativeCrawlPost", "Catwalk",
 	"Vessel", "SumpApproachDeck", "SumpFarDeck",
 	# AS-003's cage: the buttress, roof, header, brackets and rack are its
 	# native boxes; posts, rails and grille bars are drawn inside the native

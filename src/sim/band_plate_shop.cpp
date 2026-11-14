@@ -81,6 +81,95 @@ void ladder(std::vector<Part> &parts, const float x, const float z, const bool a
     }
 }
 
+// ---- J-105 (#424), step 1: one flight of the leg spiral -----------------------
+// One flight (one turn) of Fable's leg spiral at the north-west leg, from the
+// 462 ring: 20 steps of 0.275 m rise, 0.675 x 1.3 m, corner landings 1.3 m
+// square, full-height plate on the outside corners. Only step 1 is approved;
+// the rest of the spiral is not built here. The foot is the 462 ring itself
+// (its north band at the square's south-east corner); the top landing is
+// 5.5 m up at 467.75 m. The 462 -> 484 ladder stays as built: this flight
+// does not reach the 484 ring, so nothing is bypassed and nothing measured
+// is moved or deleted. Geometry gate: new Cory-approved content (issue #424),
+// on the protected branch, alone.
+// The square: four treads of 0.675 m plus two 1.3 m landings make a side
+// 5.3 m, so the design's 4.0 m outer square cannot hold them (2.7 + 2.6);
+// the square is 5.3 m and the leg gap is 0.92 m, not the design's 0.05-0.5 m.
+// Every number the issue pins (20 steps, 0.275 rise, 0.675 going, 1.3 m
+// walkway and landings) is kept; only the design's derived square changes.
+void build_leg_spiral(std::vector<Part> &frame) {
+    constexpr float kFootY = 462.25F;   // the 462 ring's top
+    constexpr float kRise = 0.275F;
+    constexpr float kGoing = 0.675F;
+    constexpr float kWidth = 1.3F;      // the walkway, and the tread width
+    constexpr float kLanding = 1.3F;    // a corner landing's side
+    constexpr float kSlab = 0.3F;       // a tread's slab, as the wall stack's
+    constexpr float kPlateH = 2.2F;     // a corner plate above its landing
+    constexpr float kPlateT = 0.1F;     // and its thickness
+    // The leg is build_upper_frame's corner column for the 462-473 lift:
+    // 0.86 m square, centred ring_inner(467.5) + 4.0 m out on both axes.
+    const float leg = ring_inner(467.5F) + 4.0F;
+    const float cx = -leg;
+    const float cz = kWellZ - leg;
+    const float outer = 0.5F * (2.0F * kLanding + 4.0F * kGoing);   // 2.65 m
+    const float inner = outer - kWidth;                              // 1.35 m
+    const auto slab = [&](const float x0, const float x1, const float z0, const float z1, const float top) {
+        frame.push_back(span({x0, top - kSlab, z0}, {x1, top, z1}, Material::Steel));
+    };
+    // The turn, counter-clockwise seen from above: south westward, west
+    // northward, north eastward, east southward. Step n (1..20) tops at
+    // kFootY + n * kRise; the foot is the ring, the top is the south-east
+    // landing.
+    int step = 0;
+    const auto next_top = [&]() { return kFootY + static_cast<float>(++step) * kRise; };
+    // South flight: four treads westward across the south strip.
+    for (int k = 0; k < 4; ++k) {
+        const float x1 = cx + inner - static_cast<float>(k) * kGoing;
+        slab(x1 - kGoing, x1, cz + inner, cz + outer, next_top());
+    }
+    // South-west landing.
+    slab(cx - outer, cx - inner, cz + inner, cz + outer, next_top());
+    // West flight: four treads northward across the west strip.
+    for (int k = 0; k < 4; ++k) {
+        const float z1 = cz + inner - static_cast<float>(k) * kGoing;
+        slab(cx - outer, cx - inner, z1 - kGoing, z1, next_top());
+    }
+    // North-west landing.
+    slab(cx - outer, cx - inner, cz - outer, cz - inner, next_top());
+    // North flight: four treads eastward across the north strip.
+    for (int k = 0; k < 4; ++k) {
+        const float x0 = cx - inner + static_cast<float>(k) * kGoing;
+        slab(x0, x0 + kGoing, cz - outer, cz - inner, next_top());
+    }
+    // North-east landing.
+    slab(cx + inner, cx + outer, cz - outer, cz - inner, next_top());
+    // East flight: four treads southward across the east strip.
+    for (int k = 0; k < 4; ++k) {
+        const float z0 = cz - inner + static_cast<float>(k) * kGoing;
+        slab(cx + inner, cx + outer, z0, z0 + kGoing, next_top());
+    }
+    // South-east landing, the top.
+    slab(cx + inner, cx + outer, cz + inner, cz + outer, next_top());
+    // Full-height plates on the outside corners: on each landing's two outer
+    // faces, inside the edge, 2.2 m above the landing (above her 2.1 m head,
+    // so she cannot tip over one). The foot landing is the ring itself and
+    // needs none; the top landing takes both faces.
+    const auto plate = [&](const float x0, const float x1, const float z0, const float z1, const float base) {
+        frame.push_back(span({x0, base, z0}, {x1, base + kPlateH, z1}, Material::Yellow));
+    };
+    const float top_sw = kFootY + 5.0F * kRise;    // 463.625
+    const float top_nw = kFootY + 10.0F * kRise;   // 465.00
+    const float top_ne = kFootY + 15.0F * kRise;   // 466.375
+    const float top_se = kFootY + 20.0F * kRise;   // 467.75
+    plate(cx - outer, cx - outer + kPlateT, cz + inner, cz + outer, top_sw);   // SW west
+    plate(cx - outer, cx - inner, cz + outer - kPlateT, cz + outer, top_sw);  // SW south
+    plate(cx - outer, cx - outer + kPlateT, cz - outer, cz - inner, top_nw);  // NW west
+    plate(cx - outer, cx - inner, cz - outer, cz - outer + kPlateT, top_nw);  // NW north
+    plate(cx + inner, cx + outer, cz - outer, cz - outer + kPlateT, top_ne);  // NE north
+    plate(cx + outer - kPlateT, cx + outer, cz - outer, cz - inner, top_ne);  // NE east
+    plate(cx + inner, cx + outer, cz + outer - kPlateT, cz + outer, top_se);  // SE south
+    plate(cx + outer - kPlateT, cx + outer, cz + inner, cz + outer, top_se);  // SE east
+}
+
 // Handles, levers and platforms, as the other bands build them.
 constexpr float kHandleHalfY = 0.04F;
 constexpr float kHandleDrop = 0.75F;
@@ -760,6 +849,7 @@ void build_climbing_route(kit::Kit &kit, std::vector<Part> &frame) {
 void build_plate_shop(kit::Kit &kit, PlateShop &shop) {
     std::vector<Part> upper;
     build_upper_frame(upper, 484.0F);
+    build_leg_spiral(upper);   // J-105 (#424), step 1: one flight at the north-west leg
     (void)kit.add_body(Sim::kUpperFrameEntityId, upper, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     std::vector<Part> frame;
     build_stage_g(kit, shop, frame);

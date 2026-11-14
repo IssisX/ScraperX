@@ -137,7 +137,9 @@ a strict total order, so the simulation stays deterministic across runs and thre
 
 Where entity ids are a running count (the loose stock from 5000, the ziplines' lines, the
 corpses), they are a function of the build and of the inputs, not of the ids, and so unmoved by
-a body added elsewhere. The one way a change in a band still reaches another is a real one: a
+a body added elsewhere, but not by one added to the same count ahead of them: the sort key is
+built from them, so a piece of stock put anywhere but the end of the stock table renumbers every
+later piece and re-deals their contacts, which is the same drift by another road (J-107, §7). The one way a change in a band still reaches another is a real one: a
 new body that takes a place a piece of stock was to have moves that piece and every later one in
 the kit's list, which the save refuses as it did ("the world's bodies stand in another order").
 
@@ -224,6 +226,18 @@ include `PASS scraperx_sim body order`.
   carrier, to be diagnosed the same way (§2's instrument, five worlds, the first differing word).
 - A new static that takes a place a piece of stock or a zipline was to have moves that piece
   in the kit's list: that is a real change in the band, and the save refuses as it does.
+- **The stock table is append-only** (J-107, #426). A piece of stock takes the end of the table,
+  in its own group laid after every other (`lay_matron_kinds`, `lay_hung_slab`). J-054 put its
+  ballast drum in `add_deck_loads`, at table index 320: every later piece (the tower's dressed
+  stock, the throwables, the upper rings, the slab) was renumbered by one. Two things then moved
+  that the drum never touched: `matron crash` shoved what had been piece 245, not 246, and heard
+  the wrong piece (230 J at loudness 0.554 in place of 39,143 J at 1); and the toolbox in
+  `matron-ammo`, renumbered 5322 to 5323, parted from trunk in its last bits the tick it landed
+  (tick 2556 of the first run), its contacts sorted by a new key, until the race's grab arm ran
+  1555 W against its listed 997 W. With the same drum laid last, both groups match trunk line for
+  line. The E guard (`tests/sim_tests_wet.cpp`) pins this: its `stock_before` and
+  `stock_before_cell` hashes stay as they are when a piece is appended, and a change that needs
+  them re-pinned has inserted one.
 - The patch is part of the pinned Jolt: a Jolt bump stops the configure until someone re-checks
   how contacts are sorted for the solver (`third_party/jolt_patch.cmake`,
   `third_party/README.md`).

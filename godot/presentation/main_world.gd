@@ -9,6 +9,7 @@ const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
 const LampGlow := preload("res://presentation/lamp_glow.gd")
 const FarWorld := preload("res://presentation/far_world.gd")
+const SkyCycle := preload("res://presentation/sky_cycle.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -30,6 +31,9 @@ const DECK_PLANK_PITCH := 1.35
 const DECK_PLANK_WIDTH := 1.1
 const DECK_PLANK_TOP := 0.09
 var _vent_tops := PackedVector3Array()
+# J-081: the stack lamps' fittings, each with its own material so sky_cycle
+# can gate its glow by the deck he has passed: [deck_y, StandardMaterial3D].
+var _lamp_fittings: Array = []
 @onready var _light_rig: Node3D = $LightRig
 
 # --- world ------------------------------------------------------------------
@@ -117,6 +121,16 @@ const BAY_EAST_X := -0.4
 const BAY_PLANK_SETBACK := 0.05
 const DECK13_GATE_WEST := -8.4
 const DECK13_GATE_EAST := -5.1
+# The hang rail under the 154 m deck's north band (src/sim/physics_world_tuning.hpp
+# kHangRail*): the crossing from the bay to the shaft edge is a hang on this rail,
+# so it must be drawn — the native frame() body has no kit part and the machine
+# renderer never sees it. Section 0.12 m; top 0.50 m below the soffit (153.00);
+# south end at the shaft edge, north end 0.05 m clear of the leaf's south edge.
+const HANG_RAIL_X := -2.15
+const HANG_RAIL_SECTION := 0.12
+const HANG_RAIL_TOP_Y := 153.0
+const HANG_RAIL_NORTH_Z := -129.35
+const HANG_RAIL_SOUTH_Z := -133.0
 
 func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 		rust_bright: Material, galvanised: Material, faded: Material, timber: Material) -> void:
@@ -155,6 +169,16 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 				Vector3(cx + sx * inner_half, deck_y - 0.55, cz), oxidised)
 			_add_box("OuterEdgeBeam", Vector3(0.6, 1.1, STACK_HALF_EXTENT * 2.0),
 				Vector3(cx + sx * STACK_HALF_EXTENT, deck_y - 0.7, cz), rust_deep)
+
+		if level == MATRON_DECK_LEVEL:
+			# The hang rail under this deck's north band: the crossing from the bay
+			# to the shaft edge is a hang on this rail. It hangs 0.50 m below the
+			# soffit, along the bay's centre line, from the shaft edge to 0.05 m
+			# clear of the leaf.
+			_add_box("HangRail", Vector3(HANG_RAIL_SECTION, HANG_RAIL_SECTION,
+					HANG_RAIL_NORTH_Z - HANG_RAIL_SOUTH_Z),
+				Vector3(HANG_RAIL_X, HANG_RAIL_TOP_Y - HANG_RAIL_SECTION * 0.5,
+					(HANG_RAIL_NORTH_Z + HANG_RAIL_SOUTH_Z) * 0.5), galvanised)
 
 		# Handrails around the open shaft -- the safety line you walk beside.
 		for sz in [1.0, -1.0]:
@@ -507,8 +531,10 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 				Vector3(cx + sx * (inner_half - 1.2),
 					STACK_LEVEL_HEIGHT * STACK_LEVEL_COUNT * 0.5,
 					cz + sz * (inner_half - 1.2)), pipe_material)
+			# A flange 0.05 m proud of the riser across x, 0.20 m along z: her
+			# capsule on her pipe line clears it, her legs land on it (J-128).
 			for level in range(1, STACK_LEVEL_COUNT + 1):
-				_add_box("RiserFlange", Vector3(1.1, 0.35, 1.1),
+				_add_box("RiserFlange", Vector3(0.8, 0.35, 1.1),
 					Vector3(cx + sx * (inner_half - 1.2), float(level) * STACK_LEVEL_HEIGHT - 1.4,
 						cz + sz * (inner_half - 1.2)), mill_scale)
 
@@ -526,14 +552,21 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 					cz - STACK_HALF_EXTENT + 2.2), mill_scale)
 			_vent_tops.append(Vector3(cx + sx * (STACK_HALF_EXTENT - 2.2), y + 2.45,
 				cz - STACK_HALF_EXTENT + 2.2))
+			# Each fitting has its own material (a duplicate of the shared
+			# one), so sky_cycle can dim one fitting without dimming all
+			# fourteen; the batcher takes one batch per material, fourteen
+			# tiny boxes, which is nothing.
+			var fitting_material := lamp_material.duplicate() as StandardMaterial3D
 			_add_box("LampFitting", Vector3(0.5, 0.3, 0.7),
-				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), lamp_material)
+				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), fitting_material)
+			_lamp_fittings.append([y, fitting_material])
 			_add_box("LampStandard", Vector3(0.09, LAMP_ARM_TOP, 0.09),
 				Vector3(cx + sx * inner_half, y + LAMP_ARM_TOP * 0.5, cz), galvanised)
 			_add_box("LampArm", Vector3(0.75, 0.08, 0.08),
 				Vector3(cx + sx * (inner_half - 0.375), y + LAMP_ARM_TOP - 0.04, cz), galvanised)
 			var lamp := OmniLight3D.new()
 			lamp.name = "StackLamp"
+			lamp.set_meta(SkyCycle.STACK_DECK_META, y)
 			lamp.position = Vector3(cx + sx * (inner_half - 0.6), y + 2.4, cz)
 			lamp.light_color = Color(1.0, 0.72, 0.38)
 			lamp.light_energy = 3.2
@@ -812,7 +845,7 @@ func _build_mountains_and_waterfall() -> void:
 		_add_cone("MountainRidgeFarSnow", radius * 0.4, peak_height * 0.32,
 			base + Vector3(0.0, peak_height * 0.9, 0.0), snow).visible = false
 
-	_build_waterfall(Vector3(200.0, 0.0, -560.0))
+	_build_waterfall(Vector3(200.0, 0.0, -167.0))
 	_build_foothill_forest()
 	_build_basin()
 	MountainMesh.draw($TowerPresentation, _peaks)
@@ -975,19 +1008,35 @@ void fragment() {
 	ALPHA = clamp(sheet * (0.35 + 0.45 * streak) * smoothstep(0.0, 0.03, UV.y), 0.0, 0.85);
 }
 """
+	# The sheet lies on the peak's south face, from its foot (`at`) 400 m up
+	# the face and 348 m north of it — the face's measured line (J-021 lane C:
+	# the first build put the sheet at the peak's axis, (200, -560), where the
+	# carved rock stands 437 m, 17 m above the sheet's top, so the fall was
+	# buried inside the peak and never seen). It weaves behind the rock's own
+	# bulges where they stand proud of the line, as a fall does; its lip
+	# emerges from a cleft about 360 m up. UV.y 0 stays at the lip: the
+	# sheet's +Y runs up the face.
+	var lip := at + Vector3(0.0, 400.0, -348.0)
+	var run := lip - at
+	# The face's outward normal (south-up): the sheet stands 12 m off the
+	# rock on it, so it clears the face's own bulges; the spray at its foot
+	# covers the gap. Without the stand-off the sheet weaves behind the
+	# bulges and its middle alone shows.
+	var face_out := Vector3(0.0, -run.z, run.y).normalized()
 	var quad := QuadMesh.new()
-	quad.size = Vector2(26.0, 420.0)
+	quad.size = Vector2(26.0, run.length())
 	quad.material = falls
 	var instance := MeshInstance3D.new()
 	instance.name = "Waterfall"
 	instance.set_meta(&"part", "Waterfall")
 	instance.mesh = quad
-	instance.position = at + Vector3(0.0, 210.0, 0.0)
+	instance.position = (at + lip) * 0.5 + face_out * 12.0
+	instance.rotation.x = atan2(run.z, run.y)
 	$TowerPresentation.add_child(instance)
 
 	var mist := CPUParticles3D.new()
 	mist.name = "WaterfallMist"
-	mist.position = at + Vector3(0.0, 8.0, 8.0)
+	mist.position = at + Vector3(0.0, 6.0, 7.0)
 	mist.amount = 50
 	mist.lifetime = 6.0
 	mist.direction = Vector3(0.0, 1.0, 0.4)
