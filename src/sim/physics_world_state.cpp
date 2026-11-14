@@ -218,6 +218,9 @@ void Simulation::PhysicsWorld::commit_checkpoint(const JPH::BodyInterface &bodie
 // publishing a snapshot that mixes a teleported position with a contact
 // sample that referred to the pre-restore position.
 void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept {
+    // J-059 #343 P1: every restore moves the generation the injury view
+    // watches, so a rewind of her doses rewinds her displayed injuries.
+    ++restores_;
     // Out of the slingshot's harness, and the hands off whatever they hold
     // (a ledge, a climb's holds, a bar, a zipline's trolley), before the body
     // moves: the checkpoint is a standing one. The Matron's hands too, before
@@ -364,6 +367,9 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
 
 // The Matron's damage in a save follows the grips under this mark ("MAD1").
 constexpr std::uint32_t kMatronDamageMark = 0x314D414DU;
+// Her per-region injury follows her damage under this mark ("INJ1",
+// J-059 #343 fix): nine regions, j_region and j_event each.
+constexpr std::uint32_t kMatronInjuryMark = 0x314A4E49U;
 
 // The committed checkpoint as bytes (see SaveWriter).
 namespace {
@@ -444,6 +450,12 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(checkpoint_.matron.damage_ns);
     w.pod(checkpoint_.matron.player_damage_ns);
     w.pod(static_cast<std::uint8_t>(checkpoint_.matron.dead ? 1 : 0));
+    // Her per-region injury, under its own mark, so a save made before it
+    // still loads: it ends at the damage, or at the fabricated objects'
+    // mark (J-059 #343 fix: a reload restores her as saved).
+    w.pod(kMatronInjuryMark);
+    for (const float d : checkpoint_.matron.injury_j_region) w.pod(d);
+    for (const float d : checkpoint_.matron.injury_j_event) w.pod(d);
     // Fabricated objects follow the damage, under their mark, only when the
     // world holds any.
     write_fabricated(w);
@@ -562,13 +574,14 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
-    // After the grips, her damage under its mark (MAD1), then the
-    // fabricated objects (FAB1, only when the world holds any), then
-    // the stock damage (DAMG, only when the world holds some), then
-    // the grip loads' entities (GRIP, only when a grip holds a load).
-    // A save made before any of them ends before it: before her
-    // damage it ends at the grips, before the fabricated objects at
-    // her damage, and so on — each mark tells what follows.
+    // After the grips, one mark tells the rest: the Matron's damage (a save
+    // made with it, "MAD1"), then her per-region injury ("INJ1", J-059 #343
+    // fix), then the fabricated objects ("FAB1", only when the world holds
+    // any), then the stock damage ("DAMG", only when the world holds some),
+    // then the grip loads' entities ("GRIP", only when a grip holds a load).
+    // A save made before any of them ends before it: before her damage it
+    // ends at the grips, before her injury at her damage, and so on — each
+    // mark tells what follows.
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
         std::uint32_t mark = 0;
@@ -581,6 +594,26 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                  loaded.matron.damage_ns >= 0.0F && std::isfinite(loaded.matron.player_damage_ns) &&
                  loaded.matron.player_damage_ns >= 0.0F;
             loaded.matron.dead = dead == 1;
+            // After her damage, her per-region injury, under its own mark
+            // (J-059 #343 fix: a reload restores her as saved). A save made
+            // before it ends here, or at the fabricated objects' mark — so
+            // the mark is peeked, not consumed: a trunk save holds FAB1,
+            // DAMG or GRIP next, and the sections below read it.
+            if (ok && !r.done()) {
+                if (!r.peek(mark)) {
+                    ok = false;
+                } else if (mark == kMatronInjuryMark) {
+                    ok = r.pod(mark);
+                    for (float &d : loaded.matron.injury_j_region) {
+                        ok = ok && r.pod(d) && std::isfinite(d) && d >= 0.0F;
+                    }
+                    for (float &d : loaded.matron.injury_j_event) {
+                        ok = ok && r.pod(d) && std::isfinite(d) && d >= 0.0F;
+                    }
+                }
+                // Any other mark: not her injury — the sections below read
+                // whichever mark follows, or the done check refuses it.
+            }
         }
         // Any other mark: not her damage — the sections below read
         // whichever mark follows, or the done check refuses it.
@@ -1318,6 +1351,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.checkpoint_position = to_vector3(checkpoint_position_);
     state_.checkpoint_commit_count = checkpoint_commit_count_;
     state_.death_count = death_count_;
+    state_.restores = restores_;
 }
 
 } // namespace scraperx::sim

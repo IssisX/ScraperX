@@ -26,7 +26,7 @@ import rules
 
 PROOF_READS = 30
 STACK_READS = 10
-AUTO_PR_PREFIX = "fb-bot/integrate-"   # switch.AUTO_PR_PREFIX: the heads the switch opens a PR for by itself
+AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")   # switch.AUTO_PR_PREFIX: the heads the switch opens a PR for
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"   # switch.MARK
 CODEX_MENTION = "@codex review"                             # switch.CODEX_MENTION
 INTEGRATE = re.compile(r"(?:^|/)integrate-")

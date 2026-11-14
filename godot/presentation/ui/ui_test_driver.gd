@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_look.gd"
+extends "res://presentation/ui/ui_test_screens.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -19,6 +19,8 @@ const SCENARIOS := {
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
 	"touch_climb": 4,
+	# J-119: the same foot of the first climb, facing it, for the screen audit.
+	"touch_screens": 4,
 	"touch_vault": 3,
 	"touch_double_tap_vault": 3,
 	"touch_speed_vault": 3,
@@ -263,6 +265,14 @@ const SCENARIOS := {
 	# The title over the live tower at launch: the simulation frozen behind
 	# it, no CONTINUE without a save, NEW CLIMB tapped starts the climb.
 	"touch_title": 8,
+	# Leaving the app mid-anything (J-118 #440): the pause the OS sends, then
+	# the way back, at five moments. Each is its own scenario (one per
+	# process); the stages are the moments' own spawns.
+	"touch_app_leave_ride": 25,
+	"touch_app_leave_slingshot": 8,
+	"touch_app_leave_hold": 11,
+	"touch_app_leave_fall": 9,
+	"touch_app_leave_title": 8,
 	# Phase 4 on touch: a sprint at deck 4's south edge, the stick let go
 	# 2 m short of it: the native teeters (its XCoM past the edge), and the
 	# soles' traction cannot stop the body before it goes over.
@@ -273,6 +283,11 @@ const SCENARIOS := {
 	"keyboard_stack_upper": 26,
 	# The continuous ascent from the game's start at grade through the upper machines to +221 m receiver.
 	"touch_stack": 8,
+	# J-133 (#459): the climb and the ending in one touch run — grade through
+	# the summit and the ending to the Home phase, zero deaths. Joins
+	# _stack (grade to the derrick's upper receiver, 803 m) and
+	# _summit_ending (the ending from where the climber stands there).
+	"touch_stack_ending": 8,
 	# The foreman's radio: his first line as the climber steps into S1's cage.
 	"touch_radio": 8,
 	"touch_photo_id_radio": 8,
@@ -326,7 +341,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if int(SCENARIOS[played]) == 11:
 		main._native.place_matron_home(154.0)
 	# The traversal kernels are authored facing +x (native tests do the same).
-	if played in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
+	if played in ["touch_climb", "touch_screens", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
 			"touch_wall_run", "touch_hang_drop",
 			"touch_hang_climb", "touch_monkey_bars", "touch_swing_launch", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
@@ -368,6 +383,8 @@ func _run() -> void:
 			ok = await _touch_gyro_aim()
 		"touch_climb":
 			ok = await _touch_climb(&"climb", 2)
+		"touch_screens":
+			ok = await _touch_screens()
 		"touch_vault":
 			ok = await _touch_vault()
 		"touch_double_tap_vault":
@@ -620,6 +637,16 @@ func _run() -> void:
 			ok = await _trapeze()
 		"touch_title":
 			ok = await _title()
+		"touch_app_leave_ride":
+			ok = await _touch_app_leave_ride()
+		"touch_app_leave_slingshot":
+			ok = await _touch_app_leave_slingshot()
+		"touch_app_leave_hold":
+			ok = await _touch_app_leave_hold()
+		"touch_app_leave_fall":
+			ok = await _touch_app_leave_fall()
+		"touch_app_leave_title":
+			ok = await _touch_app_leave_title()
 		"touch_teeter":
 			ok = await _teeter()
 		"touch_stack_upper":
@@ -634,6 +661,8 @@ func _run() -> void:
 			ok = await _touch_photo_id_radio()
 		"touch_stack":
 			ok = await _stack(InputRouter.Device.TOUCH)
+		"touch_stack_ending":
+			ok = await _stack_ending(InputRouter.Device.TOUCH)
 		"pad_stack":
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":

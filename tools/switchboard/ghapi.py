@@ -40,6 +40,7 @@ MAX_PAGES = 5          # at most 500 items read from any one listing
 ISSUE_ONLY_LABELS = frozenset({"wake:muse"})
 _LABELS_PATH = re.compile(r"repos/[^/]+/[^/]+/issues/(\d+)/labels")
 GET_ATTEMPTS = 3       # GETs are idempotent: bounded retry with full jitter on transport failure
+ESCAPE_FLAG = "--allow-escape-sequences"   # gh refuses a job log's escape bytes without it (run 43489020325)
 RATE_TRIES = 2         # a rate-limited call is tried this often in all, then left for the next sweep
 RATE_BACKOFF_S = 8.0   # the full-jitter ceiling of a rate-limit retry; a Retry-After up to RATE_WAIT_MAX_S wins
 RATE_WAIT_MAX_S = 30.0
@@ -230,10 +231,13 @@ class GitHub:
         else:
             sleep(random.uniform(0, min(RATE_BACKOFF_S, 2.0 ** attempt)))   # full jitter
 
-    def _run(self, method: str, path: str, body: Any = None, accept: str = "", binary: bool = False, token: str = ""):
+    def _run(self, method: str, path: str, body: Any = None, accept: str = "", binary: bool = False, token: str = "",
+             escapes: bool = False):
         args = ["gh", "api", "-X", method, path]
         if not binary:
             args.insert(2, "-i")   # the status and headers: the rate, the ETag, a 304
+        if escapes:   # a job log holds the runner's colour codes: without this gh refuses to output it
+            args.append(ESCAPE_FLAG)
         env = dict(os.environ, GH_TOKEN=token) if token else None   # gh reads GH_TOKEN before anything else
         if accept:
             args += ["-H", f"Accept: {accept}"]
@@ -262,6 +266,10 @@ class GitHub:
                     if out.returncode == 0:
                         return out.stdout
                     detail = out.stderr.decode("utf-8", "replace").strip() or f"exit {out.returncode}, no stderr"
+                    if ESCAPE_FLAG in args and f"unknown flag: {ESCAPE_FLAG}" in detail:
+                        args = [a for a in args if a != ESCAPE_FLAG]   # a gh too old to know it: today's call, at once
+                        attempt -= 1
+                        continue
                 else:
                     status, headers, text = split_response(out.stdout or b"")
                     if not token:   # another token's call (the merge token) has its own limit: not this run's
@@ -306,7 +314,7 @@ class GitHub:
         return self._run("GET", path, accept=accept, binary=True).decode("utf-8", "replace")
 
     def get_bytes(self, path: str) -> bytes:
-        return self._run("GET", path, binary=True)
+        return self._run("GET", path, binary=True, escapes=path.endswith("/logs"))
 
     def paged(self, path: str, key: str = "") -> list:
         sep = "&" if "?" in path else "?"

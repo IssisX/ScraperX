@@ -174,5 +174,5 @@ void run_objectives() {
     }
 }
 
-SCRAPERX_GROUP("objectives", 1100, run_objectives);
+SCRAPERX_GROUP("objectives", 1110, run_objectives);
 SCRAPERX_SLICE("objectives", run_objectives);

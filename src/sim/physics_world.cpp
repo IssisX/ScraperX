@@ -203,6 +203,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         JPH::Vec3(0.0F, 0.5F * kPlayerHalfHeight, 0.0F), JPH::Quat::sIdentity(),
         new JPH::CapsuleShape(0.5F * kPlayerHalfHeight - kPlayerRadius, kPlayerRadius));
     grip_region_shape_ = new JPH::BoxShape(kGripSearchHalf);
+    grip_region_shape_bar_ = new JPH::BoxShape(kBarSearchHalf);
     // A climber's moves are swept with a body 5 cm slimmer than the
     // capsule: a body on its holds already touches the rungs it climbs.
     climb_sweep_shape_ =
@@ -502,6 +503,44 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     }
 
     give_matron_stock();
+
+    // J-094 (#412): the probe plate/pan/stop rig -- proving ground only.
+    // A 25 kg grating plate drops 0.35 m onto a 10 kg pan over a brake stop
+    // (guide governor, 10 kN cap, 50 mm stroke; 120 N guide friction holds
+    // the 98 N pan at rest). The plate is parked 3 m east; the test
+    // teleports it per case. The governor is
+    // a speed regulator: at 10 m/s it regulates descent down the whole
+    // stroke (empty plate bottomed at 3.5 kN peak); at 0.08 m/s it brakes,
+    // so the stack stops where its energy runs out. The pan creeps after
+    // the arrest, so hold/shear reads the dynamic stop point.
+    if (scraperx::sim::is_proving_spawn(initial_spawn)) {
+        kit::Part plate_part;
+        plate_part.half = JPH::Vec3(static_cast<float>(Simulation::kProbePlateHalfM),
+                                    static_cast<float>(Simulation::kProbePlateHalfHeightM),
+                                    static_cast<float>(Simulation::kProbePlateHalfM));
+        plate_part.material = kit::Material::Steel;
+        kit_->add_body(Simulation::kProbePlateEntityId, {plate_part},
+                       JPH::RVec3(Simulation::kProbeRigX + 3.0,
+                                  Simulation::kProbePlateHalfHeightM, Simulation::kProbeRigZ),
+                       JPH::Quat::sIdentity(),
+                       static_cast<float>(Simulation::kProbePlateMassKg), 0.9F);
+        kit::Part pan_part;
+        pan_part.half = JPH::Vec3(static_cast<float>(Simulation::kProbePanHalfM),
+                                  static_cast<float>(Simulation::kProbePanHalfHeightM),
+                                  static_cast<float>(Simulation::kProbePanHalfM));
+        pan_part.material = kit::Material::Steel;
+        const kit::BodyIndex pan_body = kit_->add_body(
+            Simulation::kProbePanEntityId, {pan_part},
+            JPH::RVec3(Simulation::kProbeRigX,
+                       Simulation::kProbePanTopYM - Simulation::kProbePanHalfHeightM,
+                       Simulation::kProbeRigZ),
+            JPH::Quat::sIdentity(), static_cast<float>(Simulation::kProbePanMassKg), 0.9F);
+        const kit::GuideIndex pan_guide = kit_->add_guide(
+            pan_body, JPH::Vec3::sAxisY(),
+            static_cast<float>(-Simulation::kProbeStrokeM), 0.0F, 0.08F,
+            static_cast<float>(Simulation::kProbeStopCapN), 5.0F);
+        kit_->set_guide_friction(pan_guide, 120.0F);
+    }
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
@@ -1657,6 +1696,16 @@ void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {
                 frame(JPH::Vec3(kStackDeckBandDepth * 0.5F, kStackDeckHalfThickness, inner_half),
                       JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
             }
+        }
+        if (level == kStackLevelCount) {
+            // J-043 (#241): the hang rail under the 154 deck's north band,
+            // along the crossing from the bay to the shaft edge (see
+            // kHangRail* in physics_world_tuning.hpp). A static frame body
+            // like the deck slabs, top flush with the soffit.
+            const float half_len = 0.5F * (kHangRailNorthZ - kHangRailSouthZ);
+            frame(JPH::Vec3(0.5F * kHangRailSection, 0.5F * kHangRailSection, half_len),
+                  JPH::RVec3(kHangRailX, kHangRailTopY - 0.5F * kHangRailSection,
+                             0.5F * (kHangRailNorthZ + kHangRailSouthZ)));
         }
     }
 

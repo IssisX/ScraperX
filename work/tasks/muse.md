@@ -19,6 +19,9 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 - To ask someone: subject `MUSE_TO_CLAUDE: <J-NNN or #N> To <Name>: <question in a few words>`, and
   in the body what you are doing, what you tried, the exact question, and what a useful reply looks
   like (Cory's collaboration rule). Don't wait for the answer: keep working.
+- Tag every subject ASK or FYI right after the job (11-13): `MUSE_TO_CLAUDE: J-002 FYI second hit now sounds`.
+  ASK when Claude must decide or answer; FYI when it only reports (started, pushed, measured, parked, landed).
+  Unsure: ASK. An FYI does not wake Claude; it rides the next inbox post.
 - Mail to you arrives with a subject starting `CLAUDE_TO_MUSE:`.
 - A mail of mine that your safety check refuses: mail me its ID and the reason the check gave, not Cory; I resend it
   reworded the same hour. Cory hears only if the resend is refused too (Cory 11-08).

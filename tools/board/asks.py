@@ -80,7 +80,8 @@ OPENS = re.compile(r"^" + _MARKS + r"To\s+(?:the\s+)?(?:" + TARGETS + r")\b")   
 SIGNED = re.compile(r"[ \t]*(?:\((?:from[ \t]+)?|:[ \t*_]*\(?(?:from[ \t]+)?)(" + _SIGNER + r")\b(?!['’]s)")
 VERDICT = re.compile(r"^\*\*(" + TARGETS + r")\b[^\n]*?review of #(\d+)", re.MULTILINE)
 PR_REF = re.compile(r"#(\d+)")
-MAX_PAGES = 10  # bounded: at most 1000 comments read
+MAX_PAGES = 10  # bounded: at most 1000 open issues read
+MAX_COMMENT_PAGES = 40  # bounded: at most 4000 comments read; a full last page is reported, never silent (11-14)
 NOISE = ("<!-- linear-linkback", "You have reached your Codex")
 LEDGER_MARK = "<!-- switchboard:ledger "   # in the switchboard ledger's notices (tools/switchboard/ledger.py)
 BRIDGE_POST = "**Muse (via email bridge)"   # the first line of every inbound bridge post: Muse writing to Claude
@@ -349,8 +350,10 @@ def main() -> int:
             break
 
     comments = []
-    for page in range(1, MAX_PAGES + 1):
+    truncated = False
+    for page in range(1, MAX_COMMENT_PAGES + 1):
         batch = gh(f"repos/{args.repo}/issues/comments?since={since}&per_page=100&page={page}")
+        truncated = len(batch) == 100 and page == MAX_COMMENT_PAGES
         for c in batch:
             comments.append({
                 "id": str(c.get("id")),
@@ -377,6 +380,8 @@ def main() -> int:
     for _, _, text in sorted(open_asks, key=lambda x: (x[0], -x[1])):
         print(text)
     print(f"OPEN ASKS: {len(open_asks)} (posted after {since}, open threads only)")
+    if truncated:   # 11-14: a 7-day read hit the old 1000-comment cap and dropped every recent ask, silently
+        print(f"TRUNCATED: read stopped at {MAX_COMMENT_PAGES * 100} comments; newer asks are missing. Use a shorter --hours.")
     return 0
 
 

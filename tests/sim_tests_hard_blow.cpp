@@ -7,8 +7,8 @@
 // heaved at a pest coming upright puts her down, up again a few seconds
 // later, nobody dead. This file proves the rest: the dangerous and changed
 // throws, the low toolbox that downs a changed Matron, the bare punch at every
-// stage, the hold-escape window an object blow opens, and the stock along
-// the route.
+// stage, the hold-escape window an object blow opens, the heavy piece dropped
+// on a charging Matron, and the stock along the route.
 #include "sim_tests.hpp"
 
 #include "sim/loose_stock.hpp"
@@ -534,6 +534,141 @@ void run_hard_blow_hold() {
     std::cout << "PASS scraperx_sim hard blow hold: the grab breaks, he walks clear\n";
 }
 
+// A heavy piece released above a charging Matron: the sleeper (90 kg, over
+// the 40 kg from-above bar) let go over her path as she hunts at her hunt
+// speed, crouched, her take bar 1.90 m/s. A thrown toolbox reads 0.80 m/s
+// and cannot take her balance at that bar; only a falling heavy piece can,
+// because the blow from above zeroes her step (her reach is nothing under a
+// weight coming down on her), so the same blow that would only stagger her
+// faced puts her down — at stage 2, a drum at her face only staggers her,
+// however hard (run_matron_balance). The drum was the first try and it does
+// not clear the bar: its best read over eight configurations is 1.897,
+// three thousandths short, and the gate fix for it was ruled out (the
+// from-above share only counts while the piece enters the tick falling
+// faster than 4 m/s and above her centre, and the drum sheds its speed
+// sliding off her). The 60 kg gas bottle reads about 2.07, under the 10%
+// margin over the bar (2.09), so the sleeper is the lightest piece that
+// clears it: a 90 kg sleeper falling 8.26 m/s reads 3.38 stopping dead
+// (blow = fall speed x 90 / 220), and the ruling measured about 3.1. The
+// release is the pipe drop's own: the sleeper let go over where she will be
+// a fall-time on, from 4.3 m up, at -2.0 m/s — under the 4.0 m/s from-above
+// bar, so the blow's speed is gravity's alone, not the release's. The
+// sleeper lies flat, 3 m long along z, so it meets her across her whole
+// top; the run prints the blow it reads. She goes down for her stage's
+// seconds, alive, and has her feet back after — when the blow clears the
+// bar.
+void run_hard_blow_drop() {
+    Simulation s(InitialSpawn::Deck154);
+    to_her_post(s);
+    // The piece is a sleeper, not a throwable: scan the stock for the first
+    // one (90 kg) and launch that. The throwables at her deck hold only
+    // toolboxes and the drum, and the drum cannot clear the bar.
+    std::uint32_t sleeper_piece = s.loose_stock_count();
+    for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+        if (static_cast<LooseStock::Kind>(s.loose_stock_piece(i).kind) == LooseStock::Kind::Sleeper) {
+            sleeper_piece = i;
+            break;
+        }
+    }
+    require(sleeper_piece < s.loose_stock_count(), "hard blow drop: a sleeper stands in the world");
+    const std::uint32_t sleeper = s.kit_body_index(LooseStock::kFirstEntity + sleeper_piece);
+    // West along the north band, stopping the moment she bursts: she then
+    // charges the band at him, and the drop is timed on her charge, not on a
+    // guess at her burst.
+    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        s.debug_set_matron_stage(2);
+        if (s.matron_state().state == kStateHunting) {
+            break;
+        }
+        if (steer(s, -16.0, Matron::kBandNorthZ, false)) {
+            break;
+        }
+        tick(s);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    const auto from = s.snapshot().player_position;
+    // She charges: hunting, at her hunt speed, crouched, before her Turn can
+    // fire (it needs half a second of sight inside 13 m) and with room still
+    // between her and him. The sleeper goes over where she will be a fall-time
+    // on — 4.3 m over her centre takes 0.75 s to fall — on her line to him.
+    // The lead is her speed times the fall time along her facing, where she
+    // is heading. Measured with the drum: at 5.08 m/s she covers 0.8 m more
+    // than the lead says in the fall, and the line to him sits 0.57 m north
+    // of where she runs. The sleeper's 3 m length lies along z, so it covers
+    // her z-line with room; the x-timing still has to land her under its
+    // 0.25 m width. The from-above share only counts while the piece enters
+    // the tick falling faster than 4 m/s and above her centre.
+    bool released = false;
+    double release_speed = 0.0;
+    double release_d = 0.0;
+    Vector3 drop_at{};
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !released; ++i) {
+        s.debug_set_matron_stage(2);
+        tick(s);
+        const auto m = s.matron_state();
+        const auto me = s.snapshot().player_position;
+        const double d = std::hypot(m.position.x - me.x, m.position.z - me.z);
+        if (m.state == kStateHunting && m.stage == 2 && m.turn == 0 && m.speed >= 6.5 && d >= 6.0) {
+            const double lead = m.speed * 0.75;
+            const double fx = std::sin(m.yaw);
+            const double fz = std::cos(m.yaw);
+            drop_at = {m.position.x + fx * lead, m.position.y + 4.3, m.position.z + fz * lead};
+            s.debug_launch_kit_body(sleeper, drop_at, {0.0, -2.0, 0.0});
+            released = true;
+            release_speed = m.speed;
+            release_d = d;
+        }
+    }
+    const auto deaths0 = s.snapshot().death_count;
+    const auto catches0 = s.matron_state().catches;
+    const auto stags0 = s.matron_state().staggers;
+    const auto downs0 = s.matron_state().knockdowns;
+    std::cout << "  hard blow drop: released=" << released << " her speed " << release_speed << " m/s, " << release_d
+              << " m off, he walked to (" << from.x << ", " << from.z << "), drop over (" << drop_at.x << ", "
+              << drop_at.y << ", " << drop_at.z << ")\n";
+    require(released, "hard blow drop: the sleeper let go over her path as she charges");
+    const auto her0 = s.matron_state();
+    const double floor_y = her0.floor_y;
+    const double y = her0.position.y;
+    int worst = -1;
+    double blow = 0.0;
+    double sleeper_vy_at_hit = 0.0;
+    bool hit_read = false;
+    for (int i = 0; i < static_cast<int>(2.0 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        s.debug_set_matron_stage(2);
+        // The sleeper's speed carried into the contact: a square hit slows it in
+        // the first contact tick, so the speed read after the tick does not
+        // show how fast it was falling when it met her.
+        const double sleeper_vy_before = s.kit_body_velocity(sleeper).y;
+        tick(s);
+        const auto m = s.matron_state();
+        blow = std::max(blow, m.blow_mps);
+        if (!hit_read && m.blow_mps > 0.0) {
+            hit_read = true;
+            sleeper_vy_at_hit = sleeper_vy_before;
+        }
+        if (m.state == kStateDown || (m.state == kStateStaggering && worst < 0)) {
+            worst = m.state;
+        }
+    }
+    const auto m = s.matron_state();
+    const auto piece_end = s.kit_body_position(sleeper);
+    std::cout << "  hard blow drop changed: blow=" << blow << " m/s, worst=" << worst << ", staggers="
+              << (m.staggers - stags0) << ", knockdowns=" << (m.knockdowns - downs0) << ", sleeper vy at hit "
+              << sleeper_vy_at_hit << " m/s, sleeper ends (" << piece_end.x << ", " << piece_end.y << ", " << piece_end.z << "), her centre ("
+              << m.position.x << ", " << m.position.y << ", " << m.position.z << ")\n";
+    require(hit_read && blow >= 1.90,
+            "hard blow drop: the falling sleeper clears her 1.90 m/s take bar");
+    require(sleeper_vy_at_hit < -4.0, "hard blow drop: the sleeper was falling faster than 4 m/s when it met her");
+    require(worst == kStateDown && m.knockdowns - downs0 == 1 && m.staggers - stags0 == 0,
+            "hard blow drop: a falling heavy piece puts a charging, fully changed Matron down");
+    require(m.alive && s.snapshot().death_count == deaths0 && s.matron_state().catches == catches0,
+            "hard blow drop: down, alive, nobody dead, nobody taken");
+    require(rises(s, floor_y, y, 3.0), "hard blow drop: up again, on her deck, alive");
+    std::cout << "PASS scraperx_sim hard blow drop: charging down, up again\n";
+}
+
 // The stock that can do it is reachable along the route at each stage: on
 // every deck the route climbs, a piece the hands carry (at most the carry's
 // grip, LooseStock::heavy) lies on the ring round the shaft. The bands are
@@ -607,6 +742,7 @@ void run_hard_blow() {
     run_hard_blow_throw();
     run_hard_blow_low();
     run_hard_blow_hold();
+    run_hard_blow_drop();
     run_hard_blow_stock();
     std::cout << "PASS scraperx_sim hard blow\n";
 }
