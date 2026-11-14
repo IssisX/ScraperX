@@ -1434,6 +1434,10 @@ void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const
     own_drive_ = false;   // thrown: what he meets on this flight is a blow
 }
 
+void Simulation::PhysicsWorld::clear_corpses_for_test() noexcept {
+    corpses_->clear();
+}
+
 void Simulation::PhysicsWorld::remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
     // A proving-ground fixture is never built in the game's world.
     if (body_id.IsInvalid()) {

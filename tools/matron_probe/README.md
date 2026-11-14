@@ -42,7 +42,8 @@ the game's float32 rounding).
 Fails (exit 1, last line `MATRON_DRAWN FAIL: ...`) on a bone drawn more than 5% over its rest length, a drawn
 hand more than 3 cm from the grip the sim says it holds (in a hold, the held ankle: the point her fingers
 hold on him by the native's grip, `held_ankle`, not her hand's commanded target; on a climb or pipe,
-`contact_hand` and `contact_hand2`), a foot that slides more than 5 cm while she stands, and hair or skirt
+`contact_hand` and `contact_hand2`), a foot that slides more than 5 cm while she stands, a drawn joint
+turning faster than 20 rad/s (rule 37), and hair or skirt
 more than 3 mm inside her body. The tolerances are the law; a known defect is listed in
 `EXPECTED`, keyed by (check, scenario), with the exit-board item that fixes it and its measured failing count
 and worst amount. It is strict both ways: more failures than 10% (at least 3) over the count, or a worst

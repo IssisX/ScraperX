@@ -31,9 +31,8 @@ it to match, never ask him again.
   answer: a Fable 5.2 helper (`model: fable`); nothing waits (11-12).
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Claude picks each helper's
-  effort and tells him in one line; he changes it if he wants (11-13: "I don't want to have to name every single time").
-- Claude types no clock time (11-11): an event is named by its link; a time decision
-  runs `date`. Hooks refuse them; `time_audit.py` counts slips.
+  effort and tells him in one line; he changes it if he wants (11-13).
+- Every time comes from the clock reading added to each of his messages, or `date`; never memory (11-14).
 
 ## Test only what a change reaches
 
@@ -48,9 +47,9 @@ it to match, never ask him again.
 ## Talking to Cory (he is on a phone)
 
 - **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
-  faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
-  unclear input gets one simple follow-up on what he means before acting, never on wording.
-- SIMPLE, every message: a few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan: answer it, no warning him off (11-13). What happened, why, the fix; progress is what is left.
+  faster without waste; if the literal reading fails, do the sensible thing and say why. Speech-to-text mishears him (11-14): read for meaning; rough or
+  unclear input gets one simple follow-up on what he means, never on wording.
+- SIMPLE AND CONCISE, every message (11-14): few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan (11-13). What happened, why, the fix; progress is what is left.
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links. For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03). Still his: Claude
@@ -59,7 +58,7 @@ it to match, never ask him again.
   loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
   ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
-- Never ask him to merge, approve or review, except what this session's safety check refuses (say it once).
+- Never ask him to merge, approve or review (bar what the safety check refuses).
 - Say unasked, at once: your own mistakes, the system's holes, a better way, and any setting (effort, model) that
   changes how Claude works for him (11-07, 11-11).
 
@@ -112,9 +111,10 @@ it to match, never ask him again.
 - Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
   loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
 - **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
-  a new job gets a fresh helper, never a resumed one (11-13). Ask Cory before a second session. Stopping a working helper
-  is Cory's call: give him its run time, model, effort (11-12).
+  a new job gets a fresh helper, never a resumed one (11-13). This app starts every helper in the
+  background, even when asked not to (38 of 38, 11-14); each report wakes this big context. Ask before a 2nd session. Stopping a working helper
+  is Cory's call (11-12).
 - **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
-  current; after a compact re-read it, this file and the hourly file, and say what may be lost.
+  current; after a compact re-read it, this file and the hourly file, and name what was lost (always something, 11-14).
 - **Keep reads small:** subscribe only to PRs you merge; big reads go to a helper; read only what a job needs. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

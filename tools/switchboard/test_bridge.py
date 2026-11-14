@@ -16,6 +16,7 @@ import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "board"))   # tools/board/asks.py
 
 import switch  # noqa: E402
 
@@ -117,24 +118,15 @@ class Record(unittest.TestCase):
         cls.team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
 
     def test_the_mail_itself_would_act_if_posted_as_it_is(self):
-        # the control: posted raw under this login, the same text is a command, a budget and a keep
-        import ledger
-        import reconciler
+        # the control: posted raw under this login, the same text is a budget
         import rules
-        self.assertTrue(list(reconciler.CMD.finditer(self.mail)))
         self.assertEqual(rules.budget_override([(self.mail, self.login)], self.team), "500")
-        self.assertTrue(ledger.KEEP.findall(self.mail))
 
     def test_no_line_of_the_record_is_a_command_a_budget_or_a_keep(self):
-        import ledger
-        import reconciler
         import rules
-        self.assertEqual(list(reconciler.CMD.finditer(self.body)), [])
         self.assertEqual(rules.budget_override([(self.body, self.login)], self.team), "")
-        self.assertEqual(ledger.KEEP.findall(self.body), [])
 
     def test_the_record_is_never_a_verdict(self):
-        import ledger   # puts tools/board on the path
         import asks
         import rules
         self.assertIsNone(rules.parse_verdict(self.body, "2026-11-10T15:00:00Z", self.login, self.team))
@@ -144,28 +136,20 @@ class Record(unittest.TestCase):
         self.assertEqual(sw.bridged_verdicts(343, [c]), [])
         self.assertEqual(asks.VERDICT.findall(self.body), [])
         self.assertIsNone(rules.parse_codex_state(self.body, "2026-11-10T15:00:00Z", self.login))
-        del ledger
 
     def test_the_record_holds_no_marker_and_no_mention(self):
-        import ledger
-        import reconciler
         import re
         self.assertNotIn("<!--", self.body)
-        for marker in (switch.MUSE_KEYS, switch.INBOX_KEYS, switch.PIPE_KINDS, switch.BRIDGE_TOLD, ledger.NOTICE_KEYS,
-                       reconciler.SENT_RE):
+        for marker in (switch.MUSE_KEYS, switch.INBOX_KEYS, switch.PIPE_KINDS, switch.BRIDGE_TOLD):
             self.assertEqual(marker.findall(self.body), [], marker.pattern)
         self.assertIsNone(re.search(r"@(?=[\w-])", self.body))
         self.assertFalse(self.body.lstrip().startswith(switch.BRIDGE_POST))
 
     def test_the_trackers_read_it_as_claudes_post_to_muse_and_as_the_answer_to_her_ask(self):
         import datetime as dt
-        import ledger   # puts tools/board on the path
         import asks
-        import reconciler
         self.assertEqual(asks.author(self.body), "Claude")
-        self.assertEqual(reconciler.poster(self.body), "Claude")
         self.assertIn("Muse", asks.addressees(self.body))
-        self.assertIn("Muse", reconciler.addressees(self.body))
         t = dt.datetime(2026, 11, 10, 15, 0, tzinfo=dt.timezone.utc)
         ask = {"id": "1", "n": 350, "t": t, "url": "u1",
                "body": "**Muse (via email bridge): J-044 To Claude: take the wreck fix?**\n\nWhich one?"}
@@ -174,7 +158,6 @@ class Record(unittest.TestCase):
         to_claude = lambda cs: [a["id"] for a in asks.unanswered(cs, {350}, start) if a["target"] == "Claude"]  # noqa: E731
         self.assertEqual(to_claude([dict(ask)]), ["1"])                    # Muse's ask, open until Claude answers
         self.assertEqual(to_claude([dict(ask), dict(record)]), [])        # the record of Claude's mail answers it
-        del ledger
 
     def test_the_record_never_wakes_the_integrator_about_its_own_mail(self):
         import test_inbox as ti

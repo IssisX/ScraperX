@@ -259,6 +259,41 @@ func _save(device: int) -> bool:
 	await _seconds(0.5)
 	if not bool(_native().is_player_grounded()) or _position().y < 44.0:
 		return _fail("not standing on deck 4 after the load (y %.2f)" % _position().y)
+	# A relaunch in the middle of the climb (J-116): ride S2 up to Deck 6,
+	# save there, ride C2 on to Deck 8, then load the Deck 6 save as a
+	# relaunch would: the player, S2's cage and the death count come back
+	# as saved, not as the climb left them.
+	if not await _stack_s2(device):
+		return false
+	_main._save_enabled = true
+	_main._save_climb(true)
+	if not FileAccess.file_exists(path):
+		return _fail("no save written on Deck 6")
+	var mid_saved: Vector3 = _native().get_checkpoint_position()
+	var mid_s2 := float(_native().get_stack_s2_cage_travel())
+	var mid_deaths := int(_native().get_death_count())
+	var mid_bytes := FileAccess.get_file_as_bytes(path)
+	# Pin the Deck 6 save: the game writes a save every frame the
+	# checkpoint commits change, so riding C2 with autosave on would
+	# overwrite this file with Deck 8 before the relaunch load reads it.
+	_main._save_enabled = false
+	if not await _stack_c2(device):
+		return false
+	if not _main.load_saved_climb():
+		return _fail("the mid-climb save was not loaded")
+	var mid_loaded := _position()
+	if mid_loaded.distance_to(mid_saved) > 0.05 or int(_native().get_death_count()) != mid_deaths:
+		return _fail("relaunch loaded at (%.2f, %.2f, %.2f), deaths %d; saved (%.2f, %.2f, %.2f), deaths %d" % [
+			mid_loaded.x, mid_loaded.y, mid_loaded.z, int(_native().get_death_count()), mid_saved.x, mid_saved.y, mid_saved.z, mid_deaths])
+	await _seconds(0.5)
+	if not bool(_native().is_player_grounded()) or _position().y < 66.5:
+		return _fail("not standing on Deck 6 after the relaunch (y %.2f)" % _position().y)
+	if absf(float(_native().get_stack_s2_cage_travel()) - mid_s2) > 0.05:
+		return _fail("S2's cage travel %.2f after the relaunch, saved %.2f" % [
+			float(_native().get_stack_s2_cage_travel()), mid_s2])
+	# The cut-short test below truncates the mid-climb save.
+	bytes = mid_bytes
+	_main._save_enabled = false
 	var cut := FileAccess.open(path, FileAccess.WRITE)
 	cut.store_buffer(bytes.slice(0, bytes.size() >> 1))
 	cut.close()
@@ -277,7 +312,7 @@ func _save(device: int) -> bool:
 	if FileAccess.file_exists(path):
 		return _fail("NEW CLIMB's discard left the save")
 	DirAccess.remove_absolute(path + ".bad")
-	_detail = "bytes=%d saved_y=%.2f" % [bytes.size(), saved.y]
+	_detail = "bytes=%d saved_y=%.2f mid_y=%.2f mid_s2=%.2f" % [bytes.size(), saved.y, mid_saved.y, mid_s2]
 	return true
 
 # The Stack from the game's own start at grade to the 220 m ring, on the

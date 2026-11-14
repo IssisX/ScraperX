@@ -6,7 +6,6 @@ name: Switchboard
 run-name: >-
   ${{ github.event_name == 'workflow_dispatch' && (inputs.part == 'ask' && (inputs.dry_run &&
   'Switchboard reviews DRY run (takes no action)' || 'Switchboard reviews') ||
-  inputs.provision && 'Switchboard provision' ||
   inputs.dry_run && 'Switchboard DRY run (takes no action)' || inputs.digest && 'Switchboard digest' ||
   inputs.bridge_version && format('Switchboard sweep (bridge {0})', inputs.bridge_version) ||
   'Switchboard sweep') || github.event_name == 'schedule' && (github.event.schedule == '0 12,13 * * *' &&
@@ -53,10 +52,6 @@ on:
         description: Post (or print) the digest now
         type: boolean
         default: false
-      provision:
-        description: One-time setup of the hosted API agent (creates its environment, agent and vault)
-        type: boolean
-        default: false
       # J-072: sent by the Muse bridge's clock (muse_bridge.gs BRIDGE_VERSION); it only names the run.
       bridge_version:
         description: The live Muse bridge's version (set by the bridge's clock; leave empty)
@@ -87,20 +82,18 @@ concurrency:
   # sweeps were replaced. Each group runs one run at a time, and each run restores and saves only its own part's ETag
   # file (cache-in, cache-out), so each file still has one writer at a time, and only the steer part keeps ledger
   # timers. A needs:orchestrator label starts no job any more (ask runs only in a reviews run), so its run is idle.
-  # The one-time provision dispatch gets its own group: in the shared one a newer queued run replaces it.
   # A comment or label event that the jobs below will skip gets a group of its own too (11-03): GitHub keeps
   # one pending run per group and cancels the older one, so idle comment runs, several a minute, were
   # displacing the proof-finished and scheduled runs that do the reviews, the eye and the sweep.
   group: >-
     ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) ||
     inputs.part == 'ask' && 'switchboard-ask' ||
-    (inputs.provision && 'switchboard-provision' ||
     (((github.event_name == 'issue_comment' && !(github.event.issue.pull_request &&
     (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
     contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
     contains(github.event.comment.body, 'codex-review-receipt')))) ||
     (github.event_name == 'issues' && !startsWith(github.event.label.name, 'owner:'))) &&
-    format('switchboard-idle-{0}', github.run_id) || 'switchboard')) }}
+    format('switchboard-idle-{0}', github.run_id) || 'switchboard') }}
   cancel-in-progress: false
 
 env:
@@ -153,7 +146,7 @@ jobs:
   # state never diverges, and a cached ledger timer (the steer part's) never fires twice.
   cache-in:
     if: >-
-      github.ref == 'refs/heads/ScraperX-Claude' && github.event_name != 'pull_request' && !inputs.provision && (
+      github.ref == 'refs/heads/ScraperX-Claude' && github.event_name != 'pull_request' && (
         github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:')
       ) && (
         github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
@@ -263,38 +256,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
           overwrite: true
-
-  # One-time setup of the hosted API agent (step C): only on a dispatch with provision=true. It prints
-  # the new ids to the run summary for work/budget.yml; it never prints a secret.
-  provision:
-    # J-057: ANTHROPIC_API_KEY and AGENT_GITHUB_TOKEN live only in this environment (deploys only from ScraperX-Claude),
-    # like the merge token, so no branch's copy of any workflow can read them.
-    environment: switchboard-merge
-    if: github.event_name == 'workflow_dispatch' && inputs.provision
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Check out trunk
-        env:
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          git clone -q --filter=blob:none --branch "$TRUNK" --single-branch "https://github.com/${REPO}.git" src
-      - name: Install the hash-pinned dependencies (wheels only)
-        run: |
-          set -euo pipefail
-          python3 -m venv .venv
-          .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
-            -r src/tools/switchboard/requirements.txt
-      - name: Create the environment, agent and vault
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          .venv/bin/python src/tools/switchboard/provision_agent.py
 
   # The free part: the merge rule, review asks, one owner per issue, the digest. No API key.
   steer:

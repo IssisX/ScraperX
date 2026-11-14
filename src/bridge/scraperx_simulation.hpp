@@ -299,6 +299,8 @@ public:
     // A saved climb (Simulation::save_game / load_game), as bytes.
     [[nodiscard]] godot::PackedByteArray get_save_game() const;
     [[nodiscard]] bool load_save_game(const godot::PackedByteArray &bytes);
+    // Why the last load was refused, empty when it was not refused.
+    [[nodiscard]] godot::String get_save_reject_reason() const;
     [[nodiscard]] godot::Dictionary get_lift_state() const;
 
     // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): a delivery

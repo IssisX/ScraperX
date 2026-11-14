@@ -7,7 +7,7 @@ head it acts on, or idempotent at GitHub (a merge names the head sha it merges).
 
 Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
-         a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
+         a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the watcher of orchestrator sessions
   steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
          issue, opening PRs for finished fb-bot/ and claude/ integrate-* branches, the 7:00 AM Central digest, and
          after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051; QUEUE-LOW when
@@ -84,7 +84,6 @@ def built_run(jobs: list[dict]) -> bool:
 
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
-STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switchboard/reconciler.py, J-072)
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
@@ -93,6 +92,14 @@ MUSE_LABEL = "wake:muse"
 # names none and no sweep has found one (#340 opened 11-09, when #107 closed).
 BOARD_LABEL = "board"
 BOARD_ISSUE = 340
+# J-072 (#350): the board rolls itself (Switch.board_roll). The board went past its 100-comment cap three times (the
+# last at 235) waiting for a human to roll it. At BOARD_ROLL_AT comments a sweep opens the next board (labeled, the old
+# body, a BOARD_FROM mark naming the old one) and takes the label off the old one; a later sweep closes the old one
+# (work/CONTEXT.md: closing #340 mid-sweep let that sweep post on a closed board).
+BOARD_ROLL_AT = 90
+BOARD_FROM_MARK = "<!-- switchboard:board-from #{old} -->"
+BOARD_FROM = re.compile(r"^<!-- switchboard:board-from #(\d+) -->$", re.MULTILINE)
+BOARD_CONTINUES = re.compile(r"^_Continues #\d+[^\n]*_\n?", re.MULTILINE)
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
@@ -103,6 +110,8 @@ MAX_AUTO_PRS = 10                  # PRs the auto-open opens in one sweep (J-047
 # The branches the switch opens a PR for by itself (J-047), integrate-protected-* too. claude/ since 11-13: a PR a
 # helper opened by hand subscribed the integrator session to it, so every event on it woke the integrator (#497, #498).
 AUTO_PR_PREFIX = ("fb-bot/integrate-", "claude/integrate-")
+AUTO_PR_OLD = dt.timedelta(days=7)   # #350: a head this old, its AUTO-PR-FAILED listed once, is never listed again
+MAX_AUTO_PR_OLD = 500                # such heads kept in the sweep state ("auto_pr_old")
 # GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
 AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
@@ -131,7 +140,9 @@ MAX_INBOX_KEYS = 600                           # keys kept in the sweep state's 
 # for the sweep state: the relay to the session cuts a comment near 4,000 characters, and the keys were most of it.
 INBOX_HOLD = dt.timedelta(minutes=30)
 INBOX_MAX_CHARS = 3500                         # a comment's whole text, under the relay's cut with room to spare
-PLAN_WAKES = frozenset({"claude", "integrator"})   # a late job's next step owed by these reaches the integrator
+# a late job's next step owed by these reaches the integrator. #350: "switchboard" too: a step the switch owes itself
+# and has not taken (J-049's proof read, J-072's PR open) is the integrator's to fix, and else reached nobody
+PLAN_WAKES = frozenset({"claude", "integrator", "switchboard"})
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
 MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
 MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
@@ -215,9 +226,24 @@ MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a b
 PIPE_HEADER = "Claude (integrator): PIPE ALARM:"
 PIPE_MARK = "<!-- switchboard:pipe-alarm kinds={kinds} -->"
 PIPE_KINDS = re.compile(r"^<!-- switchboard:pipe-alarm kinds=([a-z,]*) -->$", re.MULTILINE)
+# #350: the all-clear when a tripped pipe is healthy again. It starts CLAUDE_TO_MUSE: (the bridge mails only that); its
+# mark keeps it from counting as an ask to Muse (inbound_quiet, the fast sweep's pipe trigger)
+PIPE_OK_HEAD = "CLAUDE_TO_MUSE: PIPE OK on #{board}:"
+PIPE_OK_MARK = "<!-- switchboard:pipe-ok -->"
 PIPE_WAKE_STUCK = dt.timedelta(minutes=20)    # a wake:muse label this old: the bridge's outbound is stuck (it runs every 5 min)
 PIPE_INBOUND_QUIET = dt.timedelta(hours=24)   # no bridge post this long while asks went to Muse: its inbound is stuck
 PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound incident is read; older, it alarms again
+# #350 (run 43587341746: 12 h with no Muse push and no mail either way, 13 Muse lanes late, and nothing woke anyone;
+# inbound_quiet needs a CLAUDE_TO_MUSE ask in its day). While a Muse lane is in flight, this long with no fb-bot push
+# and no bridge post is one QUIET item to the integrator, at most once per MUSE_QUIET_AGAIN while it lasts.
+MUSE_QUIET = dt.timedelta(hours=1)        # Cory 11-14: Muse posts about every half hour; 6 h was far too long
+MUSE_QUIET_AGAIN = dt.timedelta(hours=2)
+# #350 (J-124, J-078): a TO-CLAUDE ask that names a job stays open in the sweep state until a later Claude comment or
+# mail names the job, and is listed again at most once per ASK_AGAIN while it is open. At most MAX_OPEN_ASKS kept.
+ASK_AGAIN = dt.timedelta(hours=1)          # Cory 11-14: an ask to Claude is answered within the hour
+MAX_OPEN_ASKS = 50
+ASK_FIELDS = ("job", "target", "at", "listed", "said", "url")   # one open ask in the sweep state, every field a string
+JOB_NAMED = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")   # machine.JOB_ID
 BRIDGE_POST = "**Muse (via email bridge)"     # the first line of every inbound bridge post
 LEDGER_NOTICE = "<!-- switchboard:ledger keys="   # the hidden marker of a ledger notice (ledger.py NOTICE_MARK)
 # J-072: the live bridge's version. muse_bridge.gs's BRIDGE_VERSION is bridge_version() of its own text; its clock
@@ -345,6 +371,23 @@ def no_verdict(text: str) -> str:
     return VERDICT_TRIGGER.sub(" -", text)
 
 
+def board_next(old: dict) -> tuple[str, str]:
+    """The next board's (title, body) from the old one's listing item (board_roll): "Board: live jobs (5)" becomes
+    "(6)" (a title with no number gets " (2)"); the body is the old one's as it stands, its "# " heading (if it starts
+    with one) the new title, an earlier roll's mark and line taken out, and a line and BOARD_FROM mark naming the
+    board it continues put under the heading."""
+    number, title = old["number"], str(old.get("title") or "Board: live jobs").rstrip()
+    m = re.search(r"\((\d+)\)$", title)
+    new_title = f"{title[:m.start()].rstrip()} ({int(m.group(1)) + 1})" if m else f"{title} (2)"
+    body = BOARD_FROM.sub("", BOARD_CONTINUES.sub("", str(old.get("body") or ""))).lstrip("\n")
+    head = ""
+    if body.startswith("# "):   # the old heading names the old board: the new one's own name
+        head, body = f"# {new_title}\n\n", body.partition("\n")[2].lstrip("\n")
+    note = (f"_Continues #{number}, rolled by the switchboard at {old.get('comments')} comments; its comments stay "
+            f"there._\n{BOARD_FROM_MARK.format(old=number)}\n\n")
+    return new_title, head + note + body
+
+
 def hours(span: dt.timedelta) -> str:
     return f"{span.total_seconds() / 3600:.1f} h"
 
@@ -454,6 +497,29 @@ def muse_routine(first: str, body: str) -> str:
     if kind:
         return "" if MUSE_WAKES.search(FAILING_FIRST.sub(" ", ACK_ID.sub("", body))) else kind
     return "FYI" if muse_report(title, body) else ""
+
+
+def ask_said(kind: str, first: str) -> str:
+    """An ask's first line as an inbox line shows it: bounded, no mention, nothing that wakes the switchboard."""
+    said = first if kind == "TO-CLAUDE" else "Muse: " + first[len(BRIDGE_POST):].strip(": *")
+    return no_verdict(plain(said[:100]))
+
+
+def thread_job(thread: dict | None) -> str:
+    """The job an open issue or PR is (#350): a PR's `Job: J-NNN` line, an issue's title; "" for neither."""
+    if not isinstance(thread, dict):
+        return ""
+    if thread.get("pull_request") is not None:
+        return rules.job_of_pr(thread.get("body") or "")
+    return rules.job_of_title(thread.get("title") or "")
+
+
+def same_job(job: str, named) -> bool:
+    """Does an id in `named` name `job` (#350)? The same id, or one is the other's base (J-044c and J-044): a
+    split's answer answers its base's ask, and the base's answers the split's."""
+    def base(j: str) -> str:
+        return j.rstrip("abcdefghijklmnopqrstuvwxyz")
+    return any(n and (n == job or n == base(job) or base(n) == job) for n in named)
 
 
 def unquoted(body: str) -> str:
@@ -750,6 +816,8 @@ class Switch:
                 raise
             got, why = [], f"the open issues labeled `{BOARD_LABEL}` could not be read ({plain(str(err)[:160])})"
         found = sorted(self._issue_numbers(got))
+        self._board_listing = {it["number"]: it for it in (got if isinstance(got, list) else [])   # board_roll's
+                               if isinstance(it, dict) and it.get("number") in found} or None   # count, no new read
         last = 0 if fresh else self._last_board()
         if found:
             board = found[-1]
@@ -766,11 +834,6 @@ class Switch:
             self._board_warn(f"{why} and no sweep has found one: using the fallback, #{board}")
         self._board_issue = board
         return board
-
-    def board_known(self) -> int:
-        """The board with no read, for a fast sweep's part that sends from the full pass's reading (the ledger clock):
-        this run's if it was read, else the last one a sweep found, else BOARD_ISSUE."""
-        return getattr(self, "_board_issue", None) or self._last_board() or BOARD_ISSUE
 
     def _last_board(self) -> int:
         """The last board a sweep found, kept in the sweep state; 0 when it holds none (or anything but a number)."""
@@ -799,8 +862,134 @@ class Switch:
         label = urllib.parse.quote(BOARD_LABEL, safe="")
         got = self.gh.get(f"repos/{self.gh.repo}/issues?labels={label}&state=closed&sort=created&direction=desc"
                           "&per_page=30")   # one page: the newest closed ones
-        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS)) - {self.board_issue()}
+        live = self.board_issue()
+        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS) | set(self.rolled_boards())) - {live}
         return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
+
+    # ---------- the board roll (J-072, #350) ----------
+    def rolled_boards(self) -> list[int]:
+        """The boards board_roll moved away from: they lose the label, so old_boards' closed listing misses them,
+        and their muse and plan marks must still count. The live board's BOARD_FROM mark (no state needed) and the
+        sweep state's roll record (the board before, and the ones before it)."""
+        item = (getattr(self, "_board_listing", None) or {}).get(getattr(self, "_board_issue", None)) or {}
+        m = BOARD_FROM.search(str(item.get("body") or ""))
+        rec = self._roll_record() or {}
+        return ([int(m.group(1))] if m else []) + ([rec["old"]] + rec["past"] if rec else [])
+
+    def _roll_record(self) -> dict | None:
+        """The sweep state's last roll, {old, new, closed, past}, or None when it holds none (or anything else)."""
+        rec = self.gh.state.get("board_roll") if isinstance(getattr(self.gh, "state", None), dict) else None
+        if not isinstance(rec, dict) or not all(type(rec.get(k)) is int and rec[k] > 0 for k in ("old", "new")):
+            return None
+        past = rec.get("past") if isinstance(rec.get("past"), list) else []
+        past = [n for n in past if type(n) is int and n > 0]
+        return {"old": rec["old"], "new": rec["new"], "closed": rec.get("closed") is True, "past": past}
+
+    def board_roll(self) -> None:
+        """#350: the switch rolls the board at BOARD_ROLL_AT comments, in steps a later sweep can finish. Each step
+        is decided from GitHub's listing of the open `board` issues, the read board_issue already made this run
+        (none made: only a recorded close can run), so a normal pass costs no call:
+        1. a roll an EARLIER sweep recorded: the old board is closed (never by the sweep that rolled, CONTEXT.md;
+           checked on GitHub first, _board_close);
+        2. the newest labeled board names (BOARD_FROM) another still labeled: a sweep died after opening it, so the
+           label comes off the old one, then the notices and the record (no second board is opened);
+        3. the live board names one no longer labeled and the state has no record of it: a sweep died after the
+           label came off, so only the record is written (the next sweep closes it);
+        4. one labeled board at BOARD_ROLL_AT comments or more: the next one is opened (labeled, board_next), then
+           step 2 runs at once.
+        Two labeled boards neither names stay as they are (board_issue's WARN). A dry run prints and records nothing."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
+        rec = self._roll_record()
+        if rec and not rec["closed"]:   # an earlier sweep's: a record is made only below, and this runs once a sweep
+            self._board_close(rec, state)
+            return
+        listing = getattr(self, "_board_listing", None)
+        if not listing:
+            return
+        live = max(listing)
+        item = listing[live]
+        m = BOARD_FROM.search(str(item.get("body") or ""))
+        src = int(m.group(1)) if m else 0
+        if src and src != live and src in listing:
+            self._board_unlabel(listing[src], live)
+            return
+        if src and src != live and not (rec and rec["old"] == src):
+            self._board_record(src, live, rec)
+            self.out(f"BOARD       #{live} continues #{src}, which no longer carries `{BOARD_LABEL}`: recorded; "
+                     "the next sweep closes it")
+            return
+        count = item.get("comments")
+        if len(listing) > 1 or type(count) is not int or count < BOARD_ROLL_AT:
+            return
+        title, body = board_next(item)
+        got = self.gh.write("POST", f"repos/{self.gh.repo}/issues", {"title": title, "body": body,
+                                                                      "labels": [BOARD_LABEL]},
+                            f"board: #{live} has {count} comments (roll at {BOARD_ROLL_AT}): open {title!r}")
+        new = got.get("number") if isinstance(got, dict) else None
+        if type(new) is not int or new <= 0:
+            self.out(f"BOARD       #{live} has {count} comments (roll at {BOARD_ROLL_AT}): " +
+                     ("would open the next board, take the label off this one, and close it next sweep (dry run)"
+                      if self.gh.dry_run else "no issue number came back; the next sweep looks again"))
+            return
+        self.out(f"BOARD       #{live} has {count} comments (roll at {BOARD_ROLL_AT}): opened #{new}")
+        self._board_unlabel(item, new)
+
+    def _board_close(self, rec: dict, state: dict | None) -> None:
+        """Roll step 1: close the board an earlier sweep rolled away from. The number comes from the sweep state or a
+        board body's mark, so it is checked on GitHub first (one read): never a pull request (the inbox), never an
+        issue that carries the board label again or is not older than the board it rolled to (a WARN, and the
+        record is done). A `wake:muse` still on it holds the close (the bridge reads only open issues, so a notice
+        the rolling sweep posted there would never be mailed); the next sweep looks again."""
+        old, new = rec["old"], rec["new"]
+        got = self.gh.get(f"repos/{self.gh.repo}/issues/{old}") if old < new else {}
+        got = got if isinstance(got, dict) else {}
+        names = {lb.get("name") for lb in got.get("labels") or [] if isinstance(lb, dict)}
+        why = (f"it is not older than #{new}" if old >= new else "it is a pull request" if "pull_request" in got
+               else f"it carries `{BOARD_LABEL}` again" if BOARD_LABEL in names else "")
+        if not why and MUSE_LABEL in names:
+            self.out(f"BOARD       #{old} stays open for now: `{MUSE_LABEL}` is still on it (a notice not mailed yet)")
+            return
+        if why:
+            self.out(f"WARN        board: #{old} (rolled to #{new}) is not closed: {why}")
+        elif got.get("state") != "closed":
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/{old}", {"state": "closed", "state_reason": "completed"},
+                          f"board: close #{old}, rolled to #{new} by an earlier sweep")
+            self.out(f"BOARD       #{old} closed (rolled to #{new} by an earlier sweep)")
+        if not self.gh.dry_run and state is not None:
+            state["board_roll"] = dict(rec, closed=True)
+
+    def _board_unlabel(self, old: dict, new: int) -> None:
+        """Roll step 2: the label off the old board (already off: done), the record, then one line on the new board
+        and one inbox line."""
+        number = old["number"]
+        try:
+            label = urllib.parse.quote(BOARD_LABEL, safe="")
+            self.gh.write("DELETE", f"repos/{self.gh.repo}/issues/{number}/labels/{label}", None,
+                          f"board: take `{BOARD_LABEL}` off #{number}, rolled to #{new}")
+        except GitHubError as err:
+            if err.status != 404 and "HTTP 404" not in err.detail:
+                raise
+        self._board_record(number, new, self._roll_record())
+        count = old.get("comments")
+        self.gh.comment(new, f"Switchboard (board): this board continues #{number}, which reached {count} comments "
+                             f"(it rolls at {BOARD_ROLL_AT}); #{number} closes at the next sweep and its comments "
+                             "stay there.",
+                        f"board: #{new} names #{number}")
+        self.gh.comment(INBOX_PR, f"Switchboard (board): the board rolled from #{number} ({count} comments) to "
+                                  f"#{new}; #{number} closes at the next sweep. The new body is the old one's, its "
+                                  "heading renamed: any number in its text is the integrator's to edit.",
+                        f"inbox: the board rolled to #{new}")
+        self.out(f"BOARD       #{number} rolled to #{new}: label off; it closes at the next sweep")
+
+    def _board_record(self, old: int, new: int, rec: dict | None) -> None:
+        """The roll's record in the sweep state (the next sweep closes `old`), and the fallback board moved to the new
+        one (board_issue uses it when the listing fails). Never in a dry run."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else None
+        if self.gh.dry_run or state is None:
+            return
+        past = ([rec["old"]] + rec["past"] if rec and rec["old"] != old else (rec or {}).get("past") or [])
+        state["board_roll"] = {"old": old, "new": new, "closed": False, "past": past[:MAX_OLD_BOARDS]}
+        state["board"] = new
 
     def jobs(self) -> dict[str, dict]:
         """PR-review lookup, as before. The plan audit separately finds bare J-NNN issues."""
@@ -876,14 +1065,6 @@ class Switch:
             out.append(f"and {len(failed) - MAX_FAIL_JOBS} more failed test jobs, their logs not read")
         memo[run_id] = tuple(out)
         return memo[run_id]
-
-    def red_tests_at(self, sha: str) -> tuple[str, ...]:
-        """red_tests of a head's newest proof run (the reconciler's red notice, J-104); () with no run read."""
-        try:
-            runs = self.head_runs(sha)
-        except Exception:   # noqa: BLE001  the notice goes without its tests
-            return ()
-        return self.red_tests(max(runs, key=lambda r: r["created_at"])["id"]) if runs else ()
 
     def run_state_or_none(self, run: dict) -> tuple[str, str, int, str] | None:
         """run_state, or None when GitHub would not answer its jobs read (11-12: intermittent 502s on
@@ -1516,7 +1697,24 @@ class Switch:
                     f"the PR by hand. This sweep's auto-open stopped here.")
         else:
             text = f"the auto-open failed ({why}); the next sweep tries again."
+        state = getattr(self.gh, "state", None)
+        if isinstance(state, dict) and f"{branch}@{sha}" in (state.get("auto_pr_old") or []):
+            return   # #350: an old head listed once already; the open is still tried, only the listing is not
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
+
+    def auto_pr_aged(self, key: str, committed: str) -> None:
+        """#350 (60 of 69 inbox lines in six posts were AUTO-PR-FAILED lines for heads from weeks before, each re-listed
+        once the inbox's ring had lost its key): a head older than AUTO_PR_OLD whose AUTO-PR-FAILED item the inbox has
+        listed is recorded in the sweep state ("auto_pr_old", at most MAX_AUTO_PR_OLD, the heads still live), and is
+        never listed again. Its PR is still opened when it can be (a plan line given later)."""
+        state = getattr(self.gh, "state", None)
+        at = parse_time(committed)
+        if (not isinstance(state, dict) or at is None or self.now - at <= AUTO_PR_OLD
+                or getattr(self.gh, "dry_run", False)):
+            return
+        old = [k for k in state.get("auto_pr_old") or [] if isinstance(k, str)]
+        if key not in old:
+            state["auto_pr_old"] = (old + [key])[-MAX_AUTO_PR_OLD:]
 
     def auto_open_prs(self, only: set[str] | None = None) -> int:
         """Open PRs for finished fb-bot/integrate-* and claude/integrate-* heads with no PR yet (J-047).
@@ -1540,6 +1738,7 @@ class Switch:
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget heads gone or moved
             current = {f"{b['name']}@{b['commit']['sha']}" for b in listed}
             state["prior_pr"] = [k for k in state.get("prior_pr") or [] if k in current]
+            state["auto_pr_old"] = [k for k in state.get("auto_pr_old") or [] if k in current][-MAX_AUTO_PR_OLD:]
         branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
@@ -1566,10 +1765,15 @@ class Switch:
                 if any(ref == branch and sha.startswith(ksha) for ref, ksha in kept):
                     self.out(f"SKIP       {branch} @{sha[:8]}: the plan keeps this head as a record")
                     continue
-                message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
+                commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]
+                message = commit["message"]
                 job = rules.job_of_pr(message) or collab_plan.job_of_branch(branch)   # the Job: line, else the name
                 line = lines.get(collab_plan.plan_job(job, lines)) if job else None
-                if line is None and inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                if inbox_key("AUTO-PR-FAILED", branch, sha) in listed_keys:
+                    self.auto_pr_aged(key, (commit.get("committer") or {}).get("date") or "")
+                    if line is None:
+                        continue
+                if line is None and key in (state.get("auto_pr_old") or []):
                     continue
                 if line is not None and line.hold:
                     self.out(f"SKIP       {branch} @{sha[:8]} ({job}): the plan holds {line.job}")
@@ -1889,7 +2093,40 @@ class Switch:
                               "One alarm per incident; the switch prints the state every sweep.", "",
                               PIPE_MARK.format(kinds=",".join(new))] + marks)
             self.gh.comment(board, body, f"pipe alarm ({', '.join(new)}) on #{board}")
+        self.pipe_all_clear(board, [k for k, on in (("version", version), ("outbound", stuck), ("inbound", quiet)) if on],
+                            getattr(self, "pipe_last_post", None))
         return found
+
+    def pipe_all_clear(self, board: int, kinds: list[str], last_post: dt.datetime | None) -> None:
+        """#350 (Muse believed the bridge down for 36 h after it recovered: an alarm had no all-clear). The sweep state
+        keeps each finding kind the pipe tripped on and when (gh.state["pipe_trip"]); the first pass that finds none
+        posts one PIPE OK on the board, labeled wake:muse so the bridge mails it, and only then clears it (a failed
+        write posts it again next pass). An inbound trip ends only on a bridge post newer than it (`last_post`, the
+        newest one inbound_quiet read): its finding also ends when the day's asks age out, which proves nothing. A dry
+        run writes no state. Reads nothing; two writes, only on recovery."""
+        state = getattr(self.gh, "state", None)
+        if not isinstance(state, dict) or getattr(self.gh, "dry_run", False):
+            return
+        box = state.get("pipe_trip") if isinstance(state.get("pipe_trip"), dict) else {}
+        trips = {k: t for k, v in box.items() if isinstance(k, str) and (t := parse_time(str(v or ""))) is not None}
+        if kinds:
+            state["pipe_trip"] = {k: iso_z(t) for k, t in {**{k: self.now for k in kinds}, **trips}.items()}
+            return
+        if not trips:
+            return
+        if "inbound" in trips and (last_post is None or last_post <= trips["inbound"]):
+            self.out("PIPE        no finding now, but no bridge post since the inbound alarm: no all-clear yet")
+            return
+        since = min(trips.values())
+        body = "\n".join([f"{PIPE_OK_HEAD.format(board=board)} the Muse mail bridge works again ({central(self.now)}).",
+                          "", f"The PIPE ALARM raised {central(since)} is over: this pass found none of its findings "
+                          "(the switch checks the bridge every full sweep). Nothing to do, no reply needed.", "",
+                          PIPE_OK_MARK])
+        self.gh.comment(board, body, f"pipe all-clear on #{board}")
+        self.gh.write("POST", f"repos/{self.gh.repo}/issues/{board}/labels", {"labels": [MUSE_LABEL]},
+                      f"label #{board} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+        self.out(f"PIPE OK     the alarm raised {central(since)} is over: all-clear posted on #{board}")
+        state.pop("pipe_trip", None)
 
     def pipe_ripen(self, at: dt.datetime) -> None:
         """J-072: the next time a clock alone changes pipe_health's findings; a fast sweep runs it then."""
@@ -1984,11 +2221,11 @@ class Switch:
             body = (c.get("body") or "").lstrip()
             if body.startswith(BRIDGE_POST):
                 posts.append(at)
-            elif body.startswith("CLAUDE_TO_MUSE:"):
+            elif body.startswith("CLAUDE_TO_MUSE:") and PIPE_OK_MARK not in body:   # an all-clear asks nothing
                 newest_ask = max(at, newest_ask or at)
                 if at >= start:
                     asks += 1
-        last_post = max(posts) if posts else None
+        last_post = self.pipe_last_post = max(posts) if posts else None   # #350: pipe_all_clear reads it
         if last_post is not None and newest_ask is not None and newest_ask > last_post:
             self.pipe_ripen(last_post + PIPE_INBOUND_QUIET + dt.timedelta(seconds=1))   # quiet a day after the last post
         if not asks or (last_post is not None and last_post >= start):
@@ -2083,7 +2320,7 @@ class Switch:
             mail = mail_reader.read(self, model, reads, also=notes)   # posts and notices from one comment set
             mail = dataclasses.replace(mail, receipts={**machine.recorded_receipts(notes), **mail.receipts})
             rows = machine.table(model, machine.collect(model, reads, works=works, mail=mail,
-                                                        planned_at=reads.get("planned_at")))
+                                                        planned_at=reads.get("planned_at"), asks=self.ask_jobs()))
             memo = self.__dict__["_plan_table"] = (model, reads, mail, rows)
         return memo
 
@@ -2139,6 +2376,9 @@ class Switch:
         changes = machine.labels(model, reads["issues"], aliases)
         for number, add, remove in changes[:MAX_PLAN_LINES]:
             self.out(f"PLAN-LABEL  #{number} add {', '.join(add) or '-'}; remove {', '.join(remove) or '-'}")
+        titles = machine.bad_titles(model, reads["issues"])[:MAX_PLAN_LINES]
+        for job, number, title in titles:
+            self.out(f"PLAN-TITLE  {job} #{number} {plain(untrusted(title, 120))}: not `{job} ` first")
         notices, receipts = [], []
         notes = self.plan_notice_comments(model, reads)
         vers = machine.versions(model)
@@ -2153,7 +2393,9 @@ class Switch:
             answer = machine.receipt_post(mail, ver, sent) if sent else None
             if answer and (owner, ver) not in mail.receipts:
                 receipts.append((owner, ver, answer))
-            unread = sent and any(r.owner == owner and r.state == "told" and r.late(self.now) for r in rows)
+            # #350: a told job waiting on an open ask is late on Claude's clock, not on the receipt's
+            unread = sent and any(r.owner == owner and r.owes == owner and r.state == "told" and r.late(self.now)
+                                  for r in rows)
             again = machine.NOTICE_AGAIN.format(owner=owner, ver=ver)
             if sent and not (unread and not any(again in (c.get("body") or "") and
                                                 (c.get("user") or {}).get("login") == rules.BOT_LOGIN for c in notes)):
@@ -2169,6 +2411,14 @@ class Switch:
         # 11-13: dest is who owes the next step; only the integrator's own wake it (inbox_class), the rest ride
         self.plan_items = tuple(InboxItem("PLAN", r.job, r.key(), f"PLAN {plain(line[:600])}", r.owes or "claude")
                                 for r, line in machine.alarm_groups(rows, self.now))[:MAX_PLAN_LINES]
+        self.plan_items += self.muse_quiet(rows, reads, steered)   # #350: after the cut, so late lines never crowd it out
+        # #350: a job issue the mail bridge cannot find by its title, once per title (its head); the integrator renames it
+        self.plan_items += tuple(InboxItem(
+            "PLAN", f"#{number}", hashlib.sha256(title.encode()).hexdigest()[:16],
+            f"PLAN {job}: #{number} is titled {no_verdict(untrusted(title, 120))}, not `{job} ` first (the id, "
+            f"then a space), so the mail bridge files {job}'s mail on the board, not on #{number}: rename #{number}",
+            "integrator")
+            for job, number, title in titles)
         for owner, ver, answer in receipts:   # the receipt, written into the notice it answers: it outlives the window
             c = machine.notice_comment(notes, owner, ver)
             if c and c.get("id"):
@@ -2301,11 +2551,39 @@ class Switch:
         The first line holds `To Claude` or `proposal`, or is the bridge's `**Muse (via email bridge):
         <subject>**`: every Muse mail is to Claude, so every one wakes it. Every agent posts as IssisX, so the author is read
         from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
-        start with `<!-- codex`."""
-        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
-        open_threads = {int(i["number"]) for i in
-                        self.listing(f"repos/{self.gh.repo}/issues?state=open")}
+        start with `<!-- codex`. #350: an ask that names a job is listed again, once per ASK_AGAIN, while no Claude
+        post has named the job since (open_asks)."""
         out: list[InboxItem] = []
+        for c, number, kind, first in self.asks_seen():
+            cid = str(c["id"])
+            if inbox_key(kind, f"#{number}", cid) in reported:
+                continue
+            out.append(InboxItem(kind, f"#{number}", cid, f"{kind} #{number} {ask_said(kind, first)} "
+                                                          f"{c.get('html_url') or ''}"))
+        for cid, rec in self.open_asks().items():
+            last = parse_time(rec["listed"])
+            if last is not None and self.now - last < ASK_AGAIN:
+                continue
+            head = f"{cid}@{iso_z(self.now)}"   # a new key per listing; the first listing keeps the bare id
+            if inbox_key("TO-CLAUDE", rec["target"], head) in reported:
+                continue
+            age = self.now - (parse_time(rec["at"]) or self.now)
+            out.append(InboxItem("TO-CLAUDE", rec["target"], head,
+                                 f"TO-CLAUDE {rec['target']} still open after {hours(age)}: no Claude comment or mail "
+                                 f"has named {rec['job']} since. {rec['said']} {rec['url']}"))
+            rec["listed"] = iso_z(self.now)
+        return out
+
+    def asks_seen(self) -> list[tuple[dict, int, str, str]]:
+        """The asks to the integrator in the inbox's comment window, as (comment, thread, kind, first line): kind
+        TO-CLAUDE, or a routine Muse post's digest kind (muse_routine). Read once per run (#350: open_asks too)."""
+        memo = self.__dict__.get("_asks_seen")
+        if memo is not None:
+            return memo
+        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+        threads = {int(i["number"]): i for i in self.listing(f"repos/{self.gh.repo}/issues?state=open")}
+        self.__dict__["_ask_threads"] = threads
+        out: list[tuple[dict, int, str, str]] = []
         for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
             if (c.get("updated_at") or c.get("created_at") or "") < since:   # the hour's floor read a little more
                 continue
@@ -2321,14 +2599,13 @@ class Switch:
                 continue
             if body.lstrip().startswith("CLAUDE_TO_MUSE:"):   # Claude's own mail to Muse, as the bridge records it
                 continue
-            cid = c.get("id")
-            if cid is None:
+            if c.get("id") is None:
                 continue
             try:
                 number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
             except (ValueError, IndexError):
                 continue
-            if number not in open_threads:
+            if number not in threads:
                 continue
             first = (body.split("\n", 1)[0] or "").strip()
             low = first.lower()
@@ -2339,14 +2616,130 @@ class Switch:
                 continue
             # J-103: a bridged "J-NNN started" or a bare ack is digested, never posted alone (muse_routine); a question,
             # a sha, a red, a finding or "taken" in it still wakes as TO-CLAUDE. queue_check counts STARTED either way.
-            kind = muse_routine(first, body) or "TO-CLAUDE"
-            if inbox_key(kind, f"#{number}", str(cid)) in reported:
-                continue
-            said = first if kind == "TO-CLAUDE" else "Muse: " + first[len(BRIDGE_POST):].strip(": *")
-            out.append(InboxItem(kind, f"#{number}", str(cid),
-                                 f"{kind} #{number} {no_verdict(plain(said[:100]))} "
-                                 f"{c.get('html_url') or ''}"))
+            out.append((c, number, muse_routine(first, body) or "TO-CLAUDE", first))
+        self.__dict__["_asks_seen"] = out
         return out
+
+    def open_asks(self) -> dict[str, dict]:
+        """#350 (J-124 waited 37 h on a ruling, J-078 42 h on a landing path, each listed once and then forgotten):
+        comment id -> the TO-CLAUDE asks from a team login that name a job (the subject's, else the job whose issue
+        or PR the thread is) and that no later Claude post has answered: a comment from a team login, never the
+        switch's own, that carries Claude's footer, opens `Claude (integrator)` or is a hand mail to Muse
+        (`CLAUDE_TO_MUSE:`), and that names the job or sits on the job's own thread. One post naming several jobs
+        answers each of them. Kept in the sweep state (the inbox's
+        box), past the comment window, at most MAX_OPEN_ASKS, the newest. An ask that names no job is listed once,
+        as before. No read of its own: the inbox's comment window and open-thread listing, once per run."""
+        memo = self.__dict__.get("_open_asks")
+        if memo is not None:
+            return memo
+        box = self.inbox_box()
+        stored = box.get("asks") if isinstance(box.get("asks"), dict) else {}
+        kept = {str(k): v for k, v in stored.items()
+                if isinstance(v, dict) and all(isinstance(v.get(f), str) for f in ASK_FIELDS)
+                and parse_time(v["at"]) is not None}
+        seen = self.asks_seen()
+        threads = self.__dict__.get("_ask_threads") or {}
+        logins = {login.lower() for login in self.team.verdict_logins}
+        for c, number, kind, first in seen:
+            cid = str(c["id"])
+            at = parse_time(c.get("created_at") or "")
+            job = (machine.JOB_ID.findall(first) or [thread_job(threads.get(number))])[0]
+            # only a team login's ask is kept: anyone can comment on the public repo, and a kept ask moves a job's
+            # step to Claude; a stranger's is still listed once, as before
+            if kind != "TO-CLAUDE" or cid in kept or not job or at is None or \
+                    ((c.get("user") or {}).get("login") or "").lower() not in logins:
+                continue
+            kept[cid] = {"job": job, "target": f"#{number}", "at": iso_z(at), "listed": iso_z(self.now),
+                         "said": ask_said(kind, first), "url": str(c.get("html_url") or "")}
+        team = logins - {rules.BOT_LOGIN.lower()}
+        for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
+            body = (c.get("body") or "").lstrip()
+            at = parse_time(c.get("created_at") or "")
+            if at is None or ((c.get("user") or {}).get("login") or "").lower() not in team or not (
+                    body.startswith(("CLAUDE_TO_MUSE:", "Claude (integrator)")) or "Generated by [Claude Code]" in body):
+                continue
+            try:
+                number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
+            except (ValueError, IndexError):
+                number = 0
+            named = set(machine.JOB_ID.findall(body)) | {thread_job(threads.get(number))}
+            for cid, rec in list(kept.items()):
+                if at > (parse_time(rec["at"]) or at) and same_job(rec["job"], named):
+                    self.out(f"ASK         {rec['target']} {rec['job']}: answered by {c.get('html_url') or c.get('id')}")
+                    del kept[cid]
+        kept = dict(sorted(kept.items(), key=lambda kv: kv[1]["at"])[-MAX_OPEN_ASKS:])
+        if not getattr(self.gh, "dry_run", False):
+            box["asks"] = kept
+        self.__dict__["_open_asks"] = kept
+        return kept
+
+    def ask_jobs(self) -> dict[str, tuple[dt.datetime, str]]:
+        """job -> (when, link) of its oldest open ask (open_asks), for the job machine. A read that fails leaves the
+        machine without them this pass; the plan part goes on."""
+        try:
+            asks = self.open_asks()
+        except GitHubError as err:
+            self.out(f"NOTE        open asks not read this pass ({plain(str(err)[:160])})")
+            return {}
+        out: dict[str, tuple[dt.datetime, str]] = {}
+        for rec in asks.values():
+            at = parse_time(rec["at"])
+            if at is not None and (rec["job"] not in out or at < out[rec["job"]][0]):
+                out[rec["job"]] = (at, rec["url"] or rec["target"])
+        return out
+
+    def muse_heard(self, reads: dict, steered=()) -> dt.datetime | None:
+        """#350: the newest sign of Muse on GitHub that a full pass reads anyway: a head commit on its branches
+        with no PR (the plan's compares) or on its open PRs (the steered PRs' facts), and a bridge post from a team
+        login (the inbox's comment window). None when none of them shows one."""
+        def muses(ref: str) -> bool:
+            return any(machine.owns(o, ref) for o in machine.MAIL_OWNERS)
+        head_at = reads.get("head_at") or {}
+        times = [head_at[collab_plan.branch_sha(b)] for b in reads.get("branches") or []
+                 if muses(collab_plan.branch_name(b)) and collab_plan.branch_sha(b) in head_at]
+        times += [t for s in steered if muses(s.facts.head_ref)
+                  and (t := parse_time(s.facts.head_committed_at or "")) is not None]
+        team = {login.lower() for login in self.team.verdict_logins}
+        times += [t for c in self.comments_since(self.now - INBOX_RUNS_WINDOW)
+                  if (c.get("body") or "").lstrip().startswith(BRIDGE_POST)
+                  and ((c.get("user") or {}).get("login") or "").lower() in team
+                  and (t := parse_time(c.get("created_at") or "")) is not None]
+        return max(times, default=None)
+
+    def muse_quiet(self, rows, reads: dict, steered=()) -> tuple[InboxItem, ...]:
+        """#350: one QUIET item to the integrator (class "hold": it wakes, never digest-only) while a Muse lane is in
+        flight and nothing of Muse's (muse_heard) is newer than MUSE_QUIET; at most once per MUSE_QUIET_AGAIN while
+        the silence lasts (its head is the incident's stamp, the inbox box's quiet_at), and again once Muse is heard
+        and then goes quiet again. Needs no CLAUDE_TO_MUSE ask (inbound_quiet does) and makes no read of its own; a
+        read that fails drops only this item."""
+        box = self.inbox_box()
+        write = not getattr(self.gh, "dry_run", False)
+        lanes = [r for r in rows if r.owner in machine.MAIL_OWNERS and machine.flying(r)]
+        try:
+            heard = self.muse_heard(reads, steered) if lanes else None
+        except GitHubError as err:
+            self.out(f"NOTE        Muse quiet check not made this pass ({plain(str(err)[:160])})")
+            return ()
+        if not lanes or (heard is not None and self.now - heard < MUSE_QUIET):
+            if write:
+                box.pop("quiet_at", None)
+            return ()
+        # the incident's stamp is the item's head: every silent pass returns it and the inbox's ring lists it once,
+        # so an inbox part that fails this pass loses nothing; a day on, a new stamp lists it again
+        stamp = parse_time(str(box.get("quiet_at") or ""))
+        if stamp is None or self.now - stamp >= MUSE_QUIET_AGAIN:
+            stamp = self.now
+            if write:
+                box["quiet_at"] = iso_z(stamp)
+        late = [r.job for r in lanes if r.owes == r.owner and r.late(self.now)]   # an ask's clock is Claude's
+        jobs = ", ".join(r.job for r in lanes[:8]) + (", ..." if len(lanes) > 8 else "")
+        span = hours(self.now - heard) if heard is not None else \
+            f"at least {hours(INBOX_RUNS_WINDOW)} (none in the window read)"
+        self.out(f"QUIET       Muse: no push and no bridge post for {span}, {len(lanes)} lane(s) in flight")
+        return (InboxItem("QUIET", "muse", iso_z(stamp),
+                          f"QUIET Muse: no fb-bot push and no bridge post for {span} while {len(lanes)} Muse lane(s) "
+                          f"are in flight ({jobs}), {len(late)} of them late. Muse may be down or holding: mail "
+                          f"Muse, or check the bridge."),)
 
     def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
         """One PR's items, for one audience (J-052): prefix "" is the integrator's, "muse-" is Muse's.
@@ -3044,83 +3437,6 @@ class Switch:
                         out[info.filename] = data
         return out
 
-    def orchestrate(self, number: int) -> None:
-        """Design 2.3 step 1, behind `needs:orchestrator` and budget.yml (off in v0)."""
-        import claude_calls
-        issue = self.gh.get(f"repos/{self.gh.repo}/issues/{number}")
-        labels = {l["name"] for l in issue["labels"]}
-        if not {"job", "needs:orchestrator"} <= labels:
-            return
-        comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
-        if self.start_blocked(comments, number):
-            self.out(f"ORCH        #{number} already handled")
-            return
-        b = self.budget
-        job = rules.job_of_title(issue["title"])
-        tag = MARK.format(kind="orchestrator", pr=number, head="-")
-        if not (b.orchestrator_enabled and b.orchestrator_agent_id and b.orchestrator_environment_id):
-            self.out(f"ORCH        #{number}: off in budget.yml (orchestrator.enabled, agent_id, environment_id); not started")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the orchestrator "
-                                    f"is off in `work/budget.yml` until step C defines the hosted agent. Nothing was started.\n\n{tag}")
-            return
-        if not os.environ.get("AGENT_GITHUB_TOKEN") and not self.gh.dry_run:
-            self.out(f"ORCH        #{number}: no AGENT_GITHUB_TOKEN in this job; not started")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the workflow has no "
-                                    f"`AGENT_GITHUB_TOKEN` secret, so the API agent cannot push. Nothing was started.\n\n{tag}")
-            return
-        key = f"orchestrator#{number}"
-        v = self.gate("orchestrator", job, b.orchestrator_session_usd, self.job_cap({"issue": issue}), key)
-        if not v.ok:
-            self.out(f"REFUSED orchestrator #{number}: {v.reason}")
-            return
-        if self.gh.dry_run:
-            self.out(f"DRY  beta.sessions.create for #{number} with a ${b.orchestrator_session_usd} budget ({v.reason})")
-            return
-        client = self.claude()   # before the reserve: no key, no reserve
-        run = uuid.uuid4().hex[:12]
-        self.append(money.record(self.now, run, "reserve", "orchestrator", job, b.orchestrator_session_usd, key), f"reserve {key}")
-        message = (f"Job {job}, GitHub issue #{number} in {self.gh.repo}: {issue['title']}\n\n{(issue.get('body') or '')[:30000]}\n\n"
-                   f"Read work/tasks/api-agent.md first, then the issue's newest comments, then do the job.")
-        try:
-            session = claude_calls.start_session(client, b.orchestrator_agent_id, b.orchestrator_environment_id,
-                                                 f"{job} #{number}", message, b.orchestrator_session_usd,
-                                                 f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
-                                                 rules.TRUNK, b.orchestrator_vault_id,
-                                                 {"switchboard_key": key, "run": run})
-        except claude_calls.SessionStartRejected as err:
-            # A 4xx: the server refused the request, so no session exists and the reserve is released at once.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
-                                     f"{key} start rejected HTTP {err.status}"), f"end {key} (start rejected)")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started. "
-                                    f"`beta.sessions.create` answered HTTP {err.status} ({err.error_class}). No session "
-                                    f"exists, and the reserve is released. Fix the cause, then re-add `needs:orchestrator`."
-                                    f"\n\n{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
-            return
-        except claude_calls.SessionStartUnknown as err:
-            # No usable answer (no connection, or a 5xx): a session may exist. The reserve stands, and the issue
-            # is marked handled so a re-label cannot start a second session beside it; a person looks in the Console.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            heard = f"answered HTTP {err.status}" if err.status else "got no answer"
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` {heard} "
-                                    f"({', '.join(err.classes)}), so a session may exist. The ${b.orchestrator_session_usd} "
-                                    f"reserve stays on the ledger (run `{run}`) and no second session is started. The next "
-                                    f"sweeps look for it by its metadata, and write the reserve off after "
-                                    f"{int(GIVE_UP_AFTER.total_seconds() // 60)} minutes if it never appears.\n\n{tag}\n"
-                                    f"{UNKNOWN_MARK.format(run=run, at=self.now.strftime('%Y-%m-%dT%H:%M:%SZ'))}")
-            return
-        except claude_calls.ClaudeCallError as err:
-            # Refused locally before any request was sent: no session exists.
-            self.out(f"FAILED orchestrator #{number}: {err}")
-            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
-                                     f"{key} start refused locally"), f"end {key} (start refused)")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started: {err}. "
-                                    f"No session exists, and the reserve is released.\n\n"
-                                    f"{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
-            return
-        self.out(f"ORCH        #{number}: session {session} started on run {run}")
-        self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, ""))
-
     def started_comment(self, number: int, session: str, run: str, budget: Decimal, note: str) -> str:
         return (f"Switchboard, {central(self.now)}: orchestrator session `{session}` started{note} with a ${budget} budget. "
                 f"Trace: {CONSOLE_SESSION.format(session=session)}\n\n"
@@ -3600,7 +3916,8 @@ def sweep_delta(sw, prs: list[dict], state: dict, running: dict[str, str] | None
     recs = state.get("prs") or {}
     auto = {b for b in finished if b.startswith(AUTO_PR_PREFIX)}
     active = finished | {r.get("head_branch") or "" for r in runs if (parse_time(r.get("created_at") or "") or since) >= since}
-    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST)) for c in comments)
+    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST))
+               and PIPE_OK_MARK not in (c.get("body") or "") for c in comments)   # #350: the all-clear asks nothing
     mail: set[str] = set()
     for c in comments:
         body = (c.get("body") or "").lstrip()
@@ -3695,8 +4012,6 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     if args.issue:
         if steer and args.label.startswith("owner:"):
             sw.owner_labels(args.issue, args.label)
-        if ask:
-            sw.orchestrate(args.issue)
         return 0
     if args.digest or args.force_digest:
         if steer:
@@ -3894,6 +4209,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                       "version_at": iso_z(until) if until else None, "live": getattr(sw, "bridge_live", ""),
                       "wake": getattr(sw, "wake_numbers", None)}
     timers["pipe"] = pipe_state
+    if steer and not targeted and not sw.merge_only:   # #350: after every part that reads or posts on the board
+        part("board roll", sw.board_roll)
 
     if delta is None and (item_errors or deferred):
         not_done.add("prs")   # those PRs were not read: a full pass again

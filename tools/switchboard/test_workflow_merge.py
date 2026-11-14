@@ -340,8 +340,8 @@ class TheToken(unittest.TestCase):
         self.assertEqual(sorted(holders), [("ask", "Run the switch"), ("steer", "Run the switch")])
         self.assertEqual(text.count("secrets." + switch.REVIEW_KEY_ENV), 2)
         # The jobs that hold a secret deploy to the environment whose branch limit is trunk; no other job does.
-        self.assertEqual(sorted(n for n, j in flow["jobs"].items() if j.get("environment")), ["ask", "provision", "steer"])
-        for name in ("ask", "steer", "provision"):
+        self.assertEqual(sorted(n for n, j in flow["jobs"].items() if j.get("environment")), ["ask", "steer"])
+        for name in ("ask", "steer"):
             self.assertEqual(flow["jobs"][name]["environment"], "switchboard-merge", name)
 
     def test_the_api_key_and_agent_token_reach_only_steps_in_the_environment(self):
@@ -359,8 +359,8 @@ class TheToken(unittest.TestCase):
             for name, job in flow["jobs"].items():
                 self.assertNotIn("secrets." + secret, str(job.get("env")), (secret, name))
                 holders += [(name, step["name"]) for step in job["steps"] if "secrets." + secret in str(step.get("env"))]
-            self.assertEqual(sorted(holders), [("ask", "Run the switch"), ("provision", "Create the environment, agent and vault")], secret)
-            self.assertEqual(text.count("secrets." + secret), 2, secret)
+            self.assertEqual(sorted(holders), [("ask", "Run the switch")], secret)
+            self.assertEqual(text.count("secrets." + secret), 1, secret)
             for name, _ in holders:
                 self.assertEqual(flow["jobs"][name].get("environment"), "switchboard-merge", (secret, name))
 
@@ -413,7 +413,7 @@ class TheCacheBoundary(unittest.TestCase):
         flow = self.flow()
         self.assertNotIn("secrets.", str(flow.get("env")))
         secret_jobs = [n for n, j in flow["jobs"].items() if self.holds_secret(j)]
-        self.assertEqual(sorted(secret_jobs), ["ask", "provision", "steer"])
+        self.assertEqual(sorted(secret_jobs), ["ask", "steer"])
         for name in secret_jobs:
             for step in flow["jobs"][name]["steps"]:
                 uses = step.get("uses") or ""
@@ -470,16 +470,16 @@ class TheCacheBoundary(unittest.TestCase):
 
     def test_one_cache_scope_so_two_states_never_both_fire_a_timer(self):
         # Caches are scoped by ref. The default branch is trunk, so every event but a pull_request runs there; a run
-        # on another ref (a dispatch) skips the cache, the provision run (its own concurrency group) skips it, and
-        # the sweeps share one concurrency group that never runs two at once.
+        # on another ref (a dispatch) skips the cache, and the sweeps share one concurrency group that never runs two
+        # at once.
         flow = self.flow()
         cin, cout = flow["jobs"]["cache-in"], flow["jobs"]["cache-out"]
         self.assertTrue(cin["if"].startswith("github.ref == 'refs/heads/ScraperX-Claude' && "
-                                             "github.event_name != 'pull_request' && !inputs.provision && "))
+                                             "github.event_name != 'pull_request' && "))
         self.assertIn("needs.cache-in.result == 'success'", cout["if"])
         self.assertIn("inputs.dry_run != true", cout["if"])
         self.assertFalse(flow["concurrency"]["cancel-in-progress"])
-        self.assertIn("|| 'switchboard'))", flow["concurrency"]["group"])
+        self.assertIn("|| 'switchboard') }}", flow["concurrency"]["group"])
         keys = [s["with"]["key"] for j in (cin, cout) for s in j["steps"] if "key" in s.get("with", {})]
         self.assertEqual(sorted(set(k.split("${{")[0] for k in keys)), ["switchboard-etags-ask-", "switchboard-etags-steer-"])
 
@@ -496,7 +496,7 @@ class TheReviewsRunApart(unittest.TestCase):
         flow = self.flow()
         group = flow["concurrency"]["group"]
         self.assertIn("inputs.part == 'ask' && 'switchboard-ask' ||", group)
-        self.assertLess(group.index("'switchboard-ask'"), group.index("'switchboard-provision'"))
+        self.assertLess(group.index("'switchboard-ask'"), group.index("'switchboard-idle-{0}'"))
         name = flow["run-name"]
         self.assertIn("inputs.part == 'ask' && (inputs.dry_run &&", name)
         self.assertLess(name.index("'Switchboard reviews'"), name.index("'Switchboard sweep'"))   # never a sweep

@@ -41,9 +41,10 @@ than the author's (`rules.land_counts`).
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
 - The board is the one open issue labeled `board` (today #546): its body is the live board (the job section, which the switch rewrites from work/plan.md); comments hold rulings, BLOCKED lines and
   asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
-  run (`Switch.board_issue`, `board_`), once per sweep. Rollover, no code: open the new issue with the label and
-  the copied body, take the label off the old one, and close the old one only after the next sweep has finished
-  (11-10: closing #340 mid-sweep let that sweep post a Muse notice and Cory's list on the closed board).
+  run (`Switch.board_issue`, `board_`), once per sweep. Rollover: the switch does it (`Switch.board_roll`, #350):
+  at 90 comments a sweep opens the next board with the label and the copied body, takes the label off the old one,
+  and says so on the new board and the inbox; a later sweep closes the old one (11-10: closing #340 mid-sweep let
+  that sweep post a Muse notice and Cory's list on the closed board). Nobody rolls it by hand.
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages

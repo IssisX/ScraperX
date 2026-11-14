@@ -28,6 +28,15 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 - Secrets are never echoed, written to artifacts, or passed to steps that do not need them; check
   `set -x`, debug dumps and uploaded logs.
 
+### Proof scope (`ci/proof_scope.py`)
+- A skipped proof group counts as passing, so what decides the scope is a merge gate. It takes no input but the
+  event, the ref and the git graph: no dispatch input, no text from a PR or comment. A dispatch is scoped only on a
+  `switchboard/candidate-*` ref (the range merge-base(HEAD's two parents)..HEAD, the merged tree itself, so extra
+  content pushed there with the right parents is still compared) or an `*/integrate-*` ref (as its push); trunk,
+  any other ref, a candidate that is not a two-parent merge, or any git failure runs the whole proof. The switch
+  merges on a candidate only when its parents are exactly the PR's head and trunk (`switch.py read_candidate`).
+  A path where something an outsider writes can narrow the scope is P1.
+
 ### APK signing
 - `SCRAPERX_APK_KEYSTORE_B64` and `SCRAPERX_APK_KEYSTORE_PASSWORD` are used only in the signing
   steps of `wo000-delivery-spine.yml`, in jobs that run only on `refs/heads/ScraperX-Claude`, and the
@@ -35,7 +44,7 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
-  the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
+  the `ask` step that calls out (J-057); the PR check of the switch stays read-only with no
   secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
   `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
   (J-072).
