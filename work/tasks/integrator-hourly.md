@@ -1,8 +1,8 @@
 # Integrator: the hourly check
 
 It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
-5:17 PM, 9:17 PM). A backstop (11-10): the inbox wakes the integrator on every Muse mail, red proof,
-review and merge; these runs catch what no event raised.
+5:17 PM, 9:17 PM). A backstop (11-10): the inbox wakes the integrator at once on Muse mail, trunk red and Claude's merges;
+branch reds and reviews within 30 min; Muse's merges ride the next post. These runs catch what no event raised.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
 Pace: no throttling, no pace prediction, no meter asks, no quiet runs (11-10).
