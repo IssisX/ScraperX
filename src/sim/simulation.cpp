@@ -1692,6 +1692,7 @@ BaySnapshot Simulation::bay_state() const noexcept {
     result.leaf_speed = view.leaf_speed;
     result.leaf_running = view.leaf_running;
     result.leaf_open = bay.leaf_open();
+    result.guard_angle = view.guard_angle;
     result.fan_fraction = view.fan_fraction;
     result.fan_running = view.fan_running;
     result.hooked = view.hooked;

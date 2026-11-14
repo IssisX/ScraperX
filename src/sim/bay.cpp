@@ -125,6 +125,11 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
     // The leaf's drive in its housing, south of the leaf against the east
     // wall (clear of the leaf hanging), and the fan's cage north of it.
     frame.push_back(span({kEastX - 0.55F, kTop - 1.05F, -130.25F}, {kEastX, kTop - 0.15F, -129.45F}, Material::Hazard));
+    // The trip line's post on the service side, east of the cut, with an arm
+    // over the handle: the line runs from the guard's horn over the east rail
+    // to this post, and the handle hangs from it at hand height.
+    frame.push_back(span({0.82F, kTop, -129.88F}, {0.88F, kTop + 1.4F, -129.82F}, Material::Steel));
+    frame.push_back(span({0.60F, kTop + 1.37F, -129.88F}, {0.88F, kTop + 1.43F, -129.82F}, Material::Steel));
     frame.push_back(pipe(0.05F, {kEastX - 0.3F, kTop - 0.6F, -129.45F}, {kEastX - 0.3F, kTop - 0.6F, kLeafZ - 0.2F},
                          Material::Steel));
     frame.push_back(span({kFanX - 0.24F, kFanY - 0.58F, kFanZ - 0.58F}, {kFanX - 0.18F, kFanY + 0.58F, kFanZ + 0.58F},
@@ -177,12 +182,16 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
                               -JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), kLeafHangAngle, 0.0F, kLeafBrakeNm, 24);
 
     // ---- the guard on the drive's housing: a flap hung by its top edge -----
+    // A horn stands on its top edge, above the pivot: the trip line pulls
+    // the horn east, and the flap opens west past its interlock.
     const JPH::RVec3 guard_at(kEastX - 0.57F, kTop - 0.6F, -129.85F);
-    guard_ = kit_.add_body(kGuardEntity, {box({0.015F, 0.38F, 0.32F}, JPH::Vec3::sZero(), Material::Hazard)}, guard_at,
-                           JPH::Quat::sIdentity(), 4.0F, 0.6F);
+    guard_ = kit_.add_body(kGuardEntity,
+                           {box({0.015F, 0.38F, 0.32F}, JPH::Vec3::sZero(), Material::Hazard),
+                            box({0.02F, 0.185F, 0.02F}, JPH::Vec3(0.0F, 0.565F, 0.0F), Material::Steel)},
+                           guard_at, JPH::Quat::sIdentity(), 4.0F, 0.6F);
     kit_.disable_collision(guard_, frame_);
     guard_hinge_ = world_hinge(system_, kit_.body_id(guard_), guard_at + JPH::Vec3(0.0F, 0.38F, 0.0F),
-                               JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), -0.1F, 1.6F, 0.0F);
+                               JPH::Vec3::sAxisZ(), JPH::Vec3::sAxisX(), -0.1F, 1.6F, kTripGuardFrictionNm);
 
     // ---- the fan ------------------------------------------------------------
     std::vector<Part> fan;
@@ -213,6 +222,23 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
                                   0.0F);
     // As found: made fast on the cleat.
     (void)kit_.hook(kShackleEntity, cleat_);
+
+    // ---- the trip handle on the service side --------------------------------
+    // A grip on the deck east of the cut, hung from the trip post by a line
+    // over the east rail to the horn on the guard's top edge: taking it and
+    // pulling draws the horn east, the guard open past its interlock, and the
+    // district out. The line is taut as laid, so the handle hangs at rest;
+    // the guard's stiff hinge holds it shut against the handle's own weight.
+    const JPH::Vec3 trip_handle_top(0.0F, kTripHandleHalfY, 0.0F);
+    const kit::BodyIndex trip_handle = kit_.add_body(
+        kTripHandleEntity, {box({0.11F, kTripHandleHalfY, 0.02F}, JPH::Vec3::sZero(), Material::Yellow)},
+        JPH::RVec3(kTripSheave2X, kTripSheave2Y - kTripHandleDrop - kTripHandleHalfY, kTripSheave2Z),
+        JPH::Quat::sIdentity(), 3.0F, 0.9F);
+    kit_.set_carry(trip_handle, kit::CarryKind::Handle, trip_handle_top);
+    kit_.set_damping(trip_handle, 1.5F, 1.5F);
+    (void)kit_.add_trip_line(guard_, JPH::Vec3(0.0F, kTripHornTopY, 0.0F), trip_handle, trip_handle_top,
+                             JPH::RVec3(kTripSheave1X, kTripSheave1Y, kTripSheave1Z),
+                             JPH::RVec3(kTripSheave2X, kTripSheave2Y, kTripSheave2Z));
 
     // ---- the district -------------------------------------------------------
     SharedSurvival::Support support;
@@ -291,6 +317,7 @@ void Bay::post_step() {
     view_.leaf_angle = leaf_hinge_->GetCurrentAngle();
     view_.leaf_speed = leaf.speed_rad_s;
     view_.leaf_running = leaf.running;
+    view_.guard_angle = guard_hinge_->GetCurrentAngle();
     view_.fan_running = fan.running;
     view_.fan_fraction = fan.motion_fraction;
     view_.hooked = hooked();

@@ -44,6 +44,7 @@ public:
     static constexpr std::uint64_t kGuardEntity = 2651;
     static constexpr std::uint64_t kFanEntity = 2652;
     static constexpr std::uint64_t kShackleEntity = 2653;
+    static constexpr std::uint64_t kTripHandleEntity = 2654;
 
     static constexpr float kDeckTop = 154.0F;
     // The cut: across the whole band, the shaft's edge to the tower's face.
@@ -104,6 +105,23 @@ public:
     static constexpr float kFanBrakeNm = 3.0F;
     static constexpr float kMaskRadiusM = 7.0F;
 
+    // The trip handle on the service side: a grip on the deck east of the
+    // cut, hung from a post by a line over the east rail to a horn on the
+    // guard's top edge. Pulling it draws the horn east, the guard open past
+    // its interlock, and the district out. The guard's hinge is stiff (a
+    // detent): the handle's own weight, pulling the horn, does not trip it;
+    // a hand pull does.
+    static constexpr float kTripGuardFrictionNm = 15.0F;
+    static constexpr float kTripHornTopY = 0.75F;      // horn tip, guard-local, above its pivot
+    static constexpr float kTripSheave1X = kEastX + 0.06F;  // the east rail's line
+    static constexpr float kTripSheave1Y = kDeckTop + 1.0F; // the rail's top
+    static constexpr float kTripSheave1Z = -129.85F;
+    static constexpr float kTripSheave2X = 0.60F;
+    static constexpr float kTripSheave2Y = kDeckTop + 1.4F;
+    static constexpr float kTripSheave2Z = -129.85F;
+    static constexpr float kTripHandleDrop = 0.85F;    // sheave2 to the handle's top
+    static constexpr float kTripHandleHalfY = 0.04F;
+
     // The district starts again this long after its hands are out, its guard
     // shut and its drives still.
     static constexpr float kRestartSeconds = 3.0F;
@@ -122,6 +140,7 @@ public:
         float leaf_angle = 0.0F;      // rad, 0 level, down negative
         float leaf_speed = 0.0F;      // rad/s
         bool leaf_running = false;    // its motor holding it
+        float guard_angle = 0.0F;     // rad, the district guard's flap: 0 shut, past 0.08 open
         float fan_fraction = 0.0F;    // fan speed over its running speed
         bool fan_running = false;
         bool hooked = false;          // the chain on the leaf's eye

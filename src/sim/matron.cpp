@@ -817,8 +817,15 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
         };
         bool found = false;
         if (pick >= 0 && path[static_cast<std::size_t>(pick)] == to) {
+            // Its own point on her line only counts when the place is a
+            // step off it from there: the straight way from the point to
+            // the place must run clear. A projection metres from its place
+            // (the C3 ladder's foot, 5.6 m off its line, its own rungs
+            // between) is no stepping stone — walking to it flips the
+            // target between the point and the place every tick, nets zero,
+            // and resets the stall watchdog, as the line fallback below did.
             const Node &place = nodes[static_cast<std::size_t>(to)];
-            if (way_round(place.x, place.z)) {
+            if (way_round(place.x, place.z) && way_clear(place.x, place.z, tx, tz)) {
                 wx = place.x;
                 wz = place.z;
                 found = true;
@@ -834,8 +841,18 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
                 found = true;
             }
         }
+        // Back onto her line only when the way goes on past a graph node:
+        // when the place itself is the picked point, there is no line
+        // toward it to rejoin, and her own projection is a step to
+        // nowhere — the target flips between it and the place every tick,
+        // she nets zero, and the flip resets the stall watchdog's window,
+        // so its sidestep never fires. Leave the place itself: she walks
+        // up to what is in her way, the watchdog stalls, and its sidestep
+        // walks her round it (J-091: the C3 ladder's own rungs bar the
+        // straight way to its south foot).
         const Node &on_line = nodes[static_cast<std::size_t>(from)];
-        if (!found && distance_xz(fx, fz, on_line.x, on_line.z) > 0.15F) {
+        const bool direct = pick >= 0 && path[static_cast<std::size_t>(pick)] == to;
+        if (!found && !direct && distance_xz(fx, fz, on_line.x, on_line.z) > 0.15F) {
             wx = on_line.x;
             wz = on_line.z;
         }
@@ -1008,9 +1025,14 @@ void Matron::feel_floor(const float dt) {
             pipe_listen_s_ = 0.0F;
             found_ = FoundClimb{};
             drop_stock();
-            if (trap_ != Trap::Off) {
+            // Her own trap's leaf falling under her dumps her a full deck:
+            // the trap's way out is hers now, whether or not she was in the
+            // trap when it went. Any other floor going only keeps the trap
+            // she was already in, and only on the bay's bracket.
+            const bool dumped = hit.mBodyID == bay_leaf_;
+            if (trap_ != Trap::Off || dumped) {
                 if (shared_survival_) shared_survival_->release_hands();
-                trap_ = (level_ == bay_level_) ? Trap::ClimbOut : Trap::Off;
+                trap_ = (level_ == bay_level_ || dumped) ? Trap::ClimbOut : Trap::Off;
                 trap_s_ = 0.0F;
                 trap_lost_s_ = 0.0F;
             }
@@ -2223,7 +2245,10 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         return true;
     }
     if (trap_ == Trap::ClimbOut) {
-        if ((climb_way_.status() == MoverStatus::Idle && level_ != bay_level_) || trap_s_ > 20.0F) {
+        // Up and out is her deck: off the bracket level she is not done
+        // while she is still below it — a dump drops her a full deck, and
+        // the way out runs from the floor below, not the bracket.
+        if ((climb_way_.status() == MoverStatus::Idle && level_ == 0) || trap_s_ > 20.0F) {
             // Up and out (or off it some other way): done with it.
             trap_ = Trap::Off;
             return false;
@@ -2306,32 +2331,44 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     };
     // After the climber the way he went, where she saw or heard it: down the
     // shaft's pipe, or a line he took.
-    if (ask(pipe_way_, true) || (guess_line_ >= 0 && ask(line_way_, false))) {
+    const bool pipe_took = ask(pipe_way_, true);
+    if (pipe_took || (guess_line_ >= 0 && ask(line_way_, false))) {
         return true;
     }
     // Started up a line's ramp, she finishes it: a way found from the ramp
     // would walk her off its side. Off the ramp, or stalled on it, she is not held.
     const bool on_ramp = on_line_ramp(at) && stall_s_ < kRampStallS;
-    if (on_ramp && ask(line_way_, true)) {
-        return true;
+    const bool ramp_took = on_ramp && ask(line_way_, true);
+    bool route_took = false;
+    bool climb_took = false;
+    bool travel_took = false;
+    bool line_took = false;
+    if (!ramp_took) {
+        // Every other way is her own: bars she finds herself, else a way she
+        // plans over the steel her scan read (matron_found_climb.cpp), climbed by
+        // her own hands. Held to a line's ramp, they stand aside.
+        if (on_ramp) {
+            routecraft_way_.stand_aside();
+        } else {
+            route_took = ask(routecraft_way_, true);
+        }
+        if (!route_took) {
+            // A rung way her scan found off her floor; a travel over her scan, by
+            // hoist where no way of her map joins the floors; a line she would only
+            // wait at, last.
+            climb_took = ask(climb_way_, true);
+            travel_took = !climb_took && ask(travel_way_, true);
+            line_took = !climb_took && !travel_took && ask(line_way_, true);
+        }
     }
-    // Every other way is her own: bars she finds herself, else a way she
-    // plans over the steel her scan read (matron_found_climb.cpp), climbed by
-    // her own hands. Held to a line's ramp, they stand aside.
-    if (on_ramp) {
-        routecraft_way_.stand_aside();
-    } else if (ask(routecraft_way_, true)) {
-        return true;
-    }
-    // A rung way her scan found off her floor; a travel over her scan, by
-    // hoist where no way of her map joins the floors; a line she would only
-    // wait at, last.
-    return ask(climb_way_, true) || ask(travel_way_, true) || ask(line_way_, true);
+    return ramp_took || route_took || climb_took || travel_took || line_took;
 }
 
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
     if (!body_in_world_ || dead_ || holding_state(state_) || state_ == State::Down ||
-        state_ == State::Staggering || held_in_hunt() || riding_ || held_ >= 0 || bracing_structure()) return false;
+        state_ == State::Staggering || held_in_hunt() || riding_ || held_ >= 0 || bracing_structure()) {
+        return false;
+    }
     MatronRoutecraft candidate = routecraft_.replacement();
     const bool accepted = candidate.request(physics_, body_, goal, facing);
     if (accepted || (!routecraft_.planning() && !routecraft_.owns_motion())) routecraft_ = std::move(candidate);
@@ -4861,7 +4898,12 @@ void Matron::clear_interrupted_actions(const bool keep_travel) {
         shared_survival_->release_hands();
     }
     if (trap_ != Trap::Off) {
-        trap_ = (!dead_ && level_ == bay_level_) ? Trap::ClimbOut : Trap::Off;
+        // Below her deck she still needs the trap's way out: a dump drops
+        // her a full deck, and the landing's knock-down must not clear it.
+        // Her body's own height reads it — feet_y_ and level_ lag the fall.
+        const bool below_deck = trap_ == Trap::ClimbOut && body_in_world_ &&
+                                float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre < kDeckTop;
+        trap_ = (!dead_ && (level_ == bay_level_ || below_deck)) ? Trap::ClimbOut : Trap::Off;
         trap_s_ = 0.0F;
         trap_lost_s_ = 0.0F;
     }

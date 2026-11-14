@@ -94,6 +94,130 @@ bool stage_hold(Simulation &s) {
     return false;
 }
 
+// Her centre physically on the leaf: between its hinge and its west end,
+// over its width, at deck height. The trip is only taken once this holds.
+bool on_bay_leaf(Simulation &s) {
+    const auto m = s.matron_state();
+    return m.position.x > Bay::kLeafWestX && m.position.x < Bay::kLeafEastX &&
+           std::abs(m.position.z - Bay::kLeafZ) < Bay::kLeafHalfWidth &&
+           m.position.y > Bay::kDeckTop - 0.5 && m.position.y < Bay::kDeckTop + 2.0;
+}
+
+// At the trip handle, take it and step back east at `pull` of full stick
+// until the guard opens past its interlock (or `seconds` pass), then let go.
+// True once the guard has been seen open. The player stays crouched: he
+// took it crouched, so the handle stays where it hung until he steps back.
+// Fast: no long settle, so it can catch her on the leaf before she is off it.
+// The approach is 1.3, east of the sheave post (0.82-0.88): the player's
+// capsule cannot stand at 0.9, and 1.3 is still inside the 1.20 m reach.
+bool trip_bay_now(Simulation &s, const double pull, const double seconds) {
+    if (!walk_to(s, 1.3, Bay::kTripSheave2Z, 15.0, 0.15)) {
+        return false;
+    }
+    (void)s.set_facing(-1.0, 0.0);
+    (void)s.advance_frame(2.0 * Simulation::kFixedStepSeconds);
+    const auto facing = s.snapshot();
+    if (facing.carry_target_entity_id != Bay::kTripHandleEntity || facing.carry_target_kind != 2) {
+        return false;
+    }
+    (void)s.request_pick_up();
+    bool holding = false;
+    for (int i = 0; i < 12 && !holding; ++i) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        holding = s.snapshot().carrying_entity_id == Bay::kTripHandleEntity;
+    }
+    if (!holding) {
+        return false;
+    }
+    bool tripped = false;
+    const auto ticks = static_cast<std::uint32_t>(seconds * static_cast<double>(Simulation::kTickRateHz));
+    for (std::uint32_t tick = 0; tick < ticks && !tripped; ++tick) {
+        (void)s.set_move_input(0.7 * pull, 0.0);
+        (void)s.set_facing(-1.0, 0.0);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        tripped = s.bay_state().guard_angle < -0.08;
+    }
+    // One more tick with the guard held open: the district's pre_step runs
+    // before the physics step, so it only sees the open guard (and stops the
+    // drive) on the tick after the guard opens.
+    if (tripped) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    if (s.snapshot().carrying_entity_id != 0) {
+        (void)s.request_set_down();
+    }
+    return tripped;
+}
+
+// Lure her west across the leaf, circle east around the deck, and wait
+// crouched at the trip handle. True once the player is at the handle with
+// it offered, and she is far from the bay (out of her trap's west zone, so
+// a noise from the east draws her across the leaf instead of to its bracket).
+bool stage_dump(Simulation &s) {
+    require(s.advance_frame(1.0).accepted, "bay dump: settle");
+    // Wake her first: a dash along the north band right by her locker (she
+    // sleeps; a dash out west would not reach her). Then, crouched and quiet,
+    // west over the leaf and down the west band: she follows the movement
+    // she can see, and keeps the mouth of the way out there.
+    const bool woke = go(s, 10.0, Matron::kBandNorthZ, 4.0, true, 1.0);
+    if (!woke) {
+        return false;
+    }
+    (void)s.set_crouch_input(true);
+    const bool west = go(s, -Matron::kBandX, Matron::kBandNorthZ, 60.0, false);
+    if (!west) {
+        return false;
+    }
+    // Retreat south down the west band, LOUD: a dash to the south band, so
+    // she hears it from where she guards and comes further west after it.
+    // (Crouched and quiet, she stops at the way out's mouth, ~6 m off the
+    // bay, still inside her trap's west zone.)
+    (void)s.set_crouch_input(false);
+    const bool south = go(s, -Matron::kBandX, Matron::kBandSouthZ, 10.0, true, 0.5);
+    if (!south) {
+        return false;
+    }
+    // Wait until she is far WEST of the bay: more than 12.5 m from its west
+    // edge, on the west side (out of her trap's west zone). Distance alone
+    // would also pass with her still east at her locker.
+    bool far = false;
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !far; ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        far = m.position.x < Bay::kWestX &&
+              std::hypot(m.position.x - Bay::kWestX, m.position.z - Bay::kLeafZ) > 12.5;
+    }
+    if (!far) {
+        return false;
+    }
+    // Circle east around the deck, crouched and quiet: south band east, east
+    // band north, to the trip handle. (Crouched: the south dash left the
+    // player loud, and a loud circle east draws her south after him.)
+    (void)s.set_crouch_input(true);
+    const bool se = go(s, -Matron::kBandX, Matron::kBandSouthZ, 60.0, false);
+    if (!se) {
+        return false;
+    }
+    const bool ee = go(s, Matron::kBandX, Matron::kBandSouthZ, 60.0, false);
+    if (!ee) {
+        return false;
+    }
+    const bool ne = go(s, Matron::kBandX, Matron::kBandNorthZ, 60.0, false);
+    if (!ne) {
+        return false;
+    }
+    const bool to_handle = go(s, 1.3, Bay::kTripSheave2Z, 20.0, false, 0.15);
+    if (!to_handle) {
+        return false;
+    }
+    // Crouched at the handle, facing it (west), ready to take it.
+    (void)s.set_facing(-1.0, 0.0);
+    (void)s.advance_frame(0.5);
+    return s.snapshot().carry_target_entity_id == Bay::kTripHandleEntity &&
+           s.snapshot().carry_target_kind == 2;
+}
+
 void run_bay() {
     // ---- the walkway: level under its motor, a climber over and back; the
     //      fan's noise over the steps beside it ---------------------------------
@@ -271,6 +395,159 @@ void run_bay() {
                     t.matron_state().trap == 0,
                 "bay chain: loaded, the bay as at her release: the leaf driven level, the chain on its cleat");
         std::cout << "PASS scraperx_sim bay chain: chain_n=" << chain_n << " held_rad=" << held_low << "\n";
+    }
+    // ---- the dump: her bay trap turned back on her --------------------------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(stage_dump(s), "bay dump: her west, the player at the trip handle");
+        // A dash west from the handle, loud enough to draw her across, then
+        // back to the handle at a sprint to wait, crouched, for her centre
+        // on the leaf. The dash goes WEST to -5.0, not east: she guards far
+        // west, fooled twice by the staging, so a far noise east only turns
+        // her head (kWaryNoiseM 12 m). A noise at -5.0 is inside 12 m of
+        // her post, so she hunts east after it, across the leaf.
+        (void)s.set_crouch_input(false);
+        require(go(s, -5.0, Matron::kBandNorthZ, 4.0, true, 0.3), "bay dump: the lure west");
+        require(go(s, 1.3, Bay::kTripSheave2Z, 4.0, true, 0.15), "bay dump: back to the handle");
+        (void)s.set_crouch_input(true);
+        (void)s.set_facing(-1.0, 0.0);
+        bool on_leaf = false;
+        for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !on_leaf; ++i) {
+            tick(s);
+            on_leaf = on_bay_leaf(s);
+        }
+        require(on_leaf, "bay dump: she came onto the leaf");
+        const auto at_trip = s.matron_state();
+        const double damage_before = at_trip.damage_ns;
+        std::cout << "  bay dump: she is on the leaf at (" << at_trip.position.x << ", " << at_trip.position.z
+                  << "), damage " << damage_before << " N s\\n";
+        const bool tripped = trip_bay_now(s, 1.0, 3.0);
+        const auto tripped_state = s.bay_state();
+        require(tripped, "bay dump: the trip opened the guard");
+        require(!tripped_state.leaf_running, "bay dump: the district is out");
+        std::cout << "  bay dump: guard " << tripped_state.guard_angle << " rad, leaf " << tripped_state.leaf_angle
+                  << " rad, motor out\\n";
+        // The leaf falls under her; she drops a full deck to the 143 m deck.
+        // A fall's landing knocks her down (kHardLandingMps) rather than
+        // adding damage_ns, which only counts blows; so the drop hurting her
+        // is read as her going Down on the landing, not as a damage number.
+        double low_angle = 0.0;
+        double low_y = 1.0e9;
+        bool down = false;
+        bool was_down = false;
+        for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !down; ++i) {
+            tick(s);
+            const auto b = s.bay_state();
+            low_angle = std::min(low_angle, b.leaf_angle);
+            const auto m = s.matron_state();
+            low_y = std::min(low_y, m.position.y);
+            down = m.position.y < 146.0;
+            was_down = was_down || m.state == static_cast<std::uint8_t>(Matron::State::Down);
+        }
+        // Let her land and settle on the deck below before reading where she
+        // is; watch whether the landing puts her Down (the drop loop ends
+        // when she is below 146, before she lands, so Down is read here).
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+            was_down = was_down || s.matron_state().state == static_cast<std::uint8_t>(Matron::State::Down);
+        }
+        const auto landed = s.matron_state();
+        std::cout << "  bay dump: the leaf down to " << low_angle << " rad; she down at " << landed.position.y
+                  << " m, damage " << landed.damage_ns << " N s (was " << damage_before << ")\\n";
+        require(down && low_angle < Bay::kLeafHangAngle + 0.05,
+                "bay dump: the leaf falls under her and she drops a full deck");
+        require(landed.alive, "bay dump: the fall is a dump, not a kill");
+        require(was_down, "bay dump: the drop put her down");
+        require(landed.position.y < 146.0 && landed.position.y > 140.0,
+                "bay dump: she lands on the 143 m deck");
+        // The dump puts her in the trap's climb-out state: the leaf that
+        // dropped her is her own trap's leaf, so its way out is hers.
+        require(landed.trap == 5, "bay dump: the leaf's dump puts her in the trap's climb-out state");
+        // She recovers only by a real climb: up to the 154 m deck, no
+        // position write. She has no lead up after the drop (the player is
+        // quiet on the deck above), so draw her with a loud dash on the
+        // 154 m deck first. The draw is at the corner pipe's deck rail: the
+        // riser ladder drew her to its top's z without a climb, so she is
+        // drawn to the pipe she climbs hand over hand (matron_pipe.cpp).
+        (void)s.set_crouch_input(false);
+        require(go(s, Matron::kPipeDeckX, Matron::kPipeDeckZ, 4.0, true, 0.3), "bay dump: the draw to the pipe");
+        require(go(s, 1.3, Bay::kTripSheave2Z, 4.0, true, 0.15), "bay dump: back to the handle");
+        (void)s.set_crouch_input(true);
+        bool back = false;
+        for (int i = 0; i < 150 * static_cast<int>(Simulation::kTickRateHz) && !back; ++i) {
+            tick(s);
+            back = s.matron_state().position.y > Bay::kDeckTop;
+        }
+        require(back, "bay dump: she climbs back to the 154 m deck by a real climb");
+        require(s.matron_state().alive, "bay dump: she climbs back alive");
+        std::cout << "PASS scraperx_sim bay dump: guard_rad=" << tripped_state.guard_angle
+                  << " leaf_rad=" << low_angle << " low_y=" << low_y
+                  << " damage_ns=" << landed.damage_ns << " trap=" << static_cast<int>(landed.trap) << "\\n";
+    }
+    // ---- she refuses an unrelated ladder in an ordinary hunt --------------
+    // The gate in follow_climb holds everywhere else: at a ladder's foot in
+    // an ordinary hunt (no trap, no Turn) she looks up it and does not take
+    // hold of it, even with a lead above her.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "bay climb refusal: settle");
+        // Put her on the 143 m deck at the C3 ladder's foot. The player
+        // dashes on the deck above, loud enough to draw her up, renewed
+        // inside the 9 s lose-track window so she keeps hunting.
+        s.debug_place_matron({-6.11, 143.03, -134.01});
+        double max_y = -1.0e9;
+        const int tick_hz = static_cast<int>(Simulation::kTickRateHz);
+        for (int i = 0; i < 40 * tick_hz; ++i) {
+            if (i % (5 * tick_hz) == 0) {
+                const double tx = ((i / (5 * tick_hz)) % 2 == 0) ? 10.0 : -10.0;
+                (void)go(s, tx, Matron::kBandNorthZ, 2.0, true, 0.5);
+            }
+            tick(s);
+            max_y = std::max(max_y, s.matron_state().position.y);
+        }
+        const auto her = s.matron_state();
+        const double foot_d = std::hypot(her.position.x - (-6.0), her.position.z - (-134.10));
+        std::cout << "  bay climb refusal: max_y=" << max_y << " m, at foot d=" << foot_d
+                  << " m, climbs=" << her.climbs << ", trap=" << static_cast<int>(her.trap)
+                  << ", stage=" << static_cast<int>(her.stage) << "\\n";
+        require(max_y < 146.0, "bay climb refusal: she never climbs the ladder");
+        require(her.climbs == 0, "bay climb refusal: she takes no climb");
+        require(foot_d < 1.5, "bay climb refusal: she stands at the ladder's foot");
+        require(her.alive, "bay climb refusal: she lives");
+        std::cout << "PASS scraperx_sim bay climb refusal: max_y=" << max_y << "\\n";
+    }
+    // ---- tripped early, it does nothing --------------------------------------
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "bay trip early: settle");
+        // Trip the handle before she has committed to the leaf.
+        (void)s.set_crouch_input(true);
+        const bool tripped = trip_bay_now(s, 1.0, 3.0);
+        const auto after_trip = s.bay_state();
+        require(tripped, "bay trip early: the trip opened the guard");
+        require(!after_trip.leaf_running, "bay trip early: the district is out");
+        std::cout << "  bay trip early: guard " << after_trip.guard_angle << " rad, leaf "
+                  << after_trip.leaf_angle << " rad\\n";
+        // The leaf falls with nobody on it. Lure her, and watch: she is not
+        // dropped, because she never committed.
+        (void)s.set_crouch_input(false);
+        require(go(s, 3.0, Matron::kBandNorthZ, 4.0, true, 0.3), "bay trip early: the lure east");
+        double low_y = 1.0e9;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+            low_y = std::min(low_y, s.matron_state().position.y);
+        }
+        const auto her = s.matron_state();
+        std::cout << "  bay trip early: she no lower than " << low_y << " m, alive=" << her.alive << "\\n";
+        require(her.alive, "bay trip early: she lives");
+        require(low_y > 150.0, "bay trip early: tripped early, she is not dropped");
+        require(s.snapshot().death_count == 0, "bay trip early: nobody died");
+        std::cout << "PASS scraperx_sim bay trip early: low_y=" << low_y << "\\n";
     }
 }
 SCRAPERX_GROUP("bay", 970, run_bay);

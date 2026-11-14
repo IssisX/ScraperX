@@ -425,6 +425,7 @@ struct BaySnapshot final {
     double leaf_speed = 0.0;      // rad/s
     bool leaf_running = false;    // its motor holding it
     bool leaf_open = false;       // a floor to walk: level and driven
+    double guard_angle = 0.0;     // rad, the district guard's flap: 0 shut, past 0.08 open
     double fan_fraction = 0.0;    // its speed over its running speed
     bool fan_running = false;
     bool hooked = false;          // the chain on the leaf's eye

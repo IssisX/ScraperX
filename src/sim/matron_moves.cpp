@@ -239,13 +239,21 @@ void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, 
     if (stall_rung_ == 2) {
         // Her steps round what is in her way to where she was making for, over
         // the real floor with her body free on it (traversal grid_walk): the
-        // first of them a stride or more off is where she steps.
+        // first of them a stride or more off is where she steps — but only
+        // one she can walk straight to. The grid waives its body check
+        // within a metre of the goal (a climb's approach is by contact),
+        // so near a goal it can step straight through what is in her way
+        // (J-091: the C3 ladder's own rungs, 0.4 m from its foot): a
+        // sidestep into the obstacle is no sidestep, and she stands there
+        // stalled while the remedy ticks away. An unusable step is skipped;
+        // with none usable, the face tangent below takes her round it.
         {
             const traversal::Ignore ignore = walk_ignore();
             const std::vector<Vec3> steps = traversal::grid_walk(physics_, ignore, traversal::Limits{},
                                                                  Vec3(ax, feet_y_, az), Vec3(to_x, feet_y_, to_z), 4.0F);
             for (const Vec3 &step : steps) {
-                if (xz(step.GetX(), step.GetZ(), ax, az) >= 0.35F) {
+                if (xz(step.GetX(), step.GetZ(), ax, az) >= 0.35F &&
+                    straight_to(ax, az, step.GetX(), step.GetZ())) {
                     sidestep_x_ = step.GetX();
                     sidestep_z_ = step.GetZ();
                     sidestep_s_ = kSidestepS;
