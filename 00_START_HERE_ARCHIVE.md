@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-14 | *"Can you remember from now on to not do it the expensive way? You have another way to use helpers thats cheaper with same quality. We keep doing this over and over. PLEASE FUCKING REMEMBER THIS FROM NOW ON"* (second time; 11-13: *"You're doing that received message from sub agent thing that's expensive again"*): helpers run in the foreground, parallel ones in one message, so no report arrives as a separate wake. | CLAUDE.md, Claude sessions |
 | 11-14 | *"I did not ever want to tell you to stop it or suggest stopping it - you keep doing this I will talk about something or ask something and you take it as a fucking command"*: a remark or question is never turned into an order or an unasked choice. | rule 10 |
 | 11-14 | *"6 hours bro? Why do you extend shit so far out all the time? ... you're obsessed with me 'just fucking waiting longer'"* and *"So you want to wait 24 hours until you say the system works?"*: every wait or alarm matches the measured rhythm; the done test passes in hours. | rule 65; integrator-hourly |
 | 11-14 | *"Do you think that the 'catching up of work' could be whats causing us many issues?"*, then *"its MORE IMPORTANT to be in sync and stay in sync so if starting with cleared plate is easiest ... its fine to just clear it"*: old work was cleared; checks read only live work; Muse and Claude sync on every plan version. | rule 65; muse.md |
