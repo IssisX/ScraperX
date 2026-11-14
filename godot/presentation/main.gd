@@ -854,7 +854,8 @@ func load_saved_climb() -> bool:
 			_save_path, bytes.size(), checkpoint.y, int(_native.get_tick_index())])
 		_hud.toast("CONTINUE", "%+.1f M" % checkpoint.y, UiStyle.SAFE)
 		return true
-	push_warning("SCRAPERX_SAVE_REJECTED path=%s bytes=%d" % [_save_path, bytes.size()])
+	push_warning("SCRAPERX_SAVE_REJECTED path=%s bytes=%d reason=%s" % [
+		_save_path, bytes.size(), String(_native.get_save_reject_reason())])
 	DirAccess.rename_absolute(_save_path, _save_path + ".bad")
 	_hud.toast("SAVE UNREADABLE", "STARTING A NEW CLIMB", UiStyle.HAZARD)
 	return false
