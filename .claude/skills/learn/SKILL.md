@@ -17,7 +17,7 @@ session works, and leave the rest.
 **It always says that it ran.** The report opens with this line, filled in from what was
 gathered, and nothing comes before it:
 
-> 🧠 **/learn ran:** studied N of your messages (first to last, Central) and M commits.
+> 🧠 **/learn ran:** studied N of your messages (first to last, by date only: replies carry no clock time, 11-11) and M commits.
 
 (Where no session record can be read: "could not read this session's record; studied only your
 words still in the conversation".) It ends with one line:

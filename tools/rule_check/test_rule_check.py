@@ -238,6 +238,88 @@ class WorldGeometry(unittest.TestCase):
         self.assertIn(("BLOCK", "world-geometry"), _edit_findings("src/sim/world_solids.inc", old, new))
 
 
+def _const_resolver(uses):
+    """A stub usage resolver: constant name -> [(path, lineno, text, func)] of its uses at the head."""
+    def resolve(name):
+        return uses.get(name, [])
+    return resolve
+
+
+def _const_findings(path, old, new, uses, ctx=""):
+    """rule_check's findings for one file going from old to new, with a stub usage resolver."""
+    import difflib
+    rc = _load()
+    body = list(difflib.unified_diff(old, new, f"a/{path}", f"b/{path}", lineterm="", n=3))
+    if ctx:
+        body = [line + " " + ctx if line.startswith("@@") else line for line in body]
+    rc.check(rc.parse(f"diff --git a/{path} b/{path}\n" + "\n".join(body) + "\n"), _const_resolver(uses))
+    return [(level, rule) for level, _f, _n, rule, _t in rc.findings]
+
+
+TUNING_HPP = "src/sim/physics_world_tuning.hpp"
+RAIL_USE = ("src/sim/physics_world.cpp", 1445,
+            "                  JPH::RVec3(kHangRailX, kHangRailTopY - 0.5F * kHangRailSection,",
+            "void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {")
+RAIL_OLD = ["// the hang rail: a hold-sized beam along the crossing.",
+            "constexpr float kHangRailX = -2.15F;",
+            "constexpr float kHangRailSection = 0.12F;",
+            "constexpr float kHangRailTopY =",
+            "    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness;   // the 154 deck's soffit, 153.50",
+            "constexpr float kHangRailNorthZ = -129.35F;"]
+RAIL_NEW = ["// the hang rail: a hold-sized beam along the crossing.",
+            "constexpr float kHangRailX = -2.15F;",
+            "constexpr float kHangRailSection = 0.12F;",
+            "constexpr float kHangRailTopY =",
+            "    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;   // 0.50 m below the soffit, 153.00",
+            "constexpr float kHangRailNorthZ = -129.35F;"]
+
+
+class TuningHeaderGeometry(unittest.TestCase):
+    """J-135: a tuning-header constant that places a world body is a protected change, found by what uses it —
+    not by a hand list. J-043's rail drop (kHangRailTopY 153.50 -> 153.00) went through clean; it must BLOCK."""
+
+    def test_a_tuning_constant_used_to_place_a_body_blocks(self):
+        self.assertEqual(_const_findings(TUNING_HPP, RAIL_OLD, RAIL_NEW, {"kHangRailTopY": [RAIL_USE]}),
+                         [("BLOCK", "world-geometry-changed")])
+
+    def test_a_constant_used_through_another_constant_blocks(self):
+        # kStackLevelHeight moves the rail through kHangRailTopY's definition: the use is a continuation
+        # line of kHangRailTopY's multi-line definition, so its function context names that definition.
+        uses = {"kStackLevelHeight": [(TUNING_HPP, 804,
+                                       "    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;",
+                                       "constexpr float kHangRailTopY =")],
+                "kHangRailTopY": [RAIL_USE]}
+        old = ["constexpr float kStackLevelHeight = 11.0F;"]
+        new = ["constexpr float kStackLevelHeight = 11.5F;"]
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [("BLOCK", "world-geometry-changed")])
+
+    def test_a_non_geometry_tuning_change_does_not_block(self):
+        old = ["constexpr float kGripNewtons = 900.0F;"]
+        new = ["constexpr float kGripNewtons = 800.0F;"]
+        uses = {"kGripNewtons": [("src/sim/matron.cpp", 100, "    grip = kGripNewtons * hold;",
+                                  "void Matron::grip(const Input &input) {")]}
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [])
+
+    def test_a_comment_only_change_to_a_geometry_constant_is_clean(self):
+        said = list(RAIL_NEW)
+        said[4] = ("    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;"
+                   "   // 0.50 m below the soffit")
+        self.assertEqual(_const_findings(TUNING_HPP, RAIL_NEW, said, {"kHangRailTopY": [RAIL_USE]}), [])
+
+    def test_a_constant_used_only_in_another_build_function_is_review(self):
+        old = ["constexpr float kEndingPad = 0.40F;"]
+        new = ["constexpr float kEndingPad = 0.45F;"]
+        uses = {"kEndingPad": [("src/sim/summit.cpp", 10, "    const float pad = kEndingPad;",
+                                "void Summit::build_ending() {")]}
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [("REVIEW", "possible-world-geometry")])
+
+    def test_a_renamed_constant_is_not_a_value_change(self):
+        old = ["constexpr float kOldRailY = 153.50F;"]
+        new = ["constexpr float kNewRailY = 153.50F;"]
+        uses = {"kNewRailY": [RAIL_USE]}
+        self.assertEqual(_const_findings(TUNING_HPP, old, new, uses), [])
+
+
 CLAUDE_MD = ["# Rules", "", "Intro.", "", "## Settled: never reopen (Cory's calls)", "", "- Trunk is `ScraperX-Claude`.",
              "- No per-job money cap.", "", "## Test only what a change reaches", "", "- Rerun only that test."]
 
