@@ -2,10 +2,10 @@
 
 It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
 5:17 PM, 9:17 PM). A backstop (11-10): the inbox wakes the integrator at once on Muse mail, trunk red and Claude's merges;
-branch reds and reviews within 30 min; Muse's merges ride the next post. These runs catch what no event raised.
+branch reds and reviews within 30 min; Muse's merges ride.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace: no throttling, no pace prediction, no meter asks, no quiet runs (11-10).
+Pace: no throttling, pace prediction, meter asks or quiet runs (11-10).
 Specs, ruling math and research go to an outside agent first; the integrator checks them (11-06).
 How: helpers get the important work and long reads, never chores (11-06); the integrator never hand-edits the board (the switchboard writes it from the plan).
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
@@ -13,7 +13,7 @@ eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug,
 Docs stay true (11-14): a contradiction or stale fact seen while working, or left behind by a change that landed, is
 fixed that run, never listed for later; no hunting through every file for them.
 Every wait, alarm or limit a helper or I pick is checked against the measured rhythm before it ships, never
-the safe-looking long one (11-14: a helper's 6 h Muse-quiet alarm, passed on unchecked; Muse posts about every 30 min).
+the safe-looking long one (11-14: a 6 h Muse-quiet alarm; Muse posts about every 30 min).
 An agent's own blocker (memory, disk, a tool) gets the fix told that hour, never only a workaround (11-14: Muse's low
 memory got "push anyway"; Cory had to tell it to clear space).
 The machine obeys "only what changed" too: each run, look at the newest proof runs; one that ran groups its change does
