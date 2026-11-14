@@ -15,6 +15,9 @@ void run_athletic_traversal_1() {
     run_twin_geometry();
     run_twin();
     run_twin_balconies();
+    run_twin_pitch();
+    run_twin_pitch_probe();
+    run_twin_pitch_probe_pump();
     run_well_stage_a();
     run_well_stage_b();
     run_well_stage_c();

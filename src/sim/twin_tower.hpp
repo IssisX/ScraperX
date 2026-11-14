@@ -59,6 +59,16 @@ struct TwinTower final {
     static constexpr float kBalconyHookBarZ = -219.65F;
     static constexpr float kBalconyHookBarDropM = 0.5F;
     static constexpr float kBalconyTops[5] = {640.0F, 662.0F, 684.0F, 706.0F, 728.0F};
+    // J-053 (Claude 2026-11-12): the 706 deck's lip is back at its nominal
+    // top — the 0.15 m lip drop (12:32 ruling) did not close the gap (the
+    // pump max tracked the lip 1:1, gap 0.045 m invariant), so it was
+    // reverted (13:47 ruling). The 706 deck's hook bar was raised +0.20 m
+    // instead (13:47 ruling) and that raise was reverted too (09:25 ruling,
+    // 2026-11-13): the reel stall tracks the bar 1:1 but the pump's slow
+    // rise stays at ~705.10 m whatever the bar does, so the bar is back
+    // at top - kBalconyHookBarDropM (705.50 m). The other decks are at
+    // their nominal tops and bars.
+    static constexpr float kBalcony706LipDropM = 0.0F;
     static constexpr float kBalconyRailHeights[3] = {0.35F, 0.7F, 1.1F};
     // The two halves' tips and the open gap between them (z, metres).
     static constexpr float kNearTipZ = -190.0F;

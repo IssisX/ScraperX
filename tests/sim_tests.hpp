@@ -1017,6 +1017,9 @@ void run_step2_movement();
 void run_twin();
 void run_twin_geometry();
 void run_twin_balconies();
+void run_twin_pitch();
+void run_twin_pitch_probe();
+void run_twin_pitch_probe_pump();
 void run_matron_remaining();
 
 void run_matron_player_independence();
