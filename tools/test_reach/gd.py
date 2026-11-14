@@ -82,6 +82,15 @@ for m in re.finditer(r'^\t\t((?:"\w+"(?:,\s*)?)+):\n((?:\t\t\t.*\n)+)',runb,re.M
     fn=re.findall(r'await\s+(\w+)\(',m.group(2))
     for nme in names: arms[nme]=fn
 missing=[s for s in scen if s not in arms]
+# File-level load dependencies: a preload/load of another script loads it
+# when the preloading script loads, even though no function calls into it
+# (e.g. a const table with no functions, like voice_lines.gd, preloaded
+# by ui_test_moves.gd and audio_director.gd). Recorded for the file-level
+# verdict in gen_gd.py; a call edge alone can never reach such a file.
+preload={}
+for f,L in src.items():
+    ps=sorted({'godot/'+p for p in re.findall(r'(?:preload|load)\("res://([^"]+\.gd)"\)','\n'.join(L))})
+    preload[f]={p for p in ps if p in src}
 print('scenarios',len(scen),'arms',len(arms),'missing',missing)
-pickle.dump((funcs,dict(edges),dict(nat),fam,extends,scen,arms,bound,list(src.keys())),open(S+'/gd.pkl','wb'))
+pickle.dump((funcs,dict(edges),dict(nat),fam,extends,scen,arms,bound,list(src.keys()),preload),open(S+'/gd.pkl','wb'))
 print(len(funcs),sum(len(v) for v in edges.values()),len(boundnames))

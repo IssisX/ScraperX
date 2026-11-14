@@ -1,7 +1,7 @@
 import pickle,os,collections,re,glob,json
 from common import R,S
 res,core,corenat,game,arms,scen=pickle.load(open(S+'/gd_res.pkl','rb'))
-funcs,edges,nat,fam,extends,scen2,arms2,bound,gdfiles=pickle.load(open(S+'/gd.pkl','rb'))
+funcs,edges,nat,fam,extends,scen2,arms2,bound,gdfiles,preload=pickle.load(open(S+'/gd.pkl','rb'))
 d=json.load(open(S+'/cg.json'))
 defs={};cedges=collections.defaultdict(set);over=[]
 for f,v in d.items():
@@ -94,6 +94,28 @@ for h in heads:
     t=open(R+'/'+h,encoding='utf-8').read()
     pre=sorted({'godot/'+p for p in re.findall(r'(?:preload|load)\("res://([^"]+\.gd)"\)',t)})
     hp[h]=pre
+# Files live in a run: test files whose functions a scenario actually runs,
+# headless tests, and presentation files a scenario calls into or that run
+# every frame. A file preloaded by a live file is live too (its load-time
+# code runs when the preloader loads): iterate to a fixpoint, since a
+# preload chain can nest. This is what keeps a const-only table such as
+# voice_lines.gd (no functions, so no call edge can ever reach it) out of
+# the unreached list: ui_test_moves.gd and audio_director.gd preload it.
+live={k[0] for s in S_ for k in res[s]['tf']}
+live|={h for h in heads}
+for f in pres:
+    _fk=[k for k in funcs if k[0]==f]
+    _nc=sum(1 for k in _fk if k in core)
+    _ss=set()
+    for _fn,_sset in gdi.get(f,{}).items(): _ss|=_sset
+    if _nc or _ss: live.add(f)
+_changed=True
+while _changed:
+    _changed=False
+    for _g in list(live):
+        for _p in preload.get(_g,()):
+            if _p not in live and _p in gdfiles:
+                live.add(_p); _changed=True
 rows=['| File | Lines | Functions run by a scenario | Per-frame core | Scenarios that call into it (narrowest first) | Headless tests | Verdict |','|---|---|---|---|---|---|---|']
 unreach=[]
 for f in pres:
@@ -102,15 +124,18 @@ for f in pres:
     nc=sum(1 for k in fk if k in core)
     ss=set()
     for fn,sset in gdi.get(f,{}).items(): ss|=sset
-    anyreach=nc or ss or any(f in v for v in hp.values())
+    pre_by=sorted({os.path.basename(g) for g in live if f in preload.get(g,())})
+    anyreach=nc or ss or pre_by or any(f in v for v in hp.values())
     hs=[os.path.basename(h) for h,v in hp.items() if f in v]
     # reached by calls from other game funcs at all?
     allr=bool(nc) or bool(ss)
     # called from any function at all (even non-core)?
     called=any(k in {y for e in edges.values() for y in e} for k in fk)
-    if not allr and not hs:
+    if not allr and not hs and not pre_by:
         v='no scenario or test reaches it' if not called else 'only called from code no scenario reaches'
         unreach.append(f)
+    elif pre_by and not allr and not hs:
+        v='preloaded by '+', '.join(pre_by)
     elif len(ss)>=0.7*n: v='core'
     elif ss: v='scenario-specific' 
     else: v='per-frame core only (every scenario)'

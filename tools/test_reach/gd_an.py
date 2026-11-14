@@ -1,6 +1,6 @@
 import pickle,json,collections,re,os,glob
 from common import R,S
-funcs,edges,nat,fam,extends,scen,arms,bound,gdfiles=pickle.load(open(S+'/gd.pkl','rb'))
+funcs,edges,nat,fam,extends,scen,arms,bound,gdfiles,_preload=pickle.load(open(S+'/gd.pkl','rb'))
 d=json.load(open(S+'/cg.json'))
 defs={};cedges=collections.defaultdict(set);over=[];names={}
 for f,v in d.items():
