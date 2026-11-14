@@ -288,6 +288,12 @@ const SCENARIOS := {
 	# _stack (grade to the derrick's upper receiver, 803 m) and
 	# _summit_ending (the ending from where the climber stands there).
 	"touch_stack_ending": 8,
+	# J-084 #402: the whole climb from the ground to the summit on the
+	# canonical route (rules 56, 27): the Stack, the Well, the swing, C6
+	# and the mast, pitman and helix to TP-340, then J-082's bands (the
+	# Plate Shop, Facade Crane, service lifts and climbs), and the crown
+	# gondola and derrick to the summit.
+	"touch_canonical_ascent": 8,
 	# The foreman's radio: his first line as the climber steps into S1's cage.
 	"touch_radio": 8,
 	"touch_photo_id_radio": 8,
@@ -663,6 +669,8 @@ func _run() -> void:
 			ok = await _stack(InputRouter.Device.TOUCH)
 		"touch_stack_ending":
 			ok = await _stack_ending(InputRouter.Device.TOUCH)
+		"touch_canonical_ascent":
+			ok = await _canonical_ascent(InputRouter.Device.TOUCH)
 		"pad_stack":
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":

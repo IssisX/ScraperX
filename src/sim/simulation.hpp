@@ -2113,6 +2113,9 @@ public:
     // it, and the hook must only read state, never change it.
     using DebugStepHook = void (*)(void *context) noexcept;
     void debug_set_step_hook(DebugStepHook hook, void *context) noexcept;
+    // Fixture setup only, never exposed to Godot: the Matron switched off for
+    // a run without her (Matron::switch_off_for_test).
+    void debug_matron_off();
     // Test setup: put her home (her locker, where she wakes) on the deck whose
     // top is deck_top, kept across a world rebuilt after she ends a run. The
     // game's home is the stack's deck 1 (11 m); tests written for her old
