@@ -1702,17 +1702,27 @@ class Switch:
         state = getattr(self.gh, "state", None)
         return held_of(state.get("merged"), frozenset({"now", "ride"})) if isinstance(state, dict) else ()
 
-    def plan_owner(self, job: str) -> str | None:
-        """J-072: the job's owner in work/plan.md, or None when the plan cannot be read (a TAKE then stays open)."""
+    def plan_line(self, job: str):
+        """J-072: the job's line in work/plan.md, read once per run; None when it has none or the plan cannot be read."""
         memo = self.__dict__.setdefault("_plan_owner", {})
         if "model" not in memo:
             try:
                 memo["model"] = self.read_plan().by_job()
             except (AttributeError, RuntimeError) as err:
-                self.out(f"NOTE        work/plan.md not read for TAKE ({err_text(err)})")
+                self.out(f"NOTE        work/plan.md not read ({err_text(err)})")
                 memo["model"] = None
-        line = (memo["model"] or {}).get(job)
+        return (memo["model"] or {}).get(job)
+
+    def plan_owner(self, job: str) -> str | None:
+        """J-072: the job's owner in work/plan.md, or None when the plan cannot be read (a TAKE then stays open)."""
+        line = self.plan_line(job)
         return line.owner if line is not None else None
+
+    def plan_held(self, job: str) -> bool:
+        """J-072 (11-14, QUIET on #466 while J-015 was paused): the job has a `hold:` in work/plan.md, so its PR going
+        quiet is expected. An unread plan holds nothing: the nag still goes."""
+        line = self.plan_line(job) if job else None
+        return bool(line is not None and line.hold)
 
     def note_red_head(self, f: rules.PrFacts, ctx: dict, rid) -> dict | None:
         """J-072: a Muse job's PR head, once per sweep. A green (rid None) forgets the branch's reds. A red is kept
@@ -2950,7 +2960,7 @@ class Switch:
             since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if since:
                 self.ripen(f.number, since + INBOX_FIX_STUCK)
-            if since and now - since >= INBOX_FIX_STUCK:
+            if since and now - since >= INBOX_FIX_STUCK and not self.plan_held(ctx.get("job") or ""):
                 name = self.team.agent_name.get(owner, owner)
                 out.append(item("FIX-STUCK", f"{plain('; '.join(d.reasons))}, and no new head from its owner "
                                              f"{name} for {hours(now - since)}", "both" if owner == "muse" else "claude"))
@@ -3007,7 +3017,7 @@ class Switch:
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if head_since:
                 self.ripen(f.number, head_since + INBOX_RED_STUCK)
-            if head_since and now - head_since >= INBOX_RED_STUCK and owner:
+            if head_since and now - head_since >= INBOX_RED_STUCK and owner and not self.plan_held(ctx.get("job") or ""):
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
                                              f"{hours(now - head_since)} ({proof_link})", owner, run_id=rid))
         if not rerun and not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
@@ -3017,7 +3027,8 @@ class Switch:
             idle = parse_time(ctx.get("updated_at") or "")
             if action and idle:
                 self.ripen(f.number, idle + dt.timedelta(hours=QUIET_HOURS))
-            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner:
+            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner \
+                    and not self.plan_held(ctx.get("job") or ""):   # J-072: a held job's PR is quiet by plan
                 out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}", owner))
         return [it for it in out if kept(it)]
 
