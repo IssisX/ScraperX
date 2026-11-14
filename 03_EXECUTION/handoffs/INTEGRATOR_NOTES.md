@@ -12,7 +12,8 @@ Read through: 1794658801 (2026-11-14 mail+asks)
   Count: 2/6 = #544 J-040 repin (8 min green to merged), #547 J-116 MAT1 (9 min). In flight: #545 quiet-asks, proof-unittests,
   carbon-fixes, delete-dead, board-roll. Not taken: Carbon's 60-min expiry of a pause (it would override Cory). Later list:
   eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven; Carbon rank 4 (test lists to
-  ci/shards.json, re-pin split rule, first FAIL in late notices) after proof-unittests lands. Paid reviewer spent to 12-01.
+  ci/shards.json, re-pin split rule, first FAIL in late notices). Carbon from-scratch design held (Cory: current first):
+  03_EXECUTION/CARBON_REDESIGN_11-14.md; cap its 20-min re-wakes if built. Paid reviewer spent to 12-01.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
 - Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
   alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
