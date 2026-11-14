@@ -4,7 +4,7 @@
 Cory, 11-04: running full game builds and tests "when there's only been small changes ... is so extremely
 wasteful". Each changed file is mapped to the groups of the proof that read it; a group no changed file
 reaches is skipped, and a skipped job counts as passing for the switchboard and sweep.py. Any doubt (an
-unknown path, a dispatch on trunk or any ref not named below, a diff that cannot be listed) runs the whole proof.
+unknown path, a dispatch on any ref but an integrate branch, a diff that cannot be listed) runs the whole proof.
 
 The groups (checked 11-04 against CMakeLists.txt, the test sources and the proof workflow):
   native   native-tests, the four CTest shards: scraperx_sim_tests, shared_survival and parkour_flow. They
@@ -33,13 +33,13 @@ What reaches what (first match wins; see groups_of):
 What is compared:
   push to ScraperX-Claude    the pushed range, BEFORE..HEAD (every commit of the push)
   push to an integrate branch the branch against trunk, merge-base(trunk, HEAD)..HEAD, so a docs-only push
-  (or a dispatch on one)     on a branch that also changes game code still proves the game
-  dispatch on a switchboard  the switchboard's merge of a green PR head with trunk (switch.py merge_candidate):
-  merge candidate            HEAD is that merge commit, and the range is merge-base(its two parents)..HEAD:
-                             the PR's own change since its green proof's trunk, and trunk's since then, and
-                             anything else in the merge's tree (11-13: every candidate ran all 13 jobs, even
-                             when one group was reached)
-  anything else (dispatch)   the whole proof (a dispatch on trunk too)
+                             on a branch that also changes game code still proves the game
+  dispatch on an integrate   the same range as that branch's push, so the dispatch proves what the push would
+  branch                     (11-14: every fb-bot/integrate-* head is pushed and then dispatched; the dispatch
+                             cancels the push's run, and used to run every group whatever the head reached)
+  anything else              the whole proof: a dispatch on trunk or on any other ref, any other event
+
+No dispatch input is read: the scope comes from the event, the ref and the git graph only (SECURITY.md).
 
 Writes `game=`, `native=`, `godot=` and `android=` (true|false) to $GITHUB_OUTPUT when it is set; `game` is
 true when any group runs. Prints the decision and why.
@@ -52,8 +52,9 @@ import subprocess
 import sys
 
 TRUNK = "ScraperX-Claude"
-CANDIDATE_REF = "refs/heads/switchboard/candidate-"   # tools/switchboard/switch.py CANDIDATE_PREFIX
-INTEGRATE_REF = re.compile(r"^refs/heads/[A-Za-z0-9._-]+/integrate-[A-Za-z0-9._/-]+$")
+# The refs the proof's push trigger names beside trunk ('*/integrate-*' in wo000-delivery-spine.yml; its * never
+# crosses a slash). Only these are scoped on a dispatch, and exactly as their push is.
+INTEGRATE_REF = re.compile(r"^refs/heads/[A-Za-z0-9._-]+/integrate-[A-Za-z0-9._-]+$")
 ZERO_SHA = "0" * 40
 
 GROUPS = ("native", "godot", "android")
@@ -141,11 +142,11 @@ def _shown(paths: list[str]) -> str:
 
 
 def scoped(event: str, ref: str) -> bool:
-    """Is this run's scope read from its changed files? A push; a dispatch only on a merge candidate or an
-    integrate branch (a dispatch on trunk, or on any other ref, runs the whole proof)."""
+    """Is this run's scope read from its changed files? A push; a dispatch only on an integrate branch, compared
+    as its push is (a dispatch on trunk, or on any other ref, runs the whole proof)."""
     if event == "push":
         return True
-    return event == "workflow_dispatch" and (ref.startswith(CANDIDATE_REF) or bool(INTEGRATE_REF.match(ref)))
+    return event == "workflow_dispatch" and bool(INTEGRATE_REF.match(ref))
 
 
 def decide(event: str, ref: str, changed: list[str] | None) -> tuple[frozenset[str], str]:
@@ -178,14 +179,11 @@ def _git(*args: str) -> str:
 
 
 def changed_files(ref: str, before: str) -> list[str] | None:
-    """The files this push changes, as `decide` compares them; None when they cannot be listed."""
+    """The files this push (or dispatch on an integrate branch) changes, as `decide` compares them; None when they
+    cannot be listed."""
     # The checkout is shallow (depth 1), so each base is fetched; a failed fetch or merge-base means the whole proof.
     try:
-        if ref.startswith(CANDIDATE_REF):
-            parents = merge_parents()
-            _git("fetch", "--quiet", "--depth=100", "origin", *parents)
-            base = _git("merge-base", *parents).strip()
-        elif ref == f"refs/heads/{TRUNK}":
+        if ref == f"refs/heads/{TRUNK}":
             if not before or before == ZERO_SHA:
                 return None
             _git("fetch", "--quiet", "--depth=1", "origin", before)
@@ -203,16 +201,6 @@ def changed_files(ref: str, before: str) -> list[str] | None:
         print(f"proof_scope: {err}", file=sys.stderr)
         return None
     return [n for n in names.split("\0") if n]
-
-
-def merge_parents() -> list[str]:
-    """HEAD's two parents, read from the commit object itself (a shallow checkout shows HEAD with none). Anything
-    but a two-parent merge raises: the whole proof runs."""
-    head = _git("cat-file", "-p", "HEAD").split("\n\n", 1)[0]
-    parents = [line.split()[1] for line in head.splitlines() if line.startswith("parent ")]
-    if len(parents) != 2 or not all(re.fullmatch(r"[0-9a-f]{40}", p) for p in parents):
-        raise RuntimeError(f"HEAD is not a merge of two commits ({len(parents)} parent(s))")
-    return parents
 
 
 def outputs(run: frozenset[str]) -> dict[str, str]:
