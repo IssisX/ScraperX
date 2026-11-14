@@ -596,6 +596,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
         physics_system_.RemoveConstraint(carry_constraint_);
         carry_constraint_ = nullptr;
     }
+    release_hung_slab_for_test();
     drop_hang_arms();
     stow_hook(physics_system_.GetBodyInterface());
     matron_.reset();
@@ -623,6 +624,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     machine_bodies_.clear();
     remove_and_destroy(bodies, tower_id_);
     remove_and_destroy(bodies, player_id_);
+    remove_and_destroy(bodies, hung_slab_);
     remove_and_destroy(bodies, blocked_ledge_canopy_id_);
     remove_and_destroy(bodies, blocked_ledge_id_);
     remove_and_destroy(bodies, moving_ledge_id_);
@@ -1430,6 +1432,34 @@ void Simulation::PhysicsWorld::spin_kit_body_for_test(const std::uint32_t body,
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
     const JPH::BodyID id = kit_->body_id(kit::BodyIndex{body});
     bodies.SetAngularVelocity(id, angular_velocity);
+}
+
+void Simulation::PhysicsWorld::hang_slab_for_test(const JPH::RVec3 centre) {
+    // A 2000 kg plate slab (loose_stock PlateSlab: 2.4 x 0.3 x 1.2 m), hung
+    // still by a pin through its lifting eye. The pin is the test's release.
+    release_hung_slab_for_test();
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    if (!hung_slab_.IsInvalid()) {
+        remove_and_destroy(bodies, hung_slab_);
+        hung_slab_ = {};
+    }
+    hung_slab_ = add_box(bodies, JPH::Vec3(1.2F, 0.15F, 0.6F), centre, JPH::EMotionType::Dynamic,
+                         detail::object_layers::kMoving, 0.5F, 0, JPH::Quat::sIdentity(), 2000.0F);
+    const JPH::RVec3 eye = centre + JPH::RVec3(0.0, 0.17, 0.0);
+    JPH::PointConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mPoint1 = settings.mPoint2 = eye;
+    JPH::BodyLockWrite lock(physics_system_.GetBodyLockInterface(), hung_slab_);
+    hung_slab_pin_ = static_cast<JPH::PointConstraint *>(
+        settings.Create(JPH::Body::sFixedToWorld, lock.GetBody()));
+    physics_system_.AddConstraint(hung_slab_pin_.GetPtr());
+}
+
+void Simulation::PhysicsWorld::release_hung_slab_for_test() {
+    if (hung_slab_pin_ != nullptr) {
+        physics_system_.RemoveConstraint(hung_slab_pin_.GetPtr());
+        hung_slab_pin_ = nullptr;
+    }
 }
 
 void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {
