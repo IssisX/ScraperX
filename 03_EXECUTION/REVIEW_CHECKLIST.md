@@ -14,6 +14,9 @@ It already flags, so do not redo them by hand:
 - a test check removed, or a test tolerance moved, with its direction (LOOSER is a BLOCK);
 - her budget numbers changed (`Limits`, `total_force_n`, 8000.5 N, 9,800 N, 65 kW, 220 kg and the
   other named limits);
+- the save layout changed (a save reader or writer, a `Saved*` struct, a type `save_format_key` saves whole);
+- the budget audit's list of known leaks changed (`kExpected` in `tests/sim_tests_matron_budget.cpp`: a raised
+  peak, a new row, a flag turned on, `kGrowth`);
 - REVIEW lines: possible per-route / per-deck / per-transition cases, velocity and position writes in
   her code, structured bindings near lambdas.
 
