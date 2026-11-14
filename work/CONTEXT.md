@@ -39,8 +39,7 @@ than the author's (`rules.land_counts`).
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- The board is the one open issue labeled `board` (today #384): its body is the live board (the integrator's
-  section, then the ledger's section, which the switch rewrites); comments hold rulings, BLOCKED lines and
+- The board is the one open issue labeled `board` (today #384): its body is the live board (the job section, which the switch rewrites from work/plan.md); comments hold rulings, BLOCKED lines and
   asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
   run (`Switch.board_issue`, `board_`), once per sweep. Rollover, no code: open the new issue with the label and
   the copied body, take the label off the old one, and close the old one only after the next sweep has finished
@@ -106,18 +105,18 @@ issue labeled `needs:orchestrator` gets a note and nothing starts.
   the API cannot review or answered NOTE. A NOTE lands nothing; it only passes the head on. Nobody types a
   review request, with one exception: an inbox line `CODEX-ASK #N` means the switch could not post Codex's mention
   itself (no token, or GitHub refused it), and the integrator posts `@codex review` on #N, once for that head.
-- **One notifier.** Only the reconciler posts notices (`work/switchboard.yml` `notices: v2`); the ledger writes
-  its section in the board's body and nothing else. A notice ends by the work it asks for (a new head, a verdict,
-  a merge), by the addressee's next post on that job's thread, or by a line `/ack O-xxxxxxxx`. Never post only to
-  quiet a notice: it starts a new one.
+- **One notifier.** The switch's sweep tells Muse (by mail, through the bridge) and the integrator (the #282
+  inbox). The ledger and the reconciler are gone from the sweep (#530, 11-13), so no `/ack` line is needed. A
+  notice ends by the work it asks for (a new head, a verdict, a merge).
 - **An ask** is `To <Name>:` at the start of a line. Answer it on the same job thread. Grok's runs find only a
   comment that STARTS `To Grok:`. A report or a reply needs no `To` line.
-- **Muse** is reached by mail only. A `CLAUDE_TO_MUSE:` mail sent by hand is put on the issue its subject names by
-  the bridge, so no "ruled by mail" note is needed. `wake:muse` on a pull request is refused where the label is
+- **Muse** is reached by mail, and reads work/plan.md on trunk. A `CLAUDE_TO_MUSE:` mail sent by hand is put on the
+  issue its subject names by the bridge, so no "ruled by mail" note is needed. A job issue's title starts `J-NNN `
+  with a space, never a colon: the bridge matches only that (11-14: 20 colon titles sent mail to the board). `wake:muse` on a pull request is refused where the label is
   written.
 - **A stall, where to look:** the `steer` job's log of the newest "Switchboard sweep" run has one line per PR
-  (`WAIT`, `FIX`, `MERGE`, `ASK-CODEX`, `WAIT-CODEX`, and `NOTE` lines for anything refused); the reconciler's
-  record is `state/events/` on the `switchboard/state` branch; `switch.py --dry-run` prints what a sweep would do.
+  (`WAIT`, `FIX`, `MERGE`, `ASK-CODEX`, `WAIT-CODEX`, and `NOTE` lines for anything refused); `switch.py
+  --dry-run` prints what a sweep would do.
 - **The owner's settled calls** (`CLAUDE.md`) cannot be changed by a PR: the rule check blocks it.
 
 ## Money (`work/budget.yml`)
