@@ -113,6 +113,24 @@ class RedTrunk(unittest.TestCase):
         (it,) = ti.make(gh).trunk_items(gh.runs, frozenset())
         self.assertEqual((it.kind, it.dest, it.head), ("RED-TRUNK", "both", BROKE))
 
+    def test_a_red_run_still_going_when_newer_notes_only_runs_finish_is_read_once_it_ends(self):
+        # 11-14, run 43595346281: the full proof on the merge of #547 was still running when notes-only pushes after
+        # it finished; that sweep marked them judged past its created time, so its red end never fired RED-TRUNK
+        gh = self.gh([ti.run(40, TRUNK, FIXED, 3, conclusion="success"),
+                      ti.run(41, TRUNK, BROKE, 1, conclusion=None, status="in_progress"),
+                      ti.run(42, TRUNK, NOTES, 0.5, conclusion="success"),
+                      ti.run(43, TRUNK, "f" * 40, 0.3, conclusion="success")],
+                     {40: BUILT_GREEN, 42: SKIPPED, 43: SKIPPED})
+        self.assertEqual(ti.make(gh).trunk_items(gh.runs, frozenset()), [])   # sweep 1: green so far, 41 running
+        self.assertEqual(gh.state["trunk_proof"]["state"], "green")
+        self.assertLess(gh.state["trunk_proof"]["checked"], gh.runs[1]["created_at"])
+        gh.runs[1].update(status="completed", conclusion="failure")           # sweep 2: it ended red
+        gh.jobs[41] = BUILT_RED
+        (it,) = ti.later(gh, 25).trunk_items(gh.runs, frozenset())
+        self.assertEqual((it.kind, it.head), ("RED-TRUNK", BROKE))
+        self.assertIn("red on native-tests", it.line)
+        self.assertEqual(gh.state["trunk_proof"]["checked"], gh.runs[3]["created_at"])   # nothing unfinished: judged
+
     def test_claudes_own_trunk_push_pages_only_the_integrator(self):
         gh = self.gh([ti.run(41, TRUNK, "e" * 40, 5)], {41: BUILT_RED})
         (it,) = ti.make(gh).trunk_items(gh.runs, frozenset())
