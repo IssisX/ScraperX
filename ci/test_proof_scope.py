@@ -302,16 +302,17 @@ class TrunkMergeDispatch(unittest.TestCase):
         git(self.origin, "config", "uploadpack.allowAnySHA1InWant", "true")   # as GitHub: HEAD^1 is fetched by sha
         self.commit("work/plan.md", "base")
 
-    def merged(self, path, by=TOKEN_MERGE, onto="ScraperX-Claude"):
+    def merged(self, path, by=TOKEN_MERGE, onto="ScraperX-Claude", moved=True):
         """The branch `onto` after a PR that changes `path` is merged into it, as `by` (the merge commit's author
-        and committer). `onto` moved the Godot project after the PR branched."""
-        git(self.origin, "checkout", "-q", "-b", f"claude/integrate-{onto}", onto)
+        and committer). With `moved`, `onto` moved the Godot project after the PR branched, in a commit of its own."""
+        self.prs = getattr(self, "prs", 0) + 1
+        pr = f"claude/integrate-{onto}-{self.prs}"
+        git(self.origin, "checkout", "-q", "-b", pr, onto)
         self.commit(path, "the PR's own change")
         git(self.origin, "checkout", "-q", onto)
-        self.commit("godot/main.gd", "trunk moved the game")
-        subprocess.run(["git", "merge", "-q", "--no-ff", "-m",
-                        f"Merge pull request #551 from claude/integrate-{onto} (switchboard)",
-                        f"claude/integrate-{onto}"],
+        if moved:
+            self.commit("godot/main.gd", "trunk moved the game")
+        subprocess.run(["git", "merge", "-q", "--no-ff", "-m", f"Merge pull request #551 from {pr} (switchboard)", pr],
                        cwd=self.origin, check=True, capture_output=True, text=True, env=dict(os.environ, **by))
         self.assertEqual(len(git(self.origin, "rev-list", "--parents", "-1", "HEAD").split()), 3)
 
@@ -385,6 +386,36 @@ class TrunkMergeDispatch(unittest.TestCase):
         # The same clone and merge, but the step's fetch of HEAD^1 is refused (the clone is made before this is set).
         self.assertEqual(self.dispatched(extra={"GIT_ALLOW_PROTOCOL": "https"}), self.EVERYTHING, self.said)
         self.assertIn("fetch", self.said)
+
+    def test_a_merge_below_head_is_in_the_range_when_no_other_commit_is_between(self):
+        # The dispatch names no commit: the first merge's own dispatch can read the second merge as HEAD.
+        self.merged("src/sim/matron.cpp")
+        self.merged("tools/switchboard/switch.py", moved=False)
+        self.assertEqual(self.pushed(), self.NOTHING, self.said)        # the second merge's push alone
+        self.assertEqual(self.dispatched(), self.EVERYTHING, self.said)
+        self.assertIn("src/sim/matron.cpp", self.said)   # by the first merge's file, not by the dispatch rule
+
+    def test_a_merge_on_a_commit_that_is_not_a_token_merge_is_scoped_to_its_own_range(self):
+        self.merged("src/sim/matron.cpp")
+        self.commit("work/notes.md", "a pushed commit: its push has its own run")
+        self.merged("tools/switchboard/switch.py", moved=False)
+        self.assertEqual(self.dispatched(), self.NOTHING, self.said)
+        # The same below a merge pushed by hand, and below a merge made with the merge token.
+        for by in (HAND, dict(HAND, **{k: v for k, v in TOKEN_MERGE.items() if "COMMITTER" in k})):
+            self.merged("src/sim/matron.cpp", by=by, moved=False)
+            self.merged("tools/switchboard/switch.py", moved=False)
+            self.assertEqual(self.dispatched(), self.NOTHING, self.said)
+
+    def test_more_token_merges_in_a_row_than_the_cap_run_everything(self):
+        self.assertEqual(proof_scope.TOKEN_MERGE_CHAIN, 20)
+        self.commit("godot/main.gd", "trunk moved the game")
+        for n in range(20):
+            self.merged(f"tools/switchboard/part{n}.py", moved=False)
+        self.assertEqual(self.dispatched(), self.NOTHING, self.said)      # 20 in a row: all of them are compared
+        self.assertIn("all 20 changed files", self.said)
+        self.merged("tools/switchboard/part20.py", moved=False)
+        self.assertEqual(self.dispatched(), self.EVERYTHING, self.said)   # 21: the whole proof
+        self.assertIn("more than 20", self.said)
 
 
 if __name__ == "__main__":

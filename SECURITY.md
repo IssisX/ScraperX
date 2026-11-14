@@ -36,6 +36,9 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   committer are the ones GitHub writes for that token. The commit message is never read (it carries the PR's branch
   name). A person's dispatch or re-run, any other HEAD, or a first parent that cannot be fetched runs the whole
   proof. The range is the merge's whole diff against the trunk it landed on, so nothing in the PR can narrow it.
+  The dispatch names no commit, so when the commits below HEAD on its first parents are such merges too the range
+  starts below all of them (at most 20 in a row, else the whole proof): a merge whose dispatch read a later HEAD is
+  still in that run's range.
 - A skipped proof group counts as passing, so what decides the scope is a merge gate. It takes no input but the
   event, the ref and the git graph: no dispatch input, no text from a PR or comment. A dispatch is scoped only on a
   `switchboard/candidate-*` ref (the range merge-base(HEAD's two parents)..HEAD, the merged tree itself, so extra

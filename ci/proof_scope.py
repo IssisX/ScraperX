@@ -52,7 +52,9 @@ github-actions[bot]; HEAD is a merge of two commits; and HEAD's author and commi
 a workflow-token merge. Nothing a PR or a dispatch can set is read (not the commit message: it carries the PR's
 branch name). A person's dispatch on trunk, any other HEAD (a plain commit, a hand merge, a merge made with the
 merge token, whose push has its own run) or a first parent that cannot be fetched runs the whole proof, which
-playtest-apk and hand checks need.
+playtest-apk and hand checks need. The dispatch names no commit, so one merge's dispatch can read a later merge as
+HEAD: when HEAD^1 is such a merge too, the range starts below every one of them in a row (at most 20; more runs
+the whole proof), so each merge's own change is in the range of whichever run reads it.
 """
 from __future__ import annotations
 
@@ -241,21 +243,14 @@ WORKFLOW_TOKEN_AUTHOR = "github-actions[bot] <41898282+github-actions[bot]@users
 API_MERGE_COMMITTER = "GitHub <noreply@github.com>"
 
 
-def switchboard_merge_base(event: str, ref: str, actor: str, triggering_actor: str) -> str:
-    """HEAD's first parent, the trunk the merge landed on, when this run is the trunk proof the switchboard dispatches
-    after it merges a PR with the workflow token; "" for every other run, and on any doubt. The actors are the
-    runner's own GITHUB_ACTOR and GITHUB_TRIGGERING_ACTOR (a person's re-run of the bot's run changes the second).
-    The parents, author and committer are read from the commit object itself (a shallow checkout shows HEAD with no
-    parents); its message is never read."""
-    if event != "workflow_dispatch" or ref != f"refs/heads/{TRUNK}":
-        return ""
-    if actor != WORKFLOW_TOKEN_ACTOR or triggering_actor != WORKFLOW_TOKEN_ACTOR:
-        return ""
-    try:
-        header = _git("cat-file", "commit", "HEAD").split("\n\n", 1)[0].splitlines()
-    except (RuntimeError, ValueError) as err:   # ValueError: a commit that is not UTF-8
-        print(f"proof_scope: {err}", file=sys.stderr)
-        return ""
+TOKEN_MERGE_CHAIN = 20   # the most workflow-token merges in a row that are read as one push; more: the whole proof
+
+
+def token_merge_parent(commit: str) -> str:
+    """The first parent of `commit` when it is a merge of two commits with the author and committer GitHub writes on
+    a workflow-token merge; "" for any other commit. Read from the commit object itself (a shallow checkout shows a
+    commit without its parents); its message is never read."""
+    header = _git("cat-file", "commit", commit).split("\n\n", 1)[0].splitlines()
 
     def field(name: str) -> list[str]:
         return [line[len(name) + 1:] for line in header if line.startswith(name + " ")]
@@ -270,6 +265,35 @@ def switchboard_merge_base(event: str, ref: str, actor: str, triggering_actor: s
     return parents[0]
 
 
+def switchboard_merge_base(event: str, ref: str, actor: str, triggering_actor: str) -> str:
+    """The trunk commit the switchboard's merges landed on, when this run is the trunk proof the switchboard
+    dispatches after it merges a PR with the workflow token; "" for every other run, and on any doubt. The actors
+    are the runner's own GITHUB_ACTOR and GITHUB_TRIGGERING_ACTOR (a person's re-run of the bot's run changes the
+    second). The dispatch names no commit, so a merge's own dispatch can read a later merge as HEAD: the base is the
+    first commit down HEAD's first parents that is not a workflow-token merge, and the range base..HEAD holds every
+    such merge in a row, HEAD's included. More than TOKEN_MERGE_CHAIN of them, or a parent that cannot be fetched
+    (the checkout is shallow), is a doubt."""
+    if event != "workflow_dispatch" or ref != f"refs/heads/{TRUNK}":
+        return ""
+    if actor != WORKFLOW_TOKEN_ACTOR or triggering_actor != WORKFLOW_TOKEN_ACTOR:
+        return ""
+    try:
+        base = token_merge_parent("HEAD")
+        if not base:
+            return ""
+        for _ in range(TOKEN_MERGE_CHAIN):
+            _git("fetch", "--quiet", "--depth=1", "origin", base)
+            parent = token_merge_parent(base)
+            if not parent:
+                return base
+            base = parent
+    except (RuntimeError, ValueError) as err:   # ValueError: a commit that is not UTF-8
+        print(f"proof_scope: {err}", file=sys.stderr)
+        return ""
+    print(f"proof_scope: more than {TOKEN_MERGE_CHAIN} workflow-token merges in a row end at HEAD", file=sys.stderr)
+    return ""
+
+
 def main() -> int:
     event = os.environ.get("EVENT", "")
     ref = os.environ.get("REF", "")
@@ -279,7 +303,7 @@ def main() -> int:
     merged_onto = switchboard_merge_base(event, ref, actor, triggering_actor)
     if merged_onto:
         print(f"proof_scope: a switchboard merge, dispatched on trunk by the workflow token: scoped as its push, "
-              f"{merged_onto}..HEAD")
+              f"with every such merge in a row below it, {merged_onto}..HEAD")
         event, before = "push", merged_onto
     changed = changed_files(ref, before) if scoped(event, ref) else None
     run, why = decide(event, ref, changed)
