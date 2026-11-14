@@ -25,9 +25,10 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus; Sonnet only for cheap
-  chores, never game code (11-12). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
-  "Carbon or Argon?" (Gemini, free: Carbon a step above Argon, Argon 100% right so far, 11-14) with the whole copyable
-  prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2 helper (`model: fable`); nothing waits (11-12).
+  chores, never game code (11-12). The most complex, hardest work goes first to Gemini Carbon
+  (free; above Argon, 100% right so far; 11-14). Other hard work: an Opus helper at high, then `helper-max`,
+  then Carbon or Argon. Each: Cory gets the whole copyable prompt and a 15-minute `send_later` check; his no or no
+  answer: a Fable 5.2 helper (`model: fable`); nothing waits (11-12).
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Claude picks each helper's
   effort and tells him in one line; he changes it if he wants (11-13: "I don't want to have to name every single time").
