@@ -59,3 +59,6 @@ J-123 muse #445 hold: parked in live issue; reconcile pushed work before release
 J-138 claude #504 | Muse's git message channel: messages as files on fb-bot/mail and muse-inbox, mail retired after a clean trial
 J-139 claude #508 | rule_check blocks save-layout changes and loosened budget limits
 J-072 claude #350 | The collaboration system: one machine, finished and tested end to end (Cory 11-13)
+J-140 muse #560 | Mission 8 Top out: the done check in the objective core
+J-141 muse #561 | Regenerate REPO_MAP.md and TEST_REACH.md at trunk
+J-142 muse #562 | Bring GAP_LIST.md up to date with trunk
