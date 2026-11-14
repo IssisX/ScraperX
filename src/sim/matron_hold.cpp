@@ -1805,7 +1805,14 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // (Once his window is done: him face to face on her deck till then.)
         const bool bare_lip = fatal_hold_ && rail_up_ < 0.2F && !pin_here_ && grip_point_ == Grip::Belt && !fatal_window_;
         if (bare_lip && to_spot <= 0.2F) {
-            pose_hand(dt, rail_pose(at, feet, kBeltUpM, kBeltOutM + kBareLipPushM, kBeltSideM), 0.8F * kHandSpeedMps);
+            // His middle out past the lip: her belt hand bears it down past
+            // the lip's edge (his legs on her deck lever up over it, toward
+            // her second hand); till then, out.
+            const RVec3 mid = physics_.GetBodyInterface().GetPosition(player_);
+            const float out_past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                                   (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+            const float up = out_past >= kBareLipTipM ? kBeltUpM - kBareLipBearM : kBeltUpM;
+            pose_hand(dt, rail_pose(at, feet, up, kBeltOutM + kBareLipPushM, kBeltSideM), 0.8F * kHandSpeedMps);
         } else {
             pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
         }
@@ -1816,25 +1823,20 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         if (hand2_on_ != 1) {
             pull2_n_ = kHandReachPullN;
             pose_hand2(dt, player_ankle_, kHandReachSpeedMps);
-            if (bare_lip && to_spot <= 0.2F) {
-                // His middle out past the lip (or her arm out as far as it
-                // goes): her fingers open on his belt; he tips head first over
-                // it, his legs come up past her, and her hands take his ankle.
-                const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
-                const float past_lip = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
-                                       (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-                if (past_lip >= kBareLipTipM || hold_s_ > kHandoffS) {
-                    bare_lip_ = true;
-                    begin_regrip(Grip::Ankle);
-                    hold_phase_ = 6;
-                    hold_s_ = 0.0F;
-                    over_up_ = false;
-                    break;
-                }
-            }
             if (hold_s_ > 2.0F * kHandoffS) {
                 back_in();
             }
+        } else if (bare_lip) {
+            // Over a bare lip, hand over hand: her second hand has his ankle
+            // (his legs come up past her as he tips head first over it), and
+            // only then her first hand opens on his belt for his ankle. He is
+            // never out of her hands over the drop.
+            pull2_n_ = kHandPullN;
+            bare_lip_ = true;
+            begin_regrip(Grip::Ankle);
+            hold_phase_ = 6;
+            hold_s_ = 0.0F;
+            over_up_ = false;
         } else {
             pull2_n_ = kHandPullN;
             hold_phase_ = 5;
@@ -1892,7 +1894,11 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                 // before her, low, to her first (the over's top is at the end
                 // of her first arm). Over a bare lip both her hands go for his
                 // ankle as it comes.
-                pose_hand2(dt, hand2_on_ == 1 ? rail_pose(at, feet, rail_up_ + 0.45F, kOverOutM + 0.05F, 0.0F) : player_ankle_,
+                // (Over a bare lip, his ankle in her second hand, it goes out to
+                // his window's pose: he hangs clear of the lip's face, past
+                // its edge beam, as her first hand comes to it.)
+                const RVec3 in_before = bare_lip_ ? window_pose : rail_pose(at, feet, rail_up_ + 0.45F, kOverOutM + 0.05F, 0.0F);
+                pose_hand2(dt, hand2_on_ == 1 ? in_before : player_ankle_,
                            hand2_on_ == 1 ? 0.6F * pace * kHandSpeedMps : kHandReachSpeedMps);
             }
             if (hold_s_ > kHandoffS) {

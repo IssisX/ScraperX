@@ -1302,6 +1302,7 @@ public:
     static constexpr float kHandoffS = 3.0F;
     static constexpr float kOverPushM = 0.15F;     // her belt hand out past its pin pose
     static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
+    static constexpr float kBareLipBearM = 0.80F;  // a bare lip, his middle past it: her belt hand this far lower, tipping him over it
     static constexpr float kBareLipPushM = 0.50F;  // a bare lip: her belt hand out past its pin pose, sliding him off it
     static constexpr float kBareLipTipM = 0.25F;   // his middle this far past a bare lip: her fingers open on his belt
     static constexpr float kBareLipHangUpM = 0.30F;   // a bare lip's hang: her hand this high (her deck's height is past her bent arm)
