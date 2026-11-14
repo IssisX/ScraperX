@@ -1199,6 +1199,13 @@ struct Snapshot final {
     Vector3 matron_hand{};
     bool matron_hand_present = false;
     Vector3 held_ankle{};
+    // Every tick she holds him, where on him each hand of hers holds (world),
+    // whatever the point (ankle, collar, belt, wrist): her first hand's grip
+    // (left_grip_world, grip_mask bit 1) and her second hand's (right_grip_world,
+    // bit 2: his belt, his ankle or his wrist). A clear bit leaves its point zero.
+    Vector3 left_grip_world{};
+    Vector3 right_grip_world{};
+    std::uint8_t grip_mask = 0;
     // Arms (physics_world_arm.cpp): lost per side until a death or a
     // restart; the severed arm's body; her win.
     bool left_arm_lost = false;

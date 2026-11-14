@@ -317,6 +317,14 @@ class Recorder extends Node:
 			row.append_array(["%.5f" % ankle.x, "%.5f" % ankle.y, "%.5f" % ankle.z])
 		else:
 			row.append_array(["", "", ""])
+		# Where each of her hands holds him (the native's left_grip_world, right_grip_world, grip_mask).
+		if hold.has("grip_mask"):
+			var lg: Vector3 = hold["left_grip_world"]
+			var rg: Vector3 = hold["right_grip_world"]
+			row.append_array([int(hold["grip_mask"]), "%.5f" % lg.x, "%.5f" % lg.y, "%.5f" % lg.z,
+				"%.5f" % rg.x, "%.5f" % rg.y, "%.5f" % rg.z])
+		else:
+			row.append_array(["", "", "", "", "", "", ""])
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -389,4 +397,5 @@ class Recorder extends Node:
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
 		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
 		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz",
-		"stock_reach", "stock_two_hands", "hold_weight", "held_anklex", "held_ankley", "held_anklez"]
+		"stock_reach", "stock_two_hands", "hold_weight", "held_anklex", "held_ankley", "held_anklez",
+		"grip_mask", "left_gripx", "left_gripy", "left_gripz", "right_gripx", "right_gripy", "right_gripz"]

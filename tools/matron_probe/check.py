@@ -245,6 +245,12 @@ def held_point(rows, i, have_ankle):
         ankle = np.array([rows["held_anklex"][i], rows["held_ankley"][i], rows["held_anklez"][i]])
         if np.all(np.isfinite(ankle)) and float(np.dot(ankle, ankle)) > 1.0e-6:
             return ankle, True
+    # Her first hand off him (a collar regrip, his belt in her second hand alone): the point her
+    # second hand holds (the native's right_grip_world, grip_mask bit 2), whatever the point.
+    if "grip_mask" in rows and np.isfinite(rows["grip_mask"][i]) and (int(rows["grip_mask"][i]) & 2):
+        grip = np.array([rows["right_gripx"][i], rows["right_gripy"][i], rows["right_gripz"][i]])
+        if np.all(np.isfinite(grip)):
+            return grip, True
     return np.array([rows["hx"][i], rows["hy"][i], rows["hz"][i]]), False
 
 

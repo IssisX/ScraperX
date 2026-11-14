@@ -2019,6 +2019,11 @@ void ScraperXSimulation::fill_matron_hold(godot::Dictionary &out, const sim::Sna
     // out) and the held ankle point (where her fingers hold him, while they do).
     out[keys("matron_hand_present")] = p.matron_hand_present;
     out[keys("held_ankle")] = to_godot(p.held_ankle);
+    // Where each of her hands holds him, every held tick (bit 1 her first
+    // hand, bit 2 her second), whatever the point.
+    out[keys("left_grip_world")] = to_godot(p.left_grip_world);
+    out[keys("right_grip_world")] = to_godot(p.right_grip_world);
+    out[keys("grip_mask")] = static_cast<std::int64_t>(p.grip_mask);
     out[keys("held")] = p.held_by_matron;
     out[keys("free_rotation")] = p.player_free_rotation;
     out[keys("body_rotation")] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);

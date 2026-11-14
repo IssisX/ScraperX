@@ -1369,6 +1369,21 @@ void Simulation::PhysicsWorld::read_state() noexcept {
             const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
             state_.matron_hand2 = Vector3{hand.GetX(), hand.GetY(), hand.GetZ()};
         }
+        // Each hand's grip on him, where the grip's point on his body is now.
+        const auto grip_point = [](const JPH::TwoBodyConstraint *c, Vector3 &out) {
+            if (c == nullptr) return false;
+            const JPH::RVec3 at =
+                c->GetBody2()->GetCenterOfMassTransform() * c->GetConstraintToBody2Matrix().GetTranslation();
+            out = Vector3{at.GetX(), at.GetY(), at.GetZ()};
+            return true;
+        };
+        state_.left_grip_world = Vector3{};
+        state_.right_grip_world = Vector3{};
+        state_.grip_mask = 0;
+        if (grip_point(grip_.GetPtr(), state_.left_grip_world)) state_.grip_mask |= 1U;
+        if (grip_point(hand2_grip_ != nullptr ? hand2_grip_.GetPtr() : wrist_.GetPtr(), state_.right_grip_world)) {
+            state_.grip_mask |= 2U;
+        }
         state_.left_arm_lost = arm_lost_[0];
         state_.right_arm_lost = arm_lost_[1];
         state_.last_severed_side = last_severed_side_;
