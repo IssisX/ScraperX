@@ -240,7 +240,8 @@ def _tri_dist(p, a, b, c):
     ab, ac = b - a, c - a
     ap = p - a
     n = np.cross(ab, ac)
-    n = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+    nrm = np.linalg.norm(n, axis=1, keepdims=True)
+    n = n / np.maximum(nrm, 1e-12)
     dist_plane = np.einsum("ij,ij->i", ap, n)
     proj = p - dist_plane[:, None] * n
     v0, v1, v2 = b - a, c - a, proj - a
@@ -253,7 +254,12 @@ def _tri_dist(p, a, b, c):
     v = (d11 * d20 - d01 * d21) / den
     w = (d00 * d21 - d01 * d20) / den
     u = 1.0 - v - w
-    inside_tri = (u >= 0) & (v >= 0) & (w >= 0)
+    # A degenerate triangle (zero area: a point or a segment) has no plane,
+    # so its barycentric "inside" is meaningless and its zero normal made
+    # the plane distance 0 for every point, forcing the nearest distance to
+    # 0. Only a real triangle takes the plane branch; a degenerate one falls
+    # through to the edge distances, which are its point/segment distance.
+    inside_tri = (u >= 0) & (v >= 0) & (w >= 0) & (nrm[:, 0] > 1e-18)
     d = np.where(inside_tri, np.abs(dist_plane), np.inf)
 
     def seg_dist(p, a, b):
@@ -331,8 +337,17 @@ def mesh_inside(p, parts_tris, parts_aabb=None):
     if parts_aabb is None:
         parts_aabb = []
         for (a, b, c) in parts_tris:
-            parts_aabb.append((np.minimum(np.minimum(a.min(axis=0), b.min(axis=0)), c.min(axis=0)),
-                               np.maximum(np.maximum(a.max(axis=0), b.max(axis=0)), c.max(axis=0))))
+            if len(a) == 0:
+                # An empty part has no box: the (inf, -inf) box is farther
+                # than any real distance and no ray reaches it, so the
+                # distance and ray passes skip it, as their len(a) guards
+                # already intend. Without this, a.min on the empty arrays
+                # raised before those guards were ever reached.
+                parts_aabb.append((np.array([np.inf, np.inf, np.inf]),
+                                   np.array([-np.inf, -np.inf, -np.inf])))
+            else:
+                parts_aabb.append((np.minimum(np.minimum(a.min(axis=0), b.min(axis=0)), c.min(axis=0)),
+                                   np.maximum(np.maximum(a.max(axis=0), b.max(axis=0)), c.max(axis=0))))
     dists = [_aabb_dist(p, lo, hi) for (lo, hi) in parts_aabb]
     order = sorted(range(len(parts_tris)), key=lambda k: dists[k])
     dmin = np.inf

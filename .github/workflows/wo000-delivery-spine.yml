@@ -135,6 +135,17 @@ jobs:
           set -euo pipefail
           "$RUNNER_TEMP/switchboard-venv/bin/python" -m unittest discover -s tools/switchboard -p 'test_*.py'
 
+      # The drawn-body verdicts (hair and skirt penetration) rest on the
+      # scorer's own geometry, so pin it here, on every push, next to the
+      # proof-scope unit tests: a scorer bug must fail the proof at the
+      # front door, not read as a body verdict in a later job.
+      - name: Pin the scorer's mesh geometry (triangle distance, ray parity)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet "numpy==2.5.3"
+          (cd tools/matron_probe && python3 -m unittest -q test_score)
+
       - name: Verify every proof job is gated on its own scope output
         shell: bash
         run: |
