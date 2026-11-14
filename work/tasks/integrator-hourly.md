@@ -13,6 +13,8 @@ Quality floor (11-06): never cut reviews, tests on what a change reaches, checks
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Docs stay true (11-14): a contradiction or stale fact seen while working, or left behind by a change that landed, is
 fixed that run, never listed for later; no hunting through every file for them.
+Every wait, alarm or limit a helper or I pick is checked against the measured rhythm before it ships, never
+the safe-looking long one (11-14: a helper's 6 h Muse-quiet alarm, passed on unchecked; Muse posts about every 30 min).
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
