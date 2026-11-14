@@ -1,7 +1,7 @@
 # Integrator notes
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794664120 (2026-11-14 mail+asks)
+Read through: 1794669349 (2026-11-14 mail+asks)
 ## Now
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
