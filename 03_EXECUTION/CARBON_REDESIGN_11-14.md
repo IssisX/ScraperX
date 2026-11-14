@@ -1,6 +1,6 @@
 # Carbon (Gemini): from-scratch collaboration design, relayed by Cory 11-14
 
-Held (Cory 11-14): the current system finishes its done test first; this is the candidate built alongside after.
+Held (Cory 11-14): not built. The current system is judged first; parts are cherry-picked only where it shows a gap.
 
 Carbon (Gemini) — From-Scratch Collaboration System Design (for Cory to relay):
 
