@@ -5,6 +5,7 @@
 
 #include "sim/loose_stock.hpp"
 #include "sim/physics_world.hpp"
+#include "sim/stock_damage.hpp"
 
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
 
@@ -278,12 +279,20 @@ std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
 
+std::uint32_t Simulation::loose_stock_upper_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().upper_begin());
+}
+
 Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) const noexcept {
     const std::vector<LooseStock::Placement> &placed = physics_world_->loose_stock().placed();
     if (index >= placed.size()) {
         return {};
     }
     return {static_cast<std::uint8_t>(placed[index].kind), placed[index].variant};
+}
+
+stock_damage::DamageState Simulation::stock_damage(const std::uint64_t entity) const noexcept {
+    return physics_world_->stock_damage_state(entity);
 }
 
 std::uint32_t Simulation::kit_cable_count() const noexcept {
@@ -511,6 +520,12 @@ ServiceState Simulation::service_state() const noexcept {
     out.o_chain_kg = kit.chain_hanging_kg(service.o_chain);
     out.o_bucket_mass = kit.body_mass(service.o_bucket);
     out.o_rope_tension = kit.rope_tension(service.o_rope);
+    out.bait_a_travel = kit.guide_travel(service.bait_a_guide);
+    out.bait_b_travel = kit.guide_travel(service.bait_b_guide);
+    out.bait_a_peak_speed = kit.guide_peak_speed(service.bait_a_guide);
+    out.bait_b_peak_speed = kit.guide_peak_speed(service.bait_b_guide);
+    out.bait_chain_kg = kit.chain_hanging_kg(service.bait_chain);
+    out.bait_rope_tension = kit.rope_tension(service.bait_rope);
     return out;
 }
 
@@ -706,6 +721,9 @@ AdvanceResult Simulation::advance_frame(const double frame_delta_seconds) noexce
 
     for (std::uint32_t step = 0; step < due; ++step) {
         step_fixed();
+        if (step_hook_ != nullptr) {
+            step_hook_(step_hook_context_);
+        }
     }
     return {true, due};
 }
@@ -969,6 +987,14 @@ std::vector<ImpactSnapshot> Simulation::impacts() const {
 
 std::uint64_t Simulation::last_impact_sequence() const noexcept {
     return physics_world_->impacts().last_sequence();
+}
+
+float Simulation::debug_carried_load_mass() const noexcept {
+    return physics_world_->debug_carried_load_mass();
+}
+
+Simulation::BreakParentSample Simulation::debug_last_break_parent() const noexcept {
+    return physics_world_->debug_last_break_parent();
 }
 
 std::vector<Simulation::MachinePart> Simulation::machine_parts() const {
@@ -1303,6 +1329,16 @@ bool Simulation::debug_player_snagged() const noexcept { return physics_world_->
 
 void Simulation::debug_matron_player_blow() noexcept { physics_world_->matron().player_blow_landed(); }
 
+void Simulation::debug_matron_player_blow_at(const Vector3 impulse_ns, const Vector3 at, const bool low) noexcept {
+    physics_world_->matron().struck_by_player(
+        JPH::Vec3(static_cast<float>(impulse_ns.x), static_cast<float>(impulse_ns.y), static_cast<float>(impulse_ns.z)),
+        JPH::RVec3(at.x, at.y, at.z), low);
+}
+
+void Simulation::debug_force_strike_move(const std::uint8_t move) noexcept {
+    physics_world_->force_strike_move_for_test(move);
+}
+
 void Simulation::debug_matron_hold(const int spare, const double dangle_seconds) noexcept {
     physics_world_->matron().set_spare_for_test(spare);
     physics_world_->matron().set_dangle_seconds_for_test(static_cast<float>(dangle_seconds));
@@ -1320,6 +1356,12 @@ void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 a
     physics_world_->launch_kit_body_for_test(
         body, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
+}
+
+void Simulation::debug_spin_kit_body(const std::uint32_t body, const Vector3 angular_velocity) noexcept {
+    physics_world_->spin_kit_body_for_test(
+        body, JPH::Vec3(static_cast<float>(angular_velocity.x), static_cast<float>(angular_velocity.y),
+                        static_cast<float>(angular_velocity.z)));
 }
 
 void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) noexcept {
@@ -1454,6 +1496,10 @@ bool Simulation::place_matron_home(const float deck_top) {
     return physics_world_->place_matron_home(deck_top);
 }
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
+void Simulation::debug_set_step_hook(DebugStepHook hook, void *context) noexcept {
+    step_hook_ = hook;
+    step_hook_context_ = context;
+}
 
 double Simulation::debug_matron_gravity_factor() const noexcept {
     const Matron &matron = physics_world_->matron();
@@ -1629,6 +1675,12 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.knockdowns = view.knockdowns;
     result.damage_ns = view.damage_ns;
     result.player_damage_ns = view.player_damage_ns;
+    for (std::size_t i = 0; i < injury::kRegions; ++i) {
+        result.injury_j_region[i] = view.injury_j_region[i];
+        result.injury_j_event[i] = view.injury_j_event[i];
+    }
+    result.injury_j_region_unclassified = view.injury_j_region_unclassified;
+    for (std::size_t i = 0; i < 4; ++i) result.limb_health[i] = view.limb_health[i];
     result.damage_stage = view.damage_stage;
     result.blow_mps = view.blow_mps;
     result.blow_low = view.blow_low;
@@ -1778,6 +1830,8 @@ SwingSnapshot Simulation::swing_state() const noexcept {
     return result;
 }
 
+std::string Simulation::last_load_refusal() const { return last_load_refusal_; }
+
 std::vector<std::uint8_t> Simulation::save_game() const {
     SaveWriter w;
     w.pod(save_format_key());
@@ -1787,6 +1841,7 @@ std::vector<std::uint8_t> Simulation::save_game() const {
 }
 
 bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
+    last_load_refusal_.clear();
     if (data == nullptr) {
         return false;
     }
@@ -1796,6 +1851,7 @@ bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
         return false;
     }
     if (!physics_world_->load_save(r)) {
+        last_load_refusal_ = physics_world_->load_refusal();
         return false;
     }
     tick_index_ = tick;

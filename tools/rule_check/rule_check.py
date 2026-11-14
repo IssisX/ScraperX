@@ -8,7 +8,8 @@ Usage (from the repository root):
 
 Prints one line per finding:  LEVEL file:line rule: text
   BLOCK   a protected change: a protected file, a test check removed or changed (its text, bound or
-          operator), world geometry changed (a constant or a box of an existing body), her budget changed.
+          operator), world geometry changed (a constant or a box of an existing body — a tuning-header
+          constant counts when it places a body, J-135), her budget changed.
           Those changes go only as a PR into ScraperX-Claude, and only the owner merges it.
   REVIEW  a reviewer must look (possible per-route special case, velocity write, position write,
           structured binding near a lambda, new world geometry, a mechanism's tuning number changed (a mass,
@@ -46,6 +47,17 @@ TUNING_WORDS = {"mass", "kg", "friction", "damping", "damp", "stiffness", "stiff
                 "time", "delay", "period", "restitution", "drag", "rate", "gain", "spring", "hz", "force", "power"}
 PASS_CALLS = {"max", "min", "clamp", "abs", "sqrt", "static_cast", "float", "double"}   # look past these to the owner
 LITERAL_RE = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
+# (d2) J-135: a constant that places or sizes a world body, wherever it is defined. The checker only watched
+# the files that build the world, so a geometry change made through a tuning constant (J-043: kHangRailTopY in
+# physics_world_tuning.hpp, used in PhysicsWorld::build_stack) went through clean. The constants are found by
+# what uses them at the head revision — the solids table and the body builders — not by a hand list that goes
+# stale. A constant used in another constant's definition is followed through it (kStackLevelHeight moves the
+# rail through kHangRailTopY). Uses are resolved with `git grep` at the head; without a resolver (a hand-fed
+# diff with no repo, or a test that passes none) this rule stays silent.
+CONST_DEF_RE = re.compile(r"^\s*(?:static\s+)?(?:inline\s+)?(?:constexpr|const)\s+(?:[\w:<>,]+[\s&*]+)?"
+                          r"(\w+)\s*(?:\[[^\]]*\])?\s*(?::\s*\w+\s*)?(?::?=|\{)")
+CONST_NAME_RE = re.compile(r"^(?:k[A-Z]\w*|[A-Z][A-Z0-9_]{1,})$")
+CPP_EXTS = (".hpp", ".cpp", ".h", ".inc")
 # CLAUDE.md's "## Settled" section holds the owner's calls: only he changes a line, and the automatic review is told
 # they are his (tools/switchboard claude_calls.settled_calls). A PR that edits the section is never merged by the
 # switch: the finding is a protected-file BLOCK, which nothing lifts.
@@ -335,7 +347,152 @@ def world_geometry(f, hunks, whole, fn_re):
                 "new geometry: built after every existing body, moving none? | " + code(new[0][1]).strip())
 
 
-def check(files):
+def git_uses(head):
+    """A usage resolver backed by `git grep` at <head>: constant name -> [(path, lineno, text, func)] of its
+    uses in src/. The func is git's -p function context (the enclosing definition, or ""), so a use inside a
+    body builder can be told from one in a mechanism. A name git cannot find has no uses. Results are cached:
+    a diff that changes several constants, and the constants they are built from, still runs a handful of greps."""
+    cache = {}
+
+    def resolve(name):
+        if name in cache:
+            return cache[name]
+        uses, func = [], ""
+        try:
+            out = subprocess.check_output(["git", "grep", "-n", "-p", "-w", name, head, "--", "src"],
+                                          text=True, stderr=subprocess.DEVNULL)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            out = ""
+        for line in out.splitlines():
+            _rev, rest = line.split(":", 1)
+            m = re.match(r"^([^:=]+)=(\d+)=(.*)$", rest)
+            if m:
+                func = m.group(3)
+                continue
+            m = re.match(r"^([^:=]+):(\d+):(.*)$", rest)
+            if m:
+                uses.append((m.group(1), int(m.group(2)), m.group(3), func))
+        cache[name] = uses
+        return uses
+
+    return resolve
+
+
+def use_class(path, func):
+    """'block' | 'review' | None for one use of a constant: does it place or size a world body? The solids
+    table and the files that build the world are BLOCK, as a change to them is; a use in another build_*
+    function of src/sim is REVIEW, as a number changed there is."""
+    if path == GEOMETRY_FILE or GEOMETRY_SRC_RE.match(path):
+        return "block"
+    fn_re = GEOMETRY_FUNCS.get(path)
+    if fn_re and func and fn_re.search(func):
+        return "block"
+    if path.startswith("src/sim/") and func and BUILD_FN_RE.search(func) and not BUILD_FN_NOT.search(func):
+        return "review"
+    return None
+
+
+def constant_is_geometry(name, resolve, seen=None):
+    """('block', (path, lineno)) | ('review', None) | (None, None): does changing this constant move world
+    geometry, by what uses it at the head? A constant used in another constant's definition is followed
+    through it; a use that is only a comment or a string is not a use."""
+    if seen is None:
+        seen = set()
+    if name in seen:
+        return None, None
+    seen.add(name)
+    best = None
+    for path, _n, text, func in resolve(name):
+        c = code(text)
+        if not re.search(r"\b" + re.escape(name) + r"\b", re.sub(r'"[^"]*"', '""', c)):
+            continue
+        m = CONST_DEF_RE.match(c)
+        if m and CONST_NAME_RE.match(m.group(1)):
+            if m.group(1) == name:
+                continue  # its own definition
+            kind, where = constant_is_geometry(m.group(1), resolve, seen)
+        else:
+            fm = CONST_DEF_RE.match(func or "")
+            if fm and CONST_NAME_RE.match(fm.group(1)):
+                if fm.group(1) == name:
+                    continue  # a continuation line of its own definition
+                kind, where = constant_is_geometry(fm.group(1), resolve, seen)
+            else:
+                kind = use_class(path, func)
+                where = (path, _n) if kind == "block" else None
+        if kind == "block":
+            return "block", where
+        if kind == "review":
+            best = "review"
+    return best, None
+
+
+def _definitions(lines):
+    """{name: [(lineno, code)]} for the constant definitions in one side's lines, in hunk order. A definition
+    may run over several lines (the value on the line after its `constexpr` line); the lines after the start
+    belong to it until the `;` that ends it. Each side is read on its own, so the old version's `;` and the
+    new version's `;` — two lines in the diff — do not cut each other short."""
+    defs = {}
+    cur = None
+    for n, c in lines:
+        if cur is None:
+            m = CONST_DEF_RE.match(c)
+            if not (m and CONST_NAME_RE.match(m.group(1))):
+                continue
+            cur = [m.group(1), []]
+        cur[1].append((n, c))
+        if ";" in c:
+            defs[cur[0]] = cur[1]
+            cur = None
+    return defs
+
+
+def changed_constants(hunks):
+    """[(name, new_lineno, old, new)] for constant definitions whose value changed in these hunks. A definition
+    only added (no old side) or only removed (no new side) is not a value change: a new constant comes with the
+    builder call that uses it, and the existing rule flags that call; a removed one takes its uses with it. A
+    comment-only change is not a change. The finding sits on the definition's last line in the new file, which
+    is the changed line for a value on its own line."""
+    out = []
+    for h in hunks:
+        old_defs = _definitions([(n, code(t)) for kind, n, t in h if kind in (" ", "-")])
+        new_defs = _definitions([(n, code(t)) for kind, n, t in h if kind in (" ", "+")])
+        for name, new_lines in new_defs.items():
+            if name not in old_defs:
+                continue
+            old = " ".join(p.strip() for _n, p in old_defs[name])
+            new = " ".join(p.strip() for _n, p in new_lines)
+            if norm(old) == norm(new):
+                continue
+            out.append((name, new_lines[-1][0], old, new))
+    return out
+
+
+def tuning_constant_geometry(f, hunks, resolve):
+    """(d2) J-135: a constant that places or sizes a world body, changed wherever it is defined. The constants
+    are found by what uses them at the head revision, not by a hand list. A changed constant with a
+    world-building use is a BLOCK, the same as a world_solids.inc change; one used only in another build_*
+    function is REVIEW. A constant world_geometry already blocked on the same line is not reported twice; one
+    it called tuning is upgraded, because the use is the truth."""
+    for name, n, old, new in changed_constants(hunks):
+        kind, where = constant_is_geometry(name, resolve)
+        if kind == "block":
+            for x in list(findings):
+                if x[1] == f and x[2] == n and x[3] == "mechanism-tuning-changed":
+                    findings.remove(x)
+            if any(x[0] == "BLOCK" and x[1] == f and x[2] == n and x[3] == "world-geometry-changed"
+                   for x in findings):
+                continue
+            add("BLOCK", f, n, "world-geometry-changed",
+                f"places a world body (used in {where[0]}:{where[1]}): {old} -> {new}")
+        elif kind == "review":
+            if any(x[1] == f and x[2] == n for x in findings):
+                continue
+            add("REVIEW", f, n, "possible-world-geometry",
+                "a constant used in a build_* function: if it places a world body, a protected change | " + new)
+
+
+def check(files, resolve=None):
     old_paths = set(files.pop("__old__", []))
     hit = settled_edit(files.get(SETTLED_FILE, []))
     if hit:
@@ -351,6 +508,8 @@ def check(files):
         is_cpp = f.endswith((".cpp", ".hpp", ".h", ".inc"))
         if GEOMETRY_SRC_RE.match(f) or f in GEOMETRY_FUNCS or (f.startswith("src/sim/") and f.endswith(".cpp")):
             world_geometry(f, hunks, bool(GEOMETRY_SRC_RE.match(f)), GEOMETRY_FUNCS.get(f))
+        if resolve is not None and f != GEOMETRY_FILE and f.startswith("src/") and f.endswith(CPP_EXTS):
+            tuning_constant_geometry(f, hunks, resolve)
         for h in hunks:
             minus = [(n, t) for k, n, t in h if k == "-"]
             plus = [(n, t) for k, n, t in h if k == "+"]
@@ -414,6 +573,7 @@ def main():
     a = sys.argv[1:]
     if a == ["-"]:
         diff = sys.stdin.read()
+        resolve = git_uses("HEAD")   # a hand-fed diff: uses resolve against HEAD, or stay silent without git
     else:
         base = a[0] if a else "origin/ScraperX-Claude"
         head = a[1] if len(a) > 1 else "HEAD"
@@ -421,7 +581,8 @@ def main():
                                        text=True)
         # CLAUDE.md with its whole text as context, so each change's section is known (settled_edit)
         diff += subprocess.check_output(["git", "diff", "-U100000", f"{base}...{head}", "--", SETTLED_FILE], text=True)
-    check(parse(diff))
+        resolve = git_uses(head)
+    check(parse(diff), resolve)
     for lvl, f, n, rule, text in findings:
         print(f"{lvl:6} {f}:{n} {rule}: {text}")
     blocks = sum(1 for x in findings if x[0] == "BLOCK")

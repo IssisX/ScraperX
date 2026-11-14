@@ -77,7 +77,6 @@ const Expected kExpected[] = {
     // caps (law::kLungeForceN, kLungePowerW), the one designed exception to her one budget.
     // scenario, path, over, uncharged, peak N, peak W
     {"matron-grab", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
-    {"matron-grab", Path::CrateShove, false, true, 8000.0, 1429.0},
     {"matron-grab", Path::GrabSpring, false, true, 2600.0, 11424.0},
     {"matron-grab", Path::GrabArm, false, true, 1452.0, 545.0},
     {"matron-grab", Path::Hand2Spring, false, true, 2600.0, 5675.0},

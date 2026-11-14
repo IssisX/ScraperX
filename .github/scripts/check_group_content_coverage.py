@@ -24,7 +24,7 @@ every group's content runs; neither alone does.
 The groups register themselves (tests/sim_registry.hpp, J-074): a
 SCRAPERX_SELECT or SCRAPERX_SLICE line is a group's dispatch (a
 SCRAPERX_SLICE is also its CTest slice), and the SCRAPERX_GROUP lines,
-in order of their keys, are the default sequence the bare binary runs
+in (key, name) order, are the default sequence the bare binary runs
 locally. The GROUP lines are NOT a CI entry point: since J-071 step 2
 the default sequence runs in CI only as the two athletic-traversal
 slices, whose dispatches call the first and second half of the
@@ -39,8 +39,8 @@ All are read from every tests/*.cpp.
 
 Rules, all read from the repo as written:
   - every group in the dispatch calls at least one test function,
-    and every function it calls is defined; no name or key is
-    registered twice, and the runner and CMakeLists.txt hold no
+    and every function it calls is defined; no name is registered
+    twice (a key may repeat: groups run in (key, name) order), and the runner and CMakeLists.txt hold no
     hand-written group or slice list;
   - every CTest slice has a SCRAPERX_ONLY dispatch: a slice with
     no dispatch would run the fallthrough, not its group;
@@ -121,8 +121,8 @@ def parse_registry(sources):
     sources is [(where, text)]. dispatch is {group: [test functions it
     runs]} from SCRAPERX_SELECT and SCRAPERX_SLICE; slices the
     SCRAPERX_SLICE names; fallthrough the SCRAPERX_GROUP functions in
-    order of their keys, as the runner runs them. A name or key
-    registered twice is an error, as it is in the runner.
+    (key, name) order, as the runner runs them. A name registered
+    twice is an error, as it is in the runner; a key may repeat.
     """
     dispatch, slices, groups, errors = {}, [], [], []
     for where, raw in sources:
@@ -136,15 +136,12 @@ def parse_registry(sources):
                 slices.append(name)
         for match in GROUP_RE.finditer(text):
             groups.append((int(match.group(2)), match.group(1), match.group(3), where))
-    names, keys = set(), set()
-    for key, name, _fn, where in groups:
+    names = set()
+    for _key, name, _fn, where in groups:
         if name in names:
             errors.append(f"group {name} registered twice ({where})")
-        if key in keys:
-            errors.append(f"order key {key} used twice ({where})")
         names.add(name)
-        keys.add(key)
-    fallthrough = [fn for _key, _name, fn, _where in sorted(groups)]
+    fallthrough = [fn for _key, _name, fn, _where in sorted(groups, key=lambda g: (g[0], g[1]))]
     return dispatch, fallthrough, slices, errors
 
 
@@ -282,8 +279,15 @@ def _self_test():
     dup = sources + [("c.cpp", 'SCRAPERX_SELECT("alpha", run_x);\nSCRAPERX_GROUP("fall2", 30, run_y);\n'
                                'SCRAPERX_GROUP("fall", 40, run_z);\n')]
     errors = parse_registry(dup)[3]
-    if len(errors) != 3:
-        raise AssertionError(f"duplicate name/key detection failed: {errors}")
+    if errors != ["SCRAPERX_ONLY name alpha registered twice (c.cpp)", "group fall registered twice (c.cpp)"]:
+        raise AssertionError(f"duplicate name detection failed: {errors}")
+    # Two groups on one key run in name order, whatever order the files
+    # come in, and a shared key is no error (#482/#483, #524/J-043).
+    shared = [("d.cpp", 'SCRAPERX_GROUP("zeta", 20, run_zeta);\n'),
+              ("e.cpp", 'SCRAPERX_GROUP("eta", 20, run_eta);\n')] + sources
+    _dispatch, fallthrough, _slices, errors = parse_registry(shared)
+    if errors or fallthrough != ["run_fall", "run_eta", "run_zeta", "run_late"]:
+        raise AssertionError(f"shared key order failed: {fallthrough} {errors}")
     graph = {
         "run_alpha": {"test_a"}, "test_beta": {"test_b"}, "run_fall": {"test_a"},
         "test_a": set(), "test_b": set(),
@@ -344,7 +348,7 @@ def _self_test():
         failures, _warnings, _counts = check("", tmp, "")
         if failures:
             raise AssertionError(f"covered group flagged: {failures}")
-    return 10
+    return 11
 
 
 def main():

@@ -108,6 +108,7 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_injury.hpp"
 #include "sim/matron_mover.hpp"
 #include "sim/matron_perception.hpp"
 #include "sim/matron_routecraft.hpp"
@@ -1352,6 +1353,14 @@ public:
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
         float player_damage_ns = 0.0F;  // the player's share only
+        // J-059 #307: the same impulse, split by where it landed (J-044a §D):
+        // per-region doses, the share no region owns, and what each limb has
+        // left (1 = whole, 0 = spent; arms from the chest dose, legs whole
+        // in slice 1). The bridge exports these as `injury`.
+        std::array<float, injury::kRegions> injury_j_region{};
+        std::array<float, injury::kRegions> injury_j_event{};
+        float injury_j_region_unclassified = 0.0F;
+        std::array<float, 4> limb_health{1.0F, 1.0F, 1.0F, 1.0F};
         std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
         bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
@@ -1457,6 +1466,12 @@ public:
         float damage_ns = 0.0F;         // judged physical impulse, all sources
         float player_damage_ns = 0.0F;  // the player's share only
         bool dead = false;              // she lies dead as saved
+        // J-059 #343 fix: the per-region doses, so a restore brings her back
+        // as saved (settled call 11-05 #242; the PR's invariant is regions +
+        // unclassified == damage_ns). All nine regions: the eight drawn plus
+        // unclassified, j_region and j_event each.
+        std::array<float, injury::kRegionCount> injury_j_region{};
+        std::array<float, injury::kRegionCount> injury_j_event{};
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1649,10 +1664,16 @@ public:
         float axis_y = 1.0F;
         float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
         bool held = false;
+        bool caught = true;      // a catch is on it: a hoist she may ride
+        bool platform = false;   // a floor to her at its stops (Kit::set_platform)
         std::vector<Pin> pins;
         std::vector<JPH::BodyID> weights;
     };
     void set_hoists(std::vector<HoistFeed> hoists) { hoists_ = std::move(hoists); }
+    // The world's platforms (HoistFeed::platform) resting at a stop now, with
+    // a level floor: her scan reads them as floor where they stand
+    // (matron_hoist.cpp, the same view of a car at rest as a hoist's).
+    [[nodiscard]] std::vector<JPH::BodyID> platforms_at_rest() const;
     struct HoistView {
         int phase = 0;              // 0 none, 1 to its stop, 2 boarding, 3 freeing it, 4 riding, 5 stepping off
         int hoist = -1;
@@ -1920,8 +1941,15 @@ public:
         // death is saved as dead: a checkpoint taken while she lies dead has her dead, as a restore
         // brings her back as saved (J-069).
         const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
-                damage_ns_, player_damage_ns_, dead_};
+        Saved out{kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
+                  damage_ns_, player_damage_ns_, dead_};
+        // The per-region doses travel with the damage (J-059 #343 fix), so a
+        // restore brings her back as saved, not as the live doses happen to be.
+        for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+            out.injury_j_region[i] = injury_.doses[i].j_region;
+            out.injury_j_event[i] = injury_.doses[i].j_event;
+        }
+        return out;
     }
     void restore(const Saved &saved);
 
@@ -2038,6 +2066,14 @@ private:
     [[nodiscard]] float floor_of(float y) const;
     // An observed position's supporting scan surface, including floors below her level list.
     [[nodiscard]] float floor_at(float x, float y, float z) const;
+    // The scan patch top under a body centred at (x, y, z): the floor that
+    // body stands on, when her scan knows one there. False when no patch
+    // holds the spot within the body's standing height.
+    [[nodiscard]] bool scan_floor(float x, float y, float z, float &floor) const;
+    // The floor under a heard or glimpsed body: her scan's patch top under
+    // its feet (centre y less 0.9 m), else floor_at. A crash keeps floor_at:
+    // its impact point is not a body standing on a patch.
+    [[nodiscard]] float floor_under_body(float x, float y, float z) const;
     // (x, z) put on the nearest of her level's floor lines (not the
     // catwalk's, not a gap's): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
@@ -2857,6 +2893,9 @@ private:
     mutable std::uint32_t acoustic_queries_ = 0;
     bool lead_seen_ = false;
     Sense lead_sense_ = Sense::None;
+    // The lead is a crash she heard (a load's impact), not the player: once
+    // she stands at it there is nothing there to chase.
+    bool lead_crash_ = false;
     bool glimpsed_ = false;
     // The stalk (matron_stalk.cpp).
     bool watched_ = false;
@@ -2965,6 +3004,11 @@ private:
     // tick a striker was against her; what kind of blow it is.
     float damage_ns_ = 0.0F;
     float player_damage_ns_ = 0.0F;
+    // J-059 #307: per-region injury from where each blow lands (J-044a §D).
+    // Monotonic: no heal. Injuries persist through checkpoints (settled
+    // call): restore() loads the saved doses, so a reload brings her back
+    // as saved (#343 fix: the doses travel in Saved, they are not kept live).
+    injury::State injury_{};
     JPH::Vec3 blow_change_ = JPH::Vec3::sZero();
     JPH::Vec3 blow_impulse_ = JPH::Vec3::sZero();
     float blow_above_ = 0.0F;
