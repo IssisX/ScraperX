@@ -178,6 +178,9 @@ const SCENARIOS := {
 	"touch_stock": 8,
 	"touch_forklift": 8,
 	"touch_forklift_strain": 8,
+	# The forklift's lift lever (J-083): worked by hand, the mast follows it
+	# (ui_test_chase.gd).
+	"touch_forklift_lever": 8,
 	# The yard crane west of the stack: its remote taken, worked, let go
 	# (look_yard_crane: renders only, not in CI).
 	"touch_yard_crane": 8,
@@ -539,6 +542,8 @@ func _run() -> void:
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
 			ok = await _forklift_touch(InputRouter.Device.TOUCH)
+		"touch_forklift_lever":
+			ok = await _forklift_lever_touch(InputRouter.Device.TOUCH)
 		"touch_forklift_strain":
 			ok = await _forklift_strain_touch(InputRouter.Device.TOUCH)
 		"touch_forklift_ram":

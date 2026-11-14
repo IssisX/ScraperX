@@ -586,7 +586,6 @@ void Simulation::step_fixed() noexcept {
     commands.lift_action = lift_action_;
     commands.lift_haul = lift_haul_;
     commands.forklift_action = forklift_action_;
-    commands.forklift_lift = forklift_lift_;
     commands.summit_lower = summit_lower_;
     commands.summit_unrig = summit_unrig_;
     commands.yard_crane_take = yard_crane_take_;
@@ -951,14 +950,6 @@ bool Simulation::request_forklift_action() noexcept {
     return true;
 }
 
-bool Simulation::set_forklift_lift(const double lift) noexcept {
-    if (!std::isfinite(lift)) {
-        return false;
-    }
-    forklift_lift_ = std::clamp(lift, -1.0, 1.0);
-    return true;
-}
-
 ForkliftSnapshot Simulation::forklift_state() const noexcept {
     return forklift_state(static_cast<std::uint32_t>(std::max(0, physics_world_->active_forklift())));
 }
@@ -1003,6 +994,7 @@ ForkliftSnapshot Simulation::forklift_state(const std::uint32_t index) const noe
     ForkliftSnapshot result;
     result.index = static_cast<int>(index);
     result.chassis_entity = forklift.chassis_entity();
+    result.lever_entity = forklift.lever_entity();
     result.driving = state.driving;
     result.at_controls = !state.driving && physics_world_->at_forklift_controls(static_cast<int>(index));
     result.lift_m = state.lift_m;
@@ -1010,6 +1002,7 @@ ForkliftSnapshot Simulation::forklift_state(const std::uint32_t index) const noe
     result.steer = state.steer;
     result.drive = state.drive;
     result.lift = state.lift;
+    result.lever_rad = state.lever_rad;
     result.lift_n = state.lift_n;
     result.lift_max_n = Forklift::kLiftForceN;
     result.pitch_rad = state.pitch_rad;

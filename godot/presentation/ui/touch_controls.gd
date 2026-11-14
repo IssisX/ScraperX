@@ -577,7 +577,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		jump.icon = &"up"
 		jump.label = "THROW"
 		jump.dimmed = false
-	if driving or craning:
+	if craning:
 		jump.icon = &"up"
 		jump.label = "RAISE"
 		jump.dimmed = false
@@ -656,7 +656,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 		crouch.icon = &"up" if sliding_down else &"down"
 		crouch.label = "HOLD ON" if sliding_down else "SLIDE DOWN"
 		crouch.tone = TONE_SAFE if sliding_down else TONE_NORMAL
-	if driving or craning:
+	if craning:
 		crouch.icon = &"down"
 		crouch.label = "LOWER"
 		crouch.tone = TONE_NORMAL

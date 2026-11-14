@@ -51,6 +51,15 @@ std::vector<Part> chassis_parts() {
     // The cowl in front of the driver, between the front wheels, and the
     // wheel on its column.
     parts.push_back(box(Vec3(0.34F, 0.32F, 0.10F), Vec3(0.0F, 0.64F, 0.55F), Material::Yellow, 80.0F));
+    // The lift lever's pedestal (J-083): a post on the floor ahead of the
+    // station, at the cowl's front edge beside the steering column, carrying
+    // the lever's hinge at the driver's hand height. The hinge sits at 1.22 m
+    // because the hands sit at 1.55 m: his centre stands 1.20 m on the floor
+    // and his hands are his centre + 0.35 m up, so the grip (hinge + the
+    // 0.35 m bar) lands at 1.57 m, on his hands. At 1.80 m the grip hung
+    // 0.60 m above his hands and the grab yanked the lever past its hinge
+    // limit to -0.74 rad and tore it out of his hands (measured).
+    parts.push_back(box(Vec3(0.04F, 0.335F, 0.04F), Vec3(0.0F, 0.885F, 0.45F), Material::Galvanised, 8.0F));
     parts.push_back(box(Vec3(0.025F, 0.08F, 0.025F), Vec3(0.0F, 1.0F, 0.43F), Material::Steel, 3.0F));
     // The wheel: a rim of eight short bars round a hub, tipped toward the
     // driver.
@@ -201,12 +210,38 @@ public:
     }
 };
 
+// The lift lever (J-083): a steel bar on its hinge, its grip the rubber knob
+// at the top, in the lever's own frame with the hinge at the origin and the
+// bar rising +y.
+std::vector<Part> lever_parts() {
+    return {
+        // The bar, from just above the hinge to the grip.
+        {Vec3(0.02F, 0.175F, 0.0F), Vec3(0.0F, 0.195F, 0.0F), Quat::sIdentity(), Material::Galvanised,
+         Part::Shape::Cylinder, 1.5F},
+        // The grip, the knob the hands close on.
+        {Vec3(0.03F, 0.03F, 0.0F), Vec3(0.0F, 0.34F, 0.0F), Quat::sIdentity(), Material::Rubble,
+         Part::Shape::Cylinder, 0.5F},
+    };
+}
+
+// The lever's command from its angle (J-083): inside the dead band the valve
+// is shut; past it the valve opens in proportion to the angle, full travel
+// the full lift speed.
+float lever_command(const float lever_rad) {
+    if (std::abs(lever_rad) <= Forklift::kLeverDeadBandRad) {
+        return 0.0F;
+    }
+    const float over = (std::abs(lever_rad) - Forklift::kLeverDeadBandRad) /
+                       (Forklift::kLeverTravelRad - Forklift::kLeverDeadBandRad);
+    return std::clamp(over, 0.0F, 1.0F) * (lever_rad > 0.0F ? 1.0F : -1.0F);
+}
+
 } // namespace
 
 Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer moving_layer, const BodyID player,
                    const std::uint64_t chassis_entity, const std::uint64_t carriage_entity, const float park_x,
-                   const float park_z, const float yaw, const float park_y)
-    : physics_(physics), kit_(kit), chassis_entity_(chassis_entity) {
+                   const float park_z, const float yaw, const float park_y, const std::uint64_t lever_entity)
+    : physics_(physics), kit_(kit), chassis_entity_(chassis_entity), lever_entity_(lever_entity) {
     const Quat facing = Quat::sRotation(Vec3::sAxisY(), yaw);
     const RVec3 park(park_x, park_y, park_z);
     std::vector<Part> chassis = chassis_parts();
@@ -299,9 +334,52 @@ Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer movi
     lift_->SetMotorState(EMotorState::Position);
     lift_->SetTargetPosition(0.0F);
     controller_of(*vehicle_).SetDriverInput(0.0F, 0.0F, 1.0F, 0.0F);
+
+    // The lift lever (J-083): a bar on a hinge on the pedestal, its grip
+    // where the driver's hands land standing at the station. It never touches
+    // the chassis (the hinge is its only link to the truck) and the hands move
+    // it through the normal grab path.
+    lever_ = kit_.add_body(lever_entity, lever_parts(), park + facing * Vec3(kLeverX, kLeverPivotY, kLeverPivotZ),
+                           facing, kLeverMassKg, 0.4F);
+    kit_.disable_collision(chassis_, lever_);
+    {
+        // The carry handle is the grip's middle, in the body's centre-of-mass
+        // frame: read the centre of mass the shape actually has, so the hands
+        // meet the grip instead of dragging the lever on the grab.
+        BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+        const RMat44 com = bodies.GetCenterOfMassTransform(kit_.body_id(lever_));
+        const RVec3 grip = park + RVec3(facing * Vec3(kLeverX, kLeverPivotY + kLeverLengthM, kLeverPivotZ));
+        const RVec3 handle = com.Inversed() * grip;
+        kit_.set_carry(lever_, kit::CarryKind::Handle,
+                       Vec3(static_cast<float>(handle.GetX()), static_cast<float>(handle.GetY()),
+                            static_cast<float>(handle.GetZ())));
+    }
+    {
+        // The hinge, in world space: the axis is the truck's x, the normal
+        // its up, the same on both bodies, so the angle is zero as built. Its
+        // travel is the lever's, each way from vertical.
+        const RVec3 pivot = park + RVec3(facing * Vec3(kLeverX, kLeverPivotY, kLeverPivotZ));
+        const Vec3 axis = facing * Vec3::sAxisX();
+        const Vec3 normal = facing * Vec3::sAxisY();
+        HingeConstraintSettings hinge;
+        hinge.mPoint1 = pivot;
+        hinge.mHingeAxis1 = axis;
+        hinge.mNormalAxis1 = normal;
+        hinge.mPoint2 = pivot;
+        hinge.mHingeAxis2 = axis;
+        hinge.mNormalAxis2 = normal;
+        hinge.mLimitsMin = -kLeverTravelRad;
+        hinge.mLimitsMax = kLeverTravelRad;
+        lever_hinge_ = static_cast<HingeConstraint *>(
+            hinge.Create(*locks.TryGetBody(kit_.body_id(chassis_)), *locks.TryGetBody(kit_.body_id(lever_))));
+        physics_.AddConstraint(lever_hinge_);
+    }
 }
 
 Forklift::~Forklift() {
+    if (lever_hinge_ != nullptr) {
+        physics_.RemoveConstraint(lever_hinge_);
+    }
     physics_.RemoveConstraint(lift_);
     physics_.RemoveStepListener(vehicle_);
     physics_.RemoveConstraint(vehicle_);
@@ -327,7 +405,7 @@ float Forklift::wheel_width(const int wheel) const noexcept {
 }
 
 void Forklift::pre_step(const float delta_seconds, const bool take, const bool at_controls, const float drive,
-                        const float steer, const float lift) {
+                        const float steer, const bool lever_held) {
     if (take) {
         state_.driving = !state_.driving && at_controls;
     } else if (state_.driving && !at_controls) {
@@ -336,7 +414,29 @@ void Forklift::pre_step(const float delta_seconds, const bool take, const bool a
     }
     const float want_drive = state_.driving ? signed_unit(drive) : 0.0F;
     const float want_steer = state_.driving ? signed_unit(steer) : 0.0F;
-    const float want_lift = state_.driving ? signed_unit(lift) : 0.0F;
+    // The lever's return spring (J-083): only while the hands are off it. A
+    // torsion spring about the hinge axis, damped so it settles instead of
+    // ringing. Held, the hands move it and the spring is off: the lever
+    // follows the hands, not the spring. The angle's sign is the trap: the
+    // lever's angle is atan2(-v.z, v.y), the negative of its rotation about
+    // the truck's +x, so the restoring torque about +x is +k times the angle,
+    // not -k: at full pull toward the driver the spring must push the bar
+    // back up, and -k would pin it against its travel limit instead.
+    if (!lever_held) {
+        BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+        const BodyID chassis = kit_.body_id(chassis_);
+        const BodyID lever = kit_.body_id(lever_);
+        const Vec3 axis = bodies.GetRotation(chassis) * Vec3::sAxisX();
+        const float spin = bodies.GetAngularVelocity(lever).Dot(axis);
+        const float torque = kLeverSpringNmPerRad * state_.lever_rad - kLeverSpringDampingNmS * spin;
+        if (std::abs(torque) > 1.0e-6F) {
+            bodies.AddTorque(lever, axis * torque, EActivation::Activate);
+        }
+    }
+    // The mast follows the lever (J-083): its angle past the dead band opens
+    // the valve, full travel the full lift speed. It works whether or not the
+    // controls are taken: the lever is the control.
+    const float want_lift = lever_command(state_.lever_rad);
 
     // The forks, as a single-acting hydraulic ram: it only ever pushes up.
     // RAISE held, the pump drives it at the lift's speed with all the force
@@ -426,6 +526,15 @@ void Forklift::post_step(const float delta_seconds) {
     state_.engine_rpm = controller_of(*vehicle_).GetEngine().GetCurrentRPM();
     const Vec3 forward = bodies.GetRotation(kit_.body_id(chassis_)) * Vec3::sAxisZ();
     state_.pitch_rad = -std::asin(std::clamp(forward.GetY(), -1.0F, 1.0F));
+
+    // The lever's angle (J-083): the bar's direction in the truck's frame, +
+    // toward the driver. The bar is the lever body's +y.
+    {
+        const Quat chassis_rotation = bodies.GetRotation(kit_.body_id(chassis_));
+        const Quat lever_rotation = bodies.GetRotation(kit_.body_id(lever_));
+        const Vec3 bar = chassis_rotation.Conjugated() * (lever_rotation * Vec3::sAxisY());
+        state_.lever_rad = std::atan2(-bar.GetZ(), bar.GetY());
+    }
 
     // The blades: a short ray down from just inside each one's underside, at
     // its heel and its tip, finds what is under it and how far; touching it,

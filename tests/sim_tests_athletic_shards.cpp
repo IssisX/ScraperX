@@ -112,6 +112,7 @@ void run_athletic_traversal_2() {
     run_body_order();
     run_fabricated();
     run_forklift();
+    run_forklift_lever();
     run_forklift_strain();
     run_yard_crane();
     run_yard_crane_magnet();

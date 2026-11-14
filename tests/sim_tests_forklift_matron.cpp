@@ -202,10 +202,10 @@ std::unique_ptr<Simulation> start(const Vector3 her, const int stage,
     return s;
 }
 
-// The stick at `throttle` (steered at her when `steer`) and the forks' button
-// at `lift`, a tick at a time, for at most `seconds` or until `until` holds;
-// then both let go. The player faces +z, so the stick's right is world -x.
-void drive(Simulation &s, Run &run, const double throttle, const double lift, const double seconds,
+// The stick at `throttle` (steered at her when `steer`), a tick at a time,
+// for at most `seconds` or until `until` holds; then both let go. The player
+// faces +z, so the stick's right is world -x.
+void drive(Simulation &s, Run &run, const double throttle, const double seconds,
            const std::function<bool()> &until = [] { return false; }, const bool steer = false) {
     if (!run.begun) {
         const auto m = s.matron_state();
@@ -219,7 +219,6 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
     const int ticks = static_cast<int>(seconds * kHz);
     for (int i = 0; i < ticks && !until(); ++i) {
         (void)s.set_move_input(steer ? -steer_toward(s, s.matron_state().position) : 0.0, throttle);
-        (void)s.set_forklift_lift(lift);
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
         const auto f = s.forklift_state(kTruck);
         const auto m = s.matron_state();
@@ -329,7 +328,27 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
         run.fnv.add(m.state);
     }
     (void)s.set_move_input(0.0, 0.0);
-    (void)s.set_forklift_lift(0.0);
+}
+
+// The forks raised by the lever to the height a `seconds` hold of the old
+// button gave them: the lift runs at the lift's speed less the valve's fifth
+// of a second to open. The lever is let go and the controls taken again
+// after, the ram holding the forks where they stand.
+void raise_forks(Simulation &s, const double seconds) {
+    require(take_lever(s, true), "forklift_matron: the lever pulled to its travel limit");
+    const double up_to = Forklift::kLiftSpeedMps * (seconds - 0.1);
+    bool up = false;
+    for (int tick = 0; tick < 5 * static_cast<int>(kHz); ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        if (s.forklift_state(kTruck).lift_m >= up_to) {
+            up = true;
+            break;
+        }
+    }
+    require(up, "forklift_matron: the forks raised to their height");
+    require(release_lever(s), "forklift_matron: let go, the lever springs back");
+    require(s.request_forklift_action(), "forklift_matron: the controls taken again");
+    (void)s.advance_frame(0.2);
 }
 
 void print(const char *label, const Run &r) {
@@ -411,10 +430,10 @@ Run ram(const int stage, const double throttle, const double forks_up_s, const b
         require(made == crates, "forklift_matron crowded: the crates made");
     }
     if (forks_up_s > 0.0) {
-        drive(w, r, 0.0, 1.0, forks_up_s);
+        raise_forks(w, forks_up_s);
     }
-    drive(w, r, throttle, 0.0, 14.0, [&] { return truck_at(w).z >= -131.0; });
-    drive(w, r, 0.0, 0.0, 3.0);
+    drive(w, r, throttle, 14.0, [&] { return truck_at(w).z >= -131.0; });
+    drive(w, r, 0.0, 3.0);
     return r;
 }
 
@@ -426,9 +445,9 @@ Run push_off() {
     Simulation &w = *s;
     Run r;
     r.log = true;
-    drive(w, r, 0.0, 1.0, 1.5);
-    drive(w, r, 0.4, 0.0, 14.0, [&] { return truck_at(w).z >= -127.6; });
-    drive(w, r, 0.3, 0.0, 10.0, [&] { return truck_at(w).z >= -126.0; });
+    raise_forks(w, 1.5);
+    drive(w, r, 0.4, 14.0, [&] { return truck_at(w).z >= -127.6; });
+    drive(w, r, 0.3, 10.0, [&] { return truck_at(w).z >= -126.0; });
     const auto truck = truck_at(w);
     const auto f = w.forklift_state(kTruck);
     std::cout << "  forklift_matron push off: the truck let go at z " << truck.z << ", y " << truck.y
@@ -437,7 +456,7 @@ Run push_off() {
     require(truck.z < kOuterEdgeZ - 1.3 && std::abs(truck.y - kDeck) < 0.05 && f.wheel_contact[0] &&
                 f.wheel_contact[1] && f.wheel_contact[2] && f.wheel_contact[3],
             "forklift_matron push off: the truck stops on the deck, every wheel on it");
-    drive(w, r, 0.0, 0.0, 10.0);
+    drive(w, r, 0.0, 10.0);
     require(truck_at(w).z < kOuterEdgeZ - 1.2, "forklift_matron push off: braked, the truck stays on the deck");
     return r;
 }
@@ -485,7 +504,7 @@ Run natural() {
     Run r;
     // She comes on down the band, ahead of its forks.
     int waited = 0;
-    drive(s, r, 0.0, 0.0, 60.0, [&] {
+    drive(s, r, 0.0, 60.0, [&] {
         ++waited;
         const auto m = s.matron_state();
         const auto t = truck_at(s);
@@ -495,8 +514,8 @@ Run natural() {
     const auto m0 = s.matron_state();
     std::cout << "  forklift_matron natural: after " << waited / kHz << " s she is at (" << m0.position.x << ","
               << m0.position.z << "), state " << int(m0.state) << ", stage " << int(m0.stage) << "\n";
-    drive(s, r, 1.0, 0.0, 8.0, [&] { return r.knockdowns > 0 || truck_at(s).z >= -129.0; }, true);
-    drive(s, r, 0.0, 0.0, 2.0);
+    drive(s, r, 1.0, 8.0, [&] { return r.knockdowns > 0 || truck_at(s).z >= -129.0; }, true);
+    drive(s, r, 0.0, 2.0);
     return r;
 }
 
@@ -596,11 +615,16 @@ void run_forklift_matron() {
         auto s = start({kMiddle, kDeck, -131.0}, stage);
         Simulation &w = *s;
         Run wait;
-        drive(w, wait, 0.0, 0.0, 10.0,
+        drive(w, wait, 0.0, 10.0,
               [&] { return w.matron_state().position.y > kDeck + static_cast<double>(Matron::kStandCentre) + 0.03; });
+        // She stands on the blades; the lever raises the forks under her and
+        // carries her up with them. The forks are measured from the pull, so
+        // the pull's rise does not skew the rise against the forks.
+        require(take_lever(w, true), "forklift_matron lift: the lever pulled to its travel limit");
         const double forks0 = w.forklift_state(kTruck).lift_m;
         Run up;
-        drive(w, up, 0.0, 1.0, 4.0);
+        drive(w, up, 0.0, 4.0);
+        require(release_lever(w), "forklift_matron lift: let go, the lever springs back");
         const double forks = w.forklift_state(kTruck).lift_m - forks0;
         std::cout << "  stage " << stage << ": the forks rose " << forks << " m\n";
         print("lift", up);
@@ -631,9 +655,9 @@ void run_forklift_matron() {
         auto s = start({kMiddle, kDeck, -128.0}, 1);
         Simulation &w = *s;
         Run slow;
-        drive(w, slow, 0.15, 0.0, 14.0,
+        drive(w, slow, 0.15, 14.0,
               [&] { return w.matron_state().state == static_cast<int>(Matron::State::Grab); });
-        drive(w, slow, 0.0, 0.0, 1.0);
+        drive(w, slow, 0.0, 1.0);
         print("too slow, dangerous", slow);
         require(slow.knockdowns == 0 && slow.staggers == 0 && slow.held_him && !w.forklift_state(kTruck).driving,
                 "forklift_matron fight back: too slow to fell her, she holds and takes the driver off the truck");

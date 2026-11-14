@@ -38,7 +38,9 @@ namespace scraperx::sim::kit {
 // machines' band.
 constexpr std::uint64_t kStaticEntityBase = 1000;
 constexpr std::uint64_t kDynamicEntityBase = 2000;
-constexpr std::uint64_t kEntityLimit = 3000;
+// The machines' band runs to here: the forklifts' levers (J-083) take
+// 2999-3003, the last of the band. A new machine part past 3003 moves this.
+constexpr std::uint64_t kEntityLimit = 3010;
 constexpr std::uint64_t kStockEntityBase = 5000;
 constexpr std::uint64_t kStockEntityLimit = 6000;
 // Fabricated objects (sim/fabricated.hpp): loose stock made at run time, from

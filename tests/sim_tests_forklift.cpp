@@ -63,9 +63,23 @@ std::array<double, 6> fork_the_pallet(Simulation &s, const int pallet) {
     (void)s.advance_frame(1.5);
     const auto hits_before = s.impacts();
     const std::uint64_t seen = hits_before.empty() ? 0 : hits_before.back().sequence;
-    (void)s.set_forklift_lift(1.0);
-    (void)s.advance_frame(1.0);
+    // The lever, worked by hand: let go of the controls, take it, pull it to
+    // its travel limit and hold it there.
+    require(take_lever(s, true), "forklift: the lever pulled to its travel limit");
+    for (int tick = 0; tick < static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        if (tick % 15 == 0) {
+            const auto snap = s.snapshot();
+            const auto rot = s.kit_body_rotation(s.kit_body_index(Forklift::kChassisEntity));
+            std::cout << "    lever hold t=" << tick << " lever_rad=" << s.forklift_state().lever_rad
+                      << " lift_m=" << s.forklift_state().lift_m << " lift_mps=" << s.forklift_state().lift_mps
+                      << " carrying=" << snap.carrying_entity_id << " p=(" << snap.player_position.x << ","
+                      << snap.player_position.z << ") chassis_q=(" << rot.x << "," << rot.y << "," << rot.z << ","
+                      << rot.w << ")\n";
+        }
+    }
     const double raising = s.forklift_state().lift_mps;
+    const double held_at = s.forklift_state().lever_rad;
     // The valve opens over a fifth of a second (kLiftAccelMps2): the forks and
     // the pallet they pick up are never jerked hard enough to be heard as a hit.
     for (const auto &hit : s.impacts()) {
@@ -74,21 +88,27 @@ std::array<double, 6> fork_the_pallet(Simulation &s, const int pallet) {
                      hit.entity != LooseStock::kFirstEntity + static_cast<std::uint64_t>(pallet)),
                 "forklift: raising the forks under the pallet jerks neither the forks nor the pallet");
     }
-    (void)s.set_forklift_lift(0.0);
+    require(release_lever(s), "forklift: let go, the lever springs back");
     (void)s.advance_frame(0.5);
+    std::cout << "  forklift: held at " << held_at << " rad, the forks at " << raising << " m/s, "
+              << s.forklift_state().lift_m << " m up\n";
     require(std::abs(raising - Forklift::kLiftSpeedMps) < 0.05,
             "forklift: raised with the pallet on them, the forks run up the mast at the lift's speed");
     const auto lifted = body_at(s, LooseStock::kFirstEntity + static_cast<std::uint64_t>(pallet));
     std::cout << "  forklift: the pallet lifted to y " << lifted.y << ", the forks " << s.forklift_state().lift_m
               << " m up\n";
     require(lifted.y > 0.3, "forklift: the forks under the pallet lift it, its drums on it");
+    require(s.request_forklift_action(), "forklift: the controls taken again to back out");
+    (void)s.advance_frame(0.2);
     hold(s, 0.0, -0.4, 2.5);
     require(s.forklift_state().gear == -1 && s.forklift_state().speed_mps < -0.1,
             "forklift: backing out with the pallet, in reverse");
     (void)s.advance_frame(1.5);
-    (void)s.set_forklift_lift(-1.0);
+    require(take_lever(s, false), "forklift: the lever pushed to its travel limit");
     (void)s.advance_frame(1.5);
-    (void)s.set_forklift_lift(0.0);
+    require(release_lever(s), "forklift: let go, the lever springs back");
+    require(s.request_forklift_action(), "forklift: the controls taken again to back out");
+    (void)s.advance_frame(0.2);
     hold(s, 0.0, -0.4, 1.5);
     (void)s.advance_frame(1.5);
     const auto truck = body_at(s, Forklift::kChassisEntity);
@@ -184,7 +204,7 @@ void run_forklift() {
     std::cout << "PASS scraperx_sim forklift: carried_m=" << table[static_cast<std::size_t>(pallet)].z - runs[0][3] << "\n";
 }
 SCRAPERX_GROUP("forklift", 1020, run_forklift);
-SCRAPERX_SELECT("forklift", run_forklift, run_forklift_strain);
+SCRAPERX_SELECT("forklift", run_forklift, run_forklift_lever, run_forklift_strain);
 
 namespace {
 
@@ -268,7 +288,9 @@ LiftTry try_lift(const std::uint64_t load_entity, const double lane_x, const dou
     const auto load0 = body_at(s, load_entity);
     require(drive_to_lane(s, lane_x, load0.z - 1.85, 0.35), "forklift strain: driven in under the load");
     (void)s.advance_frame(2.0);
-    (void)s.set_forklift_lift(1.0);
+    // The lever, worked by hand: pulled to its travel limit and held there
+    // while the lift is measured, then let go.
+    require(take_lever(s, true), "forklift strain: the lever pulled to its travel limit");
     for (int tick = 0; tick < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++tick) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
         const auto f = s.forklift_state();
@@ -283,12 +305,12 @@ LiftTry try_lift(const std::uint64_t load_entity, const double lane_x, const dou
             result.rise_at_rear_off_m = rise;
         }
     }
-    (void)s.set_forklift_lift(0.0);
+    require(release_lever(s), "forklift strain: let go, the lever springs back");
     (void)s.advance_frame(1.0);
     result.held_rise_m = body_at(s, load_entity).y - load0.y;
-    (void)s.set_forklift_lift(-1.0);
+    require(take_lever(s, false), "forklift strain: the lever pushed to its travel limit");
     (void)s.advance_frame(seconds + 1.0);
-    (void)s.set_forklift_lift(0.0);
+    require(release_lever(s), "forklift strain: let go, the lever springs back");
     (void)s.advance_frame(1.0);
     const auto lowered = s.forklift_state();
     result.lowered_rear_n = lowered.wheel_load_n[2] + lowered.wheel_load_n[3];
@@ -345,3 +367,99 @@ void run_forklift_strain() {
               << " stillage_pitch_deg=" << heavy.peak_pitch_rad * 57.2958 << "\n";
 }
 SCRAPERX_GROUP("forklift_strain", 1030, run_forklift_strain);
+
+// Stands on one spot to the centimetre: the hands must meet the lever's
+// handle, or the hinge fights the grip.
+bool stand_at(Simulation &s, const double x, const double z) {
+    for (int tick = 0; tick < 270; ++tick) {
+        const auto at = s.snapshot().player_position;
+        const double dx = x - at.x;
+        const double dz = z - at.z;
+        const double gap = std::hypot(dx, dz);
+        if (gap <= 0.02) {
+            (void)s.set_move_input(0.0, 0.0);
+            return true;
+        }
+        const double step = std::min(0.15, gap);
+        (void)s.set_move_input(dx / gap * step, dz / gap * step);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
+}
+
+// The lever (J-083 #401): a physical body on a hinge beside the station.
+// The mast moves only while the lever is past its dead band, and let go it
+// springs back to neutral.
+void run_forklift_lever() {
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    require(board(s), "forklift lever: on its floor at the wheel, DRIVE offered");
+    // The lever is a physical control: it works without the Action toggle.
+    require(!s.forklift_state().driving, "forklift lever: the controls not taken");
+    // At neutral the mast stands still.
+    const double still = s.forklift_state().lift_m;
+    (void)s.advance_frame(1.0);
+    require(std::abs(s.forklift_state().lift_m - still) < 0.005 &&
+                std::abs(s.forklift_state().lever_rad) < Forklift::kLeverDeadBandRad,
+            "forklift lever: at neutral, the mast does not move");
+    // Step right to the lever: dead ahead of the station, under the hands.
+    const auto truck = s.forklift_state();
+    const auto chassis = s.kit_body_position(s.kit_body_index(truck.chassis_entity));
+    const auto rotation = s.kit_body_rotation(s.kit_body_index(truck.chassis_entity));
+    const double yaw = 2.0 * std::atan2(rotation.y, rotation.w);
+    const double fx = std::sin(yaw);
+    const double fz = std::cos(yaw);
+    require(stand_at(s, chassis.x - 0.15 * fx, chassis.z - 0.15 * fz),
+            "forklift lever: stepped right to the lever");
+    (void)s.set_facing(fx, fz);
+    (void)s.advance_frame(0.5);
+    require(s.snapshot().carry_target_entity_id == Forklift::kLeverEntity &&
+                s.snapshot().carry_target_kind == 2,
+            "forklift lever: GRAB is offered at the lever");
+    require(s.request_pick_up(), "forklift lever: the lever taken in the hands");
+    (void)s.advance_frame(0.3);
+    require(s.snapshot().carrying_entity_id == Forklift::kLeverEntity,
+            "forklift lever: the lever in the hands");
+    // Taken hold, at neutral, the mast still does not move.
+    const double held = s.forklift_state().lift_m;
+    (void)s.advance_frame(0.5);
+    require(std::abs(s.forklift_state().lift_m - held) < 0.005,
+            "forklift lever: taken hold, at neutral, the mast does not move");
+    // Step back: the hands draw the lever toward the driver, past its dead
+    // band, to near its travel limit. Near, not on it: one tick at 0.15 on
+    // the stick overshoots the lever 0.014 rad, and a target at 0.34 lands
+    // it on its 0.35 rad limit, where the hinge fights the hands and the
+    // carry tears (see take_lever). At 0.32 the mast still runs at 0.36 m/s.
+    double pulled = 0.0;
+    for (int tick = 0; tick < 5 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)s.set_move_input(-0.15 * fx, -0.15 * fz);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        pulled = s.forklift_state().lever_rad;
+        if (pulled > Forklift::kLeverTravelRad - 0.03) {
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    require(pulled > Forklift::kLeverTravelRad - 0.04, "forklift lever: pulled to its travel limit");
+    // Held past the dead band, the forks run up the mast at the lift's speed.
+    (void)s.advance_frame(1.0);
+    const double rising = s.forklift_state().lift_mps;
+    const double up = s.forklift_state().lift_m;
+    std::cout << "  forklift lever: pulled to " << pulled << " rad, the forks at " << rising << " m/s, " << up
+              << " m up\n";
+    require(up > 0.2 && std::abs(rising - Forklift::kLiftSpeedMps) < 0.05,
+            "forklift lever: past the dead band, the mast follows the lever");
+    // Let go: the lever springs back to neutral and the mast holds where it stands.
+    require(s.request_set_down(), "forklift lever: let go");
+    (void)s.advance_frame(1.0);
+    const double back = s.forklift_state().lever_rad;
+    const double held_up = s.forklift_state().lift_m;
+    (void)s.advance_frame(1.0);
+    std::cout << "  forklift lever: let go, back to " << back << " rad, the forks held at " << held_up << " m\n";
+    require(std::abs(back) < Forklift::kLeverDeadBandRad, "forklift lever: let go, it springs back to neutral");
+    require(std::abs(s.forklift_state().lift_m - held_up) < 0.005,
+            "forklift lever: let go, the ram holds the forks");
+    std::cout << "PASS scraperx_sim forklift lever: pulled_rad=" << pulled << " lifted_m=" << held_up << "\n";
+}
+SCRAPERX_GROUP("forklift_lever", 1025, run_forklift_lever);

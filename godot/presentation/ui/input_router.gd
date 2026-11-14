@@ -355,8 +355,8 @@ func frame(delta: float) -> Dictionary:
 		(touch != null and touch.is_held(&"hook")))
 	var action_held: bool = enabled and gameplay_active and (_keys.has(KEY_E) or _buttons.has(JOY_BUTTON_X) or
 		(touch != null and touch.is_held(&"action")))
-	# Held Jump and held Crouch: a machine's two-way control (the forklift's
-	# forks: RAISE and LOWER).
+	# Held Jump and held Crouch: a machine's two-way control (the yard
+	# crane's hoist: RAISE and LOWER).
 	var raise_held: bool = enabled and gameplay_active and (_keys.has(KEY_SPACE) or _buttons.has(JOY_BUTTON_A) or
 		(touch != null and touch.is_held(&"jump")))
 	var lower_held: bool = enabled and gameplay_active and (_keys.has(KEY_C) or _buttons.has(JOY_BUTTON_RIGHT_STICK) or

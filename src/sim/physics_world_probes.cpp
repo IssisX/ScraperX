@@ -3,6 +3,8 @@
 
 #include "sim/physics_world.hpp"
 
+#include <cstdio>
+#include <cstdlib>
 #include <limits>
 
 namespace scraperx::sim {
@@ -526,6 +528,15 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
             const float pull =
                 carry_constraint_->GetTotalLambdaPosition().Length() / delta_seconds;
             grip_over_seconds_ = pull > kGripNewtons ? grip_over_seconds_ + delta_seconds : 0.0F;
+            // TEMPORARY J-083 diagnosis: the lever tears out of the hands
+            // ~0.1 s into the hold; print the grip force, the accumulator,
+            // and the hand-to-handle gap while a forklift lever is carried.
+            if (std::getenv("SCRAPERX_GRIP_TRACE") != nullptr && carried_entity_ >= 2999 &&
+                carried_entity_ <= 3003) {
+                std::fprintf(stderr, "    grip pull=%.1f N over=%.3f s apart=%.4f m sep=%.3f\n", pull,
+                             grip_over_seconds_, apart.Length(),
+                             apart.Dot(separating_velocity));
+            }
             if (grip_over_seconds_ >= kGripSeconds) {
                 release_carry();
                 return;

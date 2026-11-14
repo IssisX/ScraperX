@@ -270,7 +270,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // The yard crane's, on its laydown facing east.
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kCraneChassisEntity, Forklift::kCraneCarriageEntity,
-                                                    Forklift::kCraneParkX, Forklift::kCraneParkZ, 0.5F * JPH::JPH_PI));
+                                                    Forklift::kCraneParkX, Forklift::kCraneParkZ, 0.5F * JPH::JPH_PI,
+                                                    0.0F, Forklift::kCraneLeverEntity));
     // The yard crane west of the stack and its docks on the stack's west
     // face: before the ziplines and the tower's stock, which keep clear of
     // them.
@@ -278,10 +279,12 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // Forklifts the crane put on the decks it serves, by their docks.
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kDeck11ChassisEntity, Forklift::kDeck11CarriageEntity,
-                                                    -21.5F, -139.5F, 0.0F, 11.0F));
+                                                    -21.5F, -139.5F, 0.0F, 11.0F,
+                                                    Forklift::kDeck11LeverEntity));
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kDeck44ChassisEntity, Forklift::kDeck44CarriageEntity,
-                                                    -21.5F, -147.5F, JPH::JPH_PI, 44.0F));
+                                                    -21.5F, -147.5F, JPH::JPH_PI, 44.0F,
+                                                    Forklift::kDeck44LeverEntity));
     // Life L2: the yard crew, real bodies on grade (not in the kit, not saved).
     crew_ = std::make_unique<Crew>(physics_system_, object_layers::kMoving);
     // The Matron, on deck 1 (11 m): last, like the crew (not in the kit, not saved).
@@ -461,7 +464,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity,
                                                     Forklift::kDeck154ParkX, Forklift::kDeck154ParkZ, 0.0F,
-                                                    Forklift::kDeck154ParkY));
+                                                    Forklift::kDeck154ParkY, Forklift::kDeck154LeverEntity));
     track(forklifts_.back()->chassis_body(), ImpactSound::Machine);
     track(forklifts_.back()->carriage_body(), ImpactSound::Machine);
 
@@ -657,9 +660,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         for (int index = 0; index < forklift_count(); ++index) {
             Forklift &truck = *forklifts_[static_cast<std::size_t>(index)];
             const bool at = at_forklift_controls(index);
+            // The lever's spring is off while the hands hold it (J-083): the
+            // hands move it, and the mast follows its angle.
             truck.pre_step(delta_seconds, commands.forklift_action && (truck.driving() || at), at,
                            static_cast<float>(stick_forward), static_cast<float>(stick_right),
-                           static_cast<float>(commands.forklift_lift));
+                           carried_entity_ == truck.lever_entity());
             driving = driving || truck.driving();
         }
         if (driving) {

@@ -352,7 +352,6 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_trapeze_state"), &ScraperXSimulation::get_trapeze_state);
     godot::ClassDB::bind_method(godot::D_METHOD("request_forklift_action"),
                                 &ScraperXSimulation::request_forklift_action);
-    godot::ClassDB::bind_method(godot::D_METHOD("set_forklift_lift", "lift"), &ScraperXSimulation::set_forklift_lift);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state"), &ScraperXSimulation::get_forklift_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_count"), &ScraperXSimulation::get_forklift_count);
     godot::ClassDB::bind_method(godot::D_METHOD("get_forklift_state_at", "index"),
@@ -1498,10 +1497,6 @@ bool ScraperXSimulation::request_forklift_action() {
     return simulation_->request_forklift_action();
 }
 
-bool ScraperXSimulation::set_forklift_lift(const double lift) {
-    return simulation_->set_forklift_lift(lift);
-}
-
 namespace {
 
 // A forklift: driving and offered, the forks' height, speed and steering,
@@ -1510,6 +1505,7 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     godot::Dictionary out;
     out["index"] = static_cast<std::int64_t>(state.index);
     out["chassis_entity"] = static_cast<std::int64_t>(state.chassis_entity);
+    out["lever_entity"] = static_cast<std::int64_t>(state.lever_entity);
     out["driving"] = state.driving;
     out["at_controls"] = state.at_controls;
     out["lift_m"] = state.lift_m;
@@ -1517,6 +1513,7 @@ godot::Dictionary forklift_dictionary(const sim::ForkliftSnapshot &state) {
     out["steer"] = state.steer;
     out["drive"] = state.drive;
     out["lift"] = state.lift;
+    out["lever_rad"] = state.lever_rad;
     out["lift_n"] = state.lift_n;
     out["lift_max_n"] = state.lift_max_n;
     out["pitch_rad"] = state.pitch_rad;

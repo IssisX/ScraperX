@@ -1049,9 +1049,89 @@ func _board_forklift(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return bool(_native().get_forklift_state()["driving"]), 1.0):
 		return _fail("DRIVE did not take the controls")
-	if _main._touch.button_label(&"jump") != "RAISE" or _main._touch.button_label(&"crouch") != "LOWER":
-		return _fail("driving, Jump and Crouch do not read RAISE and LOWER")
+	# The forks follow the lever the hands hold (J-083), not a button:
+	# driving, Jump and Crouch read what they always read.
+	if _main._touch.button_label(&"jump") != "JUMP" or _main._touch.button_label(&"crouch") != "CROUCH":
+		return _fail("driving, Jump and Crouch do not read JUMP and CROUCH")
 	return true
+
+
+# The yard's forklift's lift lever (J-083 #401): entity 2999, on its pedestal
+# dead ahead of the station, its grip where the driver's hands land.
+const YARD_FORKLIFT_LEVER := 2999
+
+
+# Takes the forklift's controls at the wheel, the way a player does.
+func _take_forklift_controls(device: int) -> bool:
+	if not await _offered(&"drive", "DRIVE"):
+		return _fail("DRIVE was not offered at the forklift's wheel")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_forklift_state()["driving"]), 1.0):
+		return _fail("DRIVE did not take the controls")
+	return true
+
+
+# The forklift's frame, in the world: [station, forward]. The station is the
+# driver's place on the floor, 0.15 m back along the truck's forward from the
+# chassis's origin; the lever stands dead ahead of it, under the hands.
+func _forklift_frame() -> Array:
+	var state: Dictionary = _native().get_forklift_state()
+	var truck: Transform3D = _native().get_kit_body_transform(int(_native().get_kit_body_index(int(state["chassis_entity"]))))
+	var forward := Vector2(truck.basis.z.x, truck.basis.z.z)
+	return [Vector2(truck.origin.x, truck.origin.z) - forward * 0.15, forward]
+
+
+# Takes the forklift's lever in the hands and pulls it to its travel limit
+# (raise) or pushes it there (lower), and holds it there. The mast follows
+# the lever's angle. The controls are let go first, and left let go: the
+# caller takes them again to drive.
+func _take_forklift_lever(device: int, raise: bool) -> bool:
+	if bool(_native().get_forklift_state()["driving"]):
+		if not await _offered(&"drive", "STEP OFF"):
+			return _fail("STEP OFF was not offered while driving")
+		_act(device)
+		if not await _wait_until(func() -> bool: return not bool(_native().get_forklift_state()["driving"]), 1.0):
+			return _fail("STEP OFF did not let go of the controls")
+	# Step right to the lever: the station, dead ahead of which it stands.
+	# The hands must meet the grip, or the hinge fights them.
+	var frame: Array = _forklift_frame()
+	if not await _go(device, frame[0], 0.02, 8.0):
+		return _fail("the step to the lever stopped short of the station")
+	await _face(frame[1])
+	if not await _offered(&"pick_up", "GRAB"):
+		return _fail("GRAB was not offered at the lever")
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == YARD_FORKLIFT_LEVER, 1.0):
+		return _fail("the lever was not taken in the hands")
+	# Pull it to its travel limit (raise) or push it there (lower): walk
+	# against the truck's forward, slowly, so the grip never tears.
+	var dir := Vector2(0.0, -0.15) if raise else Vector2(0.0, 0.15)
+	_move_dir(device, dir)
+	var at_limit := await _wait_until(func() -> bool:
+		var lever := float(_native().get_forklift_state()["lever_rad"])
+		return lever >= 0.34 if raise else lever <= -0.34, 5.0)
+	_move_dir(device, Vector2.ZERO)
+	if not at_limit:
+		return _fail("the lever did not reach its travel limit")
+	return true
+
+
+# Lets go of the forklift's lever: it springs back to neutral.
+func _release_forklift_lever(device: int) -> bool:
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not let go of the lever")
+	if not await _wait_until(func() -> bool: return absf(float(_native().get_forklift_state()["lever_rad"])) < 0.08, 1.0):
+		return _fail("let go, the lever did not spring back to neutral")
+	return true
+
+
+# Works the forklift's lever the player's way: take it, hold it at its travel
+# limit `hold_seconds`, let go.
+func _work_forklift_lever(device: int, raise: bool, hold_seconds: float) -> bool:
+	if not await _take_forklift_lever(device, raise):
+		return false
+	await _seconds(hold_seconds)
+	return await _release_forklift_lever(device)
 
 
 func _forklift_touch(device: int) -> bool:
@@ -1070,15 +1150,17 @@ func _forklift_touch(device: int) -> bool:
 	if not under:
 		return _fail("the forklift did not drive in to the pallet")
 	await _seconds(1.5)
-	_touch(2, _center(&"jump"), true)
-	await _seconds(1.0)
-	_touch(2, _center(&"jump"), false)
-	await _seconds(0.5)
+	# The lever, worked by hand: let go of the controls, take it, pull it to
+	# its travel limit and hold it a second, let go.
+	if not await _work_forklift_lever(device, true, 1.0):
+		return false
 	var lifted: Vector3 = _native().get_kit_body_transform(int(pallet[1])).origin
 	if lifted.y < 0.3:
-		return _fail("RAISE did not lift the pallet (at y %.2f)" % lifted.y)
+		return _fail("the lever did not lift the pallet (at y %.2f)" % lifted.y)
 	await _pose("forklift_pallet_raised")
 	# Back with it until it has come 3.5 m off its place.
+	if not await _take_forklift_controls(device):
+		return false
 	_move_dir(device, Vector2(0.0, -0.4))
 	var off := await _wait_until(func() -> bool:
 		return (_native().get_kit_body_transform(int(pallet[1])) as Transform3D).origin.z <= before.z - 3.5, 10.0)
@@ -1086,9 +1168,11 @@ func _forklift_touch(device: int) -> bool:
 	if not off:
 		return _fail("the stick back did not carry the pallet off")
 	await _seconds(1.5)
-	_touch(3, _center(&"crouch"), true)
-	await _seconds(1.5)
-	_touch(3, _center(&"crouch"), false)
+	# The lever again, pushed forward: the forks let the pallet down.
+	if not await _work_forklift_lever(device, false, 1.5):
+		return false
+	if not await _take_forklift_controls(device):
+		return false
 	_move_dir(device, Vector2(0.0, -0.4))
 	await _seconds(1.5)
 	_move_dir(device, Vector2.ZERO)
@@ -1112,6 +1196,68 @@ func _forklift_touch(device: int) -> bool:
 		return _fail("STEP OFF did not let go of the controls")
 	await _look_at_point(set_down)
 	await _pose("forklift_pallet_set_down")
+	return true
+
+
+# touch_forklift_lever (J-083 #401): the forklift's lift lever, the player's
+# way. Up onto the truck's floor without taking the controls; at neutral the
+# mast stands still; GRAB offered at the lever, taken in the hands; held at
+# neutral the mast still does not move; pulled to its travel limit the forks
+# run up the mast at the lift's speed; let go, it springs back to neutral
+# and the ram holds the forks.
+func _forklift_lever_touch(device: int) -> bool:
+	for target in [Vector2(30.0, 10.0), Vector2(36.4, 16.35)]:
+		if not await _go(device, target, 0.3, 30.0):
+			return _fail("the walk to the forklift stopped short of %s" % str(target))
+	if not await _go(device, Vector2(38.0, 16.35), 0.12, 8.0):
+		return _fail("up onto the forklift's floor")
+	# Step right to the lever: the station, dead ahead of which it stands.
+	var frame: Array = _forklift_frame()
+	if not await _go(device, frame[0], 0.02, 8.0):
+		return _fail("the step to the lever stopped short of the station")
+	await _face(frame[1])
+	# The lever is a physical control: it works without the Action toggle.
+	if bool(_native().get_forklift_state()["driving"]):
+		return _fail("the controls were taken without pressing DRIVE")
+	# At neutral the mast stands still.
+	var still := float(_native().get_forklift_state()["lift_m"])
+	await _seconds(1.0)
+	if absf(float(_native().get_forklift_state()["lift_m"]) - still) > 0.005 or \
+			absf(float(_native().get_forklift_state()["lever_rad"])) > 0.08:
+		return _fail("at neutral, the mast moved")
+	# Take it in the hands.
+	if not await _offered(&"pick_up", "GRAB"):
+		return _fail("GRAB was not offered at the lever")
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == YARD_FORKLIFT_LEVER, 1.0):
+		return _fail("the lever was not taken in the hands")
+	# Taken hold, at neutral, the mast still does not move.
+	var held := float(_native().get_forklift_state()["lift_m"])
+	await _seconds(0.5)
+	if absf(float(_native().get_forklift_state()["lift_m"]) - held) > 0.005:
+		return _fail("taken hold, at neutral, the mast moved")
+	# Pull it to its travel limit and hold it: the forks run up the mast at
+	# the lift's speed (0.4 m/s).
+	_move_dir(device, Vector2(0.0, -0.15))
+	var at_limit := await _wait_until(func() -> bool: return float(_native().get_forklift_state()["lever_rad"]) >= 0.34, 5.0)
+	_move_dir(device, Vector2.ZERO)
+	if not at_limit:
+		return _fail("the lever did not reach its travel limit")
+	await _seconds(1.0)
+	var rising := float(_native().get_forklift_state()["lift_mps"])
+	var up := float(_native().get_forklift_state()["lift_m"])
+	print("SCRAPERX_UITEST forklift lever: the forks at %.2f m/s, %.2f m up" % [rising, up])
+	if up < 0.2 or absf(rising - 0.4) > 0.05:
+		return _fail("past the dead band, the mast did not follow the lever")
+	await _pose("forklift_lever_raised")
+	# Let go: it springs back to neutral and the ram holds the forks.
+	if not await _release_forklift_lever(device):
+		return false
+	var held_up := float(_native().get_forklift_state()["lift_m"])
+	await _seconds(1.0)
+	if absf(float(_native().get_forklift_state()["lift_m"]) - held_up) > 0.005:
+		return _fail("let go, the ram did not hold the forks")
+	print("SCRAPERX_UITEST forklift lever: let go, the forks held at %.2f m" % held_up)
 	return true
 
 
@@ -1761,8 +1907,9 @@ func _forklift_strain_touch(device: int) -> bool:
 	await _seconds(1.5)
 	var strains_before := int(_main.haptic_counts.get(&"strain", 0))
 	var lands_before := int(_main.haptic_counts.get(&"land", 0))
-	# RAISE held: the truck, not the load, gives.
-	_touch(2, _center(&"jump"), true)
+	# The lever, pulled to its travel limit and held: the truck, not the load, gives.
+	if not await _take_forklift_lever(device, true):
+		return false
 	var tipped := await _wait_until(func() -> bool:
 		var f: Dictionary = _native().get_forklift_state()
 		var contacts: Array = f["wheel_contact"]
@@ -1771,28 +1918,33 @@ func _forklift_strain_touch(device: int) -> bool:
 	var rise: float = _native().get_kit_body_transform(stillage).origin.y - load0.y
 	var pitch := float(_native().get_forklift_state()["pitch_rad"])
 	await _pose("forklift_strain")
-	_touch(2, _center(&"jump"), false)
+	if not await _release_forklift_lever(device):
+		return false
 	print("SCRAPERX_UITEST forklift strain: nose down %.1f deg, the stillage up %.2f m, strain pulses %d, cues %s" % [
 		rad_to_deg(pitch), rise, int(_main.haptic_counts.get(&"strain", 0)) - strains_before,
 		str(_main._audio.forklift_cues)])
 	if not tipped:
-		return _fail("RAISE under the stillage did not bring the truck's back end up")
+		return _fail("the lever under the stillage did not bring the truck's back end up")
 	if int(_main.haptic_counts.get(&"strain", 0)) <= strains_before:
 		return _fail("the strain was not felt in the hands")
 	if int(_main._audio.forklift_cues.get(&"unload", 0)) < 1 or int(_main._audio.forklift_cues.get(&"groan", 0)) < 1:
 		return _fail("the rear wheels lifting and the mast straining were not heard")
 	await _seconds(1.0)
-	# LOWER held: back down onto the rear wheels.
-	_touch(3, _center(&"crouch"), true)
+	# The lever, pushed forward and held: back down onto the rear wheels.
+	if not await _take_forklift_lever(device, false):
+		return false
 	var down := await _wait_until(func() -> bool:
 		var contacts: Array = _native().get_forklift_state()["wheel_contact"]
 		return bool(contacts[2]) and bool(contacts[3]), 4.0)
 	await _seconds(1.0)
-	_touch(3, _center(&"crouch"), false)
+	if not await _release_forklift_lever(device):
+		return false
 	if not down:
-		return _fail("LOWER did not bring the truck back down onto its rear wheels")
+		return _fail("the lever did not bring the truck back down onto its rear wheels")
 	if int(_main._audio.forklift_cues.get(&"slam", 0)) < 1 or int(_main.haptic_counts.get(&"land", 0)) <= lands_before:
 		return _fail("the rear wheels coming down were not heard and felt")
+	if not await _take_forklift_controls(device):
+		return false
 	if not await _offered(&"drive", "STEP OFF"):
 		return _fail("STEP OFF was not offered while driving")
 	_act(device)

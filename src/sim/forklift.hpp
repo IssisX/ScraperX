@@ -30,6 +30,7 @@
 #include <Jolt/Jolt.h>
 
 #include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
@@ -43,6 +44,14 @@ class Forklift final {
 public:
     static constexpr std::uint64_t kChassisEntity = 2982;
     static constexpr std::uint64_t kCarriageEntity = 2983;
+    // The lift lever's, one per truck (J-083): the yard's, the yard crane's,
+    // the 11 m and 44 m deck trucks', and the 154 m deck truck's. The kit's
+    // entity band runs to kEntityLimit (mechanism_kit.hpp).
+    static constexpr std::uint64_t kLeverEntity = 2999;
+    static constexpr std::uint64_t kCraneLeverEntity = 3000;
+    static constexpr std::uint64_t kDeck11LeverEntity = 3001;
+    static constexpr std::uint64_t kDeck44LeverEntity = 3002;
+    static constexpr std::uint64_t kDeck154LeverEntity = 3003;
 
     // Parked facing +z (south, into the yard), lined up with the first
     // pallet of drums (loose_stock.cpp), its fork tips 4.6 m short of it.
@@ -76,9 +85,28 @@ public:
     static constexpr float kEyeY = 2.42F;
     static constexpr float kEyeZ = -0.5F;
 
+    // The lift lever (J-083): a body on a hinge on a pedestal on the floor,
+    // its grip where the driver's hands land standing at the station (his
+    // hands are his centre + 0.60 m forward + 0.35 m up, so the grip sits
+    // dead ahead of him, on the truck's middle). Its travel, each way from
+    // vertical, and the dead band about neutral inside which the valve stays
+    // shut. Pull it toward the driver and the mast rises; push it forward
+    // and it lowers. Let go and its spring carries it back to neutral.
+    static constexpr float kLeverX = 0.0F;           // dead ahead of the station, on the middle
+    static constexpr float kLeverPivotY = 1.22F;     // the hinge, on its pedestal (grip at 1.57, his hands)
+    static constexpr float kLeverPivotZ = 0.45F;     // 0.60 m ahead of the station, under the hands
+    static constexpr float kLeverLengthM = 0.35F;    // the hinge to the grip
+    static constexpr float kLeverMassKg = 2.0F;
+    static constexpr float kLeverTravelRad = 0.35F;
+    static constexpr float kLeverDeadBandRad = 0.08F;
+    // Its return spring: a torsion spring about the hinge, stiff enough to
+    // carry the lever home in half a second, light enough that the hands
+    // never feel it (CHOSEN: about 4 N m at full travel).
+    static constexpr float kLeverSpringNmPerRad = 8.0F;
+    static constexpr float kLeverSpringDampingNmS = 1.6F;
+
     // The forks: from 3.5 cm off the ground up the mast to its top (it does
     // not telescope), at kLiftSpeedMps, by a ram of at most kLiftForceN
-    // (CHOSEN: a relief valve at about 1.4 times the truck's 3.5 t rating;
     // what limits a lift far out on the forks is the counterweight).
     static constexpr float kLiftStrokeM = 1.8F;
     static constexpr float kLiftSpeedMps = 0.4F;
@@ -109,6 +137,7 @@ public:
         float drive = 0.0F;         // the throttle as applied, -1 .. 1
         float lift = 0.0F;          // the lift lever as applied: + raising, - lowering
         float lift_n = 0.0F;        // the lift's push up the mast this tick (to kLiftForceN)
+        float lever_rad = 0.0F;     // the lever's angle from neutral, + toward the driver (raise)
         float pitch_rad = 0.0F;     // the truck's nose down, + (on its front wheels)
         // Each wheel's load on the ground this tick and whether it touches:
         // front left, front right, rear left, rear right.
@@ -135,10 +164,11 @@ public:
 
     // Parked at (park_x, park_y, park_z) on a floor at park_y, its nose `yaw`
     // about +y from +z, its bodies the kit's entities chassis_entity and
-    // carriage_entity.
+    // carriage_entity, its lever lever_entity.
     Forklift(JPH::PhysicsSystem &physics, kit::Kit &kit, JPH::ObjectLayer moving_layer, JPH::BodyID player,
              std::uint64_t chassis_entity = kChassisEntity, std::uint64_t carriage_entity = kCarriageEntity,
-             float park_x = kParkX, float park_z = kParkZ, float yaw = 0.0F, float park_y = 0.0F);
+             float park_x = kParkX, float park_z = kParkZ, float yaw = 0.0F, float park_y = 0.0F,
+             std::uint64_t lever_entity = kLeverEntity);
     ~Forklift();
     Forklift(const Forklift &) = delete;
     Forklift &operator=(const Forklift &) = delete;
@@ -146,17 +176,20 @@ public:
     // Before the physics step. take: Action (takes the controls at the
     // wheel, lets go of them while driving). at_controls: the player stands on
     // the truck's floor within kStationReachM of the station. drive, steer
-    // and lift are the stick's forward and right and the forks' buttons, each
-    // -1 .. 1, and act only while driving.
-    void pre_step(float delta_seconds, bool take, bool at_controls, float drive, float steer, float lift);
+    // are the stick's forward and right, each -1 .. 1, and act only while
+    // driving. lever_held: the player's hands are on the lever; held, its
+    // spring is off and the hands move it, and the mast follows its angle.
+    void pre_step(float delta_seconds, bool take, bool at_controls, float drive, float steer, bool lever_held);
     // After the physics step: what the lift pushed and the wheels carried.
     void post_step(float delta_seconds);
 
     [[nodiscard]] bool driving() const noexcept { return state_.driving; }
     [[nodiscard]] std::uint64_t chassis_entity() const noexcept { return chassis_entity_; }
-    // Its frame and its fork carriage, as kit bodies.
+    [[nodiscard]] std::uint64_t lever_entity() const noexcept { return lever_entity_; }
+    // Its frame, its fork carriage and its lever, as kit bodies.
     [[nodiscard]] kit::BodyIndex chassis_body() const noexcept { return chassis_; }
     [[nodiscard]] kit::BodyIndex carriage_body() const noexcept { return carriage_; }
+    [[nodiscard]] kit::BodyIndex lever_body() const noexcept { return lever_; }
     [[nodiscard]] const State &state() const noexcept { return state_; }
     // Where the driver stands, in the world.
     [[nodiscard]] JPH::RVec3 station() const;
@@ -173,11 +206,14 @@ private:
     JPH::PhysicsSystem &physics_;
     kit::Kit &kit_;
     std::uint64_t chassis_entity_ = kChassisEntity;
+    std::uint64_t lever_entity_ = kLeverEntity;
     kit::BodyIndex chassis_{};
     kit::BodyIndex carriage_{};
+    kit::BodyIndex lever_{};
     JPH::IgnoreMultipleBodiesFilter wheel_filter_;
     JPH::Ref<JPH::VehicleConstraint> vehicle_;
     JPH::Ref<JPH::SliderConstraint> lift_;
+    JPH::Ref<JPH::HingeConstraint> lever_hinge_;
     State state_{};
     float lift_target_ = 0.0F;
     float lift_rate_ = 0.0F;   // the forks' speed as the valve drives it, + up

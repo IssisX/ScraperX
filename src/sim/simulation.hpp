@@ -471,6 +471,7 @@ struct SwingSnapshot final {
 struct ForkliftSnapshot final {
     int index = 0;                   // 0 the yard's, then the yard crane's
     std::uint64_t chassis_entity = 0;
+    std::uint64_t lever_entity = 0;      // its lift lever (J-083)
     bool driving = false;
     bool at_controls = false;        // on its floor at the wheel: DRIVE offered
     double lift_m = 0.0;             // the forks above their lowest
@@ -478,6 +479,7 @@ struct ForkliftSnapshot final {
     double steer = 0.0;              // the steered wheels, -1 .. 1 (right +)
     double drive = 0.0;              // the throttle as applied, -1 .. 1
     double lift = 0.0;               // the lift lever as applied: + raising, - lowering
+    double lever_rad = 0.0;          // the lever's angle from neutral, + toward the driver (raise)
     double lift_n = 0.0;             // the lift's push up the mast this tick
     double lift_max_n = 0.0;         // the most it can push (the relief valve)
     double pitch_rad = 0.0;          // nose down, + (on its front wheels)
@@ -1873,9 +1875,8 @@ public:
     [[nodiscard]] TrapezeSnapshot trapeze_state() const noexcept;
     // The yard's forklift: at its wheel, Action takes the controls (refused
     // elsewhere) and, driving, lets go of them. Driving, the stick drives and
-    // steers and the forks' buttons, held, raise (1) and lower (-1) them.
+    // steers; the forks follow the lever the hands hold (J-083), not a button.
     [[nodiscard]] bool request_forklift_action() noexcept;
-    [[nodiscard]] bool set_forklift_lift(double lift) noexcept;
     // The forklift being driven, else the one at whose wheel the player
     // stands, else the yard's; or forklift `index` of forklift_count().
     [[nodiscard]] ForkliftSnapshot forklift_state() const noexcept;
@@ -2060,7 +2061,6 @@ private:
     bool lift_action_ = false;
     bool lift_haul_ = false;
     bool forklift_action_ = false;
-    double forklift_lift_ = 0.0;
     bool summit_lower_ = false;
     bool summit_unrig_ = false;
     bool yard_crane_take_ = false;

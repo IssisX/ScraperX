@@ -259,7 +259,6 @@ public:
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
     [[nodiscard]] bool request_forklift_action();
-    [[nodiscard]] bool set_forklift_lift(double lift);
     [[nodiscard]] godot::Dictionary get_forklift_state() const;
     [[nodiscard]] std::int64_t get_forklift_count() const;
     [[nodiscard]] godot::Dictionary get_forklift_state_at(std::int64_t index) const;

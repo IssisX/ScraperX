@@ -394,7 +394,7 @@ void run_yard_crane() {
                 "crane: DRIVE the 44 m deck's forklift");
         (void)s.advance_frame(0.2);
         // In until the forks are under the pallet's deck, the carriage short
-        // of it; RAISE.
+        // of it; the lever raises them.
         int ticks = 0;
         while (body_at(s, Forklift::kDeck44ChassisEntity).z > load0.z + 1.75 && ticks++ < 900) {
             (void)s.set_move_input(0.0, -0.25);
@@ -403,10 +403,7 @@ void run_yard_crane() {
         }
         (void)s.set_move_input(0.0, 0.0);
         (void)s.advance_frame(1.5);
-        (void)s.set_forklift_lift(1.0);
-        (void)s.advance_frame(1.0);
-        (void)s.set_forklift_lift(0.0);
-        (void)s.advance_frame(0.5);
+        require(work_lever(s, true, 1.0), "crane: the 44 m deck's forklift lifts by its lever");
         const auto lifted = body_at(s, pallet);
         forked_y = lifted.y - load0.y;
         std::cout << "  crane: up on the 44 m deck its forklift lifted the skid crate " << forked_y << " m\n";

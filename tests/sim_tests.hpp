@@ -6,6 +6,7 @@
 // simulation_tests.cpp's main() runs the registry.
 
 #include "sim_registry.hpp"
+#include "sim/forklift.hpp"
 #include "sim/simulation.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/trapeze.hpp"
@@ -218,6 +219,137 @@ inline bool walk_to(scraperx::sim::Simulation &simulation, const double x, const
     }
     (void)simulation.set_move_input(0.0, 0.0);
     return false;
+}
+
+// ---- J-083, the forklift's lift lever --------------------------------------
+// The lever, worked the player's way: let go of the controls, step to the
+// lever, take it in the hands, pull it to its travel limit (raise) or push it
+// there (lower), and hold it. The mast follows the lever's angle; let go and
+// it springs back to neutral. take_lever leaves the lever held, so the caller
+// can measure the mast while it is held; release_lever lets go of it.
+// work_lever does the whole thing: take, hold `seconds`, let go.
+inline bool take_lever(scraperx::sim::Simulation &simulation, const bool raise) {
+    using scraperx::sim::Forklift;
+    using scraperx::sim::Simulation;
+    // Let go of the controls first: driving, the body cannot take hold of
+    // anything (the stick is the truck's).
+    if (simulation.forklift_state().driving) {
+        require(simulation.request_forklift_action(), "lever work lets go of the controls first");
+        for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 2; ++tick) {
+            (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        require(!simulation.forklift_state().driving, "lever work lets go of the controls first");
+    }
+    // Step to the lever: dead ahead of the station, under the hands. The
+    // coarse walk stops inside 0.15 m; the fine step then closes to 0.02 m,
+    // because steer_toward commands no input inside 0.05 m and a plain
+    // walk_to(0.02) would stall 3 cm out forever. Two centimetres is the
+    // bound that matters: at the 0.35 m bar it holds the lever inside its
+    // 0.08 rad dead band while the hands take hold.
+    const auto station_now = [&simulation]() {
+        const auto truck = simulation.forklift_state();
+        const auto chassis = simulation.kit_body_position(simulation.kit_body_index(truck.chassis_entity));
+        const auto rotation = simulation.kit_body_rotation(simulation.kit_body_index(truck.chassis_entity));
+        const double yaw = 2.0 * std::atan2(rotation.y, rotation.w);
+        const double fx = std::sin(yaw);
+        const double fz = std::cos(yaw);
+        return std::array<double, 4>{chassis.x - 0.15 * fx, chassis.z - 0.15 * fz, fx, fz};
+    };
+    {
+        const auto at = station_now();
+        require(walk_to(simulation, at[0], at[1], 10.0), "lever work steps to the lever");
+    }
+    {
+        bool settled = false;
+        for (std::uint32_t tick = 0; tick < 3 * Simulation::kTickRateHz; ++tick) {
+            const auto at = station_now();
+            const auto state = simulation.snapshot();
+            const double dx = at[0] - state.player_position.x;
+            const double dz = at[1] - state.player_position.z;
+            const double gap = std::hypot(dx, dz);
+            if (gap <= 0.02) {
+                (void)simulation.set_move_input(0.0, 0.0);
+                settled = true;
+                break;
+            }
+            const double step = std::min(0.15, gap);
+            (void)simulation.set_move_input(dx / gap * step, dz / gap * step);
+            (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)simulation.set_move_input(0.0, 0.0);
+        require(settled, "lever work steps onto the station");
+    }
+    const auto at = station_now();
+    const double fx = at[2];
+    const double fz = at[3];
+    require(simulation.set_facing(fx, fz), "lever work faces the truck's forward");
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 2; ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    // The lever is offered, a handle in the hands' reach.
+    require(simulation.snapshot().carry_target_entity_id == simulation.forklift_state().lever_entity &&
+                simulation.snapshot().carry_target_kind == 2,
+            "the lever is offered as a handle");
+    require(simulation.request_pick_up(), "lever work takes the lever");
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz / 4; ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    require(simulation.snapshot().carrying_entity_id == simulation.forklift_state().lever_entity,
+            "the lever is in the hands");
+    // Pull it to its travel limit (raise) or push it there (lower): walk
+    // against the truck's forward, so the grip never tears. The target sits
+    // 0.03 rad short of the 0.35 rad limit on purpose: the stick walks about
+    // 0.5 m/s, so one tick overshoots the lever 0.014 rad, and a target at
+    // 0.34 lands the lever on its limit, where the hinge fights the hands,
+    // the carry's pull tops the 900 N grip and the lever tears out of them
+    // (measured: pulled to 0.352, dropped inside a quarter second of the
+    // hold). Pulled slow instead it tears mid-pull, at 0.26 rad: the hands
+    // outrun the grip on its arc and the carry's pull tops the grip there.
+    // At 0.32 the mast still runs at 0.36 m/s, inside the 0.05 check, and
+    // the lever stops short of its limit, held.
+    const double pull = raise ? -0.15 : 0.15;
+    const double target = raise ? Forklift::kLeverTravelRad - 0.03 : -Forklift::kLeverTravelRad + 0.03;
+    bool reached = false;
+    const auto pull_ticks = static_cast<std::uint32_t>(3.0 * Simulation::kTickRateHz);
+    for (std::uint32_t tick = 0; tick < pull_ticks; ++tick) {
+        (void)simulation.set_move_input(pull * fx, pull * fz);
+        (void)simulation.set_facing(fx, fz);
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        const double lever = simulation.forklift_state().lever_rad;
+        if (raise ? lever >= target : lever <= target) {
+            reached = true;
+            break;
+        }
+    }
+    (void)simulation.set_move_input(0.0, 0.0);
+    return reached;
+}
+
+inline bool release_lever(scraperx::sim::Simulation &simulation) {
+    using scraperx::sim::Simulation;
+    require(simulation.request_set_down(), "lever work lets go of the lever");
+    // The spring carries it home inside half a second; give it one.
+    bool settled = false;
+    for (std::uint32_t tick = 0; tick < Simulation::kTickRateHz; ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+        if (std::abs(simulation.forklift_state().lever_rad) < 0.02) {
+            settled = true;
+            break;
+        }
+    }
+    return settled;
+}
+
+inline bool work_lever(scraperx::sim::Simulation &simulation, const bool raise, const double seconds) {
+    using scraperx::sim::Simulation;
+    if (!take_lever(simulation, raise)) {
+        return false;
+    }
+    const auto ticks = static_cast<std::uint32_t>(seconds * Simulation::kTickRateHz);
+    for (std::uint32_t tick = 0; tick < ticks; ++tick) {
+        (void)simulation.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    return release_lever(simulation);
 }
 
 // ---- AS-006, the Counterweight Well ----------------------------------------
@@ -756,6 +888,7 @@ void run_look_target();
 void run_body_order();
 void run_fabricated();
 void run_forklift();
+void run_forklift_lever();
 void run_forklift_strain();
 void run_forklift_matron();
 void run_yard_crane();

@@ -468,12 +468,8 @@ func _process(delta: float) -> void:
 	_native.set_lift_haul(_hauling)
 	_native.set_summit_lower(bool(intent.get("action_held", false)) and
 		_ctx.get("action", {}).get("id", &"") == &"summit_lower")
-	# The forklift's forks, while driving: Jump held raises, Crouch held lowers.
-	var forks := 0.0
-	if bool(_ctx.get("forklift_driving", false)):
-		forks = (1.0 if bool(intent.get("raise_held", false)) else 0.0) - \
-			(1.0 if bool(intent.get("lower_held", false)) else 0.0)
-	_native.set_forklift_lift(forks)
+	# The forklift's forks follow the lever the hands hold (J-083), not a
+	# button: no lift rides in from the input any more.
 	# The yard crane's hoist, while it is worked: Jump held raises the hook,
 	# Crouch held lowers it.
 	var hoist := 0.0
@@ -963,8 +959,9 @@ func _resume() -> void:
 # always the native's decision.
 func _dispatch(verbs: Array, delta: float) -> void:
 	for verb in verbs:
-		# At the forklift's wheel Jump and Crouch are its forks' buttons, held
-		# (_process): pressed, they neither jump nor crouch.
+		# While driving, and while the crane is worked, Jump and Crouch neither
+		# jump nor crouch: driving, the stick is the truck's; working the
+		# crane, they are its hoist's buttons, held (_process).
 		if (bool(_ctx.get("forklift_driving", false)) or bool(_ctx.get("crane_operating", false))) and \
 				verb in [&"jump", &"crouch"]:
 			continue

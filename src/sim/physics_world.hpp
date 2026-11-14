@@ -66,9 +66,9 @@ public:
         bool lift_action = false;
         bool lift_haul = false;
         // The yard's forklift: Action (take or let go of the controls),
-        // one-shot; the forks' buttons, held (-1 lower .. 1 raise).
+        // one-shot. The forks follow the lever the hands hold (J-083), not a
+        // button: no lift field rides in the commands any more.
         bool forklift_action = false;
-        double forklift_lift = 0.0;
         // The yard crane: Take the remote, its switch and the device switch
         // (the device's on the sling: the magnet on or off, the spreader's
         // LOCK or UNLOCK), one-shot; the hoist's buttons, held (-1 lowering ..
