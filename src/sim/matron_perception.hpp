@@ -82,9 +82,12 @@ struct Evidence {
     // when nothing of him reached her).
     int climb = -1;
 
-    // Her hand on him (a hold): his body where it is in her hand.
+    // Her hand on him (a hold): his body where it is in her hand. In the
+    // reach, her fingers not yet on him, only her eyes on him or her body
+    // against his (J-049); felt_at keeps the last place, felt_age_s its age.
     bool touch = false;
     JPH::RVec3 felt_at = JPH::RVec3::sZero();
+    float felt_age_s = kNever;
 
     // Memory: the last of each, and how old it is.
     JPH::RVec3 last_seen_at = JPH::RVec3::sZero();
@@ -116,6 +119,24 @@ struct Evidence {
             return true;
         }
         return false;
+    }
+    // Where she last had him by any sense (her hand, her eyes, her ears), the
+    // newest; false when nothing of him ever reached her.
+    [[nodiscard]] bool last_place(JPH::RVec3 &at) const noexcept {
+        float best = kNever;
+        if (felt_age_s < best) {
+            best = felt_age_s;
+            at = felt_at;
+        }
+        if (seen_age_s < best) {
+            best = seen_age_s;
+            at = last_seen_at;
+        }
+        if (heard_age_s < best) {
+            best = heard_age_s;
+            at = last_heard_at;
+        }
+        return best < kNever;
     }
 };
 

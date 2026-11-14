@@ -53,6 +53,7 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     ev.sight_age_s = std::min(ev.sight_age_s + dt, Evidence::kNever);
     ev.heard_age_s = std::min(ev.heard_age_s + dt, Evidence::kNever);
     ev.sound_age_s = std::min(ev.sound_age_s + dt, Evidence::kNever);
+    ev.felt_age_s = std::min(ev.felt_age_s + dt, Evidence::kNever);
 
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
@@ -98,8 +99,19 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
 
     // Her hand on him: what she holds she feels, where it is.
     if (Matron::holding_state(m.state_) || m.state_ == State::Release) {
+        // The reach (J-049): her fingers not yet on him, she has him only by
+        // her eyes on him or her body against his. A tick with neither gives
+        // her nothing new: she reaches for where she last had him.
+        if (m.state_ == State::Grab && !m.grip_on_) {
+            const bool against = m.body_in_world_ && !m.player_.IsInvalid() &&
+                                 m.physics_.WereBodiesInContact(m.body_, m.player_);
+            if (!against && m.look_at(player - RVec3(0.0, 0.3, 0.0), Matron::kEyeRangeM) != Matron::Glimpse::Sight) {
+                return;
+            }
+        }
         ev.touch = true;
         ev.felt_at = player;
+        ev.felt_age_s = 0.0F;
         return;
     }
 
