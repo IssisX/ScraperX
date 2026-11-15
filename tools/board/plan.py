@@ -46,11 +46,16 @@ def recent_flip(path: Path, job: str) -> bool:
 
 
 def in_flight(job: str, branches: list, prs: list[dict], inactive: set[str] | frozenset[str] = frozenset(),
-              kept: tuple = ()) -> bool:
+              kept: tuple = (), merged_at: dict | None = None, head_at: dict | None = None) -> bool:
     """Remote work still needing disposition, including foreign owners and closed-unmerged PR heads. A head the
-    plan keeps as a record (`kept <branch>@<sha>`, still at that sha) has had its disposition."""
+    plan keeps as a record (`kept <branch>@<sha>`, still at that sha) has had its disposition, and so has a head
+    whose commit is older than the job's newest merge (machine.collect: history). A head with no time read counts."""
     ruled = {core.branch_sha(b) for b in branches
              if any(core.branch_name(b) == ref and core.branch_sha(b).startswith(pin) for ref, pin in kept)}
+    landed = (merged_at or {}).get(job)
+    landed = dt.datetime.fromisoformat(landed.replace("Z", "+00:00")) if isinstance(landed, str) and landed else None
+    ruled |= {core.branch_sha(b) for b in branches
+              if landed and (t := (head_at or {}).get(core.branch_sha(b))) and t < landed}
     if core.live_refs(job, branches, frozenset(inactive) | ruled):
         return True
     return any((m := core.PR_JOB.match(pr.get("body") or "")) and m.group(1) == job
@@ -60,7 +65,8 @@ def in_flight(job: str, branches: list, prs: list[dict], inactive: set[str] | fr
 def change(source: str, action: str, args: list[str], *, branches: list = (),
            prs: list[dict] = (), inactive: set[str] | frozenset[str] = frozenset(),
            stop_work: str = "", again: str = "", flipped: bool = False,
-           verified_closed: set[str] | frozenset[str] = frozenset()) -> str:
+           verified_closed: set[str] | frozenset[str] = frozenset(), merged_at: dict | None = None,
+           head_at: dict | None = None) -> str:
     p = core.parse(source)
     if p.errors:
         raise ValueError("plan invalid: " + "; ".join(p.errors))
@@ -83,7 +89,7 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
             if args:
                 raise ValueError("tidy takes no job IDs; it checks remote issue closure")
             stale = [ln.job for ln in ls if ln.job in verified_closed]
-            if any(in_flight(job, branches, prs, inactive, p.by_job()[job].kept) for job in stale):
+            if any(in_flight(job, branches, prs, inactive, p.by_job()[job].kept, merged_at, head_at) for job in stale):
                 raise ValueError("tidy: closed issue still has unresolved remote work; reconcile it first")
             ls = [ln for ln in ls if ln.job not in verified_closed]
         else:
@@ -95,7 +101,8 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
                 raise ValueError(f"{action} {job}: not found")
             if flipped and not again:
                 raise ValueError(f"{action} {job}: recently changed; --again reason is required")
-            if action in {"give", "hold"} and in_flight(job, branches, prs, inactive, ls[found].kept) and not stop_work:
+            if (action in {"give", "hold"} and not stop_work
+                    and in_flight(job, branches, prs, inactive, ls[found].kept, merged_at, head_at)):
                 raise ValueError(f"{action} {job}: remote work in flight; --stop-work reason is required")
             old = ls[found]
             if action == "give":
@@ -112,7 +119,7 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
                 # the ruling that clears a conflict: a head of the job stays as a record at this sha, not a lane
                 m = core.KEPT.fullmatch("kept " + args[1]) if len(args) == 2 else None
                 live = {core.branch_name(b): core.branch_sha(b) for b in branches}
-                if not m or core.job_of_branch(m.group(1)) != job:
+                if not m or core.plan_job(core.job_of_branch(m.group(1)), p.by_job()) != job:   # a lettered split is its base's
                     raise ValueError(f"keep {job}: expected <branch naming the job>@<sha>")
                 if not live.get(m.group(1), "").startswith(m.group(2)):
                     raise ValueError(f"keep {job}: {m.group(1)} is not on the remote at {m.group(2)}")
@@ -128,7 +135,7 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
             elif action == "drop":
                 if len(args) != 1 or job not in verified_closed:
                     raise ValueError(f"drop {job}: issue must be independently verified closed")
-                if in_flight(job, branches, prs, inactive, old.kept):
+                if in_flight(job, branches, prs, inactive, old.kept, merged_at, head_at):
                     raise ValueError(f"drop {job}: unresolved remote work remains")
                 ls.pop(found)
     else:
@@ -208,6 +215,8 @@ def main(argv: list[str] | None = None) -> int:
                         branches=observed["branches"] if observed else (),
                         prs=observed["prs"] if observed else (),
                         inactive=observed["inactive"] if observed else frozenset(),
+                        merged_at=observed.get("merged_at") if observed else None,
+                        head_at=observed.get("head_at") if observed else None,
                         stop_work=ns.stop_work, again=ns.again,
                         flipped=recent_flip(ns.plan, job) if ns.action in {"give", "hold", "release", "move"} else False)
         write_atomic(ns.plan, src, result)

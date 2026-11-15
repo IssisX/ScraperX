@@ -884,6 +884,19 @@ def _unpushed(ln: P.Line, mail: Mail, named: tuple[Post, tuple[str, ...]] | None
     return {"unpushed": sha, "unpushed_at": said}
 
 
+def _superseded(h: Head, heads, pr_refs, owners) -> bool:
+    """An integrate head with no open PR that the same owner's newer integrate head with no PR, of the same job id
+    and protectedness, replaces: it is left behind, not work in flight. A head with no commit time read is never
+    proven older; another owner's head, a protected or plain twin and a lettered sibling are lanes of their own."""
+    def lane(x: Head):
+        return agent_of(x.ref, owners), P.job_of_branch(x.ref), "integrate-protected-" in x.ref
+
+    def side(x: Head) -> bool:
+        return not x.wip and x.at is not None and x.ref not in pr_refs
+
+    return side(h) and any(side(o) and o.at > h.at and lane(o) == lane(h) for o in heads)
+
+
 def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None, mail: Mail | None = None,
             planned_at: dt.datetime | None = None,
             asks: dict[str, tuple[dt.datetime, str]] | None = None) -> dict[str, Evidence]:
@@ -916,8 +929,8 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
         if not job or (sha and sha in inactive) or any(name == ref and sha and sha.startswith(pin) for ref, pin in ruled):
             continue
         head = Head(name, sha, head_at.get(sha))
-        if head.wip and head.at and job in merged and head.at < merged[job]:
-            continue   # a wip head older than the job's merge is history: its commits were squashed into the PR
+        if head.at and job in merged and head.at < merged[job]:
+            continue   # a head older than the job's merge is history: squashed into the PR, or left behind it (J-014 #491)
         if job not in by_job and job not in titled and head.at is None:
             continue   # a head of a job out of the plan that no compare proved unlanded (observe says how many)
         heads.setdefault(job, []).append(head)
@@ -930,6 +943,9 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
             prs.setdefault(job, []).append(p)
             if not any(h.ref == ref for h in heads.get(job, [])):
                 heads.setdefault(job, []).append(Head(ref, sha, head_at.get(sha)))
+    pr_refs = {(p.get("head") or {}).get("ref") for ps in prs.values() for p in ps}
+    for job, hs in heads.items():
+        heads[job] = [h for h in hs if not _superseded(h, hs, pr_refs, model.limits)]
     closed = reads.get("closed") or frozenset()
     vers = versions(model)
     wrong = mail_clashes(model, mail, planned_at)

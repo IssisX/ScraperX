@@ -6,7 +6,7 @@ the one next action each needs so nothing sits waiting:
 
   MERGE     proof green and a second agent's LAND on the PR's head
   REVIEW    proof green, no LAND or FIX yet
-  FIX-CI    the proof failed on the head (its owner fixes it)
+  FIX-CI    the proof failed on the head (its owner fixes it); never a branch whose job merged a PR after its head
   FIX       a reviewer's FIX is the latest verdict, or a Codex P0/P1 finding has no reply
   PROVING   the proof is running
   DISPATCH  pushed, but no proof ever ran on the head
@@ -24,9 +24,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+from pathlib import Path
 import re
 import subprocess
 import sys
+
+HERE = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(HERE / "tools/switchboard"))   # `plan` is the switchboard's plan.py, never tools/board/plan.py
+import plan as core  # noqa: E402
 
 WORKFLOW = "wo000-delivery-spine.yml"
 TRUNK = "ScraperX-Claude"
@@ -109,6 +114,29 @@ def open_codex_findings(repo: str, number: int) -> int:
     )
 
 
+def plan_jobs() -> dict:
+    """The plan's jobs, so a lettered split (J-044c) is its base job (J-044) when only the base has a line."""
+    try:
+        return core.parse((HERE / core.PLAN_FILE).read_text(encoding="utf-8")).by_job()
+    except OSError:
+        return {}
+
+
+def landed_jobs(repo: str, jobs: dict) -> dict[str, dt.datetime]:
+    """job -> when its newest `Job: J-NNN` PR (else its branch's job) merged into trunk, from one page of the
+    recently updated closed PRs: the sweep looks back a day."""
+    out: dict[str, dt.datetime] = {}
+    for p in gh(f"repos/{repo}/pulls?state=closed&base={TRUNK}&sort=updated&direction=desc&per_page=100"):
+        if not p.get("merged_at"):
+            continue
+        m = core.PR_JOB.match(p.get("body") or "")
+        job = core.plan_job(m.group(1) if m else core.job_of_branch((p.get("head") or {}).get("ref") or ""), jobs)
+        when = parse_time(p["merged_at"])
+        if job and (job not in out or when > out[job]):
+            out[job] = when
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", default="IssisX/ScraperX")
@@ -151,6 +179,7 @@ def main() -> int:
     refs = subprocess.run(
         ["git", "for-each-ref", "--sort=-committerdate", "--format=%(refname:strip=3) %(objectname) %(committerdate:iso-strict)",
          "refs/remotes/origin"], capture_output=True, text=True, check=True).stdout.splitlines()
+    jobs, landed = plan_jobs(), None   # landed: read once, only when a red branch needs it
     for line in refs:
         name, sha, stamp = line.split(" ", 2)
         age = (now - dt.datetime.fromisoformat(stamp)).total_seconds() / 3600
@@ -162,6 +191,11 @@ def main() -> int:
         if state == "none" and "/integrate-" not in name:
             rows.append(("DISPATCH?", f"{name} @{sha[:8]} pushed {age:.1f}h ago, no proof on its head"))
         elif state.startswith("red"):
+            if landed is None:
+                landed = landed_jobs(args.repo, jobs)
+            job = core.plan_job(core.job_of_branch(name), jobs)
+            if job in landed and landed[job] > dt.datetime.fromisoformat(stamp):
+                continue   # the job landed after this head: a leftover, not a fix anyone owes
             rows.append(("FIX-CI", f"{name} @{sha[:8]} proof={state} {url}"))
 
     order = ["MERGE", "REVIEW", "FIX-CI", "FIX", "DISPATCH", "DISPATCH?", "PROVING"]
