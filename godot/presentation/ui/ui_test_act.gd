@@ -1698,6 +1698,10 @@ func _perf_night() -> bool:
 # move stick throw a slip, the body moves ~0.4 m sideways out of her line,
 # no grab follows in the window. Staged with her woken and placed 2.5 m out,
 # hands held for the approach, freed at the press so the window is real.
+# Stage is Changed (2), not Pest (0): at Pest she stalks — under his gaze
+# she freezes, looked away she holds at her 3.0 m band — and never closes
+# to slip range (CI run 43681181291 failed this act at stage 0). The sweep
+# act proves a Changed Matron closes 2.5 m to 1.25 m.
 func _matron_slip_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if int(_matron_state()["state"]) == MATRON_STATE_DORMANT and not await _wake_matron(device):
@@ -1705,10 +1709,10 @@ func _matron_slip_touch(device: int) -> bool:
 	_native().debug_hold_matron_hands(120.0)
 	var me := _position()
 	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - 2.5))
-	_native().debug_set_matron_stage(0)
+	_native().debug_set_matron_stage(2)
 	await _face(Vector2(0.0, -1.0))
 	if not await _wait_until(func() -> bool: return _centre_gap() <= 1.25, 10.0):
-		return _fail("the pest Matron never closed into slip range")
+		return _fail("the changed Matron never closed into slip range")
 	_native().debug_hold_matron_hands(0.0)
 	var slips := int(_native().get_strike_state()["slip_count"])
 	var start := _position()

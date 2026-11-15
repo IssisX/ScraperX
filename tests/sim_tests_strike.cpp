@@ -973,6 +973,12 @@ SCRAPERX_SLICE("matron-jab", run_matron_jab);
 void run_matron_slip() {
     constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
     // Hunted setup: she comes to him till the gap closes to press_gap_m.
+    // Stage is Changed (2), not Pest (0): at Pest she stalks — under his
+    // gaze she freezes, looked away she holds at her 3.0 m band — and
+    // never closes to the press gap (CI run 43681181291 failed this setup
+    // at stage 0). Changed hunts one pace tier faster than Dangerous
+    // (choose_pace), and the sweep touch act proves a Changed Matron
+    // closes 2.5 m to 1.25 m.
     const auto hunt_to_gap = [&](Simulation &s, const double her_ahead_m, const int stage,
                                  const double press_gap_m, const bool no_hands) {
         s.place_matron_home(154.0F);
@@ -1038,7 +1044,7 @@ void run_matron_slip() {
         out.grabs = s.matron_state().grabs - grabs0;
         return out;
     };
-    const Slipped right = slip_case(2.5, 0, 1.25, 1);
+    const Slipped right = slip_case(2.5, 2, 1.25, 1);
     std::cout << "  slip right: slips=" << right.slips << " lateral_m=" << right.lateral_m
               << " forward_m=" << right.forward_m << " cone=" << right.cone_before << "->" << right.cone_after
               << " grabs=" << right.grabs << " max_step_m=" << right.max_step_m << "\n";
@@ -1048,12 +1054,12 @@ void run_matron_slip() {
     require(right.cone_after < right.cone_before - 0.02, "slip: he leaves her facing line");
     require(right.grabs == 0, "slip: no grab follows in the window");
     require(right.max_step_m <= 0.20, "slip: no tick moves the body over 0.20 m");
-    const Slipped left = slip_case(2.5, 0, 1.25, -1);
+    const Slipped left = slip_case(2.5, 2, 1.25, -1);
     require(left.slips == 1 && left.lateral_m < -0.30 && left.lateral_m > -0.55,
             "slip: the left slip mirrors the right, ~0.4 m the other way");
     // Free hands, pressed before her grab starts (1.5 m, outside her 1.40 m standoff):
     // the slip beats her grab, none follows in the window.
-    const Slipped free = slip_case(2.5, 0, 1.5, 1, true);
+    const Slipped free = slip_case(2.5, 2, 1.5, 1, true);
     require(free.slips == 1 && free.grabs == 0,
             "slip: free hands, the slip beats her grab - no grab follows in the window");
     // Control: the same free-hands setup, no slip — she grabs him in the
@@ -1062,7 +1068,7 @@ void run_matron_slip() {
     // anything; if this fails, the grab path is the blocker, not the slip.)
     {
         Simulation s(InitialSpawn::Deck154);
-        hunt_to_gap(s, 2.5, 0, 1.5, true);
+        hunt_to_gap(s, 2.5, 2, 1.5, true);
         const std::uint32_t grabs0 = s.matron_state().grabs;
         bool grabbed = false;
         for (int i = 0; i < 150 && !grabbed; ++i) {
