@@ -606,6 +606,7 @@ Simulation::PhysicsWorld::~PhysicsWorld() {
     release_hung_slab_for_test();
     drop_hang_arms();
     stow_hook(physics_system_.GetBodyInterface());
+    flex_planks_.clear();
     matron_.reset();
     bay_.reset();
     summit_.reset();
@@ -1131,6 +1132,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         effort_after_update(delta_seconds);   // J-046 measurement only: reads, writes nothing
     }
     kit_->post_step(delta_seconds);
+    for (const std::unique_ptr<FlexPlank> &plank : flex_planks_) {
+        plank->post_step();
+    }
     bay_->post_step();
     impacts_->post_step(carried_entity_);
     // J-038 slice 1: stock dents and breaks, from this tick's measured
@@ -1430,6 +1434,19 @@ std::vector<Vector3> Simulation::PhysicsWorld::slingshot_prediction() const {
         result.push_back(to_vector(points[n]));
     }
     return result;
+}
+
+int Simulation::PhysicsWorld::add_flex_plank_for_test(const FlexPlank::Spec &spec) {
+    if (flex_planks_.size() >= FlexPlank::kMaxPlanks) {
+        return -1;
+    }
+    FlexPlank::Spec laid = spec;
+    laid.layer = object_layers::kMoving;
+    laid.design_load_kg = kPlayerMassKg;
+    const std::uint64_t base =
+        FlexPlank::kEntityBase + static_cast<std::uint64_t>(flex_planks_.size()) * FlexPlank::kSegments;
+    flex_planks_.push_back(std::make_unique<FlexPlank>(physics_system_, laid, base));
+    return static_cast<int>(flex_planks_.size()) - 1;
 }
 
 void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body, const JPH::RVec3 at,
