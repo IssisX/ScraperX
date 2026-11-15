@@ -1314,6 +1314,65 @@ void damage_save_bytes_case() {
 
 } // namespace
 
+// A save from the build before the S2 drain (J-015), made after a crate
+// broke (#466 review): that build lists its built bodies, then the crate's
+// eight pieces; this build has two built bodies more, the drain's striker
+// and tank, built last. The save's own built bodies are compared with this
+// world's first ones and its pieces matched by entity, so it loads, into a
+// fresh world and into the world that broke the crate: the pieces where the
+// save has them, the crate broken and parked, the drain as built (the tank
+// full and bolted, its gate shut, the striker on its stop). Compared with
+// this world's first bodies as many as its own, the save's first two pieces
+// met the striker and the tank, and it was refused.
+void run_s2_drain_break_save() {
+    const std::string prefix = "stock damage, a save from before the S2 drain with a broken crate: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(2.0);  // settle; commits happen
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const std::uint32_t bodies_before = s.kit_body_count();
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(2.0);  // the fall, the break, a commit after it
+    require(s.stock_damage(entity).broken && s.kit_body_count() == bodies_before + 8,
+            (prefix + "the crate breaks into eight pieces").c_str());
+    std::array<Vector3, 8> piece_at{};
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        piece_at[k] = s.kit_body_position(s.kit_body_index(piece_entity_for(entity, k)));
+    }
+    const std::uint32_t bodies_after = s.kit_body_count();
+    const std::vector<std::uint8_t> parent = parent_save(s.save_game(), s);
+    const auto loads = [&](Simulation &w, const char *where) {
+        const std::string in = prefix + where + ": ";
+        require(w.load_game(parent.data(), parent.size()), (in + "the save loads").c_str());
+        require(w.kit_body_count() == bodies_after, (in + "the piece count matches").c_str());
+        require(w.stock_damage(entity).broken && !w.kit_body_enabled(crate),
+                (in + "the crate stays broken and parked").c_str());
+        double worst = 0.0;
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = w.kit_body_index(piece_entity_for(entity, k));
+            require(body != 0xFFFFFFFFU, (in + "every piece exists").c_str());
+            const auto pp = w.kit_body_position(body);
+            worst = std::max(worst, std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z));
+        }
+        (void)w.advance_frame(2.0);
+        const auto stack = w.stack_state();
+        std::cout << "  " << in << "pieces off by at most " << worst << " m; beam " << stack.s2_beam_angle
+                  << ", cage " << stack.s2_cage_travel << ", tank " << stack.s2_cart_water_kg << " kg, pawled "
+                  << (stack.s2_drain_pawled ? 1 : 0) << ", striker " << stack.s2_drain_striker_angle << '\n';
+        require(worst < 0.05, (in + "every piece keeps its position").c_str());
+        require(std::abs(stack.s2_beam_angle) < 0.01 && std::abs(stack.s2_cage_travel) < 0.02 &&
+                    std::abs(stack.s2_cart_water_kg - 1250.0) < 1.0 && !stack.s2_drain_pawled &&
+                    std::abs(stack.s2_drain_striker_angle) < 0.01,
+                (in + "the S2 drain as built: the beam at rest, the cage home, the tank full, its gate shut")
+                    .c_str());
+    };
+    Simulation fresh(scraperx::sim::InitialSpawn::ExteriorGrade);
+    loads(fresh, "a fresh world");
+    loads(s, "the world that broke it");
+    std::cout << "PASS scraperx_sim stock damage: a save from before the S2 drain with a broken crate loads\n";
+}
+
 void run_stock_damage() {
     // ---- the decision, at every tier boundary -------------------------
     using K = LooseStock::Kind;
@@ -1806,6 +1865,8 @@ void run_stock_damage() {
     carried_piece_save_case();
     // ---- #469 review: the damage section's bytes, its record size, an older save ----
     damage_save_bytes_case();
+    // ---- #466 review: a save from before the S2 drain, with a crate broken ----
+    run_s2_drain_break_save();
 }
 
 // J-074 (#352): the group registers itself beside its function, so no
@@ -1813,3 +1874,4 @@ void run_stock_damage() {
 // 980, look_target 990); the ONLY name stays "stock-damage".
 SCRAPERX_GROUP("stock_damage", 985, run_stock_damage);
 SCRAPERX_SELECT("stock-damage", run_stock_damage);
+SCRAPERX_SELECT("s2-drain-break-save", run_s2_drain_break_save);

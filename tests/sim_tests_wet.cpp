@@ -203,6 +203,8 @@ void run_wet_e_guard(const bool expect) {
     // The bodies there were before E's rebuild, in order; and those built
     // since, after them: the bay, the second shaft's access, then summit
     // rigging; last, after world-b's pieces, the forklift on deck 154 (J-041).
+    // 595, not 597: the S2 drain (J-015) is built last now, so its striker
+    // and tank no longer sit before E.
     constexpr std::uint32_t kBodiesBeforeE = 595;
     Fnv bodies;
     for (std::uint32_t i = 0; i < std::min(world.kit_body_count(), kBodiesBeforeE); ++i) {
@@ -235,18 +237,21 @@ void run_wet_e_guard(const bool expect) {
     constexpr std::uint32_t kNewUpper = 78;
     // J-014 (#121): three toolboxes on the rings the dress left with no
     // carryable piece (594.25, 640.25 and 684.1 m), their table places
-    // after the Matron's kinds and their bodies last of all, so the kinds
-    // keep their places and only the total grows by 3.
+    // after the Matron's kinds and their bodies after the bait lift's (only
+    // the S2 drain's come later), so the kinds keep their places and only
+    // the total grows by 3.
     constexpr std::uint32_t kNewHightower = 3;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
     // J-042: then exactly two pieces of stock laid for the Matron by her band
     // (the extinguisher and the pallet), after the upper pieces (the
-    // hightower pieces come after them).
+    // hightower pieces come after them); and last the S2 drain (J-015: its
+    // striker and bolted tank), the kit's last two bodies, built after every
+    // other body so saves from before the drain still line up.
     constexpr std::uint32_t kMatronKinds = 2;
     // J-092 (#410): then the slab trap's cell on her deck (slab_cell.hpp):
     // its slab, the table's last piece, then its static frame, its trigger
-    // and the cord's handle, the kit's last four bodies.
+    // and the cord's handle.
     constexpr std::uint32_t kHungSlabs = 1;
     const std::uint64_t kSlabCell[] = {scraperx::sim::SlabCell::kFrameEntity, scraperx::sim::SlabCell::kTriggerEntity,
                                        scraperx::sim::SlabCell::kHandleEntity};
@@ -261,7 +266,10 @@ void run_wet_e_guard(const bool expect) {
     const std::uint32_t cell_at = kinds_at + kMatronKinds + kHungSlabs;
     const std::uint32_t bait_at = cell_at + static_cast<std::uint32_t>(std::size(kSlabCell));
     const std::uint32_t hightower_at = bait_at + static_cast<std::uint32_t>(std::size(kBait));
-    bool since_after = world.kit_body_count() == hightower_at + kNewHightower;
+    // J-015: the S2 drain's two follow the hightower toolboxes, the kit's last.
+    const std::uint32_t drain_at = hightower_at + kNewHightower;
+    constexpr std::uint32_t kDrainBodies = 2;
+    bool since_after = world.kit_body_count() == drain_at + kDrainBodies;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
@@ -289,6 +297,8 @@ void run_wet_e_guard(const bool expect) {
         since_after = world.kit_body_entity(hightower_at + i) ==
                       Simulation::kLooseStockFirstEntity + upper_first + kNewUpper + kMatronKinds + kHungSlabs + i;
     }
+    since_after = since_after && world.kit_body_entity(drain_at) == Simulation::kStackS2DrainStrikerEntityId &&
+                  world.kit_body_entity(drain_at + 1) == Simulation::kStackS2CartEntityId;
     Fnv lines;
     bool lines_clear = true;
     for (std::uint32_t i = 0; i < world.zipline_count(); ++i) {
@@ -371,9 +381,23 @@ void run_wet_e_guard(const bool expect) {
     // #216): the east/west places take the end of the table, after the
     // throwables, so those entities are their trunk ones again. Before
     // 4824050261233220131, now 3514033760028014323.
+    // Re-pinned for J-015 slice 1 (#122): the S2 cart is now its own body,
+    // so the first 596 bodies are the same bodies in the same order plus
+    // the cart. Before 3514033760028014323, now 871693465045063551.
+    // Re-pinned for the J-015 slice-1 cage-return fix: the S2 drain striker
+    // is one more body before E, so the first 597 bodies are the same bodies
+    // in the same order plus the striker. Before 871693465045063551, now
+    // 13291784286957421329 (measured on the fixed binary, AS-007-E print).
+    // Re-pinned for the J-015 save fix: the drain is built last now, so the
+    // first 595 bodies are the same bodies in the same order minus the
+    // drain, and the hash is the world-b one again. Before
+    // 13291784286957421329, now 3514033760028014323 (from the 597-hash
+    // 3251748120709196495 measured on the fixed binary, AS-007-E print,
+    // with the bay frame and leaf un-fed from the FNV: the round-trip back
+    // to the measured hash is exact).
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, then the slab cell's, then the bait lift's A and B, then the hightower toolboxes, the last");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, then the slab cell's, then the bait lift's A and B, then the hightower toolboxes, and the S2 drain's last");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is

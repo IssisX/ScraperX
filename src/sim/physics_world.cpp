@@ -489,14 +489,14 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(slab, ImpactSound::HeavySteel);
         slab_cell_.build(*kit_, slab);
     }
-    // J-108 (#427): the bait lift's two platforms, the kit's last bodies, so
+    // J-108 (#427): the bait lift's two platforms, after the slab cell, so
     // every body before them keeps its place and older saves line up.
     scraperx::sim::bands::build_bait_lift(*kit_, service_);
 
     // J-014: the hightower toolboxes (loose_stock.hpp), their table places
     // after the Matron's kinds, so every earlier piece and body keeps its
-    // place and saves made before them still load; their bodies last of
-    // all. Heard like the rest.
+    // place and saves made before them still load; their bodies after the
+    // bait lift's (only the S2 drain's come later). Heard like the rest.
     loose_stock_->append_hightower();
     for (const int i : loose_stock_->realize_hightower()) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
@@ -542,6 +542,12 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         kit_->set_guide_friction(pan_guide, 120.0F);
     }
 
+    // J-015: the S2 drain is built last, after every other body (the slab
+    // cell, the bait lift, the hightower toolboxes and the proving ground's
+    // probe rig among them: trunk's saves hold those and no drain), so a
+    // save from before it still lines up with this world's bodies in order.
+    scraperx::sim::bands::build_s2_drain(*kit_, stack_);
+
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
 
@@ -549,6 +555,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
 
     checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
     commit_machine_checkpoint();
+    as_built_ = checkpoint_.kit;
 
     read_state();
 }
