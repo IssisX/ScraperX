@@ -995,13 +995,26 @@ void run_matron_slip() {
     // Changed (2), not Pest (0): at Pest she stalks — under his gaze she
     // freezes, looked away she holds at her 3.0 m band — and never closes
     // to the press gap (CI run 43681181291 failed this setup at stage 0).
+    // The 7.7 m is WEST along the north band, not north: the band ends at
+    // z = -124 (the tower's face; bay.hpp kNorthZ) and the spawn sits at
+    // z = -128.2, so 7.7 m north is 3.5 m past the edge, over the void.
+    // Fix 4 launched her north and CI run 43715319476 carried state 6
+    // (Dead, fell), gap 23.42, speed 20.5 — she fell and died before the
+    // wind-up wait ever saw her. The wait itself ran its full 20 s (the
+    // 2.96 s is wall time, ~1830 ticks, and the loop has no early exit
+    // except the wind-up). West along the band is clear deck for the whole
+    // approach: the A cage and gantry sit 1.35 m or more south of the line,
+    // the loose stock 2.5 m or more north, the bay cut is east of the
+    // player. He turns to face her every tick, so the slip's line is the
+    // real her-to-him line whatever side she comes from.
     const auto windup_to_gap = [&](Simulation &s, const double her_ahead_m, const int stage,
                                    const double press_gap_m, const bool no_hands) {
         s.place_matron_home(154.0F);
         for (int i = 0; i < 30; ++i) tick(s);
         const Vector3 p = s.snapshot().player_position;
         (void)s.set_facing(0.0, 1.0);
-        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+        // West along the north band (see above): north is off the deck.
+        s.launch_matron_for_test(Vector3{p.x - her_ahead_m, p.y - 0.20, p.z});
         if (!no_hands) s.debug_hold_matron_hands(30.0);
         s.debug_fix_matron_pace(0);  // Creep: the slow approach, timed to the Turn
         for (int i = 0; i < 5 * 90 && s.matron_state().state != kHunting; ++i) tick(s);
@@ -1027,7 +1040,8 @@ void run_matron_slip() {
         std::cout << "  slip setup: wound=" << wound << " gap=" << gap
                   << " sees=" << s.matron_state().sees_player
                   << " state=" << static_cast<int>(s.matron_state().state)
-                  << " speed=" << s.matron_state().speed << "\n";
+                  << " speed=" << s.matron_state().speed
+                  << " her=(" << her.x << ", " << her.y << ", " << her.z << ")\n";
         require(wound, "slip: she winds up her lunge at the press gap (setup)");
         require(gap >= 0.60 && gap <= press_gap_m + 0.50,
                 "slip: the wind-up finds her at the press gap (setup)");
