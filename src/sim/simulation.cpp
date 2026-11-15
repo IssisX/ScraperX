@@ -1391,6 +1391,10 @@ double Simulation::debug_support_y(const Vector3 at, const double depth) const n
         static_cast<float>(depth));
 }
 
+std::uint32_t Simulation::debug_hook_runs_blocked() const noexcept { return physics_world_->hook_runs_blocked_for_test(); }
+std::uint64_t Simulation::debug_hook_bite_wraps() const noexcept { return physics_world_->hook_bite_wraps_for_test(); }
+std::uint64_t Simulation::debug_hook_bite_unwraps() const noexcept { return physics_world_->hook_bite_unwraps_for_test(); }
+
 Simulation::MatronFixtureSample Simulation::debug_matron_fixture(const Vector3 *place) {
     auto &world = *physics_world_;
     auto &physics = world.physics_system_;

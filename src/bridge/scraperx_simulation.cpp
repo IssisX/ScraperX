@@ -336,6 +336,7 @@ void ScraperXSimulation::_bind_methods() {
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_hold_matron_hands", "seconds"), &ScraperXSimulation::debug_hold_matron_hands);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_face_matron", "yaw"), &ScraperXSimulation::debug_face_matron);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_set_matron_stage", "stage"),
                                 &ScraperXSimulation::debug_set_matron_stage);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_climb_way", "pipe", "down"),
@@ -1392,6 +1393,11 @@ godot::Dictionary ScraperXSimulation::get_hook_state() const {
     out["points"] = points;
     out["bends"] = static_cast<std::int64_t>(state.hook_bend_count);
     out["tears"] = static_cast<std::int64_t>(state.hook_tear_count);
+    // J-090: bitten into the Matron's body, and the ticks the line into her
+    // ran at the tines' hold.
+    out["in_matron"] = state.hook_in_matron;
+    out["matron_bites"] = static_cast<std::int64_t>(state.hook_matron_bite_count);
+    out["held_ticks"] = static_cast<std::int64_t>(state.hook_held_ticks);
     return out;
 }
 
@@ -2166,6 +2172,7 @@ namespace {
 void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
 
 void ScraperXSimulation::debug_hold_matron_hands(const double seconds) { simulation_->debug_hold_matron_hands(seconds); }
+void ScraperXSimulation::debug_face_matron(const double yaw) { simulation_->debug_face_matron(yaw); }
 
 void ScraperXSimulation::debug_set_matron_stage(const std::int64_t stage) {
     simulation_->debug_set_matron_stage(static_cast<std::uint8_t>(std::clamp<std::int64_t>(stage, 0, 2)));
