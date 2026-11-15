@@ -1694,6 +1694,49 @@ func _perf_night() -> bool:
 	return true
 
 
+# The fight slip on touch (J-036, fight S5): two quick lateral flicks on the
+# move stick throw a slip, the body moves ~0.4 m sideways out of her line,
+# no grab follows in the window. Staged with her woken and placed 2.5 m out,
+# hands held for the approach, freed at the press so the window is real.
+func _matron_slip_touch(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if int(_matron_state()["state"]) == MATRON_STATE_DORMANT and not await _wake_matron(device):
+		return false
+	_native().debug_hold_matron_hands(120.0)
+	var me := _position()
+	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - 2.5))
+	_native().debug_set_matron_stage(0)
+	await _face(Vector2(0.0, -1.0))
+	if not await _wait_until(func() -> bool: return _centre_gap() <= 1.25, 10.0):
+		return _fail("the pest Matron never closed into slip range")
+	_native().debug_hold_matron_hands(0.0)
+	var slips := int(_native().get_strike_state()["slip_count"])
+	var start := _position()
+	_move_dir(device, Vector2(1.0, 0.0))
+	await _frames(8)
+	_move_dir(device, Vector2.ZERO)
+	await _frames(8)
+	_move_dir(device, Vector2(1.0, 0.0))
+	await _frames(8)
+	_move_dir(device, Vector2.ZERO)
+	if not await _wait_until(func() -> bool: return int(_native().get_strike_state()["slip_count"]) > slips, 2.0):
+		return _fail("the double-tap threw no slip")
+	await _frames(10)
+	_act_snap("slip-right-mid")
+	if not await _wait_until(func() -> bool: return not bool(_native().get_strike_state()["slip_active"]), 1.0):
+		return _fail("the slip never finished its burst")
+	var moved := _position() - start
+	if moved.x < 0.30 or moved.x > 0.55:
+		return _fail("the slip moved %.2f m sideways, not ~0.4 m" % moved.x)
+	await _frames(40)
+	if int(_matron_state()["state"]) == MATRON_STATE_GRAB:
+		return _fail("she grabbed him inside the slip window")
+	_act_snap("slip-right-settled")
+	await _frames(5)
+	_detail = "double-tap slip right, %.2f m sideways, no grab" % moved.x
+	return true
+
+
 func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):

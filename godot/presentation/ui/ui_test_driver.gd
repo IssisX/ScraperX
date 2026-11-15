@@ -141,6 +141,9 @@ const SCENARIOS := {
 	# down (ui_test_act.gd; the crouched case lives in the native sweep
 	# group, see the note there).
 	"touch_matron_sweep": 11,
+	# The fight slip on touch (J-036, fight S5): double-tap slip, ~0.4 m
+	# sideways out of her line, no grab follows (ui_test_act.gd).
+	"touch_matron_slip": 11,
 	# The fight perf probe (J-044m, #245): punches thrown at her up close on
 	# her deck, Godot's frame times, draw calls and the native step timer
 	# logged and summarized (ui_test_act.gd; no budget asserted yet).
@@ -533,6 +536,8 @@ func _run() -> void:
 			ok = await _matron_ammo_touch(InputRouter.Device.TOUCH)
 		"touch_matron_sweep":
 			ok = await _matron_sweep_touch(InputRouter.Device.TOUCH)
+		"touch_matron_slip":
+			ok = await _matron_slip_touch(InputRouter.Device.TOUCH)
 		"perf_fight":
 			ok = await _perf_fight()
 		"perf_locker":

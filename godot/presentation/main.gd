@@ -101,6 +101,10 @@ var _uitest_scenario := ""
 var _paused := false
 var _jump_buffer := 0.0
 var _up_buffer := 0.0
+# The fight slip's double-tap (spec S5): last lateral flick's time, side (1 right, -1 left), stick back to neutral since.
+var _slip_tap_msec := 0
+var _slip_tap_side := 0
+var _slip_tap_armed := true
 var _canopy: Node3D
 var _sling_was_aiming := false
 # The forklift's heading last frame, as a view yaw: driving it, the view turns
@@ -462,6 +466,21 @@ func _process(delta: float) -> void:
 
 	var position: Vector3 = _native.get_player_position()
 	var desired: Vector2 = intent["move"]
+	# Double-tap the move stick sideways: a fight slip (spec S5). Two quick
+	# lateral flicks, same direction, stick to neutral between, inside 0.35 s.
+	var lateral := float(desired.x)
+	if absf(lateral) > 0.7:
+		var side := 1 if lateral > 0.0 else -1
+		if _slip_tap_armed and _slip_tap_side == side and Time.get_ticks_msec() - _slip_tap_msec <= 350:
+			_native.request_slip(side)
+			_slip_tap_armed = false
+			_slip_tap_side = 0
+		else:
+			_slip_tap_msec = Time.get_ticks_msec()
+			_slip_tap_side = side
+			_slip_tap_armed = false
+	elif absf(lateral) < 0.3:
+		_slip_tap_armed = true
 	var draw_effort := maxf(0.0, -desired.y) if sling_seated or sling_recovering else 0.0
 	_native.set_slingshot_input(draw_effort,
 		_sling_goal_yaw if aiming else float(sling["yaw_rad"]),
