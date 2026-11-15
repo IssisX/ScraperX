@@ -117,6 +117,7 @@
 #include <array>
 #include <memory>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace scraperx::sim {
@@ -2257,10 +2258,14 @@ public:
     // The player's fist on her (physics_world_strike.cpp): the impulse it
     // gave her body, read as a blow in take_blow against her balance like
     // any striker's (the force itself is already on her body).
-    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low) noexcept {
+    // `on_arm`: the blow met her arm (J-060): her arm takes it, not the
+    // region of her head or trunk behind it.
+    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low,
+                          const bool on_arm = false) noexcept {
         player_blow_ns_ += impulse_ns;
         player_blow_at_ = fist;
         player_blow_low_ = player_blow_low_ || low;
+        player_blow_on_arm_ = on_arm;
         // Tagged as his own: before the rip begins it frees him (take_blow).
         player_blow_landed();
     }
@@ -2272,6 +2277,7 @@ private:
     JPH::Vec3 player_blow_ns_ = JPH::Vec3::sZero();
     JPH::RVec3 player_blow_at_ = JPH::RVec3::sZero();
     bool player_blow_low_ = false;
+    bool player_blow_on_arm_ = false;
     // Her report of the pipe and of her cables (refresh_view), and both set
     // back for a restore (matron_pipe.cpp, matron_line.cpp).
     void report_pipe();
@@ -2542,7 +2548,25 @@ private:
     [[nodiscard]] bool shape_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
     // Her collision body by stance (matron_shape.cpp).
     void build_stance_shapes();
+    void build_part_shapes();
     [[nodiscard]] Stance wanted_stance() const;
+public:
+    // Her body's parts, what a blow meets (J-060, matron_shape.cpp): her
+    // drawn rig's limb segments for the stance her body is in (stance_, the
+    // family her drawn frames were recorded under), each a capsule rigid on her body,
+    // in her body frame about her middle; turned by her yaw where a blow is
+    // cast at them (strike_parts_rotation). They collide with nothing:
+    // only a blow's cast reads them. Null where she has none (down).
+    enum class PartRegion : std::uint8_t { Trunk = 0, Forearm = 1, UpperArm = 2, Leg = 3 };
+    [[nodiscard]] const JPH::Shape *strike_parts() const;
+    [[nodiscard]] JPH::Quat strike_parts_rotation() const noexcept;
+    // Which part a cast met (its sub-shape on the parts shape strike_parts gave).
+    [[nodiscard]] PartRegion strike_part_region(JPH::SubShapeID sub) const;
+    // The nearest point of her parts (on a part's axis) to `from`, in the
+    // world: where a blow thrown at her from there is aimed. Her middle
+    // where she has none.
+    [[nodiscard]] JPH::RVec3 strike_aim(JPH::RVec3 from) const;
+private:
     [[nodiscard]] const JPH::Shape *stance_shape(Stance stance, float yaw) const;
     void step_stance(float dt);
     [[nodiscard]] bool on_planning_shape() const;
@@ -3116,6 +3140,9 @@ private:
     std::uint32_t stance_switches_ = 0;
     int steel_ticks_ = 0;   // ticks running her shape has been in the steel (the audit's)
     std::array<std::array<JPH::Ref<JPH::Shape>, kStanceYawBins>, kStanceCount> stance_shapes_;
+    std::array<JPH::Ref<JPH::Shape>, kStanceCount> part_shapes_;   // J-060: her parts by stance (null: none)
+    std::array<std::vector<PartRegion>, kStanceCount> part_regions_;   // each part's region, in its shape's order
+    std::array<std::vector<std::pair<JPH::Vec3, JPH::Vec3>>, kStanceCount> part_axes_;   // each part's axis ends, body frame
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
     float blow_mps_ = 0.0F;
