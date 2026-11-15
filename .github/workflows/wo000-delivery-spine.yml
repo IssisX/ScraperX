@@ -705,7 +705,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep perf_fight touch_matron_ammo \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_pipe touch_matron_act touch_matron_heave touch_matron_sweep perf_fight touch_matron_ammo \
               touch_bay; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-2.log
