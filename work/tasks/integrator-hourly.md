@@ -3,7 +3,7 @@
 It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
 5:17 PM, 9:17 PM). A backstop (11-10): the inbox wakes the integrator at once on Muse mail, trunk red and Claude's merges;
 branch reds and reviews within 30 min; Muse's merges ride.
-Pace: no throttling, pace prediction, meter asks or quiet runs (11-10). Chat stays free for Cory (11-15): nothing over ~10 s in the foreground (run_in_background); an empty wake ends at once; a helper's report wake is at most 2 quick calls, the rest goes back to that helper (SendMessage); helpers do their own push, PR and issue posts; answer him before any tool.
+Pace: no throttling or pace prediction. Chat free for Cory (11-15): no foreground call over ~10 s; an empty wake ends at once; a hand-back gets at most 2 quick calls, leftovers to the notes for a fresh helper; never message or resume a finished helper (reloads ~200k tokens); the task-notification after a hand-back: no tools, no message; answer him before any tool.
 Specs, ruling math and research go to an outside agent first; the integrator checks them (11-06).
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
