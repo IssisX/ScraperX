@@ -1900,6 +1900,11 @@ public:
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
+    // Tests only (never bound to the bridge, J-090): the runs of the hook's
+    // line that leave the steel (the chest's, and the bite's in her) that
+    // pass through steel (1 the chest's, 2 the bite's). A rope that catches
+    // on what it crosses has none.
+    [[nodiscard]] std::uint32_t debug_hook_runs_blocked() const noexcept;
     // Tests only, never bound to the bridge. Optional placement holds the NPC
     // fixture between ticks; a null pointer only reads the last physical step.
     struct MatronFixtureSample {

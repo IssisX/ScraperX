@@ -108,6 +108,8 @@ struct Tug {
     int first_held_tick = -1;   // the first of them
     int tear_tick = -1;
     bool torn_free = false;     // on the tear tick: the hook out of her and in flight
+    int chest_run_blocked = 0;   // ticks the run from his chest passed through steel
+    int bite_run_blocked = 0;    // ticks the run from her bite to its first bend passed through steel
     int ticks = 0;
     double fold = 0.0;          // their positions folded, for the determinism check
 };
@@ -148,6 +150,9 @@ Tug pull(Simulation &s, const int ticks, Each each) {
         t.his_moved_m = std::max(t.his_moved_m, horizontal_distance(him0, n.player_position));
         t.his_lowest_y = std::min(t.his_lowest_y, n.player_position.y);
         t.most_bends = std::max(t.most_bends, n.hook_bend_count);
+        const std::uint32_t blocked = s.debug_hook_runs_blocked();
+        t.chest_run_blocked += (blocked & 1U) != 0U ? 1 : 0;
+        t.bite_run_blocked += (blocked & 2U) != 0U ? 1 : 0;
         t.her_gravity_on = t.her_gravity_on && s.debug_matron_gravity_factor() == 1.0;
         t.her_supported = t.her_supported && m.contact_supported;
         t.fold = t.fold * 0.999 + m.position.x * 3.0 + m.position.y * 5.0 + m.position.z * 7.0 + n.player_position.x * 11.0 +
@@ -164,18 +169,21 @@ Tug pull(Simulation &s, const int ticks, Each each) {
 
 void print(const char *name, const Tug &t) {
     std::printf("  %s: ticks=%d peak_tension_n=%.0f peak_feet_n=%.0f stalls=%llu tears=%llu her_moved_m=%.2f "
-                "his_moved_m=%.2f his_lowest_y=%.2f bends=%u her_step_m=%.3f his_jump_m=%.3f supported=%d died=%d held=%llu\n",
+                "his_moved_m=%.2f his_lowest_y=%.2f bends=%u her_step_m=%.3f his_jump_m=%.3f supported=%d died=%d held=%llu "
+                "blocked_chest=%d blocked_bite=%d\n",
                 name, t.ticks, t.peak_tension_n, t.peak_feet_n, static_cast<unsigned long long>(t.stalls),
                 static_cast<unsigned long long>(t.tears), t.her_moved_m, t.his_moved_m, t.his_lowest_y, t.most_bends,
                 t.her_step_m, t.his_jump_m, t.her_supported ? 1 : 0, t.he_died ? 1 : 0,
-                static_cast<unsigned long long>(t.held));
+                static_cast<unsigned long long>(t.held), t.chest_run_blocked, t.bite_run_blocked);
     std::fflush(stdout);
 }
 
 // Every tick of every pull: her one budget, her gravity on, no jump in her
 // place or his (no position write: a tick at her 6.8 m/s hunt is 0.076 m;
 // his moves are what his speed carries him), and the line into her never
-// passing more than the tines hold (a jolt past it is the tines giving).
+// passing more than the tines hold (a jolt past it is the tines giving),
+// and the run from her bite to its first bend catching on the steel it
+// would cross, as the run from his chest does (#568 review).
 void laws(const Tug &t, const std::string &what) {
     require(t.ticks > 0, (what + ": the pull ran").c_str());
     require(t.peak_tension_n <= static_cast<double>(tuning::kHookHoldForceN) * 1.001,
@@ -184,6 +192,8 @@ void laws(const Tug &t, const std::string &what) {
     require(t.her_gravity_on, (what + ": her gravity stays on").c_str());
     require(t.her_step_m <= 0.2, (what + ": her every tick moves her at most 0.2 m: nothing writes her place").c_str());
     require(t.his_jump_m <= 0.05, (what + ": his every tick moves him no further than his speed carries him").c_str());
+    require(t.bite_run_blocked == 0,
+            (what + ": the run from her bite to the line's first bend never passes through steel (it bends there)").c_str());
 }
 
 void require_bitten(const std::pair<Snapshot, MatronSnapshot> &bit, const char *what) {
