@@ -916,7 +916,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
                                                   reference_velocity,
                                                   move_x,
                                                   move_z,
-                                                  traction,
+                                                  slip_active_ ? 0.0F : traction,  // slipping: the feet are the slip's, not the stick's
                                                   delta_seconds,
                                                   full_speed);
             if (on_line) {

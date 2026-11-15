@@ -39,6 +39,8 @@ public:
         bool up_requested = false;
         bool release_requested = false;
         bool strike_requested = false;   // the Action button's punch (physics_world_strike.cpp)
+        bool slip_requested = false;     // a fight slip, double-tap move (physics_world_strike.cpp)
+        int slip_side = 1;               // 1 right of his facing, -1 left
         bool crouch_held = false;
         bool sprint_held = false;
         // The player's real room through the microphone, 0..1 (held; see
@@ -1186,12 +1188,15 @@ public:
     // The player's strike (physics_world_strike.cpp).
     enum class StrikePhase : std::uint8_t { Guard = 0, Windup = 1, Reach = 2, Recoil = 3 };
     void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
+    void slip_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
     void read_strike_state() noexcept;
     void strike_reset() noexcept;
     void strike_begin(std::uint8_t move, int side, bool in_hand) noexcept;
     // A punch under way: no other hand action starts till its recoil ends;
     // the world taking his hands from it (her fingers, a fall) ends it.
     void strike_owns_hands(StepCommands &commands) const noexcept;
+    // A slip under way: no punch, climb or jump starts till its burst ends.
+    void slip_owns_feet(StepCommands &commands) const noexcept;
     void strike_cancel() noexcept;
     // The fist he can throw with: 1 the right, 0 the left, -1 none (one torn
     // off, the other broken).
@@ -1208,6 +1213,13 @@ public:
     std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
     std::uint8_t strike_queued_move_ = 0;  // a follow-up queued in recoil: 3 jab, 4 cross, 0 none
     std::uint8_t strike_forced_move_ = 255;  // force_strike_move_for_test: the next press throws this move, 255 none
+    // The fight slip (S5): a lateral force burst, grounded only, 1.2 s cooldown.
+    bool slip_active_ = false;       // a slip is under way this tick
+    int slip_ticks_ = 0;              // ticks into the slip's 20-tick burst
+    int slip_cooldown_ = 0;          // ticks left before another slip may start
+    int slip_side_ = 1;              // 1 right of his facing, -1 left
+    JPH::Vec3 slip_dir_ = JPH::Vec3::sZero();  // the burst's world direction
+    std::uint64_t slip_count_ = 0;   // slips thrown this run
     int strike_grace_ = 0;                // ticks left to press the follow-up after a jab's recoil
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;

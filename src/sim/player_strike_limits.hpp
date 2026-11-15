@@ -26,5 +26,6 @@ constexpr float kPlayerSweepForceN = 1350.0F;
 // downs an upright Pest, staggers an upright Dangerous or faced
 // Changed, nothing vs a crouched Matron (her bar is 1.90 m/s).
 constexpr float kPlayerKickForceN = 3000.0F;
+constexpr float kPlayerSlipForceN = 1400.0F;
 
 } // namespace scraperx::sim::strike
