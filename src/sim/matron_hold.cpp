@@ -746,8 +746,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     case State::Grab: {
         if (!grip_on_) {
             // The reach: down to the ankle (the feet end of the body, however
-            // it lies), stooping for it.
-            const RVec3 ankle = player_ankle_;
+            // it lies), stooping for it. Seen or against her, his ankle; else
+            // the ankle under where she last had him (J-049).
+            const RVec3 ankle = ev_.touch ? player_ankle_ : player - RVec3(0.0, 0.82F, 0.0);
             Vec3 to = Vec3(ankle - shoulder);
             const float length = to.Length();
             if (length > kStoopReachM) {
@@ -1205,7 +1206,10 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             over = (hold_s_ >= kFatalWatchS && watch_still_s_ >= kFatalStillS) || hold_s_ >= kFatalWatchMaxS;
         }
         if (over) {
-            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
+            // Felt now, his place; seen or heard, pre_step took that lead; else the last she had (J-049).
+            if (ev_.touch) {
+                take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
+            }
             end_hold(State::Searching);
         }
         break;
