@@ -307,14 +307,11 @@ approval from a headless run or screenshots merely existing.
   `StoryRadioPlayer`; `godot/presentation/audio/story_radio_player.gd`
   `VOICE_RECORDINGS_APPROVED` is false. Cue triggering and approved recordings need separate
   verification. The timing of this existing hookup versus rule 39 remains for owner review.
-- **Rule 57, chart — partial:** `godot/presentation/uncanny/` has the chart and
-  `voice_keeper.gd` requests microphone permission. `godot/export_presets.cfg` enables `permissions/record_audio`; no INTERNET or CAMERA entry
-  appeared in the inspected preset. `godot/presentation/main.gd` instantiates `Uncanny`; `uncanny.gd` creates
+- **Rule 57, chart — verified for the five scenarios and in-game consent (J-113, 2026-11-15):** `godot/presentation/uncanny/` has the chart and
+  `voice_keeper.gd` requests microphone permission. `godot/export_presets.cfg` enables `permissions/record_audio`; `permissions/internet=true` is also set, serving the J-031 Sentry error reporter on the phone (it never sends from CI or headless runs); no CAMERA entry. `godot/presentation/main.gd` instantiates `Uncanny`; `uncanny.gd` creates
   `HerChart`, uses native observations and records voice/echo events. A `chart|uncanny`
   search of `src/sim/matron*.cpp` and `*.hpp` returned no matches; indirect wiring or
-  speech-to-text under other names is not ruled out. The workflow lists five related
-  scenarios: `touch_her_chart`, `touch_her_chart_fast`, `touch_mic_consent`,
-  `touch_voice_echo` and `touch_room_hearing`; their results require a run. Obtain in-game consent as asked.
+  speech-to-text under other names is not ruled out. All five scenarios PASS on trunk run 43712133943 @ 3c78824946 (2026-11-15 06:06 CST, touch-3 job 132806657527, full proof 16/16 success; no game, test or workflow file changed between that head and current trunk a8c29839): `touch_her_chart` (drum 5324, looked 24.5 s, page at 721 s), `touch_her_chart_fast` (page at 75 s, echo age 15 s), `touch_mic_consent` (consent screen first, all seven promises verbatim; NOT NOW leaves the microphone off and the game playable; refusal returns the setting to off; ALLOW turns it on), `touch_voice_echo` (clip 1.70 s, voiced 1.00, echo at 901 s, -14.0 dB peak, -28.5 dB at the listener, bus HerEcho), `touch_room_hearing` (hush 0.00, bark 1.00 heard, woke her).
 - **Rules 56 and 27, ascent — unresolved:** `src/sim/vertical/vertical_machine.cpp` registers
   `sx.gravity_balance.v1` and `sx.rack_climber.v1`; registration is not placement or a playable
   route. The old audit says AS-007–AS-010 are used above 340 m despite rule 56 calling them
