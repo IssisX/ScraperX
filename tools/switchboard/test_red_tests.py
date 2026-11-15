@@ -37,6 +37,21 @@ TOUCH_LOG = """\
 samples 1411, worst 0.101 m (limit 0.05 m)
 2026-11-11T12:07:27.0000000Z FAIL: a native-style line the touch notice does not use
 """
+# 2026-11-15 (J-088, run 43675935881, godot-touch touch-3, job 132696775691): the drawn-body check's own FAIL
+# lines, in the runner's own shape. The switchboard reported "no FAIL line in its log" for this job although the log
+# holds five per-check FAIL lines and the MATRON_DRAWN summary. The XFAIL lines and the native-style FAIL: line are
+# not failures of this job and must stay out.
+TOUCH_DRAWN_LOG = """\
+2026-11-15T04:35:29.8453485Z   XFAIL stretch_arm_hold  2106 failures (known 2045, bound 2250), worst 204.164% (known 204.684, bound 214.918); exit item 4, holds at a real arm's length (hold worker, PR #37)
+2026-11-15T04:35:29.8457343Z   XFAIL stretch_arm_reach 16 failures (known 15, bound 18), worst 7.528% (known 7.529, bound 7.905); her stock reach with real arms (Builder job 3; PROP_STRETCH_MAX 2.7, matron_rig.gd two-handed reach)
+2026-11-15T04:35:29.8468638Z   FAIL  grip_hold         17 failures, worst 0.058 m
+2026-11-15T04:35:29.8534059Z   FAIL  finger_wrap       30438 failures, worst 0.199 m
+2026-11-15T04:36:20.8632327Z   FAIL  finger_wrap       6315 failures, worst 0.095 m
+2026-11-15T04:36:29.3632168Z   FAIL  grip_hold         5 failures, worst 0.036 m
+2026-11-15T04:36:29.3634904Z   FAIL  finger_wrap       2786 failures, worst 0.065 m
+2026-11-15T04:36:29.3642922Z MATRON_DRAWN FAIL: grip_hold/touch_matron_act, finger_wrap/touch_matron_act, finger_wrap/look_matron_hold, grip_hold/look_matron_fatal, finger_wrap/look_matron_fatal
+2026-11-15T04:36:29.3700000Z FAIL: a native-style line the touch notice does not use
+"""
 # 11-13 (#350): host-build's red on trunk 51be238d (proof run 43503650648), in the runner's own shape: the step's
 # header, then its output, then the runner's error line
 HOST_LOG = """\
@@ -95,6 +110,18 @@ class FailLines(unittest.TestCase):
         lines, more = switch.fail_lines(TOUCH_LOG, "godot-touch (touch-2)")
         self.assertEqual(lines, ["SCRAPERX_UITEST FAIL touch_matron_act reason=her drawn wrist missed the real "
                                  "toolbox handle: samples 1411, worst 0.101 m (limit 0.05 m)"])
+        self.assertEqual(more, 0)
+
+    def test_godot_touch_reads_drawn_body_fail_lines(self):
+        lines, more = switch.fail_lines(TOUCH_DRAWN_LOG, "godot-touch (touch-3)")
+        self.assertEqual(lines, [
+            "FAIL  grip_hold         17 failures, worst 0.058 m",
+            "FAIL  finger_wrap       30438 failures, worst 0.199 m",
+            "FAIL  finger_wrap       6315 failures, worst 0.095 m",
+            "FAIL  grip_hold         5 failures, worst 0.036 m",
+            "FAIL  finger_wrap       2786 failures, worst 0.065 m",
+            "MATRON_DRAWN FAIL: grip_hold/touch_matron_act, finger_wrap/touch_matron_act, "
+            "finger_wrap/look_matron_hold, grip_hold/look_matron_fatal, finger_wrap/look_matron_fatal"])
         self.assertEqual(more, 0)
 
     def test_a_log_with_none_has_none(self):

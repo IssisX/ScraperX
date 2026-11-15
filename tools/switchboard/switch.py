@@ -444,7 +444,11 @@ MAX_LOG_FAILURES = 2      # log reads that time out in one sweep before no more 
 MAX_RUN_LOG_FAILURES = 2  # log reads that fail in one proof run before its other jobs' logs are not tried
 MAX_ERR_CHARS = 200       # of gh's error text in a NOTE line
 NATIVE_FAIL = re.compile(r"\bFAIL: .*")
-TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*")
+# godot-touch names its failures three ways: the act driver's `SCRAPERX_UITEST FAIL`, the drawn-body check's
+# per-check `  FAIL  <check>  <n> failures, worst ...` (tools/matron_probe/check.py: `%-5s` verdict word, so FAIL
+# is followed by two spaces, never a colon) and its `MATRON_DRAWN FAIL: <check>/<scenario>, ...` summary.
+# `FAIL:` stays out: a native-style line in a touch log is not this job's failure (test_red_tests pins it).
+TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*|\bMATRON_DRAWN FAIL\b.*|\bFAIL\s{2,}\S.*")
 # 11-13 (#350): host-build names no test; its failed step's first failing line (a check's FAIL, a compiler or CMake
 # error, a Python check's exception) and the lines after it, as `ASSET_CREDITS FAIL files=363 ... unrecorded=9`
 HOST_FAIL = re.compile(r"\b[A-Z][A-Z0-9_]* FAIL\b|\bFAIL: |\berror: |\bCMake Error\b|\b\w+(?:Error|Exception): ")
@@ -461,7 +465,8 @@ TOKENISH = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]
 
 def fail_lines(log: str, job: str) -> tuple[list[str], int]:
     """A failed job's unique FAIL lines in log order, at most MAX_FAIL_LINES, and how many more there were: `FAIL: `
-    for native-tests, `SCRAPERX_UITEST FAIL` for godot-touch, the failed step's lines for host-build (host_fail_lines).
+    for native-tests, `SCRAPERX_UITEST FAIL` plus the drawn-body `FAIL  <check>` lines and the `MATRON_DRAWN FAIL`
+    summary for godot-touch, the failed step's lines for host-build (host_fail_lines).
     The runner's timestamp and colour codes are dropped."""
     if job.startswith("host-build"):
         return host_fail_lines(log)
