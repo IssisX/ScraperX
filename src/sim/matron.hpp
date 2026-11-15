@@ -1248,6 +1248,20 @@ public:
         JPH::BodyID contact_hand2_body;
         JPH::SubShapeID contact_hand2_sub;
         JPH::RVec3 contact_hand2 = JPH::RVec3::sZero();
+        // The surface each grip closes round (leaf_surface, J-088): the
+        // held body's shape at the grip, for the presentation's finger
+        // wrap and the probe's finger check. kind 0 box, 1 cylinder,
+        // 2 capsule; size the box's half extents or (radius, half height,
+        // 0); centre and rot the leaf shape's world frame. Valid only
+        // while the grip is held.
+        std::uint8_t contact_hand_shape = 0;
+        JPH::Vec3 contact_hand_size = JPH::Vec3::sZero();
+        JPH::RVec3 contact_hand_centre = JPH::RVec3::sZero();
+        JPH::Quat contact_hand_rot = JPH::Quat::sIdentity();
+        std::uint8_t contact_hand2_shape = 0;
+        JPH::Vec3 contact_hand2_size = JPH::Vec3::sZero();
+        JPH::RVec3 contact_hand2_centre = JPH::RVec3::sZero();
+        JPH::Quat contact_hand2_rot = JPH::Quat::sIdentity();
         bool contact_line = false;
         bool contact_braced = false;
         JPH::BodyID contact_brace_body;

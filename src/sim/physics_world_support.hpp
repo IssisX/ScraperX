@@ -7,6 +7,14 @@
 
 #include "sim/simulation.hpp"
 
+// Jolt's core first: the shape headers reach HashCombine.h, which needs
+// JPH_NAMESPACE_BEGIN and uint64 from Core.h, and no earlier include here
+// provides them.
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+
 #include <algorithm>
 #include <cstring>
 #include <type_traits>
@@ -770,6 +778,53 @@ struct LeafBox final {
         out.axes[axis] = frame.GetColumn3(axis).Normalized();
     }
     return true;
+}
+
+// One box, cylinder or capsule of a body's shape, in world space: the
+// surface a hand closes round (J-088). kind follows KitPart (0 box,
+// 1 cylinder, 2 capsule, along the part's y); size is the box's half
+// extents, or (radius, half height, 0) for a cylinder or a capsule (the
+// capsule's half height is the cylinder part's, without the caps).
+// centre and rot are the leaf shape's world frame.
+struct LeafSurface final {
+    std::uint8_t kind = 0;
+    JPH::RVec3 centre{JPH::RVec3::sZero()};
+    JPH::Quat rot{JPH::Quat::sIdentity()};
+    JPH::Vec3 size{JPH::Vec3::sZero()};
+};
+
+[[nodiscard]] inline bool leaf_surface(const JPH::Body &body, const JPH::SubShapeID &sub_shape,
+                                       LeafSurface &out) noexcept {
+    JPH::SubShapeID remainder;
+    const JPH::TransformedShape leaf = body.GetShape()->GetSubShapeTransformedShape(
+        sub_shape, body.GetCenterOfMassPosition(), body.GetRotation(), JPH::Vec3::sReplicate(1.0F),
+        remainder);
+    if (leaf.mShape == nullptr) {
+        return false;
+    }
+    const JPH::RMat44 frame = leaf.GetCenterOfMassTransform();
+    out.centre = frame.GetTranslation();
+    out.rot = frame.GetQuaternion();
+    switch (leaf.mShape->GetSubType()) {
+        case JPH::EShapeSubType::Box:
+            out.kind = 0;
+            out.size = static_cast<const JPH::BoxShape *>(leaf.mShape.GetPtr())->GetHalfExtent();
+            return true;
+        case JPH::EShapeSubType::Cylinder: {
+            const auto *cylinder = static_cast<const JPH::CylinderShape *>(leaf.mShape.GetPtr());
+            out.kind = 1;
+            out.size = JPH::Vec3(cylinder->GetRadius(), cylinder->GetHalfHeight(), 0.0F);
+            return true;
+        }
+        case JPH::EShapeSubType::Capsule: {
+            const auto *capsule = static_cast<const JPH::CapsuleShape *>(leaf.mShape.GetPtr());
+            out.kind = 2;
+            out.size = JPH::Vec3(capsule->GetRadius(), capsule->GetHalfHeightOfCylinder(), 0.0F);
+            return true;
+        }
+        default:
+            return false;
+    }
 }
 
 // A saved climb (release plan B5): the committed checkpoint the death restore

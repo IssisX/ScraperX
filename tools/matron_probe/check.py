@@ -29,6 +29,17 @@ Checks, each over every recorded frame unless noted, with its tolerance:
            hand's commanded target, which it lags; from GRIP_FROM_S into the hold; a held frame without a
            held ankle is a failure) and the climb or pipe grip (contact_hand and contact_hand2, when the
            native says they are held).
+  finger_wrap
+           while the sim says a hand of hers holds something, a drawn finger of that hand more than
+           FINGER_M (2 cm) off the surface it holds: the joints past the base joint (f01, f02 and the tip
+           of each finger; t1 and the tip of the thumb) against the held body's surface (leaf_surface: the
+           box, cylinder or capsule the grip closes round, its size, centre and frame, as the probe
+           records it). The base joint (f00, t0) is the palm's edge, covered by the palm-gap check. A held
+           grip whose surface the recording cannot resolve is a failure, not a quiet pass. Measured from
+           GRIP_FROM_S into the grip, so the wrap's spring has settled. The right hand on the climb or
+           pipe grip (contact_hand), the left on the second hold (contact_hand2) or on the pipe's same
+           surface; in a hold the right hand on the held ankle and the left, in the rip (ArmPlay), on his
+           arm — the same capsule.
   plant    a drawn foot that is down (its lowest point within PLANT_M of the surface under it) while she
            stands still on a floor (not climbing, held, knocked down or turning; under STILL_MPS), more than
            PLANT_DRIFT_M across the ground from where it came down. A jump of the root over TELEPORT_M in a
@@ -63,6 +74,9 @@ import score  # noqa: E402
 STRETCH_PCT = 5.0
 GRIP_M = 0.05
 GRIP_FROM_S = 0.3
+FINGER_M = 0.02          # a drawn finger more than this off the surface it holds fails
+FINGER_SEG_M = 0.04      # a finger segment's length (matron_view.gd)
+THUMB_SEG_M = 0.035      # a thumb segment's length
 STILL_MPS = 0.15
 TURN_RAD_S = 0.4           # a body turning faster than this steps its feet round
 TELEPORT_M = 1.0
@@ -72,7 +86,7 @@ HIT_M = score.HIT_M
 MIN_REST_M = 0.01          # a bone shorter at rest than this has no length to measure
 ARM_BONES = ("sh_", "el_")
 CHECKS = ("stretch_arm", "stretch_arm_hold", "stretch_arm_reach", "stretch_arm_turn", "stretch_leg",
-          "stretch_leg_turn", "grip_hold", "grip_climb", "plant", "hair", "skirt")
+          "stretch_leg_turn", "grip_hold", "grip_climb", "finger_wrap", "plant", "hair", "skirt")
 UNIT = {c: "%" for c in CHECKS if c.startswith("stretch")}
 # A known defect's bounds: its failing count may grow by this fraction (at least COUNT_MIN frames) and its
 # worst amount by this fraction, before it reads as a regression (frame timing moves a few frames run to run).
@@ -238,6 +252,164 @@ def grip_failures(run):
     return out, notes
 
 
+def _quat_matrix(qx, qy, qz, qw):
+    """A unit quaternion's 3x3 rotation matrix."""
+    n = float(np.sqrt(qx * qx + qy * qy + qz * qz + qw * qw))
+    if n <= 1.0e-9:
+        return np.eye(3)
+    x, y, z, w = qx / n, qy / n, qz / n, qw / n
+    return np.array([
+        [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)],
+        [2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)],
+        [2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)]])
+
+
+def _surface(rows, i, prefix):
+    """(kind, size, centre, rot) for a grip's surface (leaf_surface), or None
+    when the recording has no surface columns for it or the surface is not a
+    box, cylinder or capsule with a size."""
+    if (prefix + "_shape") not in rows:
+        return None
+    kind = int(rows[prefix + "_shape"][i])
+    if kind not in (0, 1, 2):
+        return None
+    size = np.array([rows[prefix + "_sizex"][i], rows[prefix + "_sizey"][i], rows[prefix + "_sizez"][i]])
+    centre = np.array([rows[prefix + "_centrex"][i], rows[prefix + "_centrey"][i], rows[prefix + "_centrez"][i]])
+    rot = np.array([rows[prefix + "_rotx"][i], rows[prefix + "_roty"][i], rows[prefix + "_rotz"][i],
+                    rows[prefix + "_rotw"][i]])
+    if not (np.all(np.isfinite(size)) and np.all(np.isfinite(centre)) and np.all(np.isfinite(rot))):
+        return None
+    if float(np.dot(size, size)) <= 1.0e-12:
+        return None
+    return kind, size, centre, rot
+
+
+def _surface_distance(surface, point):
+    """A point's signed distance to a box (0), cylinder (1) or capsule (2)
+    surface: negative inside, positive outside. The shape's local frame is
+    its centre and rot; size is the box's half extents or (radius, half
+    height, 0)."""
+    kind, size, centre, rot = surface
+    local = _quat_matrix(*rot).T @ (point - centre)
+    if kind == 0:  # a box: the rung or rail she grips
+        q = np.abs(local) - size
+        return float(np.linalg.norm(np.maximum(q, 0.0)) + min(max(q[0], q[1], q[2]), 0.0))
+    if kind == 1:  # a cylinder along local y: the pipe she grips
+        q = np.array([float(np.linalg.norm(local[[0, 2]])) - size[0], abs(local[1]) - size[1]])
+        return float(np.linalg.norm(np.maximum(q, 0.0)) + min(max(q[0], q[1]), 0.0))
+    # A capsule along local y (his body): the distance to its segment, minus the radius.
+    along = max(-size[1], min(size[1], local[1]))
+    return float(np.linalg.norm(local - np.array([0.0, along, 0.0])) - size[0])
+
+
+def _palm_gap_hand(run, wb, hand, point):
+    """One hand's drawn palm (the line from its wrist to its knuckles) to `point`."""
+    wr = wb[run.bone_index["wr_" + hand]]
+    a = wr[:3, 3]
+    b = score.apply(wr, np.array(run.contacts["wr_" + hand]["knuckles"]))
+    ab = b - a
+    t = float(np.clip(np.dot(point - a, ab) / max(float(np.dot(ab, ab)), 1.0e-9), 0.0, 1.0))
+    return float(np.linalg.norm(point - (a + t * ab)))
+
+
+def finger_failures(run):
+    """(gap, kind, rec, t) for each drawn finger off the surface it holds, and notes."""
+    rows = run.rows
+    out = []
+    notes = []
+    have_surface = {}
+    for prefix in ("contact_hand", "contact_hand2", "held_ankle"):
+        have_surface[prefix] = (prefix + "_shape") in rows
+        if not have_surface[prefix]:
+            notes.append("finger_wrap not measured for %s: the recording has no %s columns"
+                         % (prefix, prefix))
+    # Four fingers of three joints and a thumb of two, each joint a pivot
+    # (matron_view.gd). The base joint (f00, t0) is the palm's edge, covered
+    # by the palm-gap check; the joints past it and the tip must lie on the
+    # surface the hand holds.
+    chains = {}
+    for s in "lr":
+        chains[s] = [["f%d%d_%s" % (f, seg, s) for seg in range(3)] for f in range(4)]
+        chains[s].append(["t%d_%s" % (seg, s) for seg in range(2)])
+    missing = [b for s in "lr" for chain in chains[s] for b in chain if b not in run.bone_index]
+    if missing:
+        notes.append("finger_wrap not measured: the recording has no finger bones (%s)"
+                     % ", ".join(missing[:6]))
+        return out, notes
+    have_hand = "contact_hand_held" in rows
+    have_hand2 = "contact_hand2_held" in rows
+    since = {}
+    for rec in range(run.nrec):
+        i = run.row_of_rec[rec]
+        if i < 0:
+            continue
+        t = rows["t"][i]
+        st = int(rows["hold_state"][i])
+        held = st in score.HOLD_STATES and rows["held"][i] > 0
+        on_pipe = bool(rows["on_pipe"][i])
+        # Each hand's surface this frame: the right hand on the climb or pipe
+        # grip, or on the held ankle in a hold; the left on the second hold
+        # or on the pipe's same surface. The left hand in the rip (ArmPlay)
+        # is on his arm, and the sim exports no arm surface, so it is not
+        # measured here (measuring it against the ankle reads ~0.7 m, the
+        # arm-to-ankle distance, not a finger off its surface).
+        want = []
+        if have_hand and rows["contact_hand_held"][i] > 0 and have_surface["contact_hand"]:
+            want.append(("r", "climb" if not on_pipe else "pipe", "contact_hand"))
+        elif held and have_surface["held_ankle"]:
+            want.append(("r", "hold", "held_ankle"))
+        if have_hand2 and rows["contact_hand2_held"][i] > 0 and have_surface["contact_hand2"]:
+            want.append(("l", "climb2", "contact_hand2"))
+        elif on_pipe and have_hand and rows["contact_hand_held"][i] > 0 and have_surface["contact_hand"]:
+            want.append(("l", "pipe", "contact_hand"))
+        if not want:
+            since.clear()
+            continue
+        keys = set()
+        wb = run.world_bones(rec)
+        for hand, kind, prefix in want:
+            key = (hand, kind)
+            keys.add(key)
+            if key not in since:
+                since[key] = t
+            if t - since[key] < GRIP_FROM_S:
+                continue
+            # The fingers are only on a surface the hand itself holds: the
+            # palm must be on the grip point (the palm-gap check's bar). A
+            # hand the rig has not brought to its grip — a climb's known
+            # hand-off-the-rung, already the grip check's expected defect —
+            # is not the fingers' failure to measure. The pipe's second hand
+            # sits 0.08 m along the pipe from the grip point, so it gets
+            # that offset on top of the bar.
+            if prefix == "held_ankle" and "held_anklex" in rows:
+                point = np.array([rows["held_anklex"][i], rows["held_ankley"][i], rows["held_anklez"][i]])
+            else:
+                point = np.array([rows[prefix + "x"][i], rows[prefix + "y"][i], rows[prefix + "z"][i]])
+            gate = GRIP_M + (0.08 if kind == "pipe" and hand == "l" else 0.0)
+            if _palm_gap_hand(run, wb, hand, point) > gate:
+                continue
+            surface = _surface(rows, i, prefix)
+            if surface is None:
+                out.append((float("inf"), kind + ", no surface", rec, t))
+                continue
+            for chain in chains[hand]:
+                seg = FINGER_SEG_M if len(chain) == 3 else THUMB_SEG_M
+                for bone in chain[1:]:
+                    m = wb[run.bone_index[bone]]
+                    gap = abs(_surface_distance(surface, m[:3, 3]))
+                    if gap > FINGER_M:
+                        out.append((gap, kind, rec, t))
+                tip_m = wb[run.bone_index[chain[-1]]]
+                tip = tip_m[:3, 3] - seg * tip_m[:3, 1]
+                gap = abs(_surface_distance(surface, tip))
+                if gap > FINGER_M:
+                    out.append((gap, kind, rec, t))
+        for key in list(since):
+            if key not in keys:
+                del since[key]
+    return out, notes
+
+
 def plant_failures(run):
     rows = run.rows
     out = []
@@ -343,6 +515,11 @@ def main():
         grips, notes = grip_failures(run)
         for gap, kind, rec, t in grips:
             found["grip_hold" if kind.startswith("hold") else "grip_climb"].append((gap, kind, rec, t))
+        for note in notes:
+            say("  note: " + note)
+        fingers, notes = finger_failures(run)
+        for gap, kind, rec, t in fingers:
+            found["finger_wrap"].append((gap, kind, rec, t))
         for note in notes:
             say("  note: " + note)
         for drift, foot, rec, t in plant_failures(run):

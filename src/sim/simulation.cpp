@@ -1559,10 +1559,28 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.contact_hand = {view.contact_hand.GetX(), view.contact_hand.GetY(), view.contact_hand.GetZ()};
     result.contact_hand_body = view.contact_hand_body.GetIndexAndSequenceNumber();
     result.contact_hand_sub = view.contact_hand_sub.GetValue();
+    result.contact_hand_shape = view.contact_hand_shape;
+    result.contact_hand_size = {view.contact_hand_size.GetX(), view.contact_hand_size.GetY(),
+                                view.contact_hand_size.GetZ()};
+    result.contact_hand_centre = {view.contact_hand_centre.GetX(), view.contact_hand_centre.GetY(),
+                                  view.contact_hand_centre.GetZ()};
+    result.contact_hand_rot_x = view.contact_hand_rot.GetX();
+    result.contact_hand_rot_y = view.contact_hand_rot.GetY();
+    result.contact_hand_rot_z = view.contact_hand_rot.GetZ();
+    result.contact_hand_rot_w = view.contact_hand_rot.GetW();
     result.contact_hand2_held = view.contact_hand2_held;
     result.contact_hand2 = {view.contact_hand2.GetX(), view.contact_hand2.GetY(), view.contact_hand2.GetZ()};
     result.contact_hand2_body = view.contact_hand2_body.GetIndexAndSequenceNumber();
     result.contact_hand2_sub = view.contact_hand2_sub.GetValue();
+    result.contact_hand2_shape = view.contact_hand2_shape;
+    result.contact_hand2_size = {view.contact_hand2_size.GetX(), view.contact_hand2_size.GetY(),
+                                 view.contact_hand2_size.GetZ()};
+    result.contact_hand2_centre = {view.contact_hand2_centre.GetX(), view.contact_hand2_centre.GetY(),
+                                   view.contact_hand2_centre.GetZ()};
+    result.contact_hand2_rot_x = view.contact_hand2_rot.GetX();
+    result.contact_hand2_rot_y = view.contact_hand2_rot.GetY();
+    result.contact_hand2_rot_z = view.contact_hand2_rot.GetZ();
+    result.contact_hand2_rot_w = view.contact_hand2_rot.GetW();
     result.contact_line = view.contact_line;
     result.contact_braced = view.contact_braced;
     result.contact_brace = {view.contact_brace.GetX(), view.contact_brace.GetY(), view.contact_brace.GetZ()};
