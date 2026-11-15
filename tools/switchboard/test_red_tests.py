@@ -50,6 +50,25 @@ HOST_LOG = """\
 2026-11-13T20:40:38.3185490Z ##[error]Process completed with exit code 1.
 2026-11-13T20:40:38.3623753Z Post job cleanup.
 """
+# 11-15 (J-088, run 43675935881, job 132696775719): touch-1's drive step runs its scenarios under
+# `timeout 400s` (wo000-delivery-spine.yml: `timeout 400s ... --uitest=${scenario}`, then grep for its PASS
+# line). touch_stack printed PASS at 04:33:10; the next scenario never printed its PASS, and the runner killed
+# the step at 04:39:50 — exactly 400 s later — with exit code 124. The 2.6 MB log holds zero FAIL lines, so
+# the notice said "no FAIL line in its log" and named no failing test. The deck list in the touch_stack line
+# is trimmed here; the scenario, seconds and worst numbers are the real values.
+TOUCH_TIMEOUT_LOG = """\
+2026-11-15T04:26:36.0787584Z SCRAPERX_UITEST PASS touch_teeter sprint_mps=8.25 teeters=2 fell_to_y=18.77 scheme=gestures swipes_up=0 swipes_down=0 flicks=0
+2026-11-15T04:33:10.5244268Z SCRAPERX_UITEST PASS touch_stack deck2_y=22.90 seconds=812.0 worst_body_step_m=0.179 worst_view_lift_m=0.090 scheme=gestures swipes_up=39 swipes_down=2 flicks=0
+2026-11-15T04:33:10.6829655Z Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+2026-11-15T04:39:22.7964901Z SCRAPERX_SUMMIT seconds=811.2 deaths=0
+2026-11-15T04:39:50.6967322Z ##[error]Process completed with exit code 124.
+2026-11-15T04:39:50.8111383Z Adding repository directory to the temporary git global config as a safe directory
+"""
+TOUCH_TIMEOUT_JOBS = [{"id": 508, "name": "godot-touch (touch-1)", "status": "completed", "conclusion": "failure",
+                       "steps": [{"number": 6, "name": "Drive control paths through the real input pipeline (shard 1)",
+                                  "conclusion": "failure"},
+                                 {"number": 7, "name": "Drive control paths through the real input pipeline (shard 2)",
+                                  "conclusion": "skipped"}]}]
 NAME = "fb-bot/integrate-j076"
 JOBS = [{"id": 501, "name": "native-tests (matron-slices-3)", "status": "completed", "conclusion": "failure"},
         {"id": 502, "name": "godot-touch (touch-2)", "status": "completed", "conclusion": "failure"},
@@ -184,6 +203,47 @@ class RedTests(unittest.TestCase):
         self.assertEqual(make(gh).inbox([]), 1)
         (_, posted), = gh.posts
         self.assertIn("\n  - `host-build: ASSET_CREDITS FAIL files=363 recorded=354 unrecorded=9`", posted)
+
+    def test_a_timed_out_touch_step_names_the_step_and_the_last_pass(self):
+        # 11-15 (J-088, run 43675935881): touch-1 failed with no FAIL line anywhere in its log because the
+        # step was killed by timeout(1) — the notice must name the hung step and the last scenario that passed,
+        # not say "no FAIL line in its log" as if the log held nothing.
+        gh = LogGH({508: TOUCH_TIMEOUT_LOG}, runs=[run(44, NAME, HEAD, hours=2)],
+                   jobs={44: TOUCH_TIMEOUT_JOBS}, heads={NAME: HEAD})
+        self.assertEqual(make(gh).red_tests(44), (
+            "godot-touch (touch-1): no FAIL line - step \"Drive control paths through the real input pipeline "
+            "(shard 1)\" timed out (exit 124)",
+            "godot-touch (touch-1): last test line: SCRAPERX_UITEST PASS touch_stack deck2_y=22.90 seconds=812.0 "
+            "worst_body_step_m=0.179 worst_view_lift_m=0.090 scheme=gestures swipes_up=39 swipes_down=2 flicks=0"))
+
+    def test_a_timeout_with_fail_lines_still_names_the_fail_lines(self):
+        # A step that both printed a FAIL line and was later killed: the FAIL line is the finding, the timeout
+        # is not promoted over it.
+        timed = TOUCH_LOG + "2026-11-11T12:07:28.0000000Z ##[error]Process completed with exit code 124.\n"
+        gh = LogGH({502: timed}, runs=[run(45, NAME, HEAD, hours=2)],
+                   jobs={45: [dict(JOBS[1], steps=[{"number": 6, "name": "Drive control paths through the real "
+                                                            "input pipeline (shard 2)", "conclusion": "failure"}])]},
+                   heads={NAME: HEAD})
+        self.assertEqual(make(gh).red_tests(45), (
+            "godot-touch (touch-2): SCRAPERX_UITEST FAIL touch_matron_act reason=her drawn wrist missed the real "
+            "toolbox handle: samples 1411, worst 0.101 m (limit 0.05 m)",))
+
+    def test_a_no_fail_log_without_a_timeout_keeps_the_bare_line(self):
+        # No FAIL line and no timeout kill: the bare line stands — only a measured timeout changes it.
+        quiet = "2026-11-11T12:00:00.0Z PASS: all good\n2026-11-11T12:00:01.0Z ##[error]Process completed with exit code 1.\n"
+        job = {"id": 509, "name": "native-tests (matron-slices-3)", "status": "completed", "conclusion": "failure"}
+        gh = LogGH({509: quiet}, runs=[run(46, NAME, HEAD, hours=2)], jobs={46: [job]}, heads={NAME: HEAD})
+        self.assertEqual(make(gh).red_tests(46),
+                         ("native-tests (matron-slices-3): no FAIL line in its log",))
+
+    def test_a_timeout_without_named_steps_still_names_the_timeout(self):
+        # The jobs API sometimes carries no steps (older fixtures): the exit code and the last pass still land.
+        gh = LogGH({508: TOUCH_TIMEOUT_LOG}, runs=[run(47, NAME, HEAD, hours=2)],
+                   jobs={47: [dict(TOUCH_TIMEOUT_JOBS[0], steps=[])]}, heads={NAME: HEAD})
+        self.assertEqual(make(gh).red_tests(47), (
+            "godot-touch (touch-1): no FAIL line - step timed out (exit 124)",
+            "godot-touch (touch-1): last test line: SCRAPERX_UITEST PASS touch_stack deck2_y=22.90 seconds=812.0 "
+            "worst_body_step_m=0.179 worst_view_lift_m=0.090 scheme=gestures swipes_up=39 swipes_down=2 flicks=0"))
 
     def test_the_integrators_inbox_names_them_in_code_spans(self):
         mine = "claude/integrate-j104"

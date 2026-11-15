@@ -447,6 +447,12 @@ MAX_RUN_LOG_FAILURES = 2  # log reads that fail in one proof run before its othe
 MAX_ERR_CHARS = 200       # of gh's error text in a NOTE line
 NATIVE_FAIL = re.compile(r"\bFAIL: .*")
 TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*")
+TOUCH_PASS = re.compile(r"\bSCRAPERX_UITEST PASS\b.*")
+NATIVE_PASS = re.compile(r"\bPASS: .*")
+# The proof wraps each godot scenario in `timeout 400s` (wo000-delivery-spine.yml: the touch steps run
+# `timeout 400s ... --uitest=${scenario}`, then grep for its PASS line): a scenario that never prints PASS is
+# killed by timeout(1) with exit 124, and the step fails with no FAIL line anywhere in its log.
+TIMEOUT_EXIT = re.compile(r"##\[error\]Process completed with exit code 124\.")
 # 11-13 (#350): host-build names no test; its failed step's first failing line (a check's FAIL, a compiler or CMake
 # error, a Python check's exception) and the lines after it, as `ASSET_CREDITS FAIL files=363 ... unrecorded=9`
 HOST_FAIL = re.compile(r"\b[A-Z][A-Z0-9_]* FAIL\b|\bFAIL: |\berror: |\bCMake Error\b|\b\w+(?:Error|Exception): ")
@@ -487,6 +493,26 @@ def host_fail_lines(log: str) -> tuple[list[str], int]:
     first = next((i for i, line in enumerate(step) if HOST_FAIL.search(line)), None)
     found = list(dict.fromkeys(step[first:] if first is not None else step[-1:]))
     return found[:MAX_FAIL_LINES], max(0, len(found) - MAX_FAIL_LINES)
+
+
+def timeout_lines(log: str, job: dict) -> list[str]:
+    """A failed job whose step was killed by timeout(1), for the notice: [] when the log holds no exit-124 kill.
+    Names the failed step from the jobs API - its own steps, not the log's unnamed `set -euo pipefail` group
+    header - and the last test line the step printed, so a timeout red names what hung instead of saying the log
+    holds no FAIL line. Only used when fail_lines found nothing; a FAIL line always wins."""
+    text = ANSI.sub("", log)
+    if not TIMEOUT_EXIT.search(text):
+        return []
+    steps = [st.get("name") or "" for st in job.get("steps") or [] if st.get("conclusion") == "failure"]
+    step = next((s for s in steps if not s.startswith("Post ")), steps[0] if steps else "")
+    pattern = TOUCH_PASS if (job.get("name") or "").startswith("godot-touch") else NATIVE_PASS
+    last = ""
+    for line in text.splitlines():
+        m = pattern.search(line)
+        if m:
+            last = m.group(0).strip()
+    first = f'no FAIL line - step "{step}" timed out (exit 124)' if step else "no FAIL line - step timed out (exit 124)"
+    return [first] + ([f"last test line: {last}"] if last else [])
 
 
 def log_text(text: str, limit: int = MAX_FAIL_CHARS) -> str:
@@ -1098,6 +1124,8 @@ class Switch:
                 out.append(f"{name}: {LOG_UNREAD}")
                 continue
             lines, more = fail_lines(text, j.get("name") or "")
+            if not lines:
+                lines = timeout_lines(text, j)
             out += [f"{name}: {log_text(line)}" for line in lines] or [f"{name}: no FAIL line in its log"]
             if more:
                 out.append(f"{name}: and {more} more FAIL lines")
