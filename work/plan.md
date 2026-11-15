@@ -33,7 +33,7 @@ J-116 muse #438 | A relaunch puts the world back exactly as a death restore does
 J-136 muse #468 hold: parked 11-14: gated on J-015 (#466), which is held | S2 and S3 recover after an empty send, so neither can strand him (F7)
 J-018 muse #125 hold: waits for J-001's grab code (muse.md 11-12) | Her stock reach with real arms (B3)
 J-007 muse #114 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Her exit items 4, 6, 7: arm's-length holds, the pipe, the hoists
-J-009 muse #116 hold: parked 11-14: pushed work kept, no PR or commit in 3+ days; Muse's queued lanes land first | Device determinism: the phone computes what CI proved
+J-009 muse #116 | Device determinism: the phone computes what CI proved
 J-014 muse #121 | Stock above 396 m (PE 2)
 J-036 muse #167 | Fight S5: slip
 J-040 muse #228 | Improvised weapons: brace carried bars and pipes against Matron
@@ -47,7 +47,7 @@ J-087 muse #405 | Story radio cues fire in play: the foreman's lines reach him w
 J-088 muse #406 | Her hands close on what she holds: fingers wrap rungs, rails, his ankle; the pipe warning in CI (A6, gap 19)
 J-091 muse #409 | Turn her bay trap back on her: lure her onto the leaf at 154 m, trip its drive, dump her a full deck
 J-095 muse #413 | Pull the line out from under her: one keeper pin turns the zipline she is riding into a falling cable (Grok idea 2)
-J-099 muse #417 hold: parked 11-14 (SYNC with Muse): not in flight; its work goes to fb-bot/wip-<job> | Dents: shipping containers, barrels and steel boxes dent by the real impulse that hits them (J-038's second half)
+J-099 muse #417 | Dents: shipping containers, barrels and steel boxes dent by the real impulse that hits them (J-038's second half)
 J-100 claude #418 | She reads a load hung over her and gets out from under it
 J-112 muse #431 | She shoves what he placed off an edge (A3, gap 9)
 J-113 muse #432 | Her chart and the microphone: the five touch scenarios pass and consent is asked in game (rule 57, gap 21)
