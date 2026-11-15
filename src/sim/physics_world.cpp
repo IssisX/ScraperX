@@ -1053,6 +1053,28 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // #30: tell her whether the player is on a ladder (trunk has no other caller).
     matron_->set_player_on_ladder(traversal_state_ == TraversalState::Climbing);
+    // J-076: tell her whether a machine is carrying the player (a moving kit
+    // body: a cage, a platform, a dumpster — a loose crate is not a machine),
+    // so the checkpoint freeze reads a rider as up a machine, not on her
+    // deck. A machine part that is merely floor does not carry him: the bay
+    // leaf, parked flush with her deck, is crossed on foot in the vault leg
+    // (at2), and exempting it renewed the checkpoint to the north band, so
+    // the death after her shoves restored him there instead of by her locker
+    // and she never wound up. The bar is the floor's own speed under him:
+    // the leaf, held, stays under 0.6 m/s; the A cage, governed at 2.5 m/s,
+    // carries its rider at ~1.8 m/s. Last tick's footing: the support is
+    // sampled after the step.
+    {
+        const std::uint64_t machine_support = grounded_ ? support_entity_id_ : 0;
+        const bool on_machine_body = machine_support >= kit::kDynamicEntityBase &&
+                                     machine_support < kit::kEntityLimit &&
+                                     !kit::is_stock_entity(machine_support) &&
+                                     !kit::is_fabricated_entity(machine_support);
+        // A machine carries him only when its floor moves under him.
+        constexpr float kCarryingSupportMps = 1.0F;
+        const float support_speed = on_machine_body ? current_support_point_velocity(bodies).Length() : 0.0F;
+        matron_->set_player_carried_by_machine(on_machine_body && support_speed >= kCarryingSupportMps);
+    }
     // His true state, which she cannot open: her perception (matron_perception.hpp)
     // makes her evidence of it.
     {

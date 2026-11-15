@@ -42,6 +42,18 @@ public:
     // (~36 J) 0.29, a walk's own noise.
     static constexpr float kSilentJ = 5.0F;
     static constexpr float kFullJ = 5000.0F;
+    // A machine part that comes to rest after carrying kinetic energy has hit
+    // its stop with that energy: a leveled stop spreads the same deceleration
+    // over many ticks, so no single tick crosses kMinChangeMps and no hit is
+    // ever recorded. It counts once it has sat still this long: a trajectory
+    // apex is slow for a tick or two, a stop is slow until it moves again.
+    static constexpr int kStopRestTicks = 9;
+    // A stop is a run that ends: a part must have reached this speed since
+    // its last counted rest for the rest to be a stop event. A part that only
+    // ever jitters slower than this (the bay leaf on its hinge, under
+    // 0.6 m/s) is vibration, not travel: its rests are not stops, and a hit
+    // for each one hears the stop far more than once.
+    static constexpr float kStopArmMps = 1.0F;
 
     explicit ImpactLedger(JPH::PhysicsSystem &physics) : physics_(physics) {}
 
@@ -101,6 +113,15 @@ private:
         int quiet_ticks = 0;
         float last_energy_j = 0.0F;
         bool runs = false;
+        bool machine = false;
+        // The fastest this part has moved since it last rested, as kinetic
+        // energy, and how many ticks it has sat slower than kRunMinMps: the
+        // stop hit is the peak energy, counted once the rest is sustained.
+        // `ran` is whether it reached kStopArmMps since its last counted
+        // rest: only a run that ends is a stop event.
+        float peak_ke_j = 0.0F;
+        int rest_ticks = 0;
+        bool ran = false;
     };
 
     JPH::PhysicsSystem &physics_;
