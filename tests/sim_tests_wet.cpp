@@ -3,6 +3,7 @@
 #include "sim_tests.hpp"
 
 #include "sim/bay.hpp"
+#include "sim/cradle_bay.hpp"
 #include "sim/forklift.hpp"
 #include "sim/slab_cell.hpp"
 #include "sim/summit.hpp"
@@ -211,6 +212,7 @@ void run_wet_e_guard(const bool expect) {
     const std::uint64_t kSince[] = {Bay::kFrameEntity, Bay::kLeafEntity, Bay::kGuardEntity, Bay::kFanEntity,
                                     Bay::kShackleEntity, scraperx::sim::TwinTower::kFrameEntity,
                                     scraperx::sim::TwinTower::kLeafEntity, scraperx::sim::TwinTower::kFlagEntity,
+                                    scraperx::sim::CradleBay::kFrameEntity,
                                     scraperx::sim::Summit::kLeftBearingEntity,
                                     scraperx::sim::Summit::kRightBearingEntity,
                                     scraperx::sim::Summit::kEndingFrameEntity,
@@ -222,6 +224,11 @@ void run_wet_e_guard(const bool expect) {
     // by 137, so the sequence check covers exactly those twelve bodies.
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
+    // J-054 (#293): the ballast drum's body is laid last, after the slab
+    // cell (lay_cradle_ballast), so the bay, twin, summit and forklift
+    // keep their trunk places and the sequence check covers thirteen
+    // bodies, with the forklift closing it and the drum after the cell.
+    constexpr std::uint32_t kSinceBase = kBodiesBeforeE + 1;
     constexpr std::uint32_t kNewEastWest = 137;
     // J-014 (#121): 78 new upper pieces on the rings above 396.25 m and
     // the top decks, their table places taken after the east/west pieces
@@ -245,21 +252,25 @@ void run_wet_e_guard(const bool expect) {
     constexpr std::uint32_t kHungSlabs = 1;
     const std::uint64_t kSlabCell[] = {scraperx::sim::SlabCell::kFrameEntity, scraperx::sim::SlabCell::kTriggerEntity,
                                        scraperx::sim::SlabCell::kHandleEntity};
+    // J-054 (#293): the counterweight crossing's ballast drum, laid last in
+    // its own group after the slab cell, the kit's last body.
+    constexpr std::uint32_t kCradleDrums = 1;
     const std::uint32_t forklift_at =
-        kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
+        kSinceBase + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
     const std::uint32_t cell_at = kinds_at + kMatronKinds + kHungSlabs;
-    bool since_after = world.kit_body_count() == cell_at + static_cast<std::uint32_t>(std::size(kSlabCell));
+    bool since_after = world.kit_body_count() == cell_at + static_cast<std::uint32_t>(std::size(kSlabCell)) + kCradleDrums;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
-    for (std::uint32_t i = kBodiesBeforeE; since_after && i < kBodiesBeforeE + std::size(kSince); ++i) {
-        since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
+    for (std::uint32_t i = kSinceBase; since_after && i < kSinceBase + std::size(kSince); ++i) {
+        since_after = world.kit_body_entity(i) == kSince[i - kSinceBase];
     }
     // The 78 upper pieces follow the forklift, in table order, then the
-    // Matron's two and the cell's slab, the table's last three pieces; then
-    // the cell's trigger and handle.
-    const std::uint32_t upper_first = world.loose_stock_count() - kHungSlabs - kMatronKinds - kNewUpper;
+    // Matron's two and the cell's slab; then the cell's trigger and handle,
+    // and the cradle drum's body last of all. The range below ends at the
+    // slab; the drum's place last is pinned by the total above.
+    const std::uint32_t upper_first = world.loose_stock_count() - kCradleDrums - kHungSlabs - kMatronKinds - kNewUpper;
     for (std::uint32_t i = 0; since_after && i < kNewUpper + kMatronKinds + kHungSlabs; ++i) {
         since_after = world.kit_body_entity(forklift_at + std::size(kForklift) + i) ==
                       Simulation::kLooseStockFirstEntity + upper_first + i;
@@ -349,9 +360,17 @@ void run_wet_e_guard(const bool expect) {
     // #216): the east/west places take the end of the table, after the
     // throwables, so those entities are their trunk ones again. Before
     // 4824050261233220131, now 3514033760028014323.
+    // Re-pinned for J-054 (#293): the ballast drum was one more stock body,
+    // built with the table at kit index 320, inside the first 595. The
+    // original bodies keep their order, but the window held the drum and
+    // dropped the body that was 594th (then at 595, ahead of the bay).
+    // Before 3514033760028014323, then 13951612497788147959. Laid last now
+    // (lay_cradle_ballast, after the slab cell), the drum leaves the first
+    // 595 the trunk's again. Before 13951612497788147959, now
+    // 3514033760028014323.
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, and the slab cell's are the last");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, the slab cell's follow them, and the cradle drum is the last body");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is
@@ -388,9 +407,14 @@ void run_wet_e_guard(const bool expect) {
     // hash over all pieces is new: now 2030619953479605832 (the slab at
     // z -126.4, off the walkway; 3739843295225240046 when first hung at
     // -127.9).
-    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs &&
+    // J-054 (#293) laid last, after the slab cell (lay_cradle_ballast): the
+    // ballast drum is one more piece (count 544). The first 540 still hash
+    // to 16882536141644003327 and the first 542 to 10019901410837365716, so
+    // every earlier piece stands where it was; the hash over all pieces is
+    // new: now 7876930839747952316 (measured on the fixed tree).
+    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs + kCradleDrums &&
                 stock_before.hash == 16882536141644003327ULL &&
-                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 2030619953479605832ULL,
+                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 7876930839747952316ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");

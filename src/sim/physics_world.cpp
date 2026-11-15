@@ -2,6 +2,7 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include "sim/cradle_bay.hpp"
 #include "sim/matron_effort.hpp"
 #include "sim/twin_tower.hpp"
 #include <chrono>
@@ -383,6 +384,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     matron_->set_shared_survival(&bay_->district());
     // Append static exterior access after existing saved kit bodies.
     TwinTower::build(*kit_);
+    // J-054, the counterweight crossing: the bay's frame, off the 220 ring's
+    // south face. Built after the twin tower; its place in the kit order
+    // (between the twin tower and the summit) is pinned by the E guard.
+    CradleBay::build(*kit_);
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.
@@ -487,6 +492,11 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(slab, ImpactSound::HeavySteel);
         slab_cell_.build(*kit_, slab);
     }
+    // J-054 (#293): the counterweight crossing's ballast drum, laid last in
+    // its own group after the slab cell, so it renumbers nothing (J-107
+    // #426). A drum sounds hollow when struck.
+    loose_stock_->lay_cradle_ballast();
+    track(loose_stock_->body(loose_stock_->count() - 1), ImpactSound::Hollow);
     give_matron_stock();
 
     // Tests only: the extra solids built after every body the world builds.

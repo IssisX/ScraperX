@@ -177,6 +177,15 @@ public:
     // at hung_slab_begin().
     void lay_hung_slab();
     static constexpr int kHungSlabs = 1;
+    // J-054 (#293): the counterweight crossing's ballast drum, staged on the
+    // bay's boarding deck off the 220 ring. A drum is 55 kg; this one
+    // carries 65 kg of load, 120 kg in all, past the carry grip's 80 kg,
+    // so it is dragged, not carried, onto the cradle's near end. Laid last
+    // of all, in its own group after the slab cell: a body inside the stock
+    // table renumbers every later piece (J-107 #426), so it goes after
+    // every other body, and every earlier piece keeps its place.
+    void lay_cradle_ballast();
+    static constexpr int kCradleDrums = 1;
     // Where a hand takes a carried piece of this kind, in its own frame.
     [[nodiscard]] static JPH::Vec3 carry_handle(Kind kind) noexcept;
 
