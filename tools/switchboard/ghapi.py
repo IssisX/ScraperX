@@ -53,6 +53,10 @@ CACHE_MAX_AGE_S = 7 * 86400    # an entry no run has read for this long is dropp
 STATUS = re.compile(r"^HTTP/\S+ (\d{3})")
 
 
+READY_MUTATION = ("mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) "
+                  "{ pullRequest { number isDraft } } }")
+
+
 class GitHubError(RuntimeError):
     def __init__(self, method: str, path: str, detail: str, status: int = 0):
         super().__init__(f"gh api -X {method} {path} failed: {detail[:300]}")
@@ -215,6 +219,8 @@ class GitHub:
             self.log(f"NOTE        the ETag cache was not saved: {err}")
 
     def _note_rate(self, headers: dict[str, str]) -> None:
+        if headers.get("x-ratelimit-resource") == "graphql":   # its own hourly bucket: never the REST rate floor's
+            return
         rem, reset, limit = (headers.get(f"x-ratelimit-{k}", "") for k in ("remaining", "reset", "limit"))
         if rem.isdigit():
             self.remaining = int(rem)
@@ -349,6 +355,21 @@ class GitHub:
             self.log(f"DRY  {method} {path}  {what}".rstrip())
             return None
         return self._run(method, path, body, token=token)
+
+    def mark_ready(self, node_id: str, number: int) -> bool:
+        """Mark draft PR #number ready for review (11-15). REST cannot undraft: GraphQL's
+        markPullRequestReadyForReview, the PR's node id passed as a variable. True when GitHub says it is no longer a
+        draft; False in a dry run (printed, never sent). A GraphQL `errors` answer raises GitHubError."""
+        got = self.write("POST", "graphql", {"query": READY_MUTATION, "variables": {"id": node_id}},
+                         f"mark #{number} ready for review")
+        if self.dry_run:
+            return False
+        errors = (got or {}).get("errors") if isinstance(got, dict) else None
+        if errors or not isinstance(got, dict):
+            why = "; ".join(str((e or {}).get("message", e))[:200] for e in errors) if errors else "no answer"
+            raise GitHubError("POST", "graphql", f"markPullRequestReadyForReview #{number}: {why}")
+        pr = (((got.get("data") or {}).get("markPullRequestReadyForReview") or {}).get("pullRequest") or {})
+        return pr.get("isDraft") is False
 
     def comment(self, number: int, body: str, what: str = "") -> Any:
         return self.write("POST", f"repos/{self.repo}/issues/{number}/comments", {"body": body},

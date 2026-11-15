@@ -121,6 +121,8 @@ INBOX_HEADER = "Switchboard (inbox):"
 INBOX_MARK = "<!-- switchboard:inbox keys={keys} -->"
 INBOX_KEYS = re.compile(r"^<!-- switchboard:inbox keys=([0-9a-f,]*) -->$", re.MULTILINE)
 INBOX_BRANCH_PREFIXES = ("fb-bot/integrate-", "claude/integrate-")
+# 11-15: a green draft on an `<agent>/integrate-...` branch the switch marks ready for review (Switch.ready_draft)
+READY_BRANCH = re.compile(r"[A-Za-z0-9_.-]+/integrate-[A-Za-z0-9_./-]+")
 INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a LAND this long was so at the sweep before
 INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
 INBOX_FIX_STUCK = dt.timedelta(hours=6)        # FIX with no new head this long, past the reconciler's send and re-send
@@ -1231,7 +1233,8 @@ class Switch:
                "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or "",
                "created_at": pr.get("created_at") or "",
                # the head is a branch of this repo, not a fork's: only then is the team token ever used for it
-               "own_head": (((pr.get("head") or {}).get("repo") or {}).get("full_name") or "") == self.gh.repo}
+               "own_head": (((pr.get("head") or {}).get("repo") or {}).get("full_name") or "") == self.gh.repo,
+               "node_id": (full or {}).get("node_id") or pr.get("node_id") or ""}   # GraphQL's id (ready_draft)
         return facts, ctx
 
     def job_issue(self, pr: dict) -> tuple[str, dict | None]:
@@ -1400,6 +1403,69 @@ class Switch:
         return res
 
     # ---------- steer ----------
+    def ready_refusal(self, facts: rules.PrFacts, ctx: dict) -> str:
+        """Why a draft PR is not marked ready (ready_draft), "" when it is to be. Ready: a draft of this repo's own
+        branch `<agent>/integrate-...` (never a wip- branch, never the integrator's inbox) onto trunk, its proof
+        green on this head, its job's work/plan.md line read and holding no `hold:` (the body's job and the branch
+        name's, a lettered split under its base's line too). An unread plan, or a job with no line, marks nothing."""
+        if facts.number == INBOX_PR or facts.head_ref == INBOX_BRANCH:
+            return "the integrator's inbox"
+        if facts.base_ref != rules.TRUNK:
+            return f"stacked on {facts.base_ref}, not {rules.TRUNK}"
+        if not READY_BRANCH.fullmatch(facts.head_ref) or re.search(r"(?:^|/)wip-", facts.head_ref):
+            return f"{facts.head_ref} is not an <agent>/integrate- branch"
+        if not ctx.get("own_head"):
+            return "its head is not a branch of this repo"
+        if facts.proof != "green":
+            return f"proof is {facts.proof}"
+        jobs = [j for j in dict.fromkeys((ctx.get("job") or "", collab_plan.job_of_branch(facts.head_ref))) if j]
+        if not jobs:
+            return "no job in its body or branch name"
+        try:
+            model = self.read_plan().by_job()
+        except (AttributeError, RuntimeError) as err:
+            return f"work/plan.md not read ({err_text(err)})"
+        lines = [model.get(collab_plan.plan_job(j, model)) for j in jobs]
+        if all(ln is None for ln in lines):
+            return f"{jobs[0]} has no line in work/plan.md"
+        held = [ln.job for ln in lines if ln is not None and ln.hold]
+        if held:
+            return f"the plan holds {held[0]}"
+        return ""
+
+    def ready_draft(self, facts: rules.PrFacts, ctx: dict) -> rules.PrFacts:
+        """11-15 (green drafts sat 5 to 17 hours unreviewed: #568, #466, #569): the switch skips drafts everywhere
+        and nobody owned marking them ready. A draft that ready_refusal passes, on GitHub's own answers read again
+        uncached, is marked ready (GraphQL; REST cannot), with one comment on it; from then on the normal review and
+        merge rules apply, this sweep too. Returns the PR's facts as the rest of the sweep reads them; `ctx` is
+        updated in place with the fresh read's."""
+        if not facts.draft or self.ready_refusal(facts, ctx):
+            return facts
+        facts, fresh = self.fresh_facts(facts.number)   # a cached "green" never drives a write (J-072)
+        ctx.update(fresh)
+        why = self.ready_refusal(facts, ctx) if facts.draft else "no longer a draft"
+        if why or not ctx.get("node_id"):
+            self.out(f"NOTE        #{facts.number} not marked ready: {why or 'GitHub gave no node id'}")
+            return facts
+        try:
+            ready = self.gh.mark_ready(ctx["node_id"], facts.number)
+        except RateLimited:
+            raise
+        except GitHubError as err:   # refused: this PR's line, retried next sweep, never an item error
+            self.out(f"NOTE        #{facts.number} not marked ready: GitHub refused ({err_text(err)[:160]})")
+            return facts
+        if not ready:   # a dry run (printed only), or GitHub still calls it a draft
+            return facts
+        job = ctx.get("job") or collab_plan.job_of_branch(facts.head_ref)
+        self.gh.comment(facts.number, f"Switchboard: marked this PR ready for review. Its proof is green on "
+                                      f"{facts.head_sha[:8]} and its job {job} is not held in work/plan.md; the "
+                                      f"normal review and merge rules apply from here.",
+                        what=f"note on #{facts.number}: marked ready for review")
+        self.out(f"READY       #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} job={job}: a green draft, "
+                 f"marked ready for review")
+        self.readied = getattr(self, "readied", 0) + 1
+        return dataclasses.replace(facts, draft=False)
+
     def close_superseded(self, facts: rules.PrFacts, ctx: dict) -> None:
         """A ready PR whose body says `Supersedes #N` closes #N, so replaced work can never be merged (Cory, 11-04)."""
         if facts.draft:
@@ -4267,6 +4333,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                f"the full pass (every PR read, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
     records: dict[str, dict] = dict((state or {}).get("prs") or {}) if delta is not None else {}
     read = 0
+    sw.readied = 0   # drafts ready_draft marked ready this sweep
     for pr in prs:
         if delta is not None and pr["number"] not in delta.prs:
             continue
@@ -4278,6 +4345,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                 sw.ask_pr(facts, ctx)
             if steer:
                 if not sw.merge_only:
+                    facts = sw.ready_draft(facts, ctx)
                     sw.close_superseded(facts, ctx)
                 sw.steer_pr(facts, ctx, steered)
             records[str(pr["number"])] = pr_record(sw, pr, facts, ctx, steered[-1] if len(steered) > before else None, ask)
@@ -4289,6 +4357,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             item_errors.append(f"#{pr['number']}: {type(err).__name__}: {err}")
             records.pop(str(pr["number"]), None)
             sw.out(f"ERROR       #{pr['number']}: {type(err).__name__}: {err}")
+    if sw.readied:
+        sw.out(f"READY       {sw.readied} green draft(s) marked ready for review this sweep")
     if read >= 2 and len(item_errors) == read:
         failed += 1   # no PR could be read: the sweep did not finish
         sw.out(f"ERROR       every one of the {read} PRs read failed: the sweep did not finish")
