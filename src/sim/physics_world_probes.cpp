@@ -1050,6 +1050,12 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
         hook_over_ticks_ = 0;
         hook_over_impulse_ = 0.0F;
         ++hook_bite_count_;
+        // The line from the chest to the bite, from its first tick, catches
+        // on what it crosses.
+        bend_hook_line(bodies);
+        if (moves) {
+            bend_hook_line_at_bite(bodies);
+        }
     };
     const JPH::BodyID her = matron_ != nullptr ? matron_->body() : JPH::BodyID();
     for (const JPH::CollideShapeResult &hit : hits.mHits) {
@@ -1238,6 +1244,77 @@ bool Simulation::PhysicsWorld::hook_line_blocked(const JPH::RVec3 from, const JP
     return hit.mFraction * length < length - kHookWrapEndM;
 }
 
+// Where a run fast at `to`, its free end come from `last` to `from`, catches
+// on the body it now crosses (`edge`: its first hit cast from `from`; on
+// return, the hit at the edge). Swept clear at `last`: the edge it met on its
+// way there (kHookWrapSearchSteps halvings). Crossing it at `last` too (a
+// bite, or her end brought round in one step): the edge the taut rope lies
+// on, where the run clears the body as its free end is lifted off the face
+// it struck. The bend sits kHookWrapStandoffM off that edge, away from every
+// face of the body's box that meets there, so the runs on both sides of it
+// clear the body; off a leaf that is not a box, along the face's normal.
+JPH::RVec3 Simulation::PhysicsWorld::hook_wrap_point(const JPH::RVec3 from, const JPH::RVec3 last, const JPH::RVec3 to,
+                                                     const JPH::BodyID also, JPH::RayCastResult &edge) const noexcept {
+    JPH::RVec3 cast_from = from;
+    JPH::RayCastResult probe;
+    if (!hook_line_blocked(last, to, probe, also)) {
+        float clear = 0.0F;
+        float blocked = 1.0F;
+        for (int step = 0; step < kHookWrapSearchSteps; ++step) {
+            const float mid = 0.5F * (clear + blocked);
+            const JPH::RVec3 at = last + JPH::Vec3(from - last) * mid;
+            if (hook_line_blocked(at, to, probe, also)) {
+                blocked = mid;
+                cast_from = at;
+                edge = probe;
+            } else {
+                clear = mid;
+            }
+        }
+    } else {
+        // Lifted off the struck face as far as the run is long, at most: the
+        // ray turns about `to` and leaves the body at the edge it wraps.
+        constexpr int kLiftSteps = 18;   // ~0.1 mm a metre of run
+        const JPH::RVec3 struck = JPH::RRayCast(from, JPH::Vec3(to - from)).GetPointOnRay(edge.mFraction);
+        const JPH::Vec3 lift = surface_normal(edge.mBodyID, edge.mSubShapeID2, struck) * JPH::Vec3(to - from).Length();
+        if (!hook_line_blocked(from + lift, to, probe, also)) {
+            float clear = 1.0F;
+            float blocked = 0.0F;
+            for (int step = 0; step < kLiftSteps; ++step) {
+                const float mid = 0.5F * (clear + blocked);
+                const JPH::RVec3 at = from + lift * mid;
+                if (hook_line_blocked(at, to, probe, also)) {
+                    blocked = mid;
+                    cast_from = at;
+                    edge = probe;
+                } else {
+                    clear = mid;
+                }
+            }
+        }
+    }
+    const JPH::RVec3 corner = JPH::RRayCast(cast_from, JPH::Vec3(to - cast_from)).GetPointOnRay(edge.mFraction);
+    JPH::Vec3 away = JPH::Vec3::sZero();
+    {
+        const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), edge.mBodyID);
+        LeafBox box;
+        if (lock.Succeeded() && leaf_box(lock.GetBody(), edge.mSubShapeID2, box)) {
+            constexpr float kOnFaceM = 0.01F;   // within this of a face's plane, the point is on that face
+            const JPH::Vec3 local(corner - box.centre);
+            for (int axis = 0; axis < 3; ++axis) {
+                const float along = local.Dot(box.axes[axis]);
+                if (std::abs(along) >= box.half[axis] - kOnFaceM) {
+                    away += box.axes[axis] * (along > 0.0F ? 1.0F : -1.0F);
+                }
+            }
+        }
+    }
+    if (away.LengthSq() < 1.0e-6F) {
+        away = surface_normal(edge.mBodyID, edge.mSubShapeID2, corner);
+    }
+    return corner + away.NormalizedOr(JPH::Vec3::sZero()) * kHookWrapStandoffM;
+}
+
 // The rope against the structure, once a tick while the hook is bitten:
 // off the nearest bend if the line has swung back round it, then onto any
 // edge the free line now crosses (see kHookBendsMax).
@@ -1270,29 +1347,8 @@ void Simulation::PhysicsWorld::bend_hook_line(JPH::BodyInterface &bodies) noexce
         if (hook_bend_count_ >= kHookBendsMax) {
             ++hook_bends_refused_;
         } else {
-            // Where the line, swept from the chest's last place to this one,
-            // first met the body: its edge.
-            JPH::RVec3 from = chest;
             JPH::RayCastResult edge = hit;
-            JPH::RayCastResult probe;
-            if (!hook_line_blocked(hook_last_chest_, anchor, probe)) {
-                float clear = 0.0F;
-                float blocked = 1.0F;
-                for (int step = 0; step < kHookWrapSearchSteps; ++step) {
-                    const float mid = 0.5F * (clear + blocked);
-                    const JPH::RVec3 at = hook_last_chest_ + JPH::Vec3(chest - hook_last_chest_) * mid;
-                    if (hook_line_blocked(at, anchor, probe)) {
-                        blocked = mid;
-                        from = at;
-                        edge = probe;
-                    } else {
-                        clear = mid;
-                    }
-                }
-            }
-            const JPH::Vec3 run(anchor - from);
-            const JPH::RVec3 point = JPH::RRayCast(from, run).GetPointOnRay(edge.mFraction);
-            const JPH::RVec3 bend_at = point + surface_normal(edge.mBodyID, edge.mSubShapeID2, point) * kHookWrapStandoffM;
+            const JPH::RVec3 bend_at = hook_wrap_point(chest, hook_last_chest_, anchor, {}, edge);
             const float laid = JPH::Vec3(anchor - bend_at).Length();
             // To her (a moving bite), the first bend is a sheave: the rope
             // runs on over it to her, none of it laid (attach_hook_line_to_bite).
@@ -1353,28 +1409,8 @@ void Simulation::PhysicsWorld::bend_hook_line_at_bite(JPH::BodyInterface &bodies
     }
     const JPH::RVec3 first = hook_bend_point(bodies, 0);
     if (hook_line_ != nullptr && hook_line_blocked(bite, first, hit, her)) {
-        // Where the run, swept from the bite's last place to this one, first
-        // met the steel: its edge.
-        JPH::RVec3 from = bite;
         JPH::RayCastResult edge = hit;
-        JPH::RayCastResult probe;
-        if (!hook_line_blocked(hook_last_bite_, first, probe, her)) {
-            float clear = 0.0F;
-            float blocked = 1.0F;
-            for (int step = 0; step < kHookWrapSearchSteps; ++step) {
-                const float mid = 0.5F * (clear + blocked);
-                const JPH::RVec3 at = hook_last_bite_ + JPH::Vec3(bite - hook_last_bite_) * mid;
-                if (hook_line_blocked(at, first, probe, her)) {
-                    blocked = mid;
-                    from = at;
-                    edge = probe;
-                } else {
-                    clear = mid;
-                }
-            }
-        }
-        const JPH::RVec3 point = JPH::RRayCast(from, JPH::Vec3(first - from)).GetPointOnRay(edge.mFraction);
-        const JPH::RVec3 bend_at = point + surface_normal(edge.mBodyID, edge.mSubShapeID2, point) * kHookWrapStandoffM;
+        const JPH::RVec3 bend_at = hook_wrap_point(bite, hook_last_bite_, first, her, edge);
         const float laid = JPH::Vec3(first - bend_at).Length();
         const float free = hook_line_->GetMaxLength() - laid;
         if (hook_bend_count_ >= kHookBendsMax || bodies.GetMotionType(edge.mBodyID) != JPH::EMotionType::Static) {
@@ -1405,10 +1441,17 @@ std::uint32_t Simulation::PhysicsWorld::hook_runs_blocked_for_test() const noexc
     const JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
     const JPH::BodyID her = hook_bite_moves_ ? hook_bite_target_ : JPH::BodyID();
     JPH::RayCastResult hit;
+    // The line as it lies, from the chest to the bite: each run cast toward
+    // the bend or bite it is fast to (what is within kHookWrapEndM of that
+    // end is the body it lies on there).
     const JPH::BodyID past = hook_bend_count_ == 0 ? her : JPH::BodyID();
     std::uint32_t blocked = hook_line_blocked(hook_chest(bodies), hook_anchor(bodies), hit, past) ? 1U : 0U;
-    if (hook_bite_moves_ && hook_bend_count_ > 0 &&
-        hook_line_blocked(hook_end(bodies), hook_bend_point(bodies, 0), hit, her)) {
+    for (std::uint32_t bend = hook_bend_count_; bend > 1; --bend) {
+        if (hook_line_blocked(hook_bend_point(bodies, bend - 1), hook_bend_point(bodies, bend - 2), hit)) {
+            blocked |= 4U;
+        }
+    }
+    if (hook_bend_count_ > 0 && hook_line_blocked(hook_bend_point(bodies, 0), hook_end(bodies), hit, her)) {
         blocked |= 2U;
     }
     return blocked;
