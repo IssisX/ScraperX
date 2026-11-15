@@ -1369,8 +1369,13 @@ void Simulation::PhysicsWorld::read_state() noexcept {
             state_.held_ankle = Vector3{held.GetX(), held.GetY(), held.GetZ()};
         }
         // The surface her fingers close round at the held ankle (J-088):
-        // his body's capsule, for the presentation's finger wrap and the
-        // probe's finger check. Cleared with the ankle when they let go.
+        // his ankle as its own small capsule, centred on the grip point
+        // (held_ankle), axis along his shin (the body's local Y in world).
+        // His whole-body capsule must NOT be exported here: the grip point
+        // sits 0.19 m inside it, so the wrap could never reach its surface
+        // (finger_wrap failed 34,552 checks, worst 0.347 m). Half height
+        // one radius, so the capsule stays on the drawn surface its radius
+        // was measured from. Cleared with the ankle when they let go.
         state_.held_ankle_shape = 0;
         state_.held_ankle_size = Vector3{};
         state_.held_ankle_centre = Vector3{};
@@ -1379,20 +1384,14 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         state_.held_ankle_rot_z = 0.0;
         state_.held_ankle_rot_w = 1.0;
         if (grip_ != nullptr) {
-            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
-            if (lock.Succeeded()) {
-                detail::LeafSurface surface;
-                if (detail::leaf_surface(lock.GetBody(), JPH::SubShapeID(), surface)) {
-                    state_.held_ankle_shape = surface.kind;
-                    state_.held_ankle_size =
-                        Vector3{surface.size.GetX(), surface.size.GetY(), surface.size.GetZ()};
-                    state_.held_ankle_centre = to_vector3(surface.centre);
-                    state_.held_ankle_rot_x = surface.rot.GetX();
-                    state_.held_ankle_rot_y = surface.rot.GetY();
-                    state_.held_ankle_rot_z = surface.rot.GetZ();
-                    state_.held_ankle_rot_w = surface.rot.GetW();
-                }
-            }
+            state_.held_ankle_shape = 2;
+            state_.held_ankle_size =
+                Vector3{kHeldAnkleRadiusM, kHeldAnkleRadiusM, 0.0};
+            state_.held_ankle_centre = state_.held_ankle;
+            state_.held_ankle_rot_x = rot.GetX();
+            state_.held_ankle_rot_y = rot.GetY();
+            state_.held_ankle_rot_z = rot.GetZ();
+            state_.held_ankle_rot_w = rot.GetW();
         }
         if (!hand2_id_.IsInvalid()) {
             const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);

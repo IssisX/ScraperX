@@ -1206,10 +1206,12 @@ struct Snapshot final {
     Vector3 matron_hand{};
     bool matron_hand_present = false;
     Vector3 held_ankle{};
-    // The surface her fingers close round at the held ankle (leaf_surface,
-    // J-088): his body's capsule, kind 2, size (radius, half height of the
-    // cylinder part, 0), centre and rot his body's world frame. Valid only
-    // while the grip holds him; the rip hand on his arm wraps the same body.
+    // The surface her fingers close round at the held ankle (J-088): his
+    // ankle as its own small capsule, kind 2, size (radius, half height of
+    // the cylinder part, 0) — radius kHeldAnkleRadiusM, measured from the
+    // drawn leg — centre the grip point, rot his body's world frame (local
+    // Y along his shin). Valid only while the grip holds him; the rip hand
+    // on his arm wraps the same body.
     std::uint8_t held_ankle_shape = 0;
     Vector3 held_ankle_size{};
     Vector3 held_ankle_centre{};

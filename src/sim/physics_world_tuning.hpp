@@ -381,6 +381,16 @@ constexpr double kMovingLedgeCenterZ = 12.5;
 // Player capsule: cylinder half-height 0.55 plus radius 0.35.
 constexpr float kPlayerRadius = 0.35F;
 constexpr float kPlayerHalfHeight = 0.9F;
+// The held ankle (J-088): his ankle as its own small capsule, not his
+// whole-body capsule. Radius MEASURED from the drawn leg — the player
+// rig's mesh cross-section at the grip point (trousers, 0.197 m above the
+// soles, where her hand closed: the probe's grip point sits 0.197 m above
+// the soles, 0.117 m above the ankle joint): semi-axes 0.048 x 0.054 m
+// (left) and 0.048 x 0.056 m (right), mean 0.051 m (climber_body.glb,
+// triangle-plane sections, 2026-11-14). Claude's mail 1a1dc7e5f56e56cd
+// (2026-11-14) ruled the measurement; his 0.05 m fallback (a booted
+// ankle) was not needed.
+constexpr float kHeldAnkleRadiusM = 0.051F;
 // Crouched (GDD 7.2): a 1.2 m capsule, same radius. The soles stay where they
 // are, so the centre drops by the difference in half-heights.
 constexpr float kPlayerCrouchHalfHeight = 0.6F;
