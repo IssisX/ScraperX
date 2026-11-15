@@ -971,6 +971,12 @@ public:
     // across 143's north edge, 23 m off).
     static constexpr float kPipeListenSeconds = 2.5F;
     static constexpr float kListenReach = 2.0F;
+    // Built steel across her way to a lead on her own floor (J-102): her
+    // feet's way round it is searched for a lead this near, from a floor a
+    // skid or a step over his (deck 2's barrier skid stands 0.45 m).
+    static constexpr float kRoundReachM = 12.0F;
+    static constexpr float kRoundDropM = 0.6F;
+    static constexpr float kRoundRestS = 1.0F;   // after a search that found no way round
     // The moving bodies near her a blow can come from: within this, at most
     // kMaxNear of the nearest.
     static constexpr float kNearM = 3.0F;
@@ -2115,6 +2121,8 @@ private:
     // Her width is swept, not sampled: a post thinner than the space between
     // two lines (the trip gantry's 0.1 m legs by her post) still stops her.
     [[nodiscard]] bool way_clear(float fx, float fz, float tx, float tz) const;
+    // J-102: the floor under a spot is built steel, not a moving cage's or lift's.
+    [[nodiscard]] bool on_built_floor(float x, float floor_y, float z) const;
     // way_clear, and steel under her feet all along, within a step of hers.
     [[nodiscard]] bool straight_to(float fx, float fz, float tx, float tz) const;
     // Her feet toward (wx, wz) at `speed`; `turn_moves` lets her vault and leap.
@@ -3021,6 +3029,7 @@ private:
     float clamber_refused_x_ = 0.0F, clamber_refused_z_ = 0.0F, clamber_refused_until_ = 0.0F;
     float sidestep_s_ = 0.0F;
     float sidestep_x_ = 0.0F, sidestep_z_ = 0.0F;
+    float round_rest_s_ = 0.0F;   // J-102: till her next search for a way round built steel
     struct Blocked {
         float x, z, s;
     };
