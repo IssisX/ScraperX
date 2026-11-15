@@ -1775,10 +1775,11 @@ public:
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
-    // J-076: the world tells her whether the player stands on a machine, so
+    // J-076: the world tells her whether a machine is carrying the player, so
     // the checkpoint freeze (below) reads a rider as up a machine, not on
-    // her deck.
-    void set_player_on_machine(const bool on_machine) noexcept { player_on_machine_ = on_machine; }
+    // her deck. A machine part that is merely floor (the bay leaf, parked
+    // flush with her deck) does not carry him.
+    void set_player_carried_by_machine(const bool carried) noexcept { player_carried_by_machine_ = carried; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
     // S1 measurement: the grab world reports both centres and the held
@@ -2725,7 +2726,7 @@ private:
     bool grip_was_on_ = false;
     bool player_braced_ = false;
     bool player_on_ladder_ = false;
-    bool player_on_machine_ = false;  // J-076: standing on a machine, not her deck
+    bool player_carried_by_machine_ = false;  // J-076: carried by a machine, not on her deck
     float thrash_ = 0.0F;
     float pull_n_ = kHandReachPullN;
     float arm_reach_m_ = kArmReachM;

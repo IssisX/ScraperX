@@ -90,12 +90,14 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
              ((m.stage_ != Matron::Stage::Pest || player_floor_y > level_floor) && Matron::pipe_reaches(level_floor) &&
               Matron::pipe_reaches(player_floor_y) &&
               std::abs(std::abs(player_floor_y - level_floor) - Matron::kStackPitch) < 0.1F));
-        // J-076: a rider in a machine is up a machine, not on her deck. The
-        // cage's top can sit inside her level's band (she hunts up there),
-        // and the bare Y test then froze the checkpoint mid-ride, so the
-        // restore put the rider back in a cage that still had to climb.
+        // J-076: a rider a machine is carrying is up a machine, not on her
+        // deck. The cage's top can sit inside her level's band (she hunts up
+        // there), and the bare Y test then froze the checkpoint mid-ride, so
+        // the restore put the rider back in a cage that still had to climb.
+        // A machine part that is merely floor (the bay leaf, parked flush
+        // with her deck) is her deck: the world reports it as not carrying.
         m.checkpoint_freeze_ =
-            (on_deck && !m.player_on_machine_) || player_climb >= 0 || by_her_pipe;
+            (on_deck && !m.player_carried_by_machine_) || player_climb >= 0 || by_her_pipe;
     }
     if (m.dead_) {
         return;
