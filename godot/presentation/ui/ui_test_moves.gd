@@ -1146,6 +1146,79 @@ func _touch_hook_rope() -> bool:
 	_detail = "lip=%s hung_y=%.2f rope_m=%.2f" % [str(lip), hung_y, rope]
 	return true
 
+# J-090 (#408): his hook in her. On the 220 ring the hook taken off its rack
+# with ACTION, she is put standing on the band east of him (her hands held
+# off him: her grab on the line is J-001's), and the view laid on her middle.
+# HOOK fires the hook, a body in flight: it must bite HER body, near her,
+# with no target lock. Held, the reel stalls on her weight; her feet keep
+# the floor and the line drags him across the band toward her, the line into
+# her never past the tines' hold, the bite never torn.
+func _touch_hook_her() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var device := InputRouter.Device.TOUCH
+	if not await _walk_to(device, Vector2(-21.6, -127.6), 0.3, 14.0, true):
+		return _fail("never reached the hook's rack (at %s)" % str(_position()))
+	if _ctx()["action"]["id"] != &"hook_take":
+		return _fail("ACTION offered '%s' at the rack, expected TAKE HOOK" % str(_ctx()["action"]["id"]))
+	_press(&"action", 0)
+	var taken: bool = await _wait_until(func() -> bool: return bool(_native().get_hook_state()["has_hook"]), 0.5)
+	if not taken:
+		return _fail("TAKE HOOK did not take the hook")
+	_native().debug_place_matron(Vector3(-12.0, 220.25, -128.7))
+	_native().debug_hold_matron_hands(60.0)
+	# Her face turned on him, so she sees him watching her and holds still
+	# under his gaze: her stalk. (The native slice turns her to yaw 0, which
+	# gives her the stalk there; here yaw 0 left her unseeing and hunting.)
+	_native().debug_face_matron(atan2(_position().x - (-12.0), _position().z - (-128.7)))
+	var look_at_her := func() -> void:
+		var her: Vector3 = _native().get_matron_state()["position"]
+		var to: Vector3 = her + Vector3(0.0, 0.3, 0.0) - _main._camera.global_position
+		_main._yaw = atan2(-to.x, -to.z)
+		_main._pitch = atan2(to.y, Vector2(to.x, to.z).length())
+	look_at_her.call()
+	await _seconds(0.3)
+	look_at_her.call()
+	await _frames(2)
+	var her0: Vector3 = _native().get_matron_state()["position"]
+	_tap(1, _center(&"hook"))
+	var bit: bool = await _wait_until(func() -> bool: return int(_native().get_hook_state()["state"]) == 2, 1.5)
+	var hook: Dictionary = _native().get_hook_state()
+	if not bit or not bool(hook["in_matron"]):
+		return _fail("HOOK fired at her never bit her (state %d, in her %s)" % [int(hook["state"]), str(hook["in_matron"])])
+	var bite: Vector3 = hook["position"]
+	if bite.distance_to(_native().get_matron_state()["position"]) > 1.6:
+		return _fail("the hook bit at %s, not on her body at %s" % [str(bite), str(_native().get_matron_state()["position"])])
+	if _main._touch.button_label(&"hook") != "REEL":
+		return _fail("HOOK read '%s' once bitten into her, expected REEL" % _main._touch.button_label(&"hook"))
+	var me0 := _position()
+	var tears := int(hook["tears"])
+	var peak := 0.0
+	_touch(1, _center(&"hook"), true)
+	var reeled := 0.0
+	while reeled < 3.0:
+		look_at_her.call()
+		await get_tree().process_frame
+		reeled += get_process_delta_time()
+		peak = maxf(peak, float(_native().get_hook_state()["tension_n"]))
+	await _pose("hook_her")
+	_touch(1, _center(&"hook"), false)
+	hook = _native().get_hook_state()
+	var her1: Vector3 = _native().get_matron_state()["position"]
+	var dragged := Vector2(me0.x - her0.x, me0.z - her0.z).length() - \
+		Vector2(_position().x - her1.x, _position().z - her1.z).length()
+	var her_moved := Vector2(her1.x - her0.x, her1.z - her0.z).length()
+	_detail = "bite=%s dragged_m=%.2f her_moved_m=%.2f peak_n=%.0f watched=%s" % [str(bite), dragged, her_moved, peak,
+		str(_native().get_matron_state()["watched"])]
+	if not bool(hook["in_matron"]) or int(hook["tears"]) != tears:
+		return _fail("the bite in her did not hold the reel (%s)" % _detail)
+	if peak > 6006.0:
+		return _fail("the line into her passed more than the tines' 6000 N hold (%s)" % _detail)
+	if her_moved > 0.5:
+		return _fail("planted, she was hauled off her floor by his reel (%s)" % _detail)
+	if dragged < 0.2:
+		return _fail("the stalled reel never dragged him toward her (%s)" % _detail)
+	return true
+
 # The swing's launch (sim kSwingLaunchMps): across the monkey bars hand over
 # hand, and on the last bar, rising up the front of its swing, JUMP OFF
 # throws the body on as the hands open (touch_monkey_bars lets the same

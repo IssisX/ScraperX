@@ -145,6 +145,15 @@ public:
     // with, so a death-vs-relaunch comparison clears it first.
     void clear_corpses_for_test() noexcept;
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
+    // Tests only (J-090): the runs of the hook's line that leave the steel,
+    // the chest's to its nearest bend (or the bite) and, to her over bends,
+    // the bite's to the first, that pass through a body the rope catches on:
+    // 1 the chest's, 2 the bite's, 4 one between two bends.
+    [[nodiscard]] std::uint32_t hook_runs_blocked_for_test() const noexcept;
+    // Tests only (J-090): the bends made and taken off at her end of the line
+    // (bend_hook_line_at_bite), also counted in the line's wraps and unwraps.
+    [[nodiscard]] std::uint64_t hook_bite_wraps_for_test() const noexcept { return hook_bite_wrap_count_; }
+    [[nodiscard]] std::uint64_t hook_bite_unwraps_for_test() const noexcept { return hook_bite_unwrap_count_; }
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
     // pin through its lifting eye over `centre`, and the pin pulled (J-100).
@@ -499,13 +508,33 @@ private:
 
     void attach_hook_line(JPH::BodyInterface &bodies, JPH::BodyID anchor, JPH::RVec3 at, float max_length) noexcept;
 
+    // J-090: the line to a bite that moves (her body): straight to it, or,
+    // bent, over the nearest bend and the first as two sheaves, the rope
+    // between them laid; `max_length` is the two runs together.
+    void attach_hook_line_to_bite(JPH::BodyInterface &bodies, float max_length) noexcept;
+
+    // The rope the line's limit holds now: the chest to the nearest bend (or
+    // the bite), and, to a moving bite over bends, the first bend to the bite.
+    [[nodiscard]] float hook_line_lies(const JPH::BodyInterface &bodies) const noexcept;
+
     [[nodiscard]] JPH::RVec3 hook_bend_point(const JPH::BodyInterface &bodies, std::uint32_t bend) const noexcept;
 
     [[nodiscard]] JPH::RVec3 hook_anchor(const JPH::BodyInterface &bodies) const noexcept;
 
-    [[nodiscard]] bool hook_line_blocked(JPH::RVec3 from, JPH::RVec3 to, JPH::RayCastResult &hit) const noexcept;
+    // `also`: one more body the line passes (her body, for the run from a
+    // bite in her).
+    [[nodiscard]] bool hook_line_blocked(JPH::RVec3 from, JPH::RVec3 to, JPH::RayCastResult &hit,
+                                         JPH::BodyID also = {}) const noexcept;
 
+    // The bend a run fast at `to` takes on the body it now crosses, its free
+    // end come from `last` to `from` (bend_hook_line, bend_hook_line_at_bite).
+    [[nodiscard]] JPH::RVec3 hook_wrap_point(JPH::RVec3 from, JPH::RVec3 last, JPH::RVec3 to, JPH::BodyID also,
+                                             JPH::RayCastResult &edge) const noexcept;
     void bend_hook_line(JPH::BodyInterface &bodies) noexcept;
+    // J-090: the same at the line's other end, to a bite that moves (her
+    // body): off the bend nearest her if the run to her swung back round it,
+    // onto an edge the run from her bite to its first bend now crosses.
+    void bend_hook_line_at_bite(JPH::BodyInterface &bodies) noexcept;
     // The bite gives (kHookHoldForceN): the hook comes loose and flies again.
     void tear_hook(JPH::BodyInterface &bodies) noexcept;
 
@@ -1335,6 +1364,12 @@ private:
     kit::BodyIndex hook_gun_{};
     JPH::BodyID hook_bite_target_;
     JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
+    // J-090: bitten into her body, the bite moves with her: the line runs to
+    // her over its bends as sheaves (attach_hook_line_to_bite).
+    bool hook_bite_moves_ = false;
+    std::uint64_t hook_matron_bite_count_ = 0;
+    // Ticks the line into her ran at the tines' hold, its pull limit.
+    std::uint64_t hook_held_ticks_ = 0;
     JPH::Ref<kit::RopeConstraint> hook_line_;
     // The J-100 test slab (hang_slab_for_test): its body and its pin.
     JPH::BodyID hung_slab_;
@@ -1351,6 +1386,9 @@ private:
     std::array<HookBend, kHookBendsMax> hook_bends_{};
     std::uint32_t hook_bend_count_ = 0;
     JPH::RVec3 hook_last_chest_ = JPH::RVec3::sZero();
+    JPH::RVec3 hook_last_bite_ = JPH::RVec3::sZero();   // J-090: the bite in her, a tick ago
+    std::uint64_t hook_bite_wrap_count_ = 0;     // J-090: bends made at her end of the line
+    std::uint64_t hook_bite_unwrap_count_ = 0;   // and taken off there
     std::uint64_t hook_wrap_count_ = 0;
     std::uint64_t hook_unwrap_count_ = 0;
     std::uint64_t hook_bends_refused_ = 0;

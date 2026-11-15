@@ -1040,6 +1040,15 @@ struct Snapshot final {
     std::uint64_t hook_bends_refused = 0;
     // Bites torn or slipped off their member by a load past the tines' hold.
     std::uint64_t hook_tear_count = 0;
+    // J-090: the hook bitten into the Matron's body (hook_position moves with
+    // her), and how many times it has bitten her.
+    bool hook_in_matron = false;
+    std::uint64_t hook_matron_bite_count = 0;
+    // Ticks the reel has turned at its whole kHookReelForceN: stalled.
+    std::uint64_t hook_stall_ticks = 0;
+    // Ticks the line into her ran at the tines' hold (kHookHoldForceN): a
+    // jolt asked more, and the line passed no more than the hold.
+    std::uint64_t hook_held_ticks = 0;
     // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
     std::array<WorkerView, 14> workers{};
@@ -1916,6 +1925,15 @@ public:
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
+    // Tests only (never bound to the bridge, J-090): the runs of the hook's
+    // line that leave the steel (the chest's, and the bite's in her) that
+    // pass through steel (1 the chest's, 2 the bite's, 4 one between two
+    // bends). A rope that catches
+    // on what it crosses has none.
+    [[nodiscard]] std::uint32_t debug_hook_runs_blocked() const noexcept;
+    // Tests only (J-090): the bends made at her end of the line, and taken off there.
+    [[nodiscard]] std::uint64_t debug_hook_bite_wraps() const noexcept;
+    [[nodiscard]] std::uint64_t debug_hook_bite_unwraps() const noexcept;
     // Tests only, never bound to the bridge. Optional placement holds the NPC
     // fixture between ticks; a null pointer only reads the last physical step.
     struct MatronFixtureSample {

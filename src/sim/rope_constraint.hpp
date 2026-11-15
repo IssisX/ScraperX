@@ -25,6 +25,8 @@
 #include <Jolt/Physics/Constraints/PulleyConstraint.h>
 #include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 
+#include <limits>
+
 namespace scraperx::sim::kit {
 
 class RopeConstraint final : public JPH::TwoBodyConstraint {
@@ -76,6 +78,17 @@ public:
     // The impulse along the rope in the last step, N s: negative pulling,
     // positive pushing.
     [[nodiscard]] float GetTotalLambdaPosition() const noexcept { return total_lambda_; }
+    // A pull limit (J-090: the hook's line into the Matron, at the tines'
+    // hold): the most the rope and its winch together pull in one step, N s.
+    // None by default, and a rope without one is solved exactly as before.
+    // A rope held at its limit runs out: in that step the position solver
+    // does not draw it back to its length.
+    void SetPullLimit(const float impulse) noexcept { pull_limit_ = impulse; }
+    [[nodiscard]] bool AtPullLimit() const noexcept { return at_pull_limit_; }
+    // With a pull limit: the pull the rope wanted in the last step, N s
+    // (0 or more): what it passed, or, held at its limit, what stopping the
+    // ends would have taken.
+    [[nodiscard]] float GetPullDemand() const noexcept { return pull_demand_; }
 
 private:
     enum class Side : unsigned char { Pull, Push, Rod };
@@ -117,6 +130,9 @@ private:
     float motor_force_ = 0.0F;
     float motor_impulse_max_ = 0.0F;
     float motor_lambda_ = 0.0F;
+    float pull_limit_ = std::numeric_limits<float>::max();
+    bool at_pull_limit_ = false;
+    float pull_demand_ = 0.0F;
 };
 
 } // namespace scraperx::sim::kit

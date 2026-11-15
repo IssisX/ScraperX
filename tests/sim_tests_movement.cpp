@@ -739,12 +739,14 @@ void run_hook() {
             return true;
         };
         int crossings = 0;
+        int blocked_ticks = 0;   // ticks any run of the line passed through steel (the world's own query)
         std::uint32_t most_bends = 0;
         double worst_over = 0.0;
         const auto watch = [&](const Snapshot &n) {
             for (std::uint32_t i = 1; i < n.hook_line_point_count; ++i) {
                 crossings += crosses_post(n.hook_line_points[i - 1], n.hook_line_points[i]) ? 1 : 0;
             }
+            blocked_ticks += w.debug_hook_runs_blocked() != 0U ? 1 : 0;
             most_bends = std::max(most_bends, n.hook_bend_count);
             worst_over = std::max(worst_over, line_lies(n) - n.hook_line_length);
             return false;
@@ -770,12 +772,13 @@ void run_hook() {
         require(back.hook_bend_count == 0 && back.hook_unwrap_count >= 1,
                 "walked back, the line must come off the post");
         require(crossings == 0, "no stretch of the line may pass through the post");
+        require(blocked_ticks == 0, "no run of the line may pass through any steel, the world's own query");
         require(worst_over < 0.02, "the line as it lies must never be longer than the rope out");
         require(std::abs(back.hook_line_length - rope) < 0.02,
                 "round the bend and off it again, no rope may be made or lost");
         std::cout << "PASS scraperx_sim hook rope: bends=" << most_bends << " wraps=" << wrapped.hook_wrap_count
                   << " unwraps=" << back.hook_unwrap_count << " crossings=" << crossings
-                  << " worst_over_m=" << worst_over << "\n";
+                  << " worst_over_m=" << worst_over << " blocked_ticks=" << blocked_ticks << "\n";
     }
     // The bite is not a weld (kHookHoldForceN). From the 220 ring's rack, bite
     // a member over the well, then walk in under it (the rope stays as long as

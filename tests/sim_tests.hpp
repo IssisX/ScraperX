@@ -825,6 +825,7 @@ void run_forklift_strain();
 void run_forklift_matron();
 void run_yard_crane();
 void run_machine_hearing();
+void run_machine_draw();
 void run_yard_crane_magnet();
 void run_yard_crane_spreader();
 void run_wet_isolation();
@@ -981,6 +982,7 @@ void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();
 void run_matron_jab();
+void run_matron_hook();   // J-090: his hook in her, the rope decides (sim_tests_matron_hook.cpp)
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_hung_load();
