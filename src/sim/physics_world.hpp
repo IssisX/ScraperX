@@ -7,6 +7,7 @@
 
 #include "sim/physics_world_support.hpp"
 #include "sim/fabricated.hpp"
+#include "sim/flex_plank.hpp"
 #include "sim/matron_traversal.hpp"
 #include "sim/slab_cell.hpp"
 
@@ -155,6 +156,10 @@ public:
     [[nodiscard]] std::uint64_t hook_bite_wraps_for_test() const noexcept { return hook_bite_wrap_count_; }
     [[nodiscard]] std::uint64_t hook_bite_unwraps_for_test() const noexcept { return hook_bite_unwrap_count_; }
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
+    // J-096 slice 1, tests and the eye check only: a bending plank built
+    // after every body of the world (FlexPlank), its index; -1 when full.
+    int add_flex_plank_for_test(const FlexPlank::Spec &spec);
+    [[nodiscard]] const std::vector<std::unique_ptr<FlexPlank>> &flex_planks() const noexcept { return flex_planks_; }
     // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
     // pin through its lifting eye over `centre`, and the pin pulled (J-100).
     void hang_slab_for_test(JPH::RVec3 centre);
@@ -889,6 +894,8 @@ public:
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;
+    // J-096: bending planks (tests and the eye check only; none in the world as built).
+    std::vector<std::unique_ptr<FlexPlank>> flex_planks_;
     // The bodies deaths left (Corpses); the latest death's place and speed.
     std::unique_ptr<Corpses> corpses_;
     JPH::RVec3 death_point_ = JPH::RVec3::sZero();
