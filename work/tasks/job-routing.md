@@ -34,7 +34,7 @@ Data: 49 Muse jobs, 10-29 to 11-12. A failed try is a red proof of its own or a 
 - Clean for Muse: CI and tooling 6; 0.3. One-system presentation 7; 0.6; 14%.
 
 ## Re-check a Muse job while it runs
-Move it to a helper (mail Muse "taking it") the moment one of these turns true:
+First read all its branches and PRs: one merged today means it is moving (11-14: J-014 was taken on an idle old branch). Move it to a helper (mail Muse "taking it") the moment one of these turns true:
 - a red shows in a test group or branch the change does not reach (19 jobs: 3.9; 84%);
 - the cause turns out to cross systems, or Q2 or Q3 turns yes;
 - Muse asks "stuck", "ruling needed" or "which is it" twice on the same failure;

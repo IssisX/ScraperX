@@ -69,7 +69,7 @@ Notes: before a hand merge, check the PR's base is `ScraperX-Claude` (#171 merge
 `git ls-remote` (GitHub can miss a push, #235). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its
 failed jobs. Subscribe only to PRs you merge yourself (CLAUDE.md): the inbox brings the proofs and reviews of Claude's
 own PRs, and opening a PR subscribes you, so unsubscribe at once. Before `@codex review` or calling a PR clean, read
-its open review threads (`get_review_comments`), not only the newest review. A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
+its open review threads (`get_review_comments`), not only the newest review. A helper that edits code runs in a worktree and never subscribes to a PR. Its pass gate includes the branch's current CI FAIL lines rerun locally, and a brief's facts are measured on the branch it builds, not trunk (11-14, J-001). Every helper brief ends: "Report to me in 10
 lines or fewer (branch, sha, PASS/FAIL, what is left); put the numbers and details on the job's issue. Run tests in the foreground; never end a turn waiting on a
 background job." The
 Claude API does reviews and the eye only (the API coder is off); one review per PR.

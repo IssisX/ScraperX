@@ -13,6 +13,8 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-15 | *"Yes to all"*: to three picks put to him: in the hold's deck switch she stands him up and walks him to her spot; his steps carry one deck to her ears, softened by distance and steel; the climb above 340 m gets stage designs for him to pick | rules 33 and 29 (the designs: J-082, #400) |
+| 11-14 | *"Keep muse busy and you're supposed to be doing the hard things"*, then *"I mean, real work obvious"*: Muse's queue is refilled with real game work, not tests-only or paperwork jobs, and Claude's helpers take the hard ones | rule 65 |
 | 11-14 | *"Can you remember from now on to not do it the expensive way? You have another way to use helpers thats cheaper with same quality. We keep doing this over and over. PLEASE FUCKING REMEMBER THIS FROM NOW ON"* (second time; 11-13: *"You're doing that received message from sub agent thing that's expensive again"*): helpers run in the foreground, parallel ones in one message, so no report arrives as a separate wake. | CLAUDE.md, Claude sessions |
 | 11-14 | *"I did not ever want to tell you to stop it or suggest stopping it - you keep doing this I will talk about something or ask something and you take it as a fucking command"*: a remark or question is never turned into an order or an unasked choice. | rule 10 |
 | 11-14 | *"6 hours bro? Why do you extend shit so far out all the time? ... you're obsessed with me 'just fucking waiting longer'"* and *"So you want to wait 24 hours until you say the system works?"*: every wait or alarm matches the measured rhythm; the done test passes in hours. | rule 65; integrator-hourly |
