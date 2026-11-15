@@ -7,7 +7,8 @@ read(sw, model, reads, also=()) -> machine.Mail
 Fills: posts (machine.posts over the comments read: bridge posts from team logins only), notices
 (machine.sent_notices: the switch's own plan notices), missing (job -> a commit its owner's newest mail names
 that GitHub does not have: machine.named_shas, each sha checked first against the branch and PR heads in `reads`,
-then with GET repos/<repo>/commits/<sha>, where 404 or 422 means missing; at most SHA_READS such GETs a pass).
+then with GET repos/<repo>/commits/<sha>, where 404 or 422 means missing; at most SHA_READS such GETs a pass, and a
+sha GitHub was once seen to have is kept in the sweep state, SHA_KEPT of them, and never read again: #350).
 Every listing is bounded and the bound is printed when it is reached; an unread mail is never read as "no mail".
 
 What is read, and why there. The bridge files a mail on the open issue its subject names (#N), else on the job
@@ -41,6 +42,8 @@ import rules
 from ghapi import GitHubError, RateLimited
 
 SHA_READS = 10        # GET commits/<sha> a pass; a sha past it is left unchecked (never counted missing) and said
+SHA_KEPT = 500        # #350: named shas GitHub was seen to have, kept in the sweep state ("mail_commits"), newest last
+HEX = re.compile(r"^[0-9a-f]{7,40}$")
 MAIL_THREADS = 120    # job issue threads read a pass (work/plan.md: 80 lines on 11-12); past it: Mail.unread
 RECENT = dt.timedelta(hours=24)   # switch.INBOX_RUNS_WINDOW: the same comments_since listing the inbox reads
 
@@ -123,10 +126,19 @@ def _missing(sw, model, reads, mail: machine.Mail) -> dict[str, str]:
     known |= set(reads.get("inactive") or ()) | set(reads.get("head_at") or {})
     known.discard("")
     checked = sw.__dict__.setdefault("_mail_commits", {})   # sha -> True / False / None, once a run
+    # #350: a commit GitHub has stays had, so a yes is kept in the sweep state across runs (a ring of SHA_KEPT): each
+    # pass reads only shas it has never seen on GitHub. Only a yes: a 404 is read again, Muse can push it later.
+    state = sw.gh.state if isinstance(getattr(sw.gh, "state", None), dict) else None
+    ring = (state or {}).get("mail_commits")
+    kept = dict.fromkeys(s for s in (ring if isinstance(ring, list) else []) if isinstance(s, str) and HEX.match(s))
     left, unchecked, missing = SHA_READS, [], {}
     for job in sorted((j for j in named if j in by_job), key=lambda j: (named[j][0].at, named[j][0].id), reverse=True):
         for sha in named[job][1]:
             if any(k.startswith(sha) for k in known):
+                continue
+            if sha in kept:   # seen on GitHub before: no read, and it moves to the ring's new end
+                kept.pop(sha)
+                kept[sha] = None
                 continue
             if sha not in checked:
                 if left <= 0:
@@ -134,9 +146,13 @@ def _missing(sw, model, reads, mail: machine.Mail) -> dict[str, str]:
                     continue
                 left -= 1
                 checked[sha] = _on_github(sw, sha)
+                if checked[sha] is True:
+                    kept[sha] = None
             if checked[sha] is False:
                 missing[job] = sha
                 break
+    if state is not None:
+        state["mail_commits"] = list(kept)[-SHA_KEPT:]
     if unchecked:
         sw.out(f"{NOTE}{len(unchecked)} named commit(s) past the {SHA_READS}-read bound not checked this pass, none "
                f"counted missing: {', '.join(unchecked[:6])}")

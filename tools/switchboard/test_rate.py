@@ -2,7 +2,7 @@
 
 (a) conditional requests: an ETag kept between runs, a 304 answered from the cache; (b) a rate floor: only the
 merge path runs, never a failed run; (c) a rate-limited call is tried twice with jitter, then left for the next
-sweep; (d) the reconciler's own reads are skipped under the floor; and one PR's error is not an outage.
+sweep; (d) one PR's error is not an outage. (The ledger and reconciler, once skipped under the floor, are deleted.)
 Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'. No network: gh is a fake.
 """
 
@@ -174,39 +174,34 @@ NOW = dt.datetime(2026, 11, 9, 18, 0, tzinfo=dt.timezone.utc)
 
 class Sweep(unittest.TestCase):
     def run_sweep(self, sw, **kw):
-        with tempfile.TemporaryDirectory() as d, mock.patch("ledger.sweep") as led, \
-                mock.patch("reconciler.sweep") as rec:
+        with tempfile.TemporaryDirectory() as d:
             summary = os.path.join(d, "summary.md")
             code = switch.run_sweep(sw, args(**kw), NOW, "", summary)
             text = pathlib.Path(summary).read_text(encoding="utf-8") if os.path.exists(summary) else ""
-        return code, text, led, rec
+        return code, text
 
     def test_under_the_floor_only_the_merge_path_runs_and_the_run_passes(self):
         sw = fake_switch(switch.rate_floor(1000) - 1)
-        code, text, led, rec = self.run_sweep(sw)
+        code, text = self.run_sweep(sw)
         self.assertEqual(code, 0)
         self.assertEqual(sw.steer_pr.call_count, 2)   # the merge path, for every PR
         self.assertTrue(sw.merge_only)                # steer_pr asks no reviews
         for skipped in (sw.auto_open_prs, sw.inbox, sw.muse, sw.pipe_health, sw.sweep_owner_labels,
                         sw.close_superseded, sw.watch_sessions, sw.ask_pr):
             skipped.assert_not_called()
-        led.assert_not_called()
-        rec.assert_not_called()   # (d) the reconciler's own reads wait too
         self.assertIn("rate floor", text)
 
     def test_above_the_floor_everything_runs(self):
         sw = fake_switch(switch.rate_floor(1000) + 1)
-        code, text, led, rec = self.run_sweep(sw)
+        code, text = self.run_sweep(sw)
         self.assertEqual(code, 0)
         self.assertFalse(sw.merge_only)
         sw.inbox.assert_called_once()
-        led.assert_called_once()
-        rec.assert_called_once()
         self.assertNotIn("rate floor", text)
 
     def test_the_ask_part_waits_under_the_floor(self):
         sw = fake_switch(10)
-        code, text, _, _ = self.run_sweep(sw, part="ask")
+        code, text = self.run_sweep(sw, part="ask")
         self.assertEqual(code, 0)
         sw.ask_pr.assert_not_called()
         sw.watch_sessions.assert_not_called()
@@ -215,7 +210,7 @@ class Sweep(unittest.TestCase):
     def test_a_rate_limited_pr_is_left_for_the_next_sweep_not_an_error(self):
         err = ghapi.RateLimited("GET", "repos/x/pulls/2", "API rate limit exceeded (HTTP 403)", 403)
         sw = fake_switch(4000, fail={2: err})
-        code, text, _, _ = self.run_sweep(sw)
+        code, text = self.run_sweep(sw)
         self.assertEqual(code, 0)
         self.assertIn("left for the next sweep: #2", text)
 
@@ -229,12 +224,11 @@ class Sweep(unittest.TestCase):
         # run 42663592988: one failed write to #357 failed the whole run, so the watchdog read it as down
         sw = fake_switch(4000, prs=(355, 357), fail={357: ghapi.GitHubError("PUT", "pulls/357/merge",
                                                                               "unexpected end of JSON input")})
-        code, text, led, _ = self.run_sweep(sw)
+        code, text = self.run_sweep(sw)
         self.assertEqual(code, 0)
         self.assertIn("Item errors", text)
         self.assertIn("#357", text)
         self.assertTrue(any(line.startswith("ERROR       #357") for line in sw.lines))
-        led.assert_called_once()
 
     def test_every_pr_failing_is_a_sweep_that_did_not_finish(self):
         boom = ghapi.GitHubError("GET", "x", "HTTP 502")

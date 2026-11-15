@@ -959,6 +959,7 @@ void run_ammo();   // J-042: her ammo, your ammo (sim_tests_ammo.cpp)
 void run_matron_capacity(); // J-044b H.4: the capacity test, five falsifiers, no motor code (sim_tests_matron_capacity.cpp)
 void run_strike();
 void run_matron_damage();
+void run_matron_injury();  // J-059 #307: per-region injury feed (sim_tests_matron_injury.cpp)
 void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();
@@ -1017,6 +1018,9 @@ void run_step2_movement();
 void run_twin();
 void run_twin_geometry();
 void run_twin_balconies();
+void run_twin_pitch();
+void run_twin_pitch_probe();
+void run_twin_pitch_probe_pump();
 void run_matron_remaining();
 
 void run_matron_player_independence();

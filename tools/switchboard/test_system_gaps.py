@@ -1,35 +1,28 @@
-"""The collaboration holes closed on 11-13 (claude/integrate-system-gaps), one class each:
+"""The collaboration holes closed on 11-13, one class each (03_EXECUTION/SYSTEM_PLAN.md item 3, lifted from #502):
 
-RedTrunk     trunk's full proof red pages its owners at once and stays on the board until a green full proof (J-129's
+RedTrunk     trunk's full proof red pages its owners at once, once per red streak, until a green full proof (J-129's
              doubled order key 1100 sat red about a day, hidden by notes-only pushes whose runs skip the build).
-AskLate      an ask to Claude still open past 1 h reaches its inbox again, once.
-Waiting      a job whose owner's ask is open shows "waiting on <Name>'s answer" on the board and as `state:waiting`.
-Notices      Grok and Builder are told their plan order by a comment their runs read, and reply with the receipt;
-             every notice to Grok Bot opens `To Builder:` (it never read the `To PE:` the reconciler sent on #350).
+Merged       a merge the switch makes is one MERGED inbox line (11-14: #555 and #396 were found only by hand).
+Held         a job held in the plan gets no idle nag (QUIET, FIX-STUCK, RED-STUCK); its new red or FIX still shows.
+Take         a Muse job red twice on the same failure is Claude's: Muse is mailed once, the integrator told until the
+             plan says claude (11-14: J-100 and J-014 sat in Muse's hands, missed).
 Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'
 No network, no clock, no files beyond a temporary checkout: GitHub and the time are given.
 """
 
 from __future__ import annotations
 
-import datetime as dt
-import re
 import pathlib
 import sys
+import tempfile
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.append(str(HERE.parent / "board"))   # after this dir: tools/board has a plan.py too
 
-import asks  # noqa: E402
-import ledger as L  # noqa: E402
-import machine as M  # noqa: E402
-import plan  # noqa: E402
 import rules  # noqa: E402
 import switch  # noqa: E402
 import test_inbox as ti  # noqa: E402
-import test_plan_sweep as tps  # noqa: E402
 
 NOW = ti.NOW
 TRUNK = rules.TRUNK
@@ -64,13 +57,6 @@ class TrunkGH(ti.FakeGH):
         return super().route(path)
 
 
-def roster() -> L.Roster:
-    return L.Roster({"agents": {"claude": {"names": ["Claude"], "branch_prefixes": ["claude/"]},
-                                "muse": {"names": ["Muse", "FB"], "branch_prefixes": ["muse/", "fb-bot/"]},
-                                "grok_bot": {"names": ["PE", "Builder"], "address": "Builder",
-                                             "branch_prefixes": ["pe/", "builder/"]}}})
-
-
 class RedTrunk(unittest.TestCase):
     def gh(self, runs, jobs, state=None):
         gh = TrunkGH(runs=runs, jobs=jobs, open_issues=[340],
@@ -87,6 +73,9 @@ class RedTrunk(unittest.TestCase):
         self.assertEqual(number, switch.INBOX_PR)
         self.assertIn("- RED-TRUNK trunk's full proof is red on native-tests", body)
         self.assertIn("the merge of #490 (`fb-bot/integrate-j129-objective-core`)", body)
+        # the plan's words: the owner fixes; no green fix head in 60 min, a helper reverts that merge; no freeze
+        self.assertIn("owner Muse. Muse fixes it; no green fix head in 60 min, a helper reverts it "
+                      "(`git revert -m 1 bbbbbbbb`, its own PR). No merge freeze", body)
         kept = gh.state["trunk_proof"]
         self.assertEqual((kept["state"][:3], kept["first_red"], kept["pr"]), ("red", BROKE, 490))
         # the owner of the commit that broke it: Muse's PR, so Muse is mailed too (comment + wake:muse on the board)
@@ -129,232 +118,256 @@ class RedTrunk(unittest.TestCase):
         (it,) = ti.make(gh).trunk_items(gh.runs, frozenset())
         self.assertEqual((it.kind, it.dest, it.head), ("RED-TRUNK", "both", BROKE))
 
+    def test_a_red_run_still_going_when_newer_notes_only_runs_finish_is_read_once_it_ends(self):
+        # 11-14, run 43595346281: the full proof on the merge of #547 was still running when notes-only pushes after
+        # it finished; that sweep marked them judged past its created time, so its red end never fired RED-TRUNK
+        gh = self.gh([ti.run(40, TRUNK, FIXED, 3, conclusion="success"),
+                      ti.run(41, TRUNK, BROKE, 1, conclusion=None, status="in_progress"),
+                      ti.run(42, TRUNK, NOTES, 0.5, conclusion="success"),
+                      ti.run(43, TRUNK, "f" * 40, 0.3, conclusion="success")],
+                     {40: BUILT_GREEN, 42: SKIPPED, 43: SKIPPED})
+        self.assertEqual(ti.make(gh).trunk_items(gh.runs, frozenset()), [])   # sweep 1: green so far, 41 running
+        self.assertEqual(gh.state["trunk_proof"]["state"], "green")
+        self.assertLess(gh.state["trunk_proof"]["checked"], gh.runs[1]["created_at"])
+        gh.runs[1].update(status="completed", conclusion="failure")           # sweep 2: it ended red
+        gh.jobs[41] = BUILT_RED
+        (it,) = ti.later(gh, 25).trunk_items(gh.runs, frozenset())
+        self.assertEqual((it.kind, it.head), ("RED-TRUNK", BROKE))
+        self.assertIn("red on native-tests", it.line)
+        self.assertEqual(gh.state["trunk_proof"]["checked"], gh.runs[3]["created_at"])   # nothing unfinished: judged
+
+    def test_more_skip_the_build_runs_than_one_sweep_reads_are_walked_past_to_the_red_run(self):
+        # 11-14: 8 finished notes-only runs above a finished red built run, with 6 reads a sweep, read the same newest
+        # 6 every sweep and never reached the red one; a run judged skip-the-build is remembered and never read again
+        notes = [ti.run(50 + k, TRUNK, f"{k:x}" * 40, 1 - 0.1 * k, conclusion="success") for k in range(8)]
+        gh = self.gh([ti.run(41, TRUNK, BROKE, 2)] + notes, {41: BUILT_RED, **{r["id"]: SKIPPED for r in notes}})
+        self.assertGreater(len(notes), switch.TRUNK_RUN_READS)
+        fired = [ti.later(gh, 25 * n).trunk_items(gh.runs, frozenset()) for n in range(3)]
+        self.assertTrue(any(fired), "RED-TRUNK never fired")
+        (it,) = next(f for f in fired if f)
+        self.assertEqual((it.kind, it.head), ("RED-TRUNK", BROKE))
+        for r in notes:   # each skip-the-build run's jobs were read once, never again
+            self.assertEqual(sum(f"/actions/runs/{r['id']}/jobs" in g for g in gh.gets), 1, r["id"])
+        self.assertLessEqual(len(gh.state["trunk_skipped"]), switch.TRUNK_SKIPPED_KEPT)
+
     def test_claudes_own_trunk_push_pages_only_the_integrator(self):
         gh = self.gh([ti.run(41, TRUNK, "e" * 40, 5)], {41: BUILT_RED})
         (it,) = ti.make(gh).trunk_items(gh.runs, frozenset())
         self.assertEqual((it.dest, gh.state["trunk_proof"]["branch"]), ("claude", "claude/integrate-wake-cut"))
+        self.assertIn("owner Claude. Claude fixes it", it.line)
         self.assertEqual(ti.make(gh).muse_items([], frozenset()), [])
 
-    def test_the_board_keeps_the_trunk_line_until_a_green_full_proof(self):
-        red = {"sha": NOTES, "run": 41, "url": "https://example/41", "state": "red: native-tests", "at": ti.ago(20),
-               "first_red": BROKE, "pr": 490, "branch": "fb-bot/integrate-j129-objective-core"}
-        runs = [L.RunIn(41, "u41", TRUNK, BROKE, NOW - dt.timedelta(hours=21), NOW - dt.timedelta(hours=20), "failure"),
-                L.RunIn(42, "u42", TRUNK, NOTES, NOW - dt.timedelta(hours=3), NOW - dt.timedelta(hours=3), "success")]
-
-        def trunk(tp):
-            feed = L.Feed([], [], [], [], [], runs, trunk_proof=tp)
-            return [it for it in L.classify(feed, NOW, roster()).items if it.kind == "TRUNK"]
-
-        self.assertEqual(len(trunk(None)), 0)                  # before: the notes-only run hid the red one
-        (it,) = trunk(red)
-        self.assertIn("since bbbbbbbb (the merge of #490): until a green full proof", it.state)
-        self.assertEqual((it.owner.agent, it.holder.agent, it.version), ("muse", "claude", BROKE))
-        self.assertEqual(trunk(dict(red, state="green")), [])
 
 
-class MergeSkew(unittest.TestCase):
-    """The cause of the 11-12 red trunk: J-127 (#482) and J-129 (#483) each had a green proof alone, the switch merged
-    both, and only their combination held order key 1100 twice. A head is merged only when its proof covers trunk."""
+class MergeGH(ti.FakeGH):
+    """The inbox's GitHub: its merge PUT answers merged (or refuses), and the closed PRs into trunk list newest
+    updated first, 100 a page, as GitHub's pulls?state=closed&sort=updated&direction=desc does."""
 
-    def steer(self, compare) -> tuple[str, bool, tuple]:
-        import test_cache_trust as tc
-        real = tc.github([tc.codex_clean()], "success")
-        real[f"repos/{tc.REPO}/compare/{tc.HEAD}...{TRUNK}"] = compare
-        steered, writes, _ = tc.sweep_one(real, {})
-        s = steered[-1]
-        return s.decision.action, any(path.endswith("/pulls/9/merge") for _, path in writes), s.decision.reasons
+    def __init__(self, *a, refuse="", **kw):
+        super().__init__(*a, **kw)
+        self.refuse, self.closed = refuse, []
 
-    def ahead(self, *files: str) -> dict:
-        return {"status": "ahead", "ahead_by": len(files), "commits": [{"sha": str(i)} for i in range(len(files))],
-                "files": [{"filename": f} for f in files]}
+    def write(self, method, path, body=None, what=""):
+        if method == "PUT" and path.endswith("/merge"):
+            self.writes.append((method, path, body))
+            return {"merged": False, "message": self.refuse} if self.refuse else {"merged": True}
+        return super().write(method, path, body, what)
 
-    def test_a_head_behind_trunks_game_code_waits_for_trunk_to_be_merged_in(self):
-        # #483's case: trunk had #482's registry line (tests/) when #483's green head was merged
-        action, merged, reasons = self.steer(self.ahead("tests/test_registry.cmake", "work/plan.md"))
-        self.assertEqual((action, merged), ("WAIT", False))
-        self.assertIn(rules.SKEW, "; ".join(reasons))
-        self.assertIn("1 file(s) its proof reads, e.g. `tests/test_registry.cmake`", "; ".join(reasons))
+    def route(self, path):
+        if path.startswith(f"repos/{self.repo}/pulls?state=closed"):
+            self.gets.append(path)
+            page = int(path.rsplit("page=", 1)[1])
+            ordered = sorted(self.closed, key=lambda p: p["updated_at"], reverse=True)
+            return ordered[(page - 1) * 100: page * 100]
+        return super().route(path)
 
-    def test_notes_and_switchboard_commits_on_trunk_never_hold_a_merge(self):
-        action, merged, _ = self.steer(self.ahead("work/plan.md", "03_EXECUTION/handoffs/INTEGRATOR_NOTES.md",
-                                                  "tools/switchboard/switch.py"))
-        self.assertEqual((action, merged), ("MERGE", True))
-        self.assertEqual(self.steer({"status": "behind", "ahead_by": 0, "commits": [], "files": []})[:2], ("MERGE", True))
-
-    def test_any_doubt_holds(self):
-        cut = self.ahead(*[f"work/n{i}.md" for i in range(switch.COMPARE_FILES_CAP)])
-        self.assertEqual(self.steer(cut)[:2], ("WAIT", False))
-        short = dict(self.ahead("work/plan.md"), ahead_by=400)   # more commits than the compare lists
-        self.assertEqual(self.steer(short)[:2], ("WAIT", False))
-
-    def test_the_owner_is_told_at_once(self):
-        f = rules.PrFacts(256, ti.HEAD, "fb-bot/integrate-j129", TRUNK, False, True, ti.ago(5), "green",
-                          (ti.land(),), frozenset(), False, False, trunk_skew="trunk is 1 commit(s) ahead")
-        d = rules.merge_decision(f, "meta", ti.TEAM)
-        self.assertEqual(d.action, "WAIT")
-        s = switch.Steered(f, {"job": "J-129", "proof_url": ti.RUN_URL, "run_id": 7, "proof_done_at": ti.ago(1),
-                               "updated_at": ti.ago(0.1), "comments": []}, d)
-        items = ti.make(ti.FakeGH()).muse_items([s], frozenset())
-        self.assertEqual([it.kind for it in items], ["CONFLICT"])
-        self.assertIn("merge ScraperX-Claude into fb-bot/integrate-j129 and push", items[0].line)
-        self.assertEqual(ti.make(ti.FakeGH()).inbox_items([s], frozenset()), [])   # the owner's step, no wake
-        w = M.work_of(f, d, ti.TEAM)
-        self.assertEqual((w.gate, w.why, w.land), ("skew", "trunk is 1 commit(s) ahead", True))
+    def merged(self, number, ref, minutes_ago, sha=ti.HEAD):
+        """A PR merged `minutes_ago` before NOW (by an issue_comment run: nothing of it in the sweep state)."""
+        at = (NOW - ti.dt.timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.closed.append({"number": number, "head": {"ref": ref, "sha": sha}, "merged_at": at, "updated_at": at})
 
 
-class AskLate(unittest.TestCase):
-    def ask(self, hours: float, target: str = "Claude", body: str = "To Claude: which head lands next?") -> dict:
-        return {"a": "Muse", "target": target, "n": 307, "t": NOW - dt.timedelta(hours=hours), "id": "6850000001",
-                "url": "https://github.com/IssisX/ScraperX/issues/307#issuecomment-6850000001", "body": body,
-                "login": "IssisX"}
+class Merged(unittest.TestCase):
+    def lines(self, gh):
+        return [line for _, body in gh.posts if _ == switch.INBOX_PR for line in body.splitlines()
+                if line.startswith(("- MERGED #", "- digest, nothing to decide: MERGED #"))]
 
-    def make(self):
+    def test_a_merge_whose_run_state_is_thrown_away_is_listed_once_by_the_next_sweep(self):
+        # #559: merged by issue_comment run 43610872384, whose cache save was denied; the next sweep restored older state
+        gh = MergeGH()
+        gh.state = {"inbox": {"merged_at": (NOW - ti.dt.timedelta(minutes=40)).strftime("%Y-%m-%dT%H:%M:%SZ")}}
+        thrown = dict(gh.state)                                     # the state as the next sweep restores it
+        s = ti.steered(number=559, ref="claude/integrate-j072-take-hard", verdicts=[ti.land()])
+        self.assertEqual(ti.make(gh).merge(s.facts, s.ctx, s.decision), "")
+        gh.state = thrown
+        gh.merged(559, "claude/integrate-j072-take-hard", 5)
+        self.assertEqual(ti.make(gh).inbox([]), 1)                  # at once: claude/ is "now"
+        (line,) = self.lines(gh)
+        self.assertIn("MERGED #559 `claude/integrate-j072-take-hard` at " + ti.HEAD[:8], line)
+        self.assertEqual(ti.later(gh, 60).inbox([]), 0)              # one line per merge, never repeated
+        self.assertEqual(len(self.lines(gh)), 1)
+
+    def test_a_muse_merge_never_posts_alone_and_rides_the_next_post(self):
+        gh = MergeGH()
+        gh.merged(555, "fb-bot/integrate-j129-objective-core", 20)
+        self.assertEqual(ti.make(gh).inbox([]), 0)                  # a report: never a post alone
+        self.assertEqual([n for n, _ in gh.posts if n == switch.INBOX_PR], [])
+        gh.merged(556, "claude/integrate-j072-merge-notice", 2, sha="e" * 40)
+        self.assertEqual(ti.later(gh, 5).inbox([]), 2)               # the next post carries it
+        self.assertEqual(sorted(l.split("MERGED ")[1].split()[0] for l in self.lines(gh)), ["#555", "#556"])
+        self.assertTrue(any(l.startswith("- digest, nothing to decide: MERGED #555") for l in self.lines(gh)))
+        self.assertEqual(ti.later(gh, 90).inbox([]), 0)
+        self.assertEqual(len(self.lines(gh)), 2)
+
+    def test_the_first_sweep_replays_no_history_and_old_closed_prs_above_a_merge_are_walked_past(self):
+        gh = MergeGH()
+        gh.merged(400, "claude/integrate-j001", 60 * 24)            # a day old: before the first window
+        for n in range(150):                                         # closed, never merged, touched since the merge
+            gh.closed.append({"number": 1000 + n, "head": {"ref": f"fb-bot/old-{n}", "sha": "f" * 40}, "merged_at": None,
+                              "updated_at": (NOW - ti.dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ")})
+        gh.merged(557, "claude/integrate-j072-merge-notice", 30)
+        self.assertEqual(ti.make(gh).inbox([]), 1)
+        self.assertEqual([l.split()[2] for l in self.lines(gh)], ["#557"])   # on page 2, past the old ones; not #400
+        self.assertEqual(sum("pulls?state=closed" in g for g in gh.gets), 2)
+
+    def test_a_dry_run_moves_no_cursor_and_a_refused_merge_is_no_merge(self):
+        gh = MergeGH(dry_run=True)
+        gh.merged(559, "claude/integrate-j072-take-hard", 5)
+        ti.make(gh).inbox([])
+        self.assertNotIn("merged_at", gh.state.get("inbox", {}))
+        refused = MergeGH(refuse="Base branch was modified")
+        s = ti.steered(number=559, ref="claude/x", verdicts=[ti.land()])
+        self.assertIn("merge not done", ti.make(refused).merge(s.facts, s.ctx, s.decision))
+        self.assertEqual(ti.make(refused).inbox([]), 0)              # GitHub lists no merge: nothing to say
+
+
+SLICES = "native-tests (matron-slices-3)"
+TRAVERSAL = "native-tests (athletic-traversal-2)"
+PLAN = "limit claude 4\nlimit muse 10\nJ-100 {owner} #418 | She reads a load hung over her\n"
+
+
+class Take(unittest.TestCase):
+    """The real records: J-100 (#478) red on 9458db9f, de39529d and 966fb721, the same two native jobs failing on
+    each; J-014 (#491) red on 2cbb1481, green on f6c4311c, red on a9c31437 (host-build alone: a trunk merge's
+    build break) and red on 8d9cb6f3 (its tests)."""
+
+    def setUp(self):
+        self.root = pathlib.Path(tempfile.mkdtemp())
+        (self.root / "work").mkdir()
+        self.plan("muse")
+        self.gh = ti.FakeGH(open_issues=[340])
+        self.tests: dict[int, tuple[str, ...]] = {}
+        self.minutes = 0
+
+    def plan(self, owner):
+        (self.root / "work/plan.md").write_text(PLAN.format(owner=owner), encoding="utf-8")
+
+    def sweep(self, head, rid, tests=(), proof=None, ref="fb-bot/integrate-j100", number=478, job="J-100", gap=30):
+        """One sweep after the PR's proof on `head` (run `rid`) finished: the inbox, then Muse's mail."""
+        self.minutes += gap
+        jobs = sorted({t.split(": ", 1)[0] for t in tests})
+        proof = proof or ("red: " + ", ".join(jobs))
+        self.tests[rid] = tuple(tests)
+        self.gh.runs.append(ti.run(rid, ref, head, 0.1, conclusion="success" if proof == "green" else "failure"))
+        self.gh.jobs[rid] = [{"name": j, "status": "completed", "conclusion": "failure"} for j in jobs]
+        s = ti.steered(number=number, ref=ref, head=head, proof=proof, run_id=rid, job=job)
+        posts = len(self.gh.posts)
+        sw = ti.later(self.gh, self.minutes)
+        sw.root = self.root
+        sw.red_tests = lambda run_id: self.tests.get(run_id, ())
+        sw.inbox([s])
+        sw.muse([s])
+        new = self.gh.posts[posts:]
+        return ([b for n, b in new if n == switch.INBOX_PR], [b for n, b in new if n != switch.INBOX_PR])
+
+    def takes(self, bodies):
+        return [line for b in bodies for line in b.splitlines() if line.startswith("- TAKE ")]
+
+    def test_j100_two_red_heads_on_the_same_failure_mail_muse_once_and_tell_the_integrator_until_the_plan_says_claude(self):
+        inbox, mail = self.sweep("9458db9f" + "0" * 32, 1, [f"{SLICES}: FAIL: slab trap: she stopped 1.27 m from the rim",
+                                                          f"{TRAVERSAL}: FAIL: climb: 0.31 m short"])
+        self.assertEqual((self.takes(inbox), self.takes(mail)), ([], []))       # one red: no take yet
+        # the next head fails the same checks by other amounts: the same failure
+        inbox, mail = self.sweep("de39529d" + "0" * 32, 2, [f"{SLICES}: FAIL: slab trap: she stopped 1.99 m from the rim",
+                                                          f"{TRAVERSAL}: FAIL: climb: 0.12 m short"])
+        (line,) = self.takes(inbox)
+        self.assertIn("TAKE J-100 [#478]", line)
+        self.assertIn("Give it to claude in work/plan.md", line)
+        self.assertIn("slab trap: she stopped # m from the rim", "\n".join(inbox))   # its failing tests, named
+        (to_muse,) = self.takes(mail)
+        self.assertIn("please push what you have as it is, mail MUSE_TO_CLAUDE that you stopped J-100", to_muse)
+        said = to_muse.split(", J-100: ", 1)[1]   # the TAKE's own words (the PR prefix is every Muse item's)
+        for word in ("must", "ignore", "supersede", "replace", "`", "<!--", "right now"):
+            self.assertNotIn(word, said.lower())
+        # 966fb721: a cancelled push run, then a red dispatch on the same head; within the hour nothing is re-sent
+        self.gh.runs.append(ti.run(30, "fb-bot/integrate-j100", "966fb721" + "0" * 32, 0.2, conclusion="cancelled"))
+        inbox, mail = self.sweep("966fb721" + "0" * 32, 3, [f"{SLICES}: FAIL: slab trap: she stopped 1.99 m from the rim"])
+        self.assertEqual((self.takes(inbox), self.takes(mail)), ([], []))       # Muse once per job; the hour not up
+        inbox, mail = self.sweep("966fb721" + "0" * 32, 3, gap=35)            # past the hour: listed again, once
+        self.assertEqual((len(self.takes(inbox)), self.takes(mail)), (1, []))
+        self.plan("claude")                                                    # the integrator gave it to claude
+        inbox, mail = self.sweep("966fb721" + "0" * 32, 3, gap=70)
+        self.assertEqual((self.takes(inbox), self.takes(mail)), ([], []))
+        self.assertNotIn("J-100", self.gh.state["takes"])
+
+    def test_j014_a_green_resets_and_a_different_failure_is_no_take_until_the_same_one_fails_again(self):
+        ref, tests = "fb-bot/integrate-protected-j014", [f"{SLICES}: FAIL: stock: 0 carryable on ring 594.25 m"]
+        run = dict(ref=ref, number=491, job="J-100")
+        self.assertEqual(self.takes(self.sweep("2cbb1481" + "0" * 32, 11, tests, **run)[0]), [])
+        self.sweep("f6c4311c" + "0" * 32, 12, proof="green", **run)               # green: the earlier red is fixed
+        self.assertEqual(self.takes(self.sweep("a9c31437" + "0" * 32, 13,
+                                               ["host-build: error: no member named hang_slab"], **run)[0]), [])
+        self.assertEqual(self.takes(self.sweep("8d9cb6f3" + "0" * 32, 14, tests, **run)[0]), [])   # not the same failure
+        inbox, mail = self.sweep("e" * 40, 15, [t.replace("0 carryable", "1 carryable") for t in tests], **run)
+        self.assertEqual((len(self.takes(inbox)), len(self.takes(mail))), (1, 1))   # the stock check failed twice
+
+    def test_a_failure_trunk_shares_and_a_dry_run_make_no_take(self):
+        tests = [f"{SLICES}: FAIL: slab trap: she stopped 1.27 m from the rim"]
+        self.gh.state["trunk_proof"] = {"sha": "t" * 40, "run": 99, "state": f"red: {SLICES}", "at": ti.ago(1)}
+        self.tests[99] = tuple(tests)
+        self.sweep("a" * 40, 1, tests)
+        self.assertEqual(self.takes(self.sweep("b" * 40, 2, tests)[0]), [])     # trunk is red on it too: not J-100's
+        dry = Take()
+        dry.setUp()
+        dry.gh.dry_run = True
+        dry.sweep("a" * 40, 1, tests)
+        dry.sweep("b" * 40, 2, tests)
+        self.assertNotIn("takes", dry.gh.state)
+
+
+class Held(unittest.TestCase):
+    """Inbox post 6880167407: QUIET #466 claude/integrate-protected-j015 (J-015) for 3.1 h, while work/plan.md holds
+    J-015 ("paused by Cory 11-13")."""
+
+    def sw(self, hold):
+        root = pathlib.Path(tempfile.mkdtemp())
+        (root / "work").mkdir()
+        (root / "work/plan.md").write_text("limit claude 4\nlimit muse 10\nJ-015 claude #122" + (
+            " hold: paused by Cory 11-13" if hold else "") + " | Stock\nJ-100 muse #418" + (
+            " hold: parked" if hold else "") + " | Hung load\n", encoding="utf-8")
         sw = ti.make(ti.FakeGH())
-        sw.agent_of_name = lambda name: name.lower()
+        sw.root = root
         return sw
 
-    def test_an_ask_to_claude_past_an_hour_is_listed_once_at_once(self):
-        sw = self.make()
-        self.assertEqual(sw.ask_late_items([self.ask(0.5)]), ())            # inside its hour
-        (it,) = sw.ask_late_items([self.ask(1.5)])
-        self.assertEqual((it.kind, it.target, it.head, switch.inbox_class(it)), ("ASK-LATE", "#307", "6850000001", "now"))
-        self.assertIn("ASK-LATE #307 Muse asked Claude 1.5 h ago and has no answer", it.line)
-        self.assertEqual(sw.ask_late_items([self.ask(30)]), ())             # past the day: the reconciler's line to Cory
-        self.assertEqual(sw.ask_late_items([self.ask(2, target="Grok")]), ())   # Grok's: the reconciler sends it
-        gh = ti.FakeGH()
-        sw = ti.make(gh)
-        sw.ask_items = self.make().ask_late_items([self.ask(1.5)])
-        self.assertEqual(sw.inbox([]), 1)
-        self.assertEqual(ti.later(gh).inbox([]), 0)
+    def kinds(self, s, hold, muse=False):
+        sw = self.sw(hold)
+        return [it.kind for it in (sw.muse_items if muse else sw.inbox_items)([s], frozenset())]
 
-    def test_muses_tagged_subject_is_still_an_ask(self):
-        # 11-13 (work/tasks/muse.md): subjects carry ASK or FYI right after the job; the judge missed every such ask
-        for subject, target in (("J-002 ASK To Claude: which head?", "Claude"), ("#384 J-114 ASK To Grok: why?", "Grok"),
-                                ("J-021 FYI To Claude: pushed", "Claude")):
-            body = f"**Muse (via email bridge): {subject}**\n\nBody."
-            self.assertEqual([m.group(1) for m in asks.ASK.finditer(body)], [target], subject)
-        self.assertEqual(list(asks.ASK.finditer("**Muse (via email bridge): J-002 ASK second hit sounds**")), [])
+    def test_a_held_jobs_idle_pr_gets_no_quiet_and_the_same_pr_unheld_still_does(self):
+        quiet = ti.steered(number=466, ref="claude/integrate-protected-j015", job="J-015", proof="none",
+                           updated_at=ti.ago(3.1), proof_done_at="", run_id=0)
+        self.assertEqual(self.kinds(quiet, hold=True), [])
+        self.assertEqual(self.kinds(quiet, hold=False), ["QUIET"])
 
-    def test_only_a_question_or_blocked_waits_on_an_answer(self):
-        self.assertTrue(asks.blocking("To Claude: which head?"))
-        self.assertTrue(asks.blocking("To Claude: BLOCKED: the rail, needs a ruling"))
-        self.assertFalse(asks.blocking("To Claude: J-021 pushed, CI dispatched. https://x/y?z=1 `a?b`"))
-
-
-class Waiting(unittest.TestCase):
-    PLAN = tps.PLAN
-
-    def test_the_owners_open_ask_on_its_job_is_what_the_job_waits_on(self):
-        model = plan.parse(self.PLAN)
-        t = NOW - dt.timedelta(hours=2)
-        opened = [{"a": "Muse", "target": "Claude", "n": 501, "t": t, "url": "https://x/501#c1", "body": "To Claude: which?"},
-                  {"a": "Muse", "target": "Claude", "n": 340, "t": t, "url": "https://x/340#c2",
-                   "body": "J-502 To Claude: may I?"},                     # on the board, its opening names the job
-                  {"a": "Muse", "target": "Claude", "n": 601, "t": t, "url": "u", "body": "To Claude: which?"},   # not J-601's owner
-                  {"a": "Muse", "target": "Muse", "n": 501, "t": t, "url": "u", "body": "To Muse: self?"}]
-        got = M.waits(model, opened, {501: "J-501", 502: "J-502", 601: "J-601"}, lambda n: n.lower())
-        self.assertEqual(sorted(got), ["J-501", "J-502"])
-        self.assertEqual(M.wait_text(got["J-501"], NOW), "waiting on Claude's answer ([ask](https://x/501#c1), 2 h)")
-
-
-class Sweep(tps.Sweeps):
-    """The plan part of a full pass, end to end on the in-memory GitHub."""
-    mode = "live"
-
-    def test_a_job_waiting_on_an_answer_shows_it_and_the_late_ask_reaches_claude(self):
-        hub = self.hub
-        mail = hub.mail(0.2, "J-501 ASK To Claude: which head lands first?", "The two heads disagree.", number=501)
-        mail["html_url"] = "https://github.com/IssisX/ScraperX/issues/501#issuecomment-1"
-        sw, rows = self.sweep(0.5)
-        self.assertIn("state:waiting", hub.labels(501))
-        body = hub.issues[tps.BOARD]["body"]
-        self.assertIn("- J-501 #501 planned; waiting on Claude's answer ([ask](https://github.com/IssisX/ScraperX/"
-                      "issues/501#issuecomment-1), 18 min)", body)
-        self.assertEqual(sw.ask_items, ())                      # inside its hour
-        sw, rows = self.sweep(1.5)
-        (it,) = sw.ask_items
-        self.assertEqual((it.kind, it.target), ("ASK-LATE", "#501"))
-        hub.post(501, "To Muse: J-501 lands first.\n\nGenerated by [Claude Code]", "IssisX", tps.iso(1.6))
-        sw, rows = self.sweep(2)
-        self.assertNotIn("state:waiting", hub.labels(501))      # answered: the label and the line go
-        self.assertNotIn("waiting on", hub.issues[tps.BOARD]["body"])
-        self.assertEqual(sw.ask_items, ())
-
-    def test_grok_is_told_by_a_board_comment_with_no_mail_and_its_reply_acknowledges(self):
-        self.write("work/plan.md", tps.PLAN + "limit grok 1\nJ-701 grok #701 | Grok's job\n")
-        self.hub.issue(701, "J-701: Grok's job", ["job"])
-        ver = M.versions(plan.parse(tps.PLAN + "limit grok 1\nJ-701 grok #701 | Grok's job\n"))["grok"]
-        sw, rows = self.sweep(0.5)
-        (notice,) = self.hub.by(rules.BOT_LOGIN, f"To Grok: plan {ver}")
-        self.assertTrue(notice["body"].startswith(f"To Grok: plan {ver}\n"))
-        self.assertTrue(notice["issue_url"].endswith(f"/{tps.BOARD}"))
-        self.assertIn(M.NOTICE_MARK.format(owner="grok", ver=ver, jobs="")[:40], notice["body"])
-        self.assertNotIn(("POST", f"issues/{tps.BOARD}/labels"),
-                         [w for w in self.hub.writes if "wake:muse" in str(w)])
-        sw, rows = self.sweep(1)
-        self.assertEqual((rows["J-701"].state, rows["J-701"].gate, rows["J-701"].owes), ("told", "reply", "grok"))
-        self.hub.post(tps.BOARD, f"To Claude (from Grok): plan {ver} read; J-701 next.", "IssisX", tps.iso(2))
-        sw, rows = self.sweep(3)
-        self.assertEqual(rows["J-701"].state, "acknowledged")
-        self.assertIn(f"owner=grok ver={ver}", "".join(c["body"] for c in self.hub.by(rules.BOT_LOGIN, "plan-receipt")))
-        sw, rows = self.sweep(30)                               # the reply left the day's window: the mark holds it
-        self.assertEqual(rows["J-701"].state, "acknowledged")
-
-
-class Bounds(unittest.TestCase):
-    """The merged-PR history (plan.observe) was read whole every full pass: 310 PRs, every page shifting on a close."""
-
-    class GH:
-        repo = "IssisX/ScraperX"
-
-        def __init__(self, n: int):
-            self.state, self.reads = {}, []
-            self.pulls = [{"number": i, "merged_at": f"2026-11-{1 + i // 40:02d}T00:00:00Z",
-                           "updated_at": f"2026-11-{1 + i // 40:02d}T00:{i % 60:02d}:00Z",
-                           "head": {"sha": f"{i:040x}"}, "body": f"Job: J-{i:03d}\n\n" + "x" * 500} for i in range(n)]
-
-        def get(self, path):
-            self.reads.append(path)
-            page = int(re.search(r"[?&]page=(\d+)", path).group(1))
-            items = sorted(self.pulls, key=lambda p: p["updated_at"], reverse=True) if "sort=updated" in path \
-                else sorted(self.pulls, key=lambda p: -p["number"])
-            return items[(page - 1) * 100: page * 100]
-
-        def paged(self, path):
-            out = []
-            for page in range(1, 6):
-                got = self.get(f"{path}&per_page=100&page={page}")
-                out += got
-                if len(got) < 100:
-                    break
-            return out
-
-    def test_a_warm_pass_reads_only_what_changed_since_the_last(self):
-        gh = self.GH(310)
-        self.assertEqual(len(plan.merged_prs(gh, TRUNK)), 310)
-        self.assertEqual(len(gh.reads), 4)                         # cold: the whole history, once
-        self.assertLessEqual(len(gh.state["plan_merged"]["prs"][0]["body"]), 200)
-        gh.reads = []
-        gh.pulls.append({"number": 310, "merged_at": "2026-11-13T09:00:00Z", "updated_at": "2026-11-13T09:00:00Z",
-                         "head": {"sha": "f" * 40}, "body": "Job: J-310"})
-        got = plan.merged_prs(gh, TRUNK)
-        self.assertEqual((len(got), len(gh.reads)), (311, 1))     # warm: one page
-        self.assertIn("f" * 40, {p["head"]["sha"] for p in got})
-        self.assertEqual(gh.state["plan_merged"]["at"], "2026-11-13T09:00:00Z")
-
-    def test_without_a_sweep_state_it_is_the_whole_listing(self):
-        gh = self.GH(150)
-        del gh.state
-        self.assertEqual(len(plan.merged_prs(gh, TRUNK)), 150)
-
-
-class Notices(unittest.TestCase):
-    def test_grok_bot_is_addressed_by_the_name_its_runs_read(self):
-        self.assertEqual(roster().address("grok_bot"), "Builder")
-        self.assertEqual(roster().address("muse"), "Muse")
-        real = L.Roster(switch.load_yaml(HERE.parent.parent / "work/agents.yml"))
-        self.assertEqual(real.address("grok_bot"), "Builder")
-
+    def test_a_held_jobs_new_red_or_fix_still_shows_but_never_the_stuck_nag(self):
+        red = ti.steered(number=478, ref="fb-bot/integrate-j100", job="J-100", proof="red: native-tests",
+                         committed=ti.ago(6), updated_at=ti.ago(5))
+        self.assertEqual(self.kinds(red, hold=False, muse=True), ["RED", "RED-STUCK"])
+        self.assertEqual(self.kinds(red, hold=True, muse=True), ["RED"])
+        fix = ti.steered(number=478, ref="fb-bot/integrate-j100", job="J-100", verdicts=[ti.fix(hours=7)],
+                         committed=ti.ago(8), updated_at=ti.ago(7))
+        self.assertEqual(self.kinds(fix, hold=False, muse=True), ["FIX", "FIX-STUCK"])
+        self.assertEqual(self.kinds(fix, hold=True, muse=True), ["FIX"])
 
 if __name__ == "__main__":
     unittest.main()

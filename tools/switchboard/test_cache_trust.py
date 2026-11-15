@@ -64,8 +64,6 @@ def github(comments: list, conclusion: str) -> dict:
         BOARD_COMMENTS: [],
         f"repos/{REPO}/pulls/9/files?per_page=100&page=1": [{"filename": "tools/x.py"}],
         f"repos/{REPO}/issues/9/reactions?per_page=100&page=1": [],   # read before Codex is asked (codex_first)
-        # the head holds all of trunk (base_skew, read before a merge): its proof covers the combination
-        f"repos/{REPO}/compare/{HEAD}...{rules.TRUNK}": {"status": "behind", "ahead_by": 0, "commits": [], "files": []},
     }
 
 
@@ -253,7 +251,7 @@ class SignedFile(unittest.TestCase):
     def test_the_workflow_gives_the_key_to_both_jobs_that_read_the_cache(self):
         wf = (HERE.parents[1] / ".github/workflows/switchboard.yml").read_text(encoding="utf-8")
         for job in ("ask:", "steer:"):
-            part = wf.split(f"\n  {job}\n", 1)[1].split("\n  provision:\n" if job == "ask:" else "\n\n\n", 1)[0]
+            part = wf.split(f"\n  {job}\n", 1)[1].split("\n  steer:\n" if job == "ask:" else "\n\n\n", 1)[0]
             self.assertIn("SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}", part, job)
             self.assertIn("environment: switchboard-merge", part, job)
 

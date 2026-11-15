@@ -59,7 +59,8 @@ never findings (owner rule, 2026-10-31).
   returns: those come in no order (a crowded forklift ram went unsensed for 89 ticks, 332fed64).
 
 ### Tests and protected changes
-- Tests are never weakened, skipped or deleted. A moved `require`, limit, timeout, tolerance, pin or
+- A test is never weakened, skipped or deleted to get green (Cory 11-13). A switchboard test that only checks a
+  gate Cory approved removing goes with that gate, listed in the PR. A moved `require`, limit, timeout, tolerance, pin or
   ctest slice is a protected change: a PR from `<agent>/integrate-protected-<job>` holding only that
   change, with a plain before/after. The same holds for world geometry, the save layout, and her
   force, power, mass, leg-travel or launch limits. Dropping a known-defect entry from an `EXPECTED` list

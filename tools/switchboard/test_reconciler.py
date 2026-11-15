@@ -1014,7 +1014,6 @@ class Rules(unittest.TestCase):
                 self.assertEqual(R.ledger_notifies(root), want, (ready, text))
         finally:
             R.STAGE2_READY = old
-        self.assertFalse(R.ledger_notifies(HERE.parents[1]), "the repo's own file: the reconciler is the one notifier")
 
     def test_shadow_diff_compares_with_what_the_ledger_sent(self):
         h = Harness()

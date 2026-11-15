@@ -34,7 +34,8 @@ func _check(ok: bool, what: String) -> void:
 
 # One family alone, cue after cue, its cooldown just past each time.
 func _selection() -> void:
-	for family in [&"matron_breath", &"matron_effort", &"matron_laugh", &"matron_rip", &"matron_step"]:
+	for family in [&"matron_breath", &"matron_effort", &"matron_laugh", &"matron_rip", &"matron_step",
+			&"matron_wake"]:
 		var spec: Array = HerTakes.FAMILIES[family]
 		for count in range(2, 9):
 			for seed_value in 10:

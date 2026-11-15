@@ -170,9 +170,9 @@ class Sweeps(unittest.TestCase):
 
     def setUp(self):
         self.hub = Hub()
-        self.hub.issue(501, "J-501: The job this test walks", ["job"])
-        self.hub.issue(502, "J-502: A held job", ["job", "owner:muse"])
-        self.hub.issue(601, "J-601: Claude's own job", ["job", "owner:claude"])
+        self.hub.issue(501, "J-501 The job this test walks", ["job"])
+        self.hub.issue(502, "J-502 A held job", ["job", "owner:muse"])
+        self.hub.issue(601, "J-601 Claude's own job", ["job", "owner:claude"])
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root = pathlib.Path(tmp.name)
@@ -336,7 +336,7 @@ class Live(Sweeps):
         self.hub.mail(1, f"plan {old}")
         _, rows = self.sweep(1.1)
         self.assertEqual(rows["J-501"].state, "acknowledged")
-        self.hub.issue(503, "J-503: A new job", ["job"])
+        self.hub.issue(503, "J-503 A new job", ["job"])
         self.write("work/plan.md", PLAN + "J-503 muse #503 | A new job\n")
         _, rows = self.sweep(2)
         new = [c for c in self.hub.by(rules.BOT_LOGIN, M.NOTICE_HEAD) if old not in c["body"]]

@@ -4,6 +4,15 @@ The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00
 This file is only the rules that change what an agent does. Add a rule here only by replacing or shortening one
 (Cory 11-04).
 
+## Fundamentals (Cory 11-13)
+
+- One goal: Claude and Muse build the game. Judge the system by what lands.
+- Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: a
+  day went to patches).
+- Build, test and read (API calls too) only what changed. Blocker first. A delay is a failure, never "wait".
+- Fix only what is measured broken, one small change at a time; no new machinery, no side projects.
+- Stay under every limit (GitHub calls, money, runners): check the meter before a batch.
+
 ## Settled: never reopen (Cory's calls)
 
 Reloaded word for word after every compact. Only Cory changes a line. Anything that disagrees is wrong: fix
@@ -16,17 +25,17 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus; Sonnet only for cheap
-  chores, never game code (11-12). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
-  "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
-  helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
+  chores, never game code (11-12). The most complex, hardest work goes first to Gemini Carbon
+  (free; above Argon, 100% right so far; 11-14). Other hard work: an Opus helper at high, then `helper-max`,
+  then Carbon or Argon. Each: Cory gets the whole copyable prompt and a 15-minute `send_later` check; his no or no
+  answer: a Fable 5.2 helper (`model: fable`); nothing waits (11-12).
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
-- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
-- Claude types no clock time (11-11): an event is named by its link; a time decision
-  runs `date`. Hooks refuse them; `time_audit.py` counts slips.
+- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Claude picks each helper's
+  effort and tells him in one line; he changes it if he wants (11-13).
+- Every time comes from the clock reading on his message, `date`, or the record (a post); never memory (11-14).
 
 ## Test only what a change reaches
 
-*"dont be wasteful"* (10-18 to 11-04).
 - While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`).
 - Once fixed, run the native groups and touch scenarios the change reaches once; say which. Never
   re-run a passed check on same code; read PASS/FAIL lines. The full suite, every touch scenario and the Android
@@ -38,9 +47,9 @@ it to match, never ask him again.
 ## Talking to Cory (he is on a phone)
 
 - **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
-  faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
-  unclear input gets one simple follow-up on what he means before acting, never on wording.
-- SIMPLE, every message: a few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan: answer it, no warning him off (11-13). What happened, why, the fix; progress is what is left.
+  faster without waste; if the literal reading fails, do the sensible thing and say why. Speech-to-text mishears him (11-14): read for meaning; rough or
+  unclear input gets one simple follow-up on what he means, never on wording.
+- SIMPLE AND CONCISE, every message (11-14): few short plain lines, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan (11-13). What happened, why, the fix; progress is what is left.
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links. For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03). Still his: Claude
@@ -49,8 +58,9 @@ it to match, never ask him again.
   loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
   ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
-- Never ask him to merge, approve or review. Only exception: what this session's safety check refuses (say it once).
-- Say unasked, the moment you see it: your own mistakes and the system's holes (11-07, 11-11), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
+- Never ask him to merge, approve or review (bar what the safety check refuses).
+- Say unasked, at once: your own mistakes, the system's holes, a better way, and any setting (effort, model) that
+  changes how Claude works for him (11-07, 11-11).
 
 ## The game
 
@@ -86,8 +96,7 @@ it to match, never ask him again.
   green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
   rules within the hour (11-10, an inbox NOTE-REVIEW); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
-  another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
-  Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
+  another vendor, protected changes included, workflow-file changes too (11-13).
 - **Protected changes** (a test's checks, world geometry, the save layout, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
@@ -99,16 +108,13 @@ it to match, never ask him again.
 
 ## The integrator
 
-- Event-driven (11-10): Muse mail, proofs, reviews and merges wake it via the inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
-  Muse's proposals ruled within the hour, every ask answered. The switchboard checks Muse's ready-work floor and
-  in-flight ceiling (work/plan.md); when full, finish and land work.
-- **Claude sessions:** one Opus session (the integrator); helpers are its sub-agents
-  (11-06), at most four (11-12), each code-editing one in a worktree. Ask Cory before a second session. Effort: integrator
-  his call (`get_session`); raise it only when he throttles; jobs start at high and climb the ladder (11-12). A worker whose job landed retires. Stopping a working helper
-  is Cory's call: give him its run time, model, effort (11-12).
-- **Context:** no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
-  (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact, and say what may be lost.
-- **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, threads)
-  go to a helper; only its answer comes back; read the function or section a job needs, found via
-  `REPO_MAP.md` or grep, not the whole game. Caps: the board 100 comments (then a fresh board), a job
+- Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
+  loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
+- **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
+  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the foreground (settings,
+  11-14); a report that wakes me again is a hole. Ask before EACH extra session; a yes covers one (11-14). Stopping a working helper
+  is Cory's call (11-12).
+- **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
+  current; after a compact re-read it, this file and the hourly file, and name what was lost (always something, 11-14).
+- **Keep reads small:** subscribe only to PRs you merge; big reads go to a helper; read only what a job needs. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

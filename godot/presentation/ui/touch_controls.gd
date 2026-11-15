@@ -256,9 +256,12 @@ func _layout() -> void:
 	_chute_slot = jump + Vector2(-306.0, 96.0) * _u
 	_place_chute()
 	# Over Action, away from the stick: the hook is aimed with the view.
-	_place(B_HOOK, jump + Vector2(-236.0, -370.0) * _u, 86.0)
+	# 386 clear of Action's ring and its label's foot (J-119: 370 left the
+	# hook's hit circle 4.5 short of Action's and its label 9 over it).
+	_place(B_HOOK, jump + Vector2(-236.0, -386.0) * _u, 86.0)
 	# Over Crouch, the same thumb on up: the turn is a move of the run's.
-	_place(B_TURN, jump + Vector2(40.0, -430.0) * _u, 64.0)
+	# 446 clear of Crouch's ring (J-119: 430 left the turn's label 9 over it).
+	_place(B_TURN, jump + Vector2(40.0, -446.0) * _u, 64.0)
 	# Inboard of Action, clear of the stick: the remote's switch.
 	_place(B_CRANE, jump + Vector2(-470.0, -110.0) * _u, 80.0)
 	# Inboard of Drop, clear of the stick and the crane's switch: the punch.

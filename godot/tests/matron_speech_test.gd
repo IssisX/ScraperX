@@ -31,7 +31,7 @@ class StubAudio:
 	extends RefCounted
 	const SHRIEK_S := 1.2
 	var matron_encounter := 0
-	var speech := MatronSpeech.new(11)
+	var speech: MatronSpeech
 	var said: Array = []        # each line said: its choice, with "t" when and "s" how long
 	var shrieks: Array = []     # when each shriek started
 	var refused := 0
@@ -39,6 +39,10 @@ class StubAudio:
 	var clock := 0.0
 	var _mouth_left := 0.0
 	var _mouth_rank := 0        # 2 a line, 3 a shriek, 4 her last word
+
+	# `gated`: her voice is not picked yet (J-089), so the lines are said silent (clip "").
+	func _init(gated: bool = false) -> void:
+		speech = MatronSpeech.new(11, gated)
 
 	func matron_say(moment: StringName, _at: Vector3, _volume_db: float = 0.0, priority: bool = false) -> int:
 		var rank := 4 if priority else 2
@@ -101,6 +105,7 @@ func _run() -> void:
 	_bank()
 	_choosing()
 	_wired()
+	_gated()
 	await _director()
 	print("MATRON_SPEECH %s fails=%d" % ["PASS" if _fails == 0 else "FAIL", _fails])
 	quit(0 if _fails == 0 else 1)
@@ -296,6 +301,105 @@ func _wired() -> void:
 		moments])
 
 
+# The same drive with the gate closed (J-089): her voice is not picked yet, so every line is said silent
+# (the placeholder take, clip ""). Each bound event still fires its line once, and no two lines come
+# sooner than the cooldown (MatronSound.SAY_GAP_S) unless the second is her last word, which cuts in.
+func _gated() -> void:
+	seed(0x4D415452)
+	var audio := StubAudio.new(true)
+	var sound := MatronSound.new(audio)
+	var data := {"state": 3, "position": Vector3(0, 154, 0), "speed": 1.0, "turn": 0, "stage": 0, "sees_player": false,
+		"stride": 0.0, "alive": true}
+	var hold := {"state": 0, "carries": 0, "dangles": 0, "armplay_beat": 0, "arm_tear_count": 0, "leg_tear_count": 0,
+		"fatal_hang": false, "fatal_release_beat": 0, "releases": 0, "spares": 0, "claims": 0, "waste_not": 0}
+	var feet := Vector3(0, 154, 0)
+	var head := Vector3(0, 155.6, 0)
+	var player := Vector3(6, 154, 0)
+	var frame := func(seconds: float) -> void:
+		for i in roundi(seconds * 60.0):
+			sound.update(data, FRAME_S, true, feet, head, player)
+			sound.hear_hold(hold)
+	var bump := func(key: String) -> void:
+		hold[key] = int(hold[key]) + 1
+	# Her hands on him: the grab, the carry, the dangle.
+	var take := func(carry_s: float, dangle_s: float) -> void:
+		hold["state"] = 12
+		frame.call(1.0)
+		hold["state"] = 13
+		bump.call("carries")
+		frame.call(carry_s)
+		hold["state"] = 14
+		bump.call("dangles")
+		frame.call(dangle_s)
+	frame.call(1.0)
+	# Hunting by ear: she talks to him now and then, silent.
+	frame.call(20.0)
+	_check(audio.said.size() >= 1, "gated: hunting by ear said nothing in 20 s")
+	_check(audio.said.all(func(s): return s["moment"] == &"hunting"), "gated: something else said while hunting")
+	# She sees him: her line for it, once.
+	data["sees_player"] = true
+	var seen_t: float = audio.clock
+	frame.call(8.0)
+	_check(_said_between(audio, &"sees", seen_t, audio.clock) == 1, "gated: the sight of him said no line, or two")
+	# The hunt lost: she gives it up, once, as she goes back to searching.
+	data["sees_player"] = false
+	data["state"] = 4
+	var lost_t: float = audio.clock
+	frame.call(8.0)
+	_check(_said_between(audio, &"lost", lost_t, audio.clock) == 1, "gated: the lost hunt said no line, or two")
+	data["state"] = 3
+	# A hold: the grab once, the dangle talking, the rip once, "Waste not." at the wipe, and no word to
+	# his back after she claimed him.
+	var hold_t: float = audio.clock
+	take.call(8.0, 20.0)
+	_check(_said_between(audio, &"grab", hold_t, audio.clock) == 1, "gated: the grab said no line, or two")
+	_check(_said_between(audio, &"drop", hold_t, audio.clock) >= 1, "gated: the dangle said nothing")
+	var tear_t: float = audio.clock
+	bump.call("arm_tear_count")
+	for i in 600:
+		if audio.said.any(func(s): return s["moment"] == &"rip"):
+			break
+		frame.call(FRAME_S)
+	_check(_said_between(audio, &"rip", tear_t, audio.clock) == 1, "gated: the tear said no line, or two")
+	frame.call(0.3)
+	_check(audio.speaking(), "gated: no line in her mouth at the apron wipe (the test's own setting)")
+	hold["state"] = 18
+	bump.call("claims")
+	bump.call("waste_not")
+	var wipe_t: float = audio.clock
+	frame.call(1.0)
+	var lasts := audio.said.filter(func(s): return s["moment"] == &"last")
+	_check(lasts.size() == 1 and int(lasts[0]["line"]) == 27 and float(lasts[0]["t"]) - wipe_t <= 3.0 * FRAME_S,
+		"gated: the apron wipe did not say Waste not. at once")
+	hold["state"] = 0
+	var end_t: float = audio.clock
+	frame.call(8.0)
+	_check(_said_between(audio, &"free", end_t, audio.clock) == 0, "gated: a word to his back after she claimed him")
+	# He breaks free: a word to his back, once.
+	take.call(8.0, 20.0)
+	hold["state"] = 0
+	end_t = audio.clock
+	frame.call(8.0)
+	_check(_said_between(audio, &"free", end_t, audio.clock) == 1, "gated: no word to his back as he broke free")
+	# Every line said silent, each event once, the cooldown kept, no line twice running.
+	for s in audio.said:
+		_check(String(s["clip"]).is_empty(), "gated: line %d played %s, not the silent take" % [s["line"], s["clip"]])
+	for i in range(1, audio.said.size()):
+		var a: Dictionary = audio.said[i - 1]
+		var b: Dictionary = audio.said[i]
+		_check(a["line"] != b["line"] or a["moment"] == &"last", "gated: line %d twice running" % a["line"])
+		if b["moment"] != &"last":
+			_check(float(b["t"]) - float(a["t"]) >= MatronSound.SAY_GAP_S - 2.0 * FRAME_S,
+				"gated: lines %.2f s apart, under the %.1f s cooldown" % [float(b["t"]) - float(a["t"]),
+					MatronSound.SAY_GAP_S])
+	var moments := {}
+	for s in audio.said:
+		moments[s["moment"]] = int(moments.get(s["moment"], 0)) + 1
+	for moment in [&"hunting", &"sees", &"grab", &"drop", &"rip", &"last", &"free", &"lost"]:
+		_check(moments.has(moment), "gated: no line for the moment %s (said: %s)" % [moment, moments])
+	print("MATRON_SPEECH gated lines said %d, all silent: %s" % [audio.said.size(), moments])
+
+
 # The first line of `moment` said from `since` on came `after` seconds after it, or as soon as her mouth
 # let it: when the gap after the line before it (MatronSound.SAY_GAP_S from its start) and that line had
 # ended. Two frames of slack.
@@ -373,6 +477,11 @@ func _director() -> void:
 		"her last word did not cut the line in her mouth")
 	_check(not audio.matron_cue(&"matron_shriek", head, -3.0, 1.0) and audio.matron_caption == "Waste not.",
 		"her shriek cut her last word")
+	# The gate is closed (J-089, MATRON_VOICE_APPROVED is false): every line the director said was the
+	# silent placeholder take, none of the unpicked bank played.
+	for entry in audio.matron_speech.log:
+		_check(String(entry["clip"]).is_empty(),
+			"the director played %s with the gate closed" % entry["clip"])
 	print("MATRON_SPEECH director lines refused %d, cut %d, said %d" % [audio.matron_lines_suppressed,
 		audio.matron_lines_cut, audio.matron_speech.log.size()])
 	root.remove_child(audio)

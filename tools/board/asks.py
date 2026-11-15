@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Every cross-agent ask with no answer yet, so none is left waiting.
 
-This file is the one judge of asks (J-072): the ledger (tools/switchboard/ledger.py read_feed) and the reconciler
-(reconciler.py stream_asks, acks_by_reply) both call read() and answer_rule(), so the two cannot disagree on what
-an ask is or on what answers it.
+This file is the one judge of asks (J-072): what an ask is and what answers it. The ledger and the reconciler that
+also called read() and answer_rule() are deleted (J-072, after #530); their old notices and O-ids stay in comments.
 
 An ask is a comment on an open issue or PR that addresses another agent: a line that opens `To <Name>` (after
 quote, list and emphasis marks `> - + * _`, and at most one signature such as `Claude (integrator):` or the
@@ -17,12 +16,7 @@ In the oldest day of the comments read, a post that names anything is not listed
 it may be answering can be out of reach.
 
 Who wrote a post is read from its first line (every agent posts as one login). A post that opens with an address
-is signed right after it: `To Claude: Grok Bot, 2:56 PM ...`, `To Claude (from ChatGPT): ...`. A post that names
-no one is UNSIGNED, never a guess (11-13: 8 of the 9 unsigned posts of 11-11 to 11-13 read as ChatGPT's were Grok's
-or Grok Bot's). Nor is it read as the agent the thread's open ask was for: ChatGPT's unsigned "To Claude: warp
-audit for J-064" (6727860486 on #322) came while that thread's open ask was Claude's to Grok, so it would have
-closed Grok's ask a day before Grok answered. An unsigned post answers no one's ask; the ask stays open and goes
-to its addressee when it is late (ASK-LATE), who answers it signed. What an unsigned post asks is still an ask.
+is signed right after it: `To Claude: Grok Bot, 2:56 PM ...`, `To Claude (from ChatGPT): ...`.
 
 An ask counts as answered only by a later post that addresses it (J-072: Muse's "please resend" 6746462436 on
 #340 dropped out when Claude posted about Grok's asks there a minute later). From the addressee:
@@ -69,7 +63,6 @@ import subprocess
 import sys
 
 AGENTS = ("Muse", "ChatGPT", "Grok", "Gemini", "Codex", "Builder", "PE", "Claude", "Switchboard", "Cory")
-UNSIGNED = "unsigned"   # author() of a post that names no one: no agent is guessed (unsigned_as)
 TARGETS = "Muse|ChatGPT|Grok|Builder|PE|Claude"
 SIGNERS = AGENTS + ("Principal Engineer", "FB Bot")   # the names a first line is signed with (author)
 _SIGNER = "|".join(re.escape(n) for n in sorted(SIGNERS, key=len, reverse=True))
@@ -77,19 +70,19 @@ _MARKS = r"[ \t>*_+\-]*"   # quote, list and emphasis marks before a line's firs
 # `To <Name>` where a line opens with it (after the marks and at most one signature: `Claude (integrator):`,
 # `**Muse (via email bridge):`); `→ <Name>` and `cc <Name>` anywhere, as before. One group: the name.
 # After the signature a job or thread reference may stand before the address: the bridge posts Muse's mail subject
-# after its header, and a subject opens with its job (`**Muse (via email bridge): J-044 To Claude: ...`), since 11-13
-# tagged ASK or FYI right after it (work/tasks/muse.md: `J-002 ASK To Claude: ...`; untagged, every such ask was lost).
+# after its header, and a subject opens with its job (`**Muse (via email bridge): J-044 To Claude: ...`).
 ASK = re.compile(r"(?:^" + _MARKS + r"(?:(?:" + _SIGNER + r")(?:[ \t]+Bot)?(?:[ \t]*\([^()\n]*\))?[ \t]*:" + _MARKS
-                 + r"(?:(?:J-\d+[a-z]?|#\d+)[ \t]+){0,2}(?:(?:ASK|FYI)[ \t:]+)?"
+                 + r"(?:(?:J-\d+[a-z]?|#\d+)[ \t]+)?"
                  + r")?To|(?:^|[\s*>(])(?:→|cc))\s+(?:the\s+)?(" + TARGETS + r")\b", re.MULTILINE)
 OPENS = re.compile(r"^" + _MARKS + r"To\s+(?:the\s+)?(?:" + TARGETS + r")\b")   # a first line that opens with an address
 # ... and the signature right after it: `(from ChatGPT)`, `: Grok Bot, ...`, `: (Claude, integrator) ...`
 SIGNED = re.compile(r"[ \t]*(?:\((?:from[ \t]+)?|:[ \t*_]*\(?(?:from[ \t]+)?)(" + _SIGNER + r")\b(?!['’]s)")
 VERDICT = re.compile(r"^\*\*(" + TARGETS + r")\b[^\n]*?review of #(\d+)", re.MULTILINE)
 PR_REF = re.compile(r"#(\d+)")
-MAX_PAGES = 10  # bounded: at most 1000 comments read
+MAX_PAGES = 10  # bounded: at most 1000 open issues read
+MAX_COMMENT_PAGES = 40  # bounded: at most 4000 comments read; a full last page is reported, never silent (11-14)
 NOISE = ("<!-- linear-linkback", "You have reached your Codex")
-LEDGER_MARK = "<!-- switchboard:ledger "   # in the switchboard ledger's notices (tools/switchboard/ledger.py)
+LEDGER_MARK = "<!-- switchboard:ledger "   # in the old switchboard ledger's notices (ledger.py, deleted)
 BRIDGE_POST = "**Muse (via email bridge)"   # the first line of every inbound bridge post: Muse writing to Claude
 QUOTE = re.compile(r"^>\s?(.+)$", re.MULTILINE)
 MIN_QUOTE = 12   # characters of quoted text that must appear in the ask for a quote to name it
@@ -141,9 +134,9 @@ def author(body: str) -> str:
             best, pos = name, m.start()
     best = {"Principal Engineer": "PE", "FB Bot": "Muse"}.get(best, best)
     if not best:
-        # Claude always ends with its footer, Muse comes through the bridge, and the switchboard names itself. Any
-        # other post that names no one is unsigned (the module docstring): nobody's reply.
-        best = "Claude" if "Generated by [Claude Code]" in body else UNSIGNED
+        # Claude always ends with its footer, Muse comes through the bridge and Grok and the
+        # switchboard name themselves; an unsigned post is ChatGPT's (its file asks it to sign).
+        best = "Claude" if "Generated by [Claude Code]" in body else "ChatGPT"
     return best
 
 
@@ -176,14 +169,6 @@ def asks_anyone(body: str) -> bool:
 def jobs_named(body: str) -> set[str]:
     """The job ids in a post's opening (Muse's mail subjects open with their job: `J-059 #343 FIX pushed`)."""
     return set(JOB_ID.findall(body[:300]))
-
-
-def blocking(body: str) -> bool:
-    """Does a post wait on an answer: a question (a `?` outside links and code) or a BLOCKED line? A post with
-    neither only reports (status_ask). The board's "waiting on <Name>'s answer" and the inbox's ASK-LATE read
-    only these (tools/switchboard/switch.py open_asks)."""
-    text = UNQUOTED.sub("", (body or "")[:4000])
-    return "?" in text or bool(BLOCKED.search(text))
 
 
 def status_ask(ask: dict, holder: str, same) -> bool:
@@ -364,8 +349,10 @@ def main() -> int:
             break
 
     comments = []
-    for page in range(1, MAX_PAGES + 1):
+    truncated = False
+    for page in range(1, MAX_COMMENT_PAGES + 1):
         batch = gh(f"repos/{args.repo}/issues/comments?since={since}&per_page=100&page={page}")
+        truncated = len(batch) == 100 and page == MAX_COMMENT_PAGES
         for c in batch:
             comments.append({
                 "id": str(c.get("id")),
@@ -392,6 +379,8 @@ def main() -> int:
     for _, _, text in sorted(open_asks, key=lambda x: (x[0], -x[1])):
         print(text)
     print(f"OPEN ASKS: {len(open_asks)} (posted after {since}, open threads only)")
+    if truncated:   # 11-14: a 7-day read hit the old 1000-comment cap and dropped every recent ask, silently
+        print(f"TRUNCATED: read stopped at {MAX_COMMENT_PAGES * 100} comments; newer asks are missing. Use a shorter --hours.")
     return 0
 
 

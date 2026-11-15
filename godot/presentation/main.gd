@@ -356,7 +356,7 @@ func _ready() -> void:
 	_fb_deaths = int(_ctx["deaths"])
 	_fb_best_checkpoint_y = (_ctx["checkpoint"] as Vector3).y
 	if not _title_seen and ((_uitest_scenario.is_empty() and not _ci_mode and _audit == null) or
-			_uitest_scenario == "touch_title"):
+			_uitest_scenario == "touch_title" or _uitest_scenario == "touch_app_leave_title"):
 		_show_title()
 	# The microphone is asked about once, before anything is heard, over the
 	# title when there is one.
@@ -584,6 +584,9 @@ func _process(delta: float) -> void:
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
 		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
+		# J-130 stub: J-129's done flags (objective index -> bool) land here
+		# when the objective core is hooked up; until then no done line can fire.
+		"objectives_done": {},
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how
@@ -779,6 +782,12 @@ func _notification(what: int) -> void:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 			_save_climb(true)
 			_open_pause(true)
+		NOTIFICATION_APPLICATION_RESUMED:
+			# Coming back: the background gap is not play time. The load
+			# gap's one-tick cap (J-045) applies again, so the first frame
+			# back advances one native tick, not up to nine
+			# (MAX_SIM_FRAME_DELTA).
+			_capped_advances = 0
 		NOTIFICATION_WM_CLOSE_REQUEST:
 			_save_climb(true)
 		NOTIFICATION_WM_GO_BACK_REQUEST:
@@ -845,7 +854,8 @@ func load_saved_climb() -> bool:
 			_save_path, bytes.size(), checkpoint.y, int(_native.get_tick_index())])
 		_hud.toast("CONTINUE", "%+.1f M" % checkpoint.y, UiStyle.SAFE)
 		return true
-	push_warning("SCRAPERX_SAVE_REJECTED path=%s bytes=%d" % [_save_path, bytes.size()])
+	push_warning("SCRAPERX_SAVE_REJECTED path=%s bytes=%d reason=%s" % [
+		_save_path, bytes.size(), String(_native.get_save_reject_reason())])
 	DirAccess.rename_absolute(_save_path, _save_path + ".bad")
 	_hud.toast("SAVE UNREADABLE", "STARTING A NEW CLIMB", UiStyle.HAZARD)
 	return false
@@ -861,7 +871,10 @@ func discard_saved_climb() -> void:
 func _open_pause(from_system: bool = false) -> void:
 	if _paused or _title_open or _consent_open or _ci_mode or _native == null:
 		return
-	if from_system and not _uitest_scenario.is_empty():
+	# A system pause is refused during a scripted run, so a stray focus-out
+	# cannot freeze an unrelated scenario mid-run -- except the app-leave
+	# scenarios (touch_app_leave_*), where the pause is what is tested.
+	if from_system and not _uitest_scenario.is_empty() and not _uitest_scenario.begins_with("touch_app_leave"):
 		return
 	_paused = true
 	_router.gameplay_active = false
@@ -871,7 +884,7 @@ func _open_pause(from_system: bool = false) -> void:
 	var checkpoint: Vector3 = _ctx["checkpoint"]
 	var position: Vector3 = _ctx["position"]
 	_pause_menu.open(_router.glyph_family(), "ALTITUDE %+.1f M\nCHECKPOINT %+.1f M\nDEATHS %d" % [
-		position.y, checkpoint.y, int(_ctx["deaths"])])
+		position.y, checkpoint.y, int(_ctx["deaths"])], _ctx.get("objectives", []))
 	get_tree().paused = true
 	_audio.ui_tap()
 

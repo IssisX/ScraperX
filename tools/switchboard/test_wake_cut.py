@@ -43,10 +43,8 @@ def at(gh, minutes: float):
     return ti.make(gh, NOW + minutes * M)
 
 
-def ask(cid: int, text: str = "To Claude: which head next?", number: int = 292, minute: float = -6) -> dict:
-    """An ask posted `minute` minutes after NOW: one posted between two sweeps carries a time after the first
-    (11-13: the comment window is read incrementally, since the last read, as GitHub's own `since` is)."""
-    return ti.comment(cid, number, text, hours=-minute / 60)
+def ask(cid: int, text: str = "To Claude: which head next?", number: int = 292) -> dict:
+    return ti.comment(cid, number, text, hours=0.1)
 
 
 class MuseMail(unittest.TestCase):
@@ -113,15 +111,18 @@ class Classes(unittest.TestCase):
         return switch.InboxItem(kind, "#1", HEAD, kind, dest)
 
     def test_each_kind_has_its_class(self):
-        for kind in ("TO-CLAUDE", "ASK-LATE", "RED-TRUNK"):   # an ask, a late ask to Claude, a red trunk
+        for kind in ("TO-CLAUDE", "RED-TRUNK"):   # an ask, a red trunk
             self.assertEqual(switch.inbox_class(self.item(kind)), "now", kind)
         for kind in ("FYI", "STARTED", "ACK", "RERUN"):
             self.assertEqual(switch.inbox_class(self.item(kind)), "ride", kind)
-        for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "ride"),
+        for owner, cls in (("integrator", "hold"), ("claude", "hold"), ("muse", "ride"), ("switchboard", "hold"),
                            ("reviewer", "ride")):
             self.assertEqual(switch.inbox_class(self.item("PLAN", owner)), cls, owner)
+        for dest, cls in (("claude", "now"), ("muse", "ride")):   # J-072: its own merge wakes it; Muse's rides
+            self.assertEqual(switch.inbox_class(self.item("MERGED", dest)), cls, dest)
+        self.assertEqual(switch.inbox_class(self.item("TAKE")), "now")   # J-072: a Muse job failed twice, Claude's now
         for kind in switch.INBOX_ORDER:   # every other kind is the integrator's work: it holds, never only rides
-            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "ASK-LATE", "RED-TRUNK", "PLAN"):
+            if kind not in switch.DIGEST_KINDS and kind not in ("TO-CLAUDE", "RED-TRUNK", "PLAN", "MERGED", "TAKE"):
                 for dest in ("claude", "both"):
                     self.assertEqual(switch.inbox_class(self.item(kind, dest)), "hold", (kind, dest))
 
@@ -130,7 +131,7 @@ class Hold(unittest.TestCase):
     def test_an_ask_is_never_delayed(self):
         gh = ti.FakeGH(open_issues=[292])
         self.assertEqual(at(gh, 0).inbox([ti.human_merge()]), 1)   # the integrator's own work, at 0
-        gh.comments = [ask(701, minute=0.5)]
+        gh.comments = [ask(701)]
         self.assertEqual(at(gh, 1).inbox([]), 1, "an ask a minute after a post posts at once")
         self.assertIn("- TO-CLAUDE #292 To Claude: which head next?", gh.posts[1][1])
 
@@ -146,7 +147,7 @@ class Hold(unittest.TestCase):
         self.assertIn("[#260]", gh.posts[1][1])
         # held work rides an ask at once
         at(gh, 40).inbox([ti.human_merge(number=270)])
-        gh.comments = [ask(702, minute=40.5)]
+        gh.comments = [ask(702)]
         self.assertEqual(at(gh, 41).inbox([]), 2)
         body = gh.posts[2][1]
         self.assertLess(body.index("- TO-CLAUDE #292"), body.index("- MERGE-BY-HAND [#270]"), "the ask goes first")
@@ -157,7 +158,7 @@ class Hold(unittest.TestCase):
         for minute in range(0, 120, 5):   # a sweep every 5 minutes; a new PR's item every 10
             seen = prs[:1 + minute // 10]
             if minute == 50:
-                gh.comments = [ask(703, minute=49.5)]
+                gh.comments = [ask(703)]
             at(gh, minute).inbox(seen)
         bodies = "".join(b for _, b in gh.posts)
         for s in prs:
@@ -251,9 +252,9 @@ class Hold(unittest.TestCase):
     def test_other_owners_late_jobs_ride_and_the_integrators_hold(self):
         gh = ti.FakeGH()
         sw = at(gh, 0)
-        sw.plan_items = (switch.InboxItem("PLAN", "J-059", "k1", "PLAN J-059: belongs to switchboard", "switchboard"),
+        sw.plan_items = (switch.InboxItem("PLAN", "J-058", "k0", "PLAN J-058: belongs to grok", "grok"),
                          switch.InboxItem("PLAN", "J-043", "k2", "PLAN J-043: belongs to muse", "muse"))
-        self.assertEqual(sw.inbox([]), 0, "nobody's step but the integrator's wakes it")
+        self.assertEqual(sw.inbox([]), 0, "nobody's step but the integrator's (or the switch's own) wakes it")
         self.assertEqual(len(sw.digest_held), 2)
         sw2 = at(gh, 1)
         sw2.digest_held = sw.digest_held
@@ -261,7 +262,16 @@ class Hold(unittest.TestCase):
         self.assertEqual(sw2.inbox([]), 3)
         body = gh.posts[0][1]
         self.assertIn("- PLAN J-125: belongs to integrator", body)
-        self.assertIn("- digest, nothing to decide: PLAN J-059: belongs to switchboard; PLAN J-043: belongs to muse", body)
+        self.assertIn("- digest, nothing to decide: PLAN J-058: belongs to grok; PLAN J-043: belongs to muse", body)
+
+    def test_a_step_the_switchboard_owes_itself_wakes_the_integrator(self):   # #350: J-049, J-072 reached nobody
+        gh = ti.FakeGH()
+        sw = at(gh, 0)
+        sw.plan_items = (switch.InboxItem("PLAN", "J-059", "k1", "PLAN J-059: belongs to switchboard", "switchboard"),)
+        self.assertEqual(switch.inbox_class(sw.plan_items[0]), "hold")
+        self.assertEqual(sw.inbox([]), 1)
+        self.assertIn("- PLAN J-059: belongs to switchboard", gh.posts[0][1])
+        self.assertEqual(sw.digest_held, ())
 
 
 class Keys(unittest.TestCase):
@@ -288,6 +298,21 @@ class Keys(unittest.TestCase):
         self.assertEqual(len(ti.ring(gh)), switch.MAX_INBOX_KEYS)
         self.assertEqual(ti.ring(gh)[-1], switch.inbox_key("MERGE-BY-HAND", "#256", HEAD))
         self.assertNotIn(f"{0:016x}", ti.ring(gh))
+
+    def test_old_markers_over_the_cap_never_push_a_posted_key_out(self):
+        # 11-13 (#350): #282's old comments still carry 710 marker keys, more than the ring holds. They were put back
+        # after the ring at every post, so a key posted a few posts earlier fell off the front and its item (J-130's
+        # and J-089's mails) was listed again 72 to 76 min later. The old markers are the oldest keys: cut first.
+        markers = [f"{n:016x}" for n in range(switch.MAX_INBOX_KEYS + 110)]
+        gh = ti.FakeGH(inbox=[{"body": "Switchboard (inbox):\n\n" + switch.INBOX_MARK.format(keys=",".join(markers)),
+                               "user": {"login": ti.BOT}}])
+        self.assertEqual(at(gh, 0).inbox([ti.human_merge(number=256)]), 1)
+        for n in range(8):   # eight more posts, one new item each, each past the hold
+            self.assertEqual(at(gh, 31 * (n + 1)).inbox([ti.human_merge(number=300 + n)]), 1)
+        self.assertEqual(at(gh, 31 * 9).inbox([ti.human_merge(number=256)]), 0, "listed once per head")
+        self.assertEqual(len(ti.ring(gh)), switch.MAX_INBOX_KEYS)
+        self.assertEqual(ti.ring(gh)[-9:], [switch.inbox_key("MERGE-BY-HAND", f"#{n}", HEAD)
+                                            for n in [256] + list(range(300, 308))])
 
     def test_a_dry_run_leaves_the_state_alone(self):
         gh = ti.FakeGH(dry_run=True)

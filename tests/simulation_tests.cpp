@@ -1,7 +1,8 @@
 // The native tests: one executable. The groups register themselves, each
 // beside its function in its own sim_tests_*.cpp (sim_registry.hpp); this
 // file only runs the registry. SCRAPERX_ONLY=<name> runs one selection,
-// otherwise the default sequence runs, in order of each group's key.
+// otherwise the default sequence runs, in order of each group's key, then
+// name (a key may repeat: two lanes in flight may pick the same one).
 
 #include "sim_tests.hpp"
 
@@ -47,21 +48,17 @@ bool plain_name(const std::string &name) {
     return !name.empty() && name.find_first_of(" \t\n;") == std::string::npos;
 }
 
-// Every repeated name, repeated key and empty registration, as one line each.
+// Every repeated name and empty registration, as one line each. A repeated
+// key is no error: groups on one key run in name order (main's sort).
 std::vector<std::string> registry_errors(const Registry &r) {
     std::vector<std::string> errors;
     std::map<std::string, std::string> group_names;
-    std::map<long, std::string> group_keys;
     for (const Group &g : r.groups) {
         if (!plain_name(g.name) || g.fn == nullptr) {
             errors.push_back("group '" + g.name + "' has no plain name or no function (" + g.where + ")");
         }
         if (const auto [it, added] = group_names.emplace(g.name, g.where); !added) {
             errors.push_back("group " + g.name + " registered twice (" + it->second + ", " + g.where + ")");
-        }
-        if (const auto [it, added] = group_keys.emplace(g.order, g.where); !added) {
-            errors.push_back("order key " + std::to_string(g.order) + " used twice (" + it->second + ", " +
-                             g.where + ")");
         }
     }
     std::map<std::string, std::string> selection_names;
@@ -111,8 +108,11 @@ int main() {
         }
         return EXIT_FAILURE;
     }
-    // The order comes from the keys alone (they are unique, checked above).
-    std::sort(r.groups.begin(), r.groups.end(), [](const Group &a, const Group &b) { return a.order < b.order; });
+    // The order is (key, name): a key may repeat, a name may not (checked
+    // above), so the order is total and never the registration order.
+    std::sort(r.groups.begin(), r.groups.end(), [](const Group &a, const Group &b) {
+        return a.order != b.order ? a.order < b.order : a.name < b.name;
+    });
     std::sort(r.selections.begin(), r.selections.end(),
               [](const Selection &a, const Selection &b) { return a.name < b.name; });
 

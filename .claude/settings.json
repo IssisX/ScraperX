@@ -6,7 +6,9 @@
   ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000",
-    "CLAUDE_CODE_EFFORT_LEVEL": "high"
+    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "CLAUDE_CODE_FORK_SUBAGENT": "0",
+    "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"
   },
   "permissions": {
     "allow": [
@@ -84,7 +86,9 @@
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
       "mcp__github__create_repository",
-      "mcp__github__fork_repository"
+      "mcp__github__fork_repository",
+      "Bash(rm /dev/*)",
+      "Bash(rm * /dev/*)"
     ],
     "additionalDirectories": [
       "/tmp/claude-0"
@@ -114,15 +118,6 @@
         ]
       },
       {
-        "matcher": "mcp__github__add_issue_comment|mcp__github__update_issue_comment|mcp__github__create_pull_request|mcp__github__update_pull_request|mcp__github__issue_write|mcp__github__add_reply_to_pull_request_comment|mcp__Gmail__send_message|mcp__Gmail__create_draft|mcp__Gmail__reply|SendMessage|mcp__claude-code-remote__send_message",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
-          }
-        ]
-      },
-      {
         "matcher": "Bash|Edit|Write",
         "hooks": [
           {
@@ -132,12 +127,13 @@
         ]
       }
     ],
-    "Stop": [
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/clock_now.py",
+            "timeout": 10
           }
         ]
       }

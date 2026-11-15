@@ -114,81 +114,73 @@ std::unique_ptr<Simulation> ready(const bool walk) {
     return s;
 }
 
-// The player gone from her reach, her way to him ends and she stands: the
-// first stretch of ticks after ready(false) she stands still (under 1 cm/s),
-// and where. The world is deterministic, so a second ready(false) has her
-// stand the same stretch, there.
-struct Stand {
-    int from = -1;
-    int to = -1;
-    Vector3 at{};
-    double top = 0.0;   // the top of her body, standing there
-};
-Stand first_stand() {
-    const auto s = ready(false);
-    Stand out;
-    for (int i = 0; i < 8 * kHz; ++i) {
-        tick(*s);
-        const auto m = s->matron_state();
-        const bool still = m.speed < 0.01 && m.state == static_cast<int>(Matron::State::Hunting);
-        if (still && out.from < 0) {
-            out.from = i;
-            out.at = m.position;
-            out.top = body_top(m);
-        }
-        if (!still && out.from >= 0) {
-            if (i - out.from >= kHz) {
-                out.to = i;
-                return out;
-            }
-            out.from = -1;
-        }
-    }
-    require(false, "slab-drop: she stands still a second, her way to him ended");
-    return out;
-}
-
-// The ticks the slab falls `metres` from rest: Jolt's integration, gravity
-// then the body's default linear damping (0.05/s), a tick at a time.
-int fall_ticks(const double metres) {
-    const double dt = Simulation::kFixedStepSeconds;
-    double v = 0.0;
-    double y = 0.0;
-    int ticks = 0;
-    while (y < metres) {
-        v = (v + 9.81 * dt) * (1.0 - 0.05 * dt);
-        y += v * dt;
-        ++ticks;
-    }
-    return ticks;
-}
-
-// `walk` false: the slab let go over where she will stand, timed to land in
-// the middle of the stretch she stands still (first_stand). `walk` true: let
-// go over her middle as she walks, at her stalking pace.
+// `walk` false: the slab let go over where she freezes under his gaze.
+// `walk` true: let go over her middle as she walks, at her stalking pace.
 Drop drop(const bool walk) {
-    Stand stand;
-    int release = 0;
-    if (!walk) {
-        stand = first_stand();
-        const double fell = (kReleaseY - kSlabHalfY) - stand.top;
-        release = std::max(0, (stand.from + stand.to) / 2 - fall_ticks(fell));
-    }
     const auto sim = ready(walk);
     Simulation &s = *sim;
-    for (int i = 0; i < release; ++i) tick(s);
-    const std::uint32_t slab = plate_slab(s);
-    const Vector3 her0 = walk ? s.matron_state().position : stand.at;
+    // Face him at her, from wherever he stands: his gaze is what freezes her.
+    const auto face_her = [&] {
+        const auto m = s.matron_state();
+        const auto p = s.snapshot().player_position;
+        const double dx = m.position.x - p.x;
+        const double dz = m.position.z - p.z;
+        const double len = std::hypot(dx, dz);
+        if (len > 1.0e-6) {
+            (void)s.set_facing(dx / len, dz / len);
+        }
+    };
+    Vector3 her0;
+    double top = 0.0;
+    if (!walk) {
+        // Frozen under his gaze: the player on deck 154 a few metres off,
+        // facing her; she notices him, stalks, and freezes (the stalk's
+        // freeze, walk_toward speed 0), which the dodge does not break
+        // (J-092's trap: frozen under the slab, she takes it). The slab is
+        // let go over where she froze, and lands while she is still frozen
+        // (patience 20 s, fall ~1.95 s).
+        s.debug_launch_player({9.0, 154.3, -125.5}, {0.0, 0.0, 0.0});
+        int frozen_ticks = 0;
+        bool frozen = false;
+        for (int i = 0; i < 15 * kHz && !frozen; ++i) {
+            face_her();
+            tick(s);
+            const auto m = s.matron_state();
+            if (m.speed < 0.01 && m.state == static_cast<int>(Matron::State::Hunting)) {
+                if (++frozen_ticks >= kHz) {
+                    her0 = m.position;
+                    top = body_top(m);
+                    frozen = true;
+                }
+            } else {
+                frozen_ticks = 0;
+            }
+        }
+        require(frozen, "slab-drop: she freezes under his gaze");
+    } else {
+        her0 = s.matron_state().position;
+        top = body_top(s.matron_state());
+    }
     const double damage0 = s.matron_state().damage_ns;
     Drop out;
-    out.fell_m = (kReleaseY - kSlabHalfY) - (walk ? body_top(s.matron_state()) : stand.top);
+    out.fell_m = (kReleaseY - kSlabHalfY) - top;
     out.free_fall_mps = std::sqrt(2.0 * 9.81 * out.fell_m);
-    s.debug_launch_kit_body(slab, {her0.x, kReleaseY, her0.z}, {0.0, 0.0, 0.0});
+    const std::uint32_t slab = plate_slab(s);
+    // The slab drifts as it falls (~+0.16 m x, +0.30 m z over the drop, measured):
+    // let it go that far short of her, so it lands centred on her instead of
+    // shoving her sideways off-centre (which read 0.1 m/s on her at contact).
+    const double release_x = walk ? her0.x : her0.x - 0.16;
+    const double release_z = walk ? her0.z : her0.z - 0.30;
+    s.debug_launch_kit_body(slab, {release_x, kReleaseY, release_z}, {0.0, 0.0, 0.0});
     const int down = static_cast<int>(Matron::State::Down);
     const int dead = static_cast<int>(Matron::State::Dead);
     int hit_at = -1;
     int landed_at = -1;
     for (int i = 0; i < 6 * kHz; ++i) {
+        // Hold his gaze on her, so the freeze holds while the slab falls.
+        if (!walk) {
+            face_her();
+        }
         const auto before = s.matron_state();
         const double fall_v = s.kit_body_velocity(slab).y;
         const bool reading = before.state != down && before.state != dead;   // take_blow reads her
@@ -199,13 +191,11 @@ Drop drop(const bool walk) {
         const auto k = s.debug_matron_strikers();
         bool contact = false;
         bool judged = false;
-        double given_ns = 0.0;
         for (const auto &striker : k.kept) {
             if (striker.kg > 0.5 * kSlabKg) {
                 contact = contact || striker.contact;
                 if (striker.judged) {
                     judged = true;
-                    given_ns = striker.change_mps * striker.kg;
                 }
             }
         }
@@ -214,7 +204,12 @@ Drop drop(const bool walk) {
             out.entry_mps = -fall_v;
             out.her_speed_mps = before.speed;
             out.off_spot_m = std::hypot(before.position.x - her0.x, before.position.z - her0.z);
-            out.first_tick_ns = given_ns;
+            // The first step's damage, as her balance read it: the change in
+            // her damage over this step. The striker's 3D impulse is not it -
+            // take_blow reads the larger of the horizontal and the overhead
+            // share, so the two diverge whenever the hit is not purely one
+            // way, and the require is about her damage, not the impulse.
+            out.first_tick_ns = m.damage_ns - before.damage_ns;
         }
         if (reading && landed_at < 0) {
             out.contact_ticks += contact ? 1 : 0;
