@@ -469,7 +469,7 @@ void run_matron_balance() {
             }
         }
         // Down she has no hands: the rage it costs her, and up again.
-        require(m.rage >= Matron::kKnockdownRage - 0.01, "matron balance: a knockdown feeds her rage");
+        require(m.rage < Matron::kKnockdownRage - 0.01, "matron balance: a knockdown does not feed her rage");
         require(rises(static_cast<double>(Matron::kPestDownSeconds) + 2.0), "matron balance: up again, on her deck, alive");
         std::cout << "PASS scraperx_sim matron balance pest: blow_mps=" << m.blow_mps << "\n";
     }
@@ -617,6 +617,136 @@ void run_matron_balance() {
 }
 SCRAPERX_SELECT("matron-balance", run_matron_balance);
 
+// Her rage is fed only by sound that reaches her ear (J-080, #398, rule 29:
+// perception is evidence with an age). Pain changes what she does, not how
+// enraged she is: a blow she cannot hear leaves her rage unchanged, and a
+// clang she hears raises it. The blow's own impact is her own sound (within
+// kOwnSoundM of her body, the hearing rule's own exclusion), so it never
+// reaches her ear; the clang is the same toolbox striking the deck where she
+// can hear it. The player stays crouched and still below throughout, so no
+// sound of his reaches her ear either.
+void run_matron_rage_blow() {
+    constexpr int kStaggering = static_cast<int>(Matron::State::Staggering);
+    constexpr int kDown = static_cast<int>(Matron::State::Down);
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    require(s.advance_frame(1.0).accepted, "matron rage blow: settle");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron rage blow: a sprint toward her locker wakes her");
+    const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
+    require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) && walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12),
+            "matron rage blow: up the line's ramp onto its stand");
+    require(ride_line_down(s, line), "matron rage blow: down the line to 143 m while she strains");
+    (void)s.set_crouch_input(true);
+    require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
+                go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) && go(s, -16.0, -132.6, false, 20.0, 0.3),
+            "matron rage blow: crouched round to 143's north edge of the shaft");
+    require(until_guarding(s, 120.0) && s.snapshot().death_count == 0, "matron rage blow: she stands guard at her post");
+    const std::uint32_t first = s.loose_stock_throwables_begin();
+    const std::uint32_t toolbox = s.kit_body_index(LooseStock::kFirstEntity + first);
+    // Up again within her stage's time on the steel (and room to stand), on
+    // her own deck, alive.
+    const auto rises = [&](const double seconds) {
+        for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            if (m.state != kDown && m.state != kStaggering) {
+                return m.alive && std::abs(m.floor_y - static_cast<double>(Matron::kDeckTop)) < 0.1 &&
+                       std::abs(m.position.y - (static_cast<double>(Matron::kDeckTop) + Matron::kStandCentre)) < 0.2;
+            }
+        }
+        return false;
+    };
+    // `piece` sent at her from `ahead_m` north of her (the way she faces at
+    // her post), `rise_m` over her feet, at `mps`; the worst it does to her
+    // over the contact (Down over Staggering; -1 for neither).
+    const auto send = [&](const std::uint32_t piece, const double ahead_m, const double rise_m, const double mps) {
+        const auto m = s.matron_state();
+        const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+        s.debug_launch_kit_body(piece, {m.position.x, feet + rise_m, m.position.z + ahead_m}, {0.0, 0.0, -mps});
+        int knocked = -1;
+        for (int i = 0; i < static_cast<int>(0.6 * static_cast<double>(Simulation::kTickRateHz)) && knocked != kDown; ++i) {
+            tick(s);
+            const int state = s.matron_state().state;
+            if (state == kDown || (state == kStaggering && knocked < 0)) {
+                knocked = state;
+            }
+        }
+        return knocked;
+    };
+    // A pest, upright: a toolbox heaved at her chest (5.8 m/s, an arms'
+    // throw) puts her down, and the blow she cannot hear leaves her rage
+    // where it was: zero.
+    {
+        s.debug_set_matron_stage(0);
+        const double before = s.matron_state().rage;
+        require(before == 0.0, "matron rage blow: a pest, her rage at zero before the blow");
+        const int knocked = send(toolbox, 2.0, 1.3, 5.8);
+        const auto m = s.matron_state();
+        std::cout << "  matron rage blow: a toolbox at a pest's chest, blow " << m.blow_mps << " m/s, state " << knocked
+                  << ", knockdowns " << m.knockdowns << ", rage " << m.rage << " (was " << before << ")\n";
+        require(knocked == kDown && m.knockdowns == 1, "matron rage blow: a toolbox heaved at an upright pest puts her down");
+        require(m.rage <= before + 0.001, "matron rage blow: a knockdown she cannot hear does not feed her rage");
+        require(rises(static_cast<double>(Matron::kPestDownSeconds) + 2.0), "matron rage blow: up again, on her deck, alive");
+        require(until_guarding(s, 120.0), "matron rage blow: a pest, back at her post");
+    }
+    // Dangerous: the same toolbox at her chest only staggers her, and the
+    // stagger she cannot hear leaves her rage where it was.
+    {
+        s.debug_set_matron_stage(1);
+        const double before = s.matron_state().rage;
+        require(std::abs(before - (static_cast<double>(Matron::kRageDangerousUp) + 0.05)) < 0.01,
+                "matron rage blow: dangerous, her rage set before the blow");
+        const int knocked = send(toolbox, 2.0, 1.3, 5.8);
+        const auto m = s.matron_state();
+        std::cout << "  matron rage blow: a toolbox at a dangerous chest, blow " << m.blow_mps << " m/s, state " << knocked
+                  << ", staggers " << m.staggers << ", rage " << m.rage << " (was " << before << ")\n";
+        require(knocked == kStaggering, "matron rage blow: a toolbox only staggers a dangerous Matron");
+        require(m.staggers >= 1, "matron rage blow: the stagger is counted");
+        require(m.rage <= before + 0.001, "matron rage blow: a stagger she cannot hear does not feed her rage");
+        require(rises(2.0), "matron rage blow: dangerous, on her feet again");
+        require(until_guarding(s, 120.0), "matron rage blow: dangerous, back at her post");
+    }
+    // The same toolbox striking the deck where she can hear it: a clang she
+    // hears feeds her rage. The spot is probed for deck first, 2.5 m off her
+    // post (south, north, east, west in turn), and the box is dropped on it
+    // from 2 m up, fast enough to clang.
+    {
+        const double before = s.matron_state().rage;
+        const auto m0 = s.matron_state();
+        const double offsets[4][2] = {{0.0, -2.5}, {0.0, 2.5}, {2.5, 0.0}, {-2.5, 0.0}};
+        double clang_x = 0.0, clang_z = 0.0;
+        bool clang_spot = false;
+        for (const auto &off : offsets) {
+            const double cx = m0.position.x + off[0];
+            const double cz = m0.position.z + off[1];
+            const double support = s.debug_support_y(
+                {cx, static_cast<double>(Matron::kDeckTop) + 0.05, cz}, 0.5);
+            if (!std::isnan(support) && std::abs(support - static_cast<double>(Matron::kDeckTop)) < 0.1) {
+                clang_x = cx;
+                clang_z = cz;
+                clang_spot = true;
+                break;
+            }
+        }
+        require(clang_spot, "matron rage blow: a deck spot for the clang, 2.5 m from her");
+        s.debug_launch_kit_body(toolbox, {clang_x, static_cast<double>(Matron::kDeckTop) + 2.0, clang_z},
+                                {0.0, -6.0, 0.0});
+        for (int i = 0; i < static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+        }
+        const auto m = s.matron_state();
+        const auto box = s.kit_body_position(toolbox);
+        std::cout << "  matron rage blow: the toolbox clanged at (" << clang_x << ", " << clang_z << "), box now ("
+                  << box.x << ", " << box.y << ", " << box.z << "), rage " << m.rage << " (was " << before << ")\n";
+        require(m.rage > before + 0.02, "matron rage blow: a clang she hears feeds her rage");
+        require(m.alive, "matron rage blow: alive, the clang only feeds her rage");
+        std::cout << "PASS scraperx_sim matron rage blow: knockdown rage " << before << " -> heard, stagger held, clang fed\n";
+    }
+}
+SCRAPERX_SELECT("matron-rage-blow", run_matron_rage_blow);
+
 // The shaft's corner pipe (the owner, 2026-10-19: she comes down the shaft
 // after you; one shaft pipe is hers; you hear her at least 4 s before she
 // arrives; a drum dropped on her knocks her off without killing her). The
@@ -737,6 +867,48 @@ void run_matron_pipe() {
         const PipeRun r = pipe_run(0, 0.0, 40.0);
         std::cout << "  matron pipe: a pest with the climber heard below: took the pipe " << r.took << "\n";
         require(!r.took && r.alive, "matron pipe: frail, she does not take hold of the pipe");
+    }
+    // Frail, she climbs it up after him (Cory, 11-11: she climbs as a pest
+    // too; J-085): in the game's world, a pest out of her locker on deck 1
+    // climbs the story to him on deck 2 by her own hands, slow, gravity on.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(1.0).accepted, "matron pipe pest up: settle");
+        s.debug_launch_player(scraperx::sim::Vector3{1.0, 12.2, -126.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        bool out = false, took = false, arrived = false, alive = true;
+        double peak_force = 0.0, peak_power = 0.0, worst_gravity = 1.0, climb_s = 0.0;
+        int moved = -1;
+        for (int i = 0; i < 150 * hz && !arrived && alive; ++i) {
+            s.debug_set_matron_stage(0);   // held frail the whole way
+            (void)s.set_room_loudness(i % (4 * hz) < hz / 2 ? 1.0 : 0.0);
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m = s.matron_state();
+            alive = m.alive;
+            worst_gravity = std::min(worst_gravity, s.debug_matron_gravity_factor());
+            peak_force = std::max(peak_force, m.pipe_peak_force_n);
+            peak_power = std::max(peak_power, m.pipe_peak_power_w);
+            took = took || m.on_pipe;
+            if (!out && m.released) {
+                out = true;
+                moved = i;
+                s.debug_launch_player(scraperx::sim::Vector3{10.0, 23.2, -128.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            }
+            arrived = out && took && !m.on_pipe &&
+                      std::abs(m.position.y - static_cast<double>(Matron::kStandCentre) - 22.0) < 0.4;
+            if (arrived) {
+                climb_s = static_cast<double>(i - moved) / hz;
+            }
+        }
+        std::cout << "  matron pipe: a pest up from deck 1 to him on deck 2: out " << out << ", took the pipe " << took
+                  << ", on deck 2 " << arrived << " " << climb_s << " s after she came out, grip peak " << peak_force
+                  << " N, " << peak_power << " W, gravity " << worst_gravity << "\n";
+        require(out && took && arrived && alive, "matron pipe: a pest, she takes hold of the pipe and climbs the story to him");
+        require(worst_gravity == 1.0 && peak_force > 1000.0 && peak_force <= law::kForceN + 0.5 &&
+                    peak_power <= law::kPowerW + 0.5,
+                "matron pipe: a pest climbing it, gravity on her, her grip within the shared force and power budget");
+        std::cout << "PASS scraperx_sim matron pipe pest up: climb_s=" << climb_s << "\n";
     }
     // Dangerous: down it after the climber, heard all the way.
     {
@@ -2548,6 +2720,7 @@ void run_matron_remaining() {
     run_matron_mischief();
     run_matron_wreck();
     run_matron_collision();
+    run_matron_rage_blow();
     run_matron_balance();
     run_matron_pipe();
     run_matron_room();
@@ -2632,7 +2805,7 @@ void run_matron_remaining() {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
         s.debug_matron_patrol();             // out of her locker and awake: her rage is stepped
-        s.debug_hold_matron_hands(1000.0);   // no catch, no blow: pain feeds her rage, and none is dealt
+        s.debug_hold_matron_hands(1000.0);   // no catch, no blow: nothing reaches her ear, so her rage only falls
         s.debug_fix_matron_pace(0);
         require(s.advance_frame(1.0).accepted, "matron rage down: settle");
         (void)s.set_crouch_input(true);

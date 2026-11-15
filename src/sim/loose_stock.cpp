@@ -1,5 +1,6 @@
 // Loose stock about the tower (see loose_stock.hpp).
 #include "sim/loose_stock.hpp"
+#include "sim/slab_cell.hpp"
 
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -485,6 +486,9 @@ void add_crane_laydown(std::vector<LooseStock::Placement> &t) {
 // the load it last brought in off the dock: a skid crate on the 44 m deck,
 // a reel on its pallet on the 11 m deck, each a metre and a quarter past its
 // fork tips.
+// Nothing new goes here or anywhere in this table: the tower's dressed
+// stock, the throwables and every later group are numbered after it, so a
+// piece added here renumbers them all (loose_stock.hpp, kFirstEntity; J-107).
 void add_deck_loads(std::vector<LooseStock::Placement> &t) {
     t.push_back({K::SkidCrate, 1, -21.5F, 44.0F, -151.6F, 0.0F});
     t.push_back({K::PalletReel, 0, -21.5F, 11.0F, -135.4F, 0.0F});
@@ -619,6 +623,12 @@ void LooseStock::lay_matron_kinds() {
     // on end, the pallet flat, its long side along the rail.
     add_piece({K::Extinguisher, 0, -17.0F, kDeck154, -125.1F, 0.0F});
     add_piece({K::Pallet, 0, -18.8F, kDeck154, -125.45F, 0.0F});
+}
+
+void LooseStock::lay_hung_slab() {
+    hung_slab_begin_ = count();
+    // Long side along z, across her lane, where the cell's sling holds it.
+    add_piece({K::PlateSlab, 0, SlabCell::kSlabX, SlabCell::kSlabUnderside, SlabCell::kSlabZ, 0.5F * JPH_PI});
 }
 
 void LooseStock::append_reserved() {

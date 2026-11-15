@@ -4,7 +4,7 @@
 Cory, 11-04: running full game builds and tests "when there's only been small changes ... is so extremely
 wasteful". Each changed file is mapped to the groups of the proof that read it; a group no changed file
 reaches is skipped, and a skipped job counts as passing for the switchboard and sweep.py. Any doubt (an
-unknown path, a dispatch, a diff that cannot be listed) runs the whole proof.
+unknown path, a dispatch on trunk or any ref not named below, a diff that cannot be listed) runs the whole proof.
 
 The groups (checked 11-04 against CMakeLists.txt, the test sources and the proof workflow):
   native   native-tests, the four CTest shards: scraperx_sim_tests, shared_survival and parkour_flow. They
@@ -18,9 +18,9 @@ host-build runs when any group does (it builds what all three need and checks th
 What reaches what (first match wins; see groups_of):
   nothing          the switchboard, the board tools, the agents' notes and rules (NO_GAME); the design and
                    execution docs (01_*/, 02_*/, 03_EXECUTION/) and any .md outside godot/; tools/ other than
-                   tools/fab/ and tools/matron_probe/ (tools/rule_check runs in the scope job on every push
-                   anyway); src/voice/ (the offline voice generators: what they make is committed under
-                   godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
+                   tools/fab/ and tools/matron_probe/ (tools/rule_check and the switchboard's unit tests run in
+                   the scope job on every push anyway); src/voice/ (the offline voice generators: what they
+                   make is committed under godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
   godot            tools/matron_probe/ (the godot-touch drawn-body gate records with probe.gd and gates on
                    check.py, and host-build's drawn-body guard reads check.py's EXPECTED keys; the probe
                    files are host-side tools, not packaged in the APK, so android does not run)
@@ -33,8 +33,13 @@ What reaches what (first match wins; see groups_of):
 What is compared:
   push to ScraperX-Claude    the pushed range, BEFORE..HEAD (every commit of the push)
   push to an integrate branch the branch against trunk, merge-base(trunk, HEAD)..HEAD, so a docs-only push
-                             on a branch that also changes game code still proves the game
-  anything else (dispatch)   the whole proof
+  (or a dispatch on one)     on a branch that also changes game code still proves the game
+  dispatch on a switchboard  the switchboard's merge of a green PR head with trunk (switch.py merge_candidate):
+  merge candidate            HEAD is that merge commit, and the range is merge-base(its two parents)..HEAD:
+                             the PR's own change since its green proof's trunk, and trunk's since then, and
+                             anything else in the merge's tree (11-13: every candidate ran all 13 jobs, even
+                             when one group was reached)
+  anything else (dispatch)   the whole proof (a dispatch on trunk too)
 
 Writes `game=`, `native=`, `godot=` and `android=` (true|false) to $GITHUB_OUTPUT when it is set; `game` is
 true when any group runs. Prints the decision and why.
@@ -42,10 +47,13 @@ true when any group runs. Prints the decision and why.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 
 TRUNK = "ScraperX-Claude"
+CANDIDATE_REF = "refs/heads/switchboard/candidate-"   # tools/switchboard/switch.py CANDIDATE_PREFIX
+INTEGRATE_REF = re.compile(r"^refs/heads/[A-Za-z0-9._-]+/integrate-[A-Za-z0-9._/-]+$")
 ZERO_SHA = "0" * 40
 
 GROUPS = ("native", "godot", "android")
@@ -55,9 +63,10 @@ GODOT = frozenset({"godot", "android"})
 NATIVE = frozenset({"native"})
 PROBE = frozenset({"godot"})
 
-# Read by no build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
-# proof workflow reads them; the mentions there are comments). The switchboard's own code is tested by
-# switchboard.yml's selftest job, not by the game proof.
+# Read by no game build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
+# game jobs reads them; the mentions there are comments). The switchboard's and the board tools' unit tests run in
+# the proof's scope job on every push (J-072: switchboard.yml's selftest never starts on a PR its bot opens), not in
+# a game job, so they need no group here.
 NO_GAME_PREFIXES = (
     "tools/switchboard/",
     "tools/board/",
@@ -131,10 +140,18 @@ def _shown(paths: list[str]) -> str:
     return ", ".join(paths[:6]) + (f" and {len(paths) - 6} more" if len(paths) > 6 else "")
 
 
+def scoped(event: str, ref: str) -> bool:
+    """Is this run's scope read from its changed files? A push; a dispatch only on a merge candidate or an
+    integrate branch (a dispatch on trunk, or on any other ref, runs the whole proof)."""
+    if event == "push":
+        return True
+    return event == "workflow_dispatch" and (ref.startswith(CANDIDATE_REF) or bool(INTEGRATE_REF.match(ref)))
+
+
 def decide(event: str, ref: str, changed: list[str] | None) -> tuple[frozenset[str], str]:
     """(the groups to run, why). `changed` is None when the changed files could not be listed."""
-    if event != "push":
-        return EVERY, f"event {event!r}: the whole proof"
+    if not scoped(event, ref):
+        return EVERY, f"event {event!r} on {ref!r}: the whole proof"
     if changed is None:
         return EVERY, "the changed files could not be listed: the whole proof"
     if not changed:
@@ -164,7 +181,11 @@ def changed_files(ref: str, before: str) -> list[str] | None:
     """The files this push changes, as `decide` compares them; None when they cannot be listed."""
     # The checkout is shallow (depth 1), so each base is fetched; a failed fetch or merge-base means the whole proof.
     try:
-        if ref == f"refs/heads/{TRUNK}":
+        if ref.startswith(CANDIDATE_REF):
+            parents = merge_parents()
+            _git("fetch", "--quiet", "--depth=100", "origin", *parents)
+            base = _git("merge-base", *parents).strip()
+        elif ref == f"refs/heads/{TRUNK}":
             if not before or before == ZERO_SHA:
                 return None
             _git("fetch", "--quiet", "--depth=1", "origin", before)
@@ -184,6 +205,16 @@ def changed_files(ref: str, before: str) -> list[str] | None:
     return [n for n in names.split("\0") if n]
 
 
+def merge_parents() -> list[str]:
+    """HEAD's two parents, read from the commit object itself (a shallow checkout shows HEAD with none). Anything
+    but a two-parent merge raises: the whole proof runs."""
+    head = _git("cat-file", "-p", "HEAD").split("\n\n", 1)[0]
+    parents = [line.split()[1] for line in head.splitlines() if line.startswith("parent ")]
+    if len(parents) != 2 or not all(re.fullmatch(r"[0-9a-f]{40}", p) for p in parents):
+        raise RuntimeError(f"HEAD is not a merge of two commits ({len(parents)} parent(s))")
+    return parents
+
+
 def outputs(run: frozenset[str]) -> dict[str, str]:
     """The $GITHUB_OUTPUT values the proof's jobs read."""
     flag = {True: "true", False: "false"}
@@ -195,7 +226,7 @@ def outputs(run: frozenset[str]) -> dict[str, str]:
 def main() -> int:
     event = os.environ.get("EVENT", "")
     ref = os.environ.get("REF", "")
-    changed = changed_files(ref, os.environ.get("BEFORE", "")) if event == "push" else None
+    changed = changed_files(ref, os.environ.get("BEFORE", "")) if scoped(event, ref) else None
     run, why = decide(event, ref, changed)
     values = outputs(run)
     print("proof_scope: " + " ".join(f"{k}={v}" for k, v in values.items()))

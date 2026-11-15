@@ -5,6 +5,37 @@
 
 namespace scraperx::sim {
 
+// A hold with a wall face right behind it is a hold on a wall (a rung or a
+// pipe on a wall): the climb keeps it. A hold with open air behind it is a
+// bar or rail in the open, a swing target, not a climb. The ray runs from the
+// hold's axis along the facing, past the hold, for kGripWallBehindM.
+bool Simulation::PhysicsWorld::grip_backed_by_wall(const Grip &grip) const noexcept {
+    if (facing_.IsNearZero()) {
+        return true;
+    }
+    const JPH::IgnoreSingleBodyFilter grip_filter(grip.body);
+    const JPH::IgnoreSingleBodyFilterChained filter(player_id_, grip_filter);
+    JPH::RayCastResult hit;
+    return physics_system_.GetNarrowPhaseQuery().CastRay(
+        JPH::RRayCast(grip.point, facing_ * kGripWallBehindM), hit, {}, {}, filter);
+}
+
+// A rung of a ladder: another hold a rung-spacing directly above or below
+// it. Every ladder in the world spaces its rungs kLadderRungSpacing apart;
+// the bars the hang is for (the hang rail, the gallery pipes at 1.0 m) stand
+// alone. The sibling must sit a real rung-spacing away, not the same hold
+// re-found: a stile's foot ends 0.10 m under the bottom rung, inside the
+// probe's box, and must not count.
+bool Simulation::PhysicsWorld::grip_has_rung_neighbor(const Grip &grip, const JPH::RVec3 origin) const noexcept {
+    for (const float dy : {kLadderRungSpacing, -kLadderRungSpacing}) {
+        const Grip next = find_grip(origin, grip.point + JPH::Vec3(0.0F, dy, 0.0F), facing_);
+        if (next.valid && std::abs(next.point.GetY() - grip.point.GetY()) > 0.5F * kLadderRungSpacing) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
     if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0 || dyno_active_ ||
         dyno_no_catch_) {
@@ -40,11 +71,23 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
                                          true);
     if (!probe.valid) {
         // No ledge: a hold reached for in the air is caught and climbed --
-        // rising (M6), only where the first pull up from it is clear.
+        // rising (M6), only where the first pull up from it is clear. A bar
+        // or rail in open air is the exception: the hang catch takes
+        // precedence for it, so the climb must not take it while the fall
+        // still carries the centre down to the swing window below. A hold
+        // with a wall face behind it (a rung or pipe on a wall) keeps the
+        // climb first, and so does a member that is not level. So does a
+        // rung of a hanging ladder: its siblings stand a rung-spacing above
+        // and below it, and the swing window never opens for it -- the
+        // davit's bottom rung sits 0.68 m over the monorail at most, under
+        // the swing's 0.75 m hand rise, so refusing the climb strands the
+        // leap (C1, touch_stack_upper).
         const Grip grip = find_grip(
             origin, origin + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach,
             facing_);
-        if (grip.valid) {
+        const bool swing_target =
+            grip.valid && grip.level && !grip_backed_by_wall(grip) && !grip_has_rung_neighbor(grip, origin);
+        if (grip.valid && !swing_target) {
             if (rising <= kHangApexSpeed ||
                 climb_move_clear(origin, origin + JPH::Vec3(0.0F, kClimbMoveAim, 0.0F))) {
                 begin_climb(bodies, grip);
@@ -53,14 +96,17 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
         }
         // None in front: a bar or pipe over the head is swung from -- in
         // flight (a jump, or no ground within a step under the soles),
-        // never on a step's brief lift.
+        // never on a step's brief lift. The bar search covers his real
+        // arm reach (J-043): 0.45 m to the side, and its band runs down
+        // past his shoulders to about waist height, so a rail passing his
+        // chest or hip while he falls past it is seen.
         if (!flight_from_jump_ &&
             feet_supported_at(origin, static_cast<float>(origin.GetY()) - active_half_height())) {
             return;
         }
         const Grip bar = find_grip(
-            origin, origin + JPH::Vec3(0.0F, kSwingCatchAimRise, 0.0F) + facing_ * kSwingCatchAimAhead,
-            facing_, -kPlayerRadius);
+            origin, origin + JPH::Vec3(0.0F, kBarSearchAimRise, 0.0F) + facing_ * kSwingCatchAimAhead,
+            facing_, -kPlayerRadius, grip_region_shape_bar_.GetPtr());
         if (bar.valid && bar.point.GetY() - origin.GetY() >= kSwingMinHandRise) {
             begin_swing(bodies, bar);
         }

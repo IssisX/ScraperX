@@ -1,6 +1,8 @@
 // Parkour movement: brachiation, the pipe gallery, slide, speed vault, wall-run, hook, workers, C7, jump buffer, parkour seams.
 
 #include "sim_tests.hpp"
+#include "sim/matron_traversal.hpp"
+#include "sim/physics_world_tuning.hpp"
 
 // Parkour step 2: brachiation on the proving ground's monkey bars (six bars a
 // metre apart, 3.1 m up, x = 0..5 at z = -20; a landing block past the last).
@@ -113,6 +115,254 @@ SCRAPERX_SELECT("parkour-moves", run_brachiation, run_pipe_gallery, run_slide, r
                 run_wall_climb, run_tuck, run_flow, run_springboard, run_swing_launch, run_slide_jump,
                 run_climb_moves, run_wall_chain, run_zipline, run_hook, run_workers, run_c7,
                 run_gust_front_upper);
+
+// J-043 (#241): the hang rail under deck 154's north band, from the bay to
+// the shaft edge. Two cases, both from a walked, braked stance on the leaf
+// (jump the leaf's south handrail, face south, hold south): the fall past
+// the rail starts 0.45 m east of the rail line -- inside his arm's reach --
+// and he catches the rail as it passes his chest, then swings south hand
+// over hand to the shaft edge; the dead-centre landing starts on the rail
+// line, falls straight onto the rail top and stands on it, no catch. While
+// he crosses, her own scan still reads nothing under the deck, so she
+// cannot follow underneath.
+void run_hang_rail() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    using scraperx::sim::traversal::AffordanceMap;
+
+    // Stage the fall from a walked, braked stance on the leaf at target_x:
+    // walk on, brake to a stop, nudge to the line with slow real inputs and
+    // re-brake until he stands on it. The walk + brake leaves him ~0.12 m
+    // off the line (the brake drift), and walk_to cannot fix that:
+    // steer_toward has a 0.05 m dead zone, so it can never land tighter
+    // than that -- the input is driven directly instead. The nudge is a
+    // crawl (0.05 input, world frame), so each re-brake drifts him only
+    // millimetres, and the loop converges. No teleport: the fall starts
+    // from a walked, braked stance on the leaf.
+    auto stage_fall = [](Simulation &s, const double target_x) {
+        require(walk_to(s, target_x, -128.5, 20.0, 0.1), "hang rail: walk onto the leaf");
+        // Brake to a stop first: the walk leaves eastward velocity that
+        // carries him off the line.
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        require(advance_until(s,
+                              [](const Snapshot &n) {
+                                  return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z) < 0.1;
+                              },
+                              2.0),
+                "hang rail: brake to a stop on the leaf");
+        for (int nudge = 0; nudge < 4; ++nudge) {
+            double dx = target_x - s.snapshot().player_position.x;
+            if (std::abs(dx) < 0.02) {
+                break;
+            }
+            for (int step = 0; step < 180 && std::abs(dx) >= 0.01; ++step) {
+                (void)s.set_move_input(dx > 0.0 ? 0.05 : -0.05, 0.0);
+                (void)s.set_facing(dx > 0.0 ? 1.0 : -1.0, 0.0);
+                (void)s.advance_frame(Simulation::kFixedStepSeconds);
+                dx = target_x - s.snapshot().player_position.x;
+            }
+            (void)s.set_move_input(0.0, 0.0);
+            require(advance_until(s,
+                                  [](const Snapshot &n) {
+                                      return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z) <
+                                             0.05;
+                                  },
+                                  3.0),
+                    "hang rail: brake after the nudge");
+        }
+        std::cout << "  hang rail: fall starts at x " << s.snapshot().player_position.x << " (target " << target_x
+                  << ")\n";
+        require(std::abs(s.snapshot().player_position.x - target_x) < 0.02,
+                "hang rail: the fall starts on its line");
+    };
+    // Case A: the fall past the rail. He starts 0.45 m east of the rail
+    // line -- inside his arm's reach (0.60 m from the shoulder) -- jumps
+    // the leaf's south handrail (1.0 m at z -129.26 blocks a step off the
+    // edge), faces south, holds south, and catches the rail as it passes
+    // his chest, then swings south hand over hand to the shaft edge.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "hang rail: settle");
+        stage_fall(s, static_cast<double>(scraperx::sim::detail::kHangRailX) + 0.45);
+        (void)s.set_facing(0.0, -1.0);
+        (void)s.set_move_input(0.0, -1.0);
+        require(s.request_jump(), "hang rail: jump the leaf's south handrail");
+        bool caught = false;
+        int catch_ticks = 0;
+        for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && !caught; ++i) {
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            ++catch_ticks;
+            caught = s.snapshot().traversal_state == TraversalState::Swinging;
+        }
+        require(caught, "hang rail: he catches the rail as he falls past it");
+        // Swing south hand over hand to the shaft edge; the lip fallback at
+        // the end is the pull-up exit, so either state counts as arrived.
+        bool reached = false;
+        int swing_ticks = 0;
+        for (int i = 0; i < 15 * static_cast<int>(Simulation::kTickRateHz) && !reached; ++i) {
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            ++swing_ticks;
+            const Snapshot snap = s.snapshot();
+            const double hand_z =
+                std::min(snap.traversal_left_hand.z, snap.traversal_right_hand.z);
+            reached = hand_z <= static_cast<double>(scraperx::sim::detail::kHangRailSouthZ) + 0.10 ||
+                      snap.traversal_state == TraversalState::Hanging;
+        }
+        const Snapshot snap = s.snapshot();
+        std::cout << "  hang rail: caught after " << catch_ticks << " ticks, reached the shaft edge after "
+                  << swing_ticks << " swing ticks, hand z "
+                  << std::min(snap.traversal_left_hand.z, snap.traversal_right_hand.z) << ", state "
+                  << static_cast<int>(snap.traversal_state) << ", catches " << snap.swing_catch_count
+                  << ", reaches " << snap.swing_reach_count << "\n";
+        require(reached, "hang rail: he swings the rail to the shaft edge");
+        require(snap.swing_catch_count == 1, "hang rail: one catch, no re-catch on the way");
+    }
+    // Case B: the dead-centre landing. He starts on the rail line, jumps
+    // the handrail and falls straight onto the rail top, and stands on it:
+    // the catch never fires, because he never falls past the rail -- he
+    // lands on it. His centre stands a capsule half-extent (half-height
+    // plus radius) above the rail top.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        require(s.advance_frame(1.0).accepted, "hang rail: settle");
+        stage_fall(s, static_cast<double>(scraperx::sim::detail::kHangRailX));
+        (void)s.set_facing(0.0, -1.0);
+        (void)s.set_move_input(0.0, -1.0);
+        require(s.request_jump(), "hang rail: jump the leaf's south handrail");
+        // A second in the air (the jump rises and falls back), then he
+        // must be standing on the rail top: grounded, near still, and his
+        // centre a capsule half-extent above it.
+        require(s.advance_frame(1.0).accepted, "hang rail: fall to the rail top");
+        require(advance_until(s,
+                              [](const Snapshot &n) {
+                                  return n.player_grounded &&
+                                         std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.y,
+                                                    n.player_linear_velocity.z) < 0.05;
+                              },
+                              2.0),
+                "hang rail: he lands on the rail top and stands");
+        const Snapshot snap = s.snapshot();
+        std::cout << "  hang rail: dead-centre landing at (" << snap.player_position.x << ", "
+                  << snap.player_position.y << ", " << snap.player_position.z << "), state "
+                  << static_cast<int>(snap.traversal_state) << ", catches " << snap.swing_catch_count << "\n";
+        require(snap.traversal_state == TraversalState::None, "hang rail: no catch on the dead-centre landing");
+        require(snap.swing_catch_count == 0, "hang rail: no catch on the dead-centre landing");
+        require(std::abs(snap.player_position.y -
+                         (static_cast<double>(scraperx::sim::detail::kHangRailTopY) +
+                          static_cast<double>(scraperx::sim::detail::kPlayerHalfHeight))) < 0.05,
+                "hang rail: he stands on the rail top");
+    }
+
+    // She still cannot follow underneath: her own scan reads nothing of the
+    // rail -- no patch, ladder, pole or riser overlaps its volume -- and the
+    // rail is no hold she could climb by either.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(0.1).accepted, "hang rail: settle for her scan");
+        const AffordanceMap &map = s.matron_affordances();
+        const float x0 = scraperx::sim::detail::kHangRailX - 0.5F * scraperx::sim::detail::kHangRailSection;
+        const float x1 = scraperx::sim::detail::kHangRailX + 0.5F * scraperx::sim::detail::kHangRailSection;
+        const float y0 = scraperx::sim::detail::kHangRailTopY - scraperx::sim::detail::kHangRailSection;
+        const float y1 = scraperx::sim::detail::kHangRailTopY;
+        const float z0 = scraperx::sim::detail::kHangRailSouthZ;
+        const float z1 = scraperx::sim::detail::kHangRailNorthZ;
+        for (const auto &patch : map.patches()) {
+            require(!(patch.top >= y0 && patch.top <= y1 && patch.max_x >= x0 && patch.min_x <= x1 &&
+                      patch.max_z >= z0 && patch.min_z <= z1),
+                    "hang rail: her scan reads no patch on the rail");
+        }
+        for (const auto &ladder : map.ladders()) {
+            require(!(ladder.x >= x0 && ladder.x <= x1 && ladder.z >= z0 && ladder.z <= z1 &&
+                      ladder.top >= y0 && ladder.bottom <= y1),
+                    "hang rail: her scan reads no ladder on the rail");
+        }
+        for (const auto &pole : map.poles()) {
+            require(!(pole.x >= x0 && pole.x <= x1 && pole.z >= z0 && pole.z <= z1 &&
+                      pole.top >= y0 && pole.bottom <= y1),
+                    "hang rail: her scan reads no pole on the rail");
+        }
+        for (const auto &riser : map.risers()) {
+            require(!(riser.x + riser.half_x >= x0 && riser.x - riser.half_x <= x1 &&
+                      riser.z + riser.half_z >= z0 && riser.z - riser.half_z <= z1 &&
+                      riser.top >= y0 && riser.bottom <= y1),
+                    "hang rail: her scan reads no riser on the rail");
+        }
+        std::cout << "  hang rail: her scan reads " << map.patches().size() << " patches, "
+                  << map.ladders().size() << " ladders, " << map.poles().size() << " poles, "
+                  << map.risers().size() << " risers, none on the rail\n";
+    }
+
+    // Sight-flip + hearing measurement (prints only, no requires): her on the
+    // north band facing south over the rail, him crossing under the slab.
+    // Where the twin rays clear the slab edge she sees him; the noise she
+    // hears while he walks the leaf (on top) vs swings the rail (under) is
+    // the hearing comparison. She may move while she hunts, so her position
+    // at the flip is printed with it.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        s.debug_place_matron({scraperx::sim::detail::kHangRailX, 154.0F, -126.0F});
+        s.debug_face_matron(3.14159265);   // south, down the rail
+        if (s.advance_frame(1.0).accepted &&
+            walk_to(s, static_cast<double>(scraperx::sim::detail::kHangRailX), -128.5, 20.0, 0.1)) {
+            double noise_on_top = 0.0;
+            for (int i = 0; i < 90; ++i) {
+                (void)s.advance_frame(Simulation::kFixedStepSeconds);
+                noise_on_top = std::max(noise_on_top, static_cast<double>(s.matron_state().noise_heard));
+            }
+            // Same entry as the crossing: brake to a stop, then jump the
+            // leaf's south handrail and fall onto the rail line.
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.set_sprint_input(false);
+            (void)advance_until(s,
+                                [](const Snapshot &n) {
+                                    return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z) < 0.1;
+                                },
+                                2.0);
+            (void)s.set_facing(0.0, -1.0);
+            (void)s.set_move_input(0.0, -1.0);
+            (void)s.request_jump();
+            bool flipped = false;
+            double flip_z = 0.0;
+            double flip_her_x = 0.0;
+            double flip_her_z = 0.0;
+            double noise_under = 0.0;
+            for (int i = 0; i < 18 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+                (void)s.advance_frame(Simulation::kFixedStepSeconds);
+                const Snapshot snap = s.snapshot();
+                const auto her = s.matron_state();
+                noise_under = std::max(noise_under, static_cast<double>(her.noise_heard));
+                if (her.sees_player && !flipped) {
+                    flipped = true;
+                    flip_z = snap.player_position.z;
+                    flip_her_x = her.position.x;
+                    flip_her_z = her.position.z;
+                }
+                const double hand_z =
+                    std::min(snap.traversal_left_hand.z, snap.traversal_right_hand.z);
+                if (hand_z <= static_cast<double>(scraperx::sim::detail::kHangRailSouthZ) + 0.10 ||
+                    snap.traversal_state == TraversalState::Hanging) {
+                    break;
+                }
+                if (i > 3 * static_cast<int>(Simulation::kTickRateHz) &&
+                    snap.traversal_state != TraversalState::Swinging) {
+                    break;
+                }
+            }
+            std::cout << "  hang rail sight: flipped=" << (flipped ? "yes" : "no") << " at player z " << flip_z
+                      << ", her at (" << flip_her_x << ", " << flip_her_z << ")"
+                      << ", noise on top " << noise_on_top << ", noise under " << noise_under << "\n";
+        } else {
+            std::cout << "  hang rail sight: skipped, the walk onto the leaf did not complete with her placed\n";
+        }
+    }
+    std::cout << "PASS scraperx_sim hang rail: crossed the bay to the shaft edge, her scan reads nothing under the deck\n";
+}
+SCRAPERX_GROUP("hang_rail", 1090, run_hang_rail);
 
 // The pipe gallery in the yard (sim/pipe_gallery.hpp), played: a run along
 // the start stand, a jump from its painted edge for the first pipe, the stick
@@ -1209,7 +1459,7 @@ void run_wall_climb() {
 }
 SCRAPERX_GROUP("wall_climb", 620, run_wall_climb);
 SCRAPERX_SELECT("climb", run_wall_climb, run_tuck, run_flow, run_springboard, run_swing_launch,
-                run_slide_jump, run_climb_moves, run_wall_chain, run_zipline);
+                run_slide_jump, run_climb_moves, run_wall_chain, run_zipline, run_hang_rail);
 
 // Mirror's Edge's tuck (kTuckMaximumFallMps): sprinting at the proving
 // ground's crawl beam (its top 1.85 m up), a jump 4.4 m short with Crouch held

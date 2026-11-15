@@ -14,6 +14,9 @@ issue is closed, so the integrator tells the owner to start it). Every job on th
 newest non-bot comment on its issue, so an answer that unparks it is seen. Duplicates stay a judgment: no string
 match finds two jobs doing the same thing.
 
+The owner and label checks (OWNER, NO-LABEL) are gone since `plan: live`: work/plan.md is the one record of who
+owns a job, and the job machine (tools/switchboard/machine.py) reads every open J-NNN issue and makes its labels.
+
 Usage: python3 tools/board/queue_check.py [work/tasks/muse.md]
 Exit 1 when any line in the "Unstarted" block is not OK, so a stale queue cannot be mailed unseen.
 Reads only (REST `gh api`, through tools/switchboard/ghapi.py); writes nothing.

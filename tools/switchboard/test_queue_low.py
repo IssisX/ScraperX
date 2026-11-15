@@ -194,7 +194,7 @@ class Raise(unittest.TestCase):
         sw.inbox([])
         gh.by_issue[500] = [bridged(1, 500, "J-500")]   # Muse starts one
         gh.issues[500]["comments"] = 1
-        sw = make(gh)
+        sw = test_inbox.later(gh)   # a sweep past the hold on the integrator's own work (11-13)
         sw.queue_check(queue(5))
         self.assertEqual(sw.inbox([]), 1)
         self.assertIn("QUEUE-LOW: 4 unstarted", gh.posts[1][1])
@@ -234,6 +234,16 @@ class Sweep(unittest.TestCase):
         self.assertIn("- QUEUE-LOW: 5 unstarted", body)
         self.assertEqual(gh.state["steer"]["timers"]["queue"]["listed"], switch.queue_item_of(item)[0].key)
 
+    def test_a_live_count_kept_for_a_quiet_sweep_keeps_its_key(self):
+        # 11-13 (#350): the live count's item is on work/plan.md, but the one kept for a sweep that does not count came
+        # back on muse.md, a new key: QUEUE-LOW was listed in two posts in a row (#282 6865964430, 6866078211)
+        live = switch.InboxItem("QUEUE-LOW", "work/plan.md", "abc123:J-136,J-083",
+                                "QUEUE-LOW: 2 unstarted Muse jobs in work/plan.md (under 8). Unstarted: J-136, J-083")
+        (kept,) = switch.queue_item_of(switch.queue_item_record((live,)))
+        self.assertEqual(kept.key, live.key)
+        old = {"head": "5:J-500", "line": "QUEUE-LOW: 5 unstarted"}   # a record from before: muse.md, as it was made
+        self.assertEqual(switch.queue_item_of(old)[0].target, switch.muse_queue.QUEUE_FILE)
+
     def test_a_listed_queue_low_costs_a_quiet_sweep_nothing(self):
         item = {"head": "5:J-500", "line": "QUEUE-LOW: 5 unstarted"}
         listed = switch.queue_item_of(item)[0].key
@@ -259,6 +269,56 @@ class Sweep(unittest.TestCase):
                     mock.patch.object(switch.Switch, "queue_check", autospec=True, return_value=()) as counted:
                 test_sweep_calls.sweep(gh, self.state())
             self.assertEqual(counted.call_count, want, name)
+
+    def test_live_a_proof_run_counts_on_a_branch_naming_a_muse_job_of_the_plan(self):   # muse.md's block is gone
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "work").mkdir()
+            (root / "work/plan.md").write_text("limit muse 2\nlimit claude 1\nJ-501 muse #501 | Muse's\n"
+                                              "J-601 claude #601 | Claude's\n", encoding="utf-8")
+            sw = test_inbox.make(test_sweep_calls.CountingGH(self.prs))
+            sw.root, sw.plan_mode = root, lambda: "live"
+            for name, want in (("fb-bot/integrate-j501-door", True), ("claude/integrate-j601", False)):
+                delta = switch.SweepDelta(set(), 0, set(), set(), active={name})
+                self.assertEqual(sw.queue_started(delta, False), want, name)
+
+    def test_live_after_a_count_only_a_change_to_a_waiting_job_counts_again(self):
+        # J-072, 11-13: counted on every Muse push and post, the queue check was 225 of a fast sweep's 501 calls
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "work").mkdir()
+            plan_md = root / "work/plan.md"
+            plan_md.write_text("limit muse 2\nlimit claude 1\nJ-501 muse #501 | waiting\nJ-502 muse #502 | building\n",
+                               encoding="utf-8")
+            sw = test_inbox.make(test_sweep_calls.CountingGH(self.prs))
+            sw.root, sw.plan_mode = root, lambda: "live"
+            last = {"waiting": ["J-501"], "source": sw.queue_source()}
+
+            def started(active=(), mail=None, new_pr=False, pipe=True):
+                return sw.queue_started(switch.SweepDelta(set(), 1, set(), set(), active=set(active), pipe=pipe,
+                                                          mail=mail), new_pr, last)
+            self.assertTrue(started(active={"fb-bot/integrate-j501-door"}))   # the waiting job pushed
+            self.assertFalse(started(active={"fb-bot/integrate-j502-wall"}))  # a job already started pushed again
+            self.assertFalse(started(mail={"J-502"}))                         # Muse mailed about a started job
+            self.assertTrue(started(mail={"J-501"}))
+            self.assertTrue(started(mail={"*"}))                              # a mail naming no job
+            self.assertTrue(started(new_pr=True))
+            self.assertFalse(started())                                        # our own CLAUDE_TO_MUSE notices
+            plan_md.write_text(plan_md.read_text(encoding="utf-8") + "J-503 muse #503 | new\n", encoding="utf-8")
+            self.assertTrue(started(), "the plan changed: counted as before (any post)")
+
+    def test_a_count_keeps_its_waiting_jobs_for_the_next_sweep(self):
+        gh = test_sweep_calls.CountingGH(self.prs)
+
+        def count(sw):
+            sw.queue_items, sw.queue_waiting = (), ["J-501", "J-502"]
+            return ()
+        with mock.patch.object(switch.Switch, "queue_check", autospec=True, side_effect=count):
+            status, _, sw = test_sweep_calls.sweep(gh, None)
+        self.assertEqual(status, 0, sw.lines)
+        timer = gh.state["steer"]["timers"]["queue"]
+        self.assertEqual(timer["waiting"], ["J-501", "J-502"])
+        self.assertEqual(timer["source"], sw.queue_source())
 
     def test_a_full_pass_counts(self):
         gh = test_sweep_calls.CountingGH(self.prs)
@@ -292,6 +352,10 @@ class Cli(unittest.TestCase):
             f"PARKED   J-053 #82  newest: {iso(1)} To Grok: the bar",
             "QUEUE STALE: 2 not unstarted",
         ])
+
+
+# The owner checks' scenarios (another owner's job, the parked line, a bare J-NNN issue) moved with the checks to
+# the job machine at the cutover: test_machine.Owners.
 
 
 if __name__ == "__main__":

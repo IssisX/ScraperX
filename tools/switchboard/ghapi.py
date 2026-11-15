@@ -40,6 +40,7 @@ MAX_PAGES = 5          # at most 500 items read from any one listing
 ISSUE_ONLY_LABELS = frozenset({"wake:muse"})
 _LABELS_PATH = re.compile(r"repos/[^/]+/[^/]+/issues/(\d+)/labels")
 GET_ATTEMPTS = 3       # GETs are idempotent: bounded retry with full jitter on transport failure
+ESCAPE_FLAG = "--allow-escape-sequences"   # gh refuses a job log's escape bytes without it (run 43489020325)
 RATE_TRIES = 2         # a rate-limited call is tried this often in all, then left for the next sweep
 RATE_BACKOFF_S = 8.0   # the full-jitter ceiling of a rate-limit retry; a Retry-After up to RATE_WAIT_MAX_S wins
 RATE_WAIT_MAX_S = 30.0
@@ -64,6 +65,11 @@ class LabelRefused(GitHubError):
 
 class RateLimited(GitHubError):
     """GitHub's rate limit answered, RATE_TRIES times: the item waits for the next sweep."""
+
+
+class TimedOut(GitHubError):
+    """A call that failed after at least one of its attempts hit TIMEOUT_S: a GitHub that hangs, not one that answered
+    (the switch bounds how many of these one sweep pays for, switch.py red_tests)."""
 
 
 def split_response(raw: bytes) -> tuple[int, dict[str, str], str]:
@@ -225,10 +231,13 @@ class GitHub:
         else:
             sleep(random.uniform(0, min(RATE_BACKOFF_S, 2.0 ** attempt)))   # full jitter
 
-    def _run(self, method: str, path: str, body: Any = None, accept: str = "", binary: bool = False, token: str = ""):
+    def _run(self, method: str, path: str, body: Any = None, accept: str = "", binary: bool = False, token: str = "",
+             escapes: bool = False):
         args = ["gh", "api", "-X", method, path]
         if not binary:
             args.insert(2, "-i")   # the status and headers: the rate, the ETag, a 304
+        if escapes:   # a job log holds the runner's colour codes: without this gh refuses to output it
+            args.append(ESCAPE_FLAG)
         env = dict(os.environ, GH_TOKEN=token) if token else None   # gh reads GH_TOKEN before anything else
         if accept:
             args += ["-H", f"Accept: {accept}"]
@@ -241,7 +250,7 @@ class GitHub:
             args += ["--input", "-"]
         data = json.dumps(body).encode("utf-8") if body is not None else None
         attempts = GET_ATTEMPTS if method == "GET" else 1
-        rate_tries, attempt, status, detail = 0, 0, 0, ""
+        rate_tries, attempt, status, detail, timed_out = 0, 0, 0, "", False
         while True:
             attempt += 1
             headers: dict[str, str] = {}
@@ -251,11 +260,16 @@ class GitHub:
                 out = (self.runner or subprocess.run)(args, input=data, capture_output=True, timeout=TIMEOUT_S, env=env)
             except subprocess.TimeoutExpired:
                 detail = f"timed out after {TIMEOUT_S}s"
+                timed_out = True
             else:
                 if binary:
                     if out.returncode == 0:
                         return out.stdout
-                    detail = out.stderr.decode("utf-8", "replace").strip()
+                    detail = out.stderr.decode("utf-8", "replace").strip() or f"exit {out.returncode}, no stderr"
+                    if ESCAPE_FLAG in args and f"unknown flag: {ESCAPE_FLAG}" in detail:
+                        args = [a for a in args if a != ESCAPE_FLAG]   # a gh too old to know it: today's call, at once
+                        attempt -= 1
+                        continue
                 else:
                     status, headers, text = split_response(out.stdout or b"")
                     if not token:   # another token's call (the merge token) has its own limit: not this run's
@@ -290,7 +304,7 @@ class GitHub:
             time.sleep(random.uniform(0, 2 ** attempt))
         if token:
             detail = detail.replace(token, "[token]")
-        raise GitHubError(method, path, detail, status)
+        raise (TimedOut if timed_out else GitHubError)(method, path, detail, status)
 
     # reads
     def get(self, path: str, accept: str = "") -> Any:
@@ -300,7 +314,7 @@ class GitHub:
         return self._run("GET", path, accept=accept, binary=True).decode("utf-8", "replace")
 
     def get_bytes(self, path: str) -> bytes:
-        return self._run("GET", path, binary=True)
+        return self._run("GET", path, binary=True, escapes=path.endswith("/logs"))
 
     def paged(self, path: str, key: str = "") -> list:
         sep = "&" if "?" in path else "?"

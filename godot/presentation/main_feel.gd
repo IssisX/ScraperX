@@ -1072,7 +1072,8 @@ func _feel_gore(her_state: Dictionary, delta: float, hold: Dictionary) -> void:
 		_gore.matron_view = _matron_view
 	_gore.outside = _hold_cam.third_person()
 	_gore.grip_at = _matron_view.holding_hand_world()
-	_gore.lens_on = not _gore.outside
+	_gore.hold_vignette = _hold_cam.vignette()
+	_gore.lens_on = not _gore.outside or _hold_cam.vignette() > 0.01
 	_gore.update_view(hold, her_state, delta, _camera, float(her_state.get("floor_y", 0.0)))
 	_matron_view.hear_hold(hold)
 

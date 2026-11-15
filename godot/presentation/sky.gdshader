@@ -8,6 +8,8 @@ shader_type sky;
 uniform float day_factor : hint_range(0.0, 1.0) = 1.0;    // 0 night .. 1 day
 uniform float dusk_factor : hint_range(0.0, 1.0) = 0.0;   // warm band at low sun, and after it sets
 uniform float star_factor : hint_range(0.0, 1.0) = 0.0;   // 0 none .. 1 all (sun 12 degrees under)
+uniform float city_glow : hint_range(0.0, 1.0) = 0.0;    // J-081: the city's light at night (sky_cycle.gd)
+uniform vec2 city_bearing = vec2(0.0, -1.0);   // J-081: toward the city, north past the summit
 uniform bool light_is_moon = false;
 // Toward the sun, set or not: LIGHT0 is the moon while the sun is down, but
 // the twilight glow follows the sun.
@@ -72,6 +74,13 @@ void sky() {
 	// Its broad upper part, which clears the basin's rim.
 	col += dusk_glow * dusk_factor * sun_side * sun_side * exp(-max(up, 0.0) * 3.5) * 0.7;
 	col += vec3(0.42, 0.30, 0.40) * dusk_factor * (1.0 - bearing) * exp(-abs(up - 0.12) * 9.0) * 0.18;
+	// J-081: the city to the north, past the summit: a dim warm glow
+	// hugging the horizon and a broad dome of lit air above it, at night
+	// only. Before the mountains, so a ridge in front of it covers it.
+	float city_side = pow(clamp(dot(normalize(dir.xz + vec2(1e-4, 0.0)), city_bearing) * 0.5 + 0.5, 0.0, 1.0), 3.0);
+	vec3 city_color = vec3(1.0, 0.55, 0.25);
+	col += city_color * city_glow * band * city_side * 0.55;
+	col += city_color * city_glow * city_side * exp(-max(up, 0.0) * 2.5) * 0.22;
 	// Below the horizon: haze over the valley, never a bare void. The
 	// radiance map, which lights the world's ambient, takes the ground's own
 	// bounce there instead, so shade under a deck is lit from below, warm
@@ -121,6 +130,9 @@ void sky() {
 		// Lit from under by the low or set sun: salmon on its side, not the
 		// brown of a dimmed white.
 		cloud = mix(cloud, dusk_glow * mix(0.6, 1.1, day_factor), dusk_factor * 0.55 * (0.3 + 0.7 * sun_side));
+		// J-081: the city's light on the cloud undersides toward the
+		// north, strongest low where the clouds meet the glow.
+		cloud = mix(cloud, city_color * 0.7, city_glow * city_side * (1.0 - smoothstep(0.0, 0.35, up)) * 0.5);
 		cloud *= 0.82 + 0.18 * (1.0 - detail);
 		col = mix(col, cloud, density * 0.92);
 	}

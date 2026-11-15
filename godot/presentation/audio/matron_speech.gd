@@ -8,23 +8,31 @@ extends RefCounted
 ##
 ## Choosing only: the audio director plays what is chosen (matron_say), and `log` has one entry for each
 ## line said, whether or not a device mixes it, for the scripted runs.
+##
+## The gate: her voice is not picked yet (J-089, the owner picks by ear from
+## 03_EXECUTION/VOICE_PICKS/ (out of the shipped tree)), so the speech is silent while the gate is closed. A
+## silent speech still picks its line (the variety and no-repeat hold, the log and caption are written,
+## her mouth is timed) but reports the silent placeholder take, clip "", so no clip of the unpicked bank
+## plays. The director opens the gate by constructing it not silent.
 
 const Table := preload("res://presentation/audio/matron_voice_lines.gd")
 
 # One entry per line said: {moment, line, clip, encounter}.
 var log: Array = []
 var _rng := RandomNumberGenerator.new()
+var _silent := false
 var _bags := {}          # a moment's lines, or a line's clips, not yet drawn this round
 var _last_line := 0
 var _last_clip := ""
 var _streams := {}       # clip file -> AudioStreamOggVorbis
 
 
-func _init(seed_value: int = 0) -> void:
+func _init(seed_value: int = 0, silent: bool = false) -> void:
 	if seed_value != 0:
 		_rng.seed = seed_value
 	else:
 		_rng.randomize()
+	_silent = silent
 
 
 # The line and clip `moment` says now, or {} when it has none. `encounter` is the hold she is in (0:
@@ -42,13 +50,18 @@ func choose(moment: StringName, encounter: int = 0) -> Dictionary:
 	var clip: String = _draw(line, clips, _last_clip)
 	_last_line = line
 	_last_clip = clip
+	if _silent:
+		clip = ""   # the silent placeholder take while her voice is not picked yet
 	var said := {"moment": moment, "line": line, "clip": clip, "encounter": encounter}
 	log.append(said)
 	return said
 
 
 # The stream of a clip file, read once. Ogg pages are decoded as they play.
+# The silent placeholder take (clip "") has no stream.
 func stream(clip: String) -> AudioStream:
+	if clip.is_empty():
+		return null
 	if not _streams.has(clip):
 		var loaded := AudioStreamOggVorbis.load_from_file(Table.DIR + clip)
 		if loaded == null:

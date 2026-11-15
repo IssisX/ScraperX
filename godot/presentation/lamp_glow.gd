@@ -37,6 +37,7 @@ const BEACON_RADIUS_M := 3.0
 
 var _halo_material: ShaderMaterial
 var _cone_material: ShaderMaterial
+var _halo_mm: MultiMesh
 
 
 # lamps: the rig's OmniLight3Ds; beacons: where the obstruction lights hang,
@@ -58,11 +59,14 @@ func build(lamps: Array, beacons: PackedVector3Array) -> void:
 	_cone_material = ShaderMaterial.new()
 	_cone_material.shader = _shader(CONE_SHADER)
 	_add_cards("LampHalos", halos.size(), _halo_material, func(mm: MultiMesh) -> void:
+		_halo_mm = mm
 		for i in halos.size():
 			var h: Array = halos[i]
 			mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, h[0]))
 			mm.set_instance_color(i, h[2])
-			mm.set_instance_custom_data(i, Color(h[1], 1.0 if h[3] else 0.0, 0.0, 0.0)))
+			# Custom data: r radius, g flashes 0/1, b lit 1/0 (J-081: a
+			# stack lamp's halo follows its lamp), a unused.
+			mm.set_instance_custom_data(i, Color(h[1], 1.0 if h[3] else 0.0, 1.0, 0.0)))
 	_add_cards("LampCones", cones.size(), _cone_material, func(mm: MultiMesh) -> void:
 		for i in cones.size():
 			var c: Array = cones[i]
@@ -70,6 +74,16 @@ func build(lamps: Array, beacons: PackedVector3Array) -> void:
 			mm.set_instance_color(i, c[2])
 			mm.set_instance_custom_data(i, Color(c[1], CONE_TOP_M, CONE_FOOT_M, 0.0)))
 	set_night(0.0)
+
+
+# A stack lamp's halo follows its lamp: 1 lit, 0 dark (J-081, sky_cycle.gd).
+# Index is the lamp's place among the rig's OmniLight3Ds, the order build()
+# took them; beacons sit after the lamps and keep b 1.0.
+func set_lamp_lit(lamp_index: int, lit: float) -> void:
+	if _halo_mm == null or lamp_index < 0 or lamp_index >= _halo_mm.instance_count:
+		return
+	var cd: Color = _halo_mm.get_instance_custom_data(lamp_index)
+	_halo_mm.set_instance_custom_data(lamp_index, Color(cd.r, cd.g, clampf(lit, 0.0, 1.0), cd.a))
 
 
 # 0 by day .. 1 at night.
@@ -134,6 +148,9 @@ void vertex() {
 		float t = fract(TIME / PERIOD);
 		energy = max(energy, 0.55) * smoothstep(0.0, 0.06, t) * (1.0 - smoothstep(0.22, 0.55, t)) * 3.0;
 	}
+	// J-081: a stack lamp's halo follows its lamp (b is the lit factor;
+	// beacons and yard floods keep 1.0).
+	energy *= INSTANCE_CUSTOM.b;
 	tint = COLOR.rgb;
 	centre *= max(dist - radius, 0.05) / dist;
 	VERTEX = centre + vec3(VERTEX.xy * size, 0.0);

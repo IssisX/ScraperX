@@ -112,11 +112,21 @@ std::uint64_t Simulation::PhysicsWorld::add_fabricated(const std::uint8_t *data,
         refusal = FabricatedRefusal::Full;
         return 0;
     }
-    // The checkpoint holds every kit body: the delivery as it arrived, until
-    // the next commit takes it as it lies.
+    // The checkpoint holds every kit body, indexed by its kit index: the
+    // delivery as it arrived, until the next commit takes it as it lies.
+    // Break pieces built since the commit sit between the built bodies
+    // and this one, so extend to its true index and fill the gap from
+    // the live capture; committed indices keep their states.
     kit::Kit::Checkpoint now;
     kit_->capture(now);
-    checkpoint_.kit.bodies.push_back(now.bodies.back());
+    const std::size_t kit_index = object.body.value;
+    if (checkpoint_.kit.bodies.size() <= kit_index) {
+        const std::size_t old = checkpoint_.kit.bodies.size();
+        checkpoint_.kit.bodies.resize(kit_index + 1);
+        for (std::size_t b = old; b <= kit_index; ++b) {
+            checkpoint_.kit.bodies[b] = now.bodies[b];
+        }
+    }
     fabricated_.push_back(std::move(object));
     return fabricated_.back().entity;
 }
@@ -181,12 +191,18 @@ void Simulation::PhysicsWorld::write_fabricated(SaveWriter &w) const {
     }
     w.pod(kSaveMark);
     w.pod(static_cast<std::uint32_t>(fabricated_.size()));
-    const std::size_t built = kit_built_count();
+    // Each object's state at its own kit index: a fabricated body may sit
+    // before the break pieces, so it is not at built + i. The state is the
+    // live one, as the save must carry it: the checkpoint's is the state
+    // at delivery, and the object may have settled or been knocked since
+    // without a commit taking it.
+    kit::Kit::Checkpoint now;
+    kit_->capture(now);
     for (std::size_t i = 0; i < fabricated_.size(); ++i) {
         const Fabricated &object = fabricated_[i];
         w.pod(object.entity);
         w.bytes(object.data);
-        const kit::Kit::BodyState &state = checkpoint_.kit.bodies[built + i];
+        const kit::Kit::BodyState &state = now.bodies[object.body.value];
         const float numbers[13] = {static_cast<float>(state.position.GetX()), static_cast<float>(state.position.GetY()),
                                    static_cast<float>(state.position.GetZ()), state.rotation.GetX(),
                                    state.rotation.GetY(), state.rotation.GetZ(), state.rotation.GetW(),

@@ -1,14 +1,6 @@
 # Switches for tools/switchboard, read by switch.py on each run. (The workflow is .github/workflows/switchboard.yml.)
 
-# J-072 Design B (#350): after each non-dry full sweep, the reconciler (tools/switchboard/reconciler.py) writes job
-# records, obligations and a daily diff to the switchboard/state branch. `shadow` posts nothing; `live` (with
-# reconciler.STAGE2_READY) posts its notices and Cory's hourly "Needs you" batch. Absent or any other value is off.
-# Live since J-072's replay of 48 h of real history came back clean (tools/switchboard/replay_reconciler.py,
-# Cory 11-09: live as soon as a test proves it).
-reconciler: live
-
-# J-072: one owner of notices. `v2` beside `reconciler: live`: the reconciler is the only notifier, and the ledger
-# (tools/switchboard/ledger.py) only writes its section in the board's body: no "past deadline" comment, no clock
-# for one (reconciler.ledger_notifies). Absent or any other value, or a reconciler that is not live: the ledger
-# posts its own notices as before.
-notices: v2
+# The job machine (tools/switchboard/machine.py) over work/plan.md. `live` (cutover, Cory 11-12: "switch it on once
+# the bookkeeping's done"): late jobs go to the inbox, the plan notice goes to Muse once per order version, the job
+# issues' labels and the board's job section are made from the plan. `shadow`: print only. Absent or other: off.
+plan: live

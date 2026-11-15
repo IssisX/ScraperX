@@ -16,6 +16,8 @@ extends RefCounted
 # below a board, a label or a coat of paint (never only at its edge); under a
 # machine's beacon; on any side of a lamp, a solid part or other dressing.
 # A light is held when a held part, its fitting, is within LIGHT_REACH_M.
+# A light on the camera is worn by the player, not hung on the structure,
+# so the camera it rides on is its fitting.
 # Every light, lamp, sign and non-solid dressing part nothing holds is listed
 # with where it is, what it is, the nearest thing that could hold it and the
 # builder line that put it there; so is every solid part. Prints
@@ -339,10 +341,22 @@ func _gather_lights_and_labels(node: Node, tower: Node) -> void:
 			var named := "" if str(child.name).begins_with("@") else " %s" % child.name
 			var reach := (child as OmniLight3D).omni_range if child is OmniLight3D else \
 				((child as SpotLight3D).spot_range if child is SpotLight3D else 0.0)
-			_lights.append({"name": child.get_class() + named, "kind": "light",
+			var light := {"name": child.get_class() + named, "kind": "light",
 				"where": str(child.get_meta(&"placed_by", "?")), "c": (child as Node3D).global_position,
 				"u": [Vector3.RIGHT, Vector3.UP, Vector3.BACK], "e": Vector3.ONE * LIGHT_REACH_M,
-				"held_by": "", "range": reach})
+				"held_by": "", "range": reach}
+			# A light worn on the camera is held by the player, not by the
+			# structure: it rides his head wherever he goes, so it cannot be
+			# left floating in the air when a structure moves. The audit has
+			# no part for his body, so no held part can ever be within reach
+			# of it; the camera it hangs on is its fitting.
+			var carrier := child.get_parent()
+			while carrier != null:
+				if carrier is Camera3D:
+					light["held_by"] = "worn by the player (child of the camera)"
+					break
+				carrier = carrier.get_parent()
+			_lights.append(light)
 		elif child is Label3D and (child as Node3D).is_visible_in_tree():
 			_add(child, "Label3D \"%s\"" % (child as Label3D).text.replace("\n", " "), "sign", "thin")
 		_gather_lights_and_labels(child, tower)
@@ -592,7 +606,7 @@ func _report(floating: Array, loose: Array) -> PackedStringArray:
 	lines.append("FLOATING DRESSING AUDIT: %d parts and lights checked %s" % [
 		_parts.size() + _lights.size(), str(counts)])
 	lines.append("Held: a native body or the ground; else a held part within %.2f m the way it mounts;" % MOUNT_GAP_M)
-	lines.append("a light: a held part within %.1f m of it (its fitting)." % LIGHT_REACH_M)
+	lines.append("a light: a held part within %.1f m of it (its fitting); a light on the camera is worn by the player." % LIGHT_REACH_M)
 	var by_where := func(a: Dictionary, b: Dictionary) -> bool:
 		return str(a["where"]) + str(a["name"]) < str(b["where"]) + str(b["name"])
 	floating.sort_custom(by_where)

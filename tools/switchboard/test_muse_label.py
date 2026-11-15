@@ -9,7 +9,6 @@ Run: python3 -m unittest discover -s tools/switchboard -p 'test_*.py'
 
 from __future__ import annotations
 
-import datetime as dt
 import pathlib
 import sys
 import unittest
@@ -18,18 +17,12 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import ghapi  # noqa: E402
-import ledger as L  # noqa: E402
-import reconciler as R  # noqa: E402
-import rules  # noqa: E402
 import switch  # noqa: E402
 import test_cache_trust as ct  # noqa: E402
 import test_review_fallback as fb  # noqa: E402
 
 REPO = "IssisX/ScraperX"
 PR, ISSUE = 9, 138
-NOW = fb.NOW
-ROSTER = L.Roster({"agents": {"muse": {"vendor": "meta", "names": ["Muse"], "branch_prefixes": ["muse/"],
-                                       "wake": "email"}}})
 
 
 def client(dry_run: bool = False):
@@ -86,33 +79,6 @@ class EachWriter(unittest.TestCase):
         with self.assertRaises(ghapi.LabelRefused):
             sw.ask_review(facts, dict(fb.ctx(issue=other), comments=[]), "muse", "")
         self.assertEqual(labels(runner), [])
-
-    def test_the_ledgers_notice(self):
-        gh, runner = client()
-        it = L.Item("PR", "#9", "", "J-031", None, ROSTER.person("muse"), "proof red", NOW, L.ACT, "v", thread=PR)
-        lines: list[str] = []
-        posted = L.send(gh, [L.Notice(PR, "muse", [(it, 1)])], ROSTER, NOW, PR, lines.append)
-        self.assertEqual((posted, labels(runner)), ([], []))   # not delivered, so its keys are not recorded as sent
-        self.assertTrue(any("LabelRefused" in l and "#9 is a pull request" in l for l in lines), lines)
-
-    def test_the_reconcilers_notice(self):
-        gh, runner = client()
-        out = R.CommentOutbox(gh, ROSTER, PR)
-        ob = {"id": "O-12345678", "to": "muse", "via": "email", "what": "start J-031", "thread": PR,
-              "due": "2026-11-03T19:00:00Z"}
-        with self.assertRaises(ghapi.LabelRefused):
-            out.send({"job": "J-031", "issue": PR}, ob, 1, 1)
-        self.assertEqual(labels(runner), [])
-        self.assertFalse(any("reconciler:sent" in str(w) for w in runner.writes))   # no receipt: it was not delivered
-
-    def test_on_an_issue_each_of_them_labels_it(self):
-        gh, runner = client()
-        it = L.Item("PR", "#9", "", "J-031", None, ROSTER.person("muse"), "proof red", NOW, L.ACT, "v", thread=PR)
-        L.send(gh, [L.Notice(ISSUE, "muse", [(it, 1)])], ROSTER, NOW, ISSUE, lambda line: None)
-        R.CommentOutbox(gh, ROSTER, ISSUE).send({"job": "J-031", "issue": ISSUE},
-                                                {"id": "O-12345678", "to": "muse", "via": "email", "what": "x",
-                                                 "thread": ISSUE, "due": "2026-11-03T19:00:00Z"}, 1, 1)
-        self.assertEqual(labels(runner), [f"repos/{REPO}/issues/{ISSUE}/labels"] * 2)
 
 
 if __name__ == "__main__":

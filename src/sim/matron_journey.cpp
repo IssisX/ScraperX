@@ -602,7 +602,14 @@ bool Matron::TravelWay::begin(const MoverGoal &goal) {
             return false;
         }
         const int goal_region = m_.scanned_->region_at(Vec3(goal.x, goal.floor_y, goal.z));
-        if (goal_region >= 0 && here != goal_region) {
+        // A lead on the region under her is no travel's: travel_to would take
+        // it as already there and stand her still for its arrival, every
+        // tick the hunt asked again. Her hunt walks her own region to the
+        // spot itself (J-126).
+        if (goal_region >= 0 && here == goal_region) {
+            return false;
+        }
+        if (goal_region >= 0) {
             for (const int edge : m_.scanned_->plan(here, goal_region)) {
                 if (m_.scanned_->edges()[static_cast<std::size_t>(edge)].kind != traversal::MoveKind::Walk) {
                     return false;

@@ -43,6 +43,11 @@ var _lens_blood := 0.0
 var _lens_run := 0.0
 var _vignette := 0.0
 var _redout := 0.0
+# The hold camera's vignette (matron_hold_camera.gd vignette()): the same
+# lens, darkened per beat of her hold. Set every frame by main_feel.gd; the
+# lens only runs while some darkening is on, so the hold costs one fullscreen
+# pass on the intimate beats and none on the open ones.
+var hold_vignette := 0.0
 var _crush := 0.0
 var _apron := 0.0
 var _hands := 0.0
@@ -235,9 +240,9 @@ func update_view(hold: Dictionary, her: Dictionary, delta: float, camera: Camera
 	_vignette = move_toward(_vignette, 0.0, delta * 0.35)
 	_lens_blood = move_toward(_lens_blood, 0.0, delta * 0.03)
 	_lens_run += delta
-	lens.visible = lens_on and (_lens_blood > 0.01 or _vignette > 0.01 or _redout > 0.01)
+	lens.visible = lens_on and (_lens_blood > 0.01 or _vignette > 0.01 or hold_vignette > 0.01 or _redout > 0.01)
 	_lens_mat.set_shader_parameter("blood", _lens_blood)
-	_lens_mat.set_shader_parameter("vignette", maxf(_vignette, arm_s * 0.5 if wrist_side >= 0 else 0.0))
+	_lens_mat.set_shader_parameter("vignette", maxf(maxf(_vignette, hold_vignette), arm_s * 0.5 if wrist_side >= 0 else 0.0))
 	_lens_mat.set_shader_parameter("redout", _redout)
 	_lens_mat.set_shader_parameter("run", _lens_run)
 	# --- her ---

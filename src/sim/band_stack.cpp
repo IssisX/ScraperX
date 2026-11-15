@@ -563,12 +563,12 @@ constexpr float kLandingX1 = 22.20F;
 constexpr float kLandingZ1 = -120.80F;
 constexpr float kCabinetX0 = 19.40F;
 constexpr float kCabinetX1 = 20.60F;
-constexpr float kCabinetZ0 = -122.50F;
-constexpr float kCabinetZ1 = -121.80F;
+constexpr float kCabinetZ0 = -122.55F;   // J-085: 0.35 m under the duct, her ledge jump's take-off in reach (was -122.50)
+constexpr float kCabinetZ1 = -121.88F;   // J-085: with Z0, her take-off (its middle) 0.685 m from the duct lip (was -121.80)
 constexpr float kCabinetTop = kDeck2Top + 1.70F;
 // The duct along the face, hung on straps from deck 3's edge beam: its lip
 // is 3.6 m over the cabinet's top, in reach at the top of a jump, and its
-// south face stands 0.4 m clear of the cabinet so the jump does not meet
+// south face stands 0.35 m clear of the cabinet so the jump does not meet
 // its underside.
 constexpr float kDuctX0 = 17.40F;
 constexpr float kDuctX1 = 24.40F;
@@ -1197,13 +1197,14 @@ void build_c2_traversal_enhancements(std::vector<Part> &route) {
 
 void build_c2(std::vector<Part> &route) {
     // 1. Switchgear enclosure on Deck 6 East band (floor 66.00F, top 67.70F)
-    route.push_back(span({20.50F, kDeck6Top, -139.00F}, {23.50F, kDeck6Top + 1.70F, -136.50F},
+    // J-085: north edge at -139.10 (was -139.00), her ledge jump's take-off in reach.
+    route.push_back(span({20.50F, kDeck6Top, -139.10F}, {23.50F, kDeck6Top + 1.70F, -136.50F},
                          Material::Steel));
     route.push_back(span({20.45F, kDeck6Top + 1.62F, -136.55F},
                          {23.55F, kDeck6Top + 1.70F, -136.50F}, Material::Hazard));
 
     // 2. High exhaust manifold duct along the East band (bottom 69.80F, top 71.30F)
-    // South face stands 0.4 m clear of the cabinet (Z = -139.40F vs -139.00F)
+    // South face stands 0.3 m clear of the switchgear (Z = -139.40F vs -139.10F)
     route.push_back(span({20.80F, 69.80F, -148.50F}, {23.20F, 71.30F, -139.40F},
                          Material::Galvanised));
     for (const float z : {-141.0F, -145.0F}) {

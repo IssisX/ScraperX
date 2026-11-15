@@ -4,6 +4,8 @@ extends "res://presentation/main_machines.gd"
 # (what the player stands on, holds and is offered) and the names of what
 # can be carried or rigged.
 
+const PunchList := preload("res://presentation/ui/punch_list.gd")
+
 # Chute is offered once a fall is unmistakably a fall: a full-height jump
 # lands at ~5.5 m/s, so 6.5 m/s never pops the canopy button mid-hop.
 const CHUTE_OFFER_FALL_MPS := 6.5
@@ -407,6 +409,15 @@ func _read_context() -> Dictionary:
 	elif grounded and free and grip:
 		# A hold at hand height: a rung, a pipe, a scaffold bar.
 		action = {"id": &"climb", "label": "CLIMB", "icon": &"climb", "detail": "HOLD"}
+	# The punch list (J-131): one done boolean per objective id, read
+	# through the bridge getter is_objective_done(id) -- the same getter
+	# J-132's mission scenarios read. It lands with the per-tick hook
+	# after J-116's F8 bump; until then has_method is false and every
+	# line reads open. Riding a lift deck, for the HUD line's hide rule.
+	var objective_done: Array = []
+	for i in PunchList.TITLES.size():
+		objective_done.append(_native.has_method("is_objective_done") and bool(_native.is_objective_done(i)))
+	var lift_riding := lift_machine >= 0 and int(lift["role"]) == LIFT_ROLE_DECK and bool(lift["moving"])
 	return {
 		"position": position,
 		"velocity": velocity,
@@ -439,6 +450,8 @@ func _read_context() -> Dictionary:
 		"swing_seated": swing_seated,
 		"trapeze_hanging": trapeze_hanging,
 		"forklift_driving": forklift_driving,
+		"objectives": PunchList.lines(objective_done),
+		"lift_riding": lift_riding,
 		"has_remote": bool(crane["has_remote"]),
 		"crane_operating": crane_operating,
 		"crane_able": bool(crane["able"]),
@@ -564,6 +577,8 @@ func _carry_name(entity: int) -> String:
 			return "DROP PIN"
 		2127:
 			return "CLUTCH HANDLE"
+		2671:
+			return "TRIP CORD"
 	if entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT:
 		return _stock_name(entity)
 	if entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT:

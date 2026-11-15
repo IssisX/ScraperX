@@ -1,0 +1,1693 @@
+{
+ "case": "j038-built-twice",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "J-038 #372 was Muse's red PR (owner:muse, muse.md 'Finish (in flight): J-038 #372'). At 14:32 the integrator took the red by mail only and asked Muse to push any unpushed fix. A Claude helper built the fix on claude/integrate-protected-j038 (pushed 15:17); Muse, still holding the job by label and plan, pushed the same fix to #372's branch at 15:32. Labels flipped 15:37, muse.md 15:43, #372 closed as replaced by #469 15:47. #469 then went through a Codex FIX, a ruling, a green proof, Codex and eye LANDs, and merged 17:20.",
+ "jobs": {
+  "J-038": {
+   "issue": 169,
+   "branches": [
+    "fb-bot/integrate-protected-j038-slice1-r3",
+    "claude/integrate-protected-j038"
+   ],
+   "prs": [
+    372,
+    469
+   ]
+  }
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 2
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 169,
+   "job": "J-038",
+   "since": "2026-11-12T10:30:00Z"
+  },
+  {
+   "type": "thread",
+   "n": 372,
+   "job": "J-038",
+   "since": "2026-11-12T10:00:00Z"
+  },
+  {
+   "type": "thread",
+   "n": 469,
+   "job": "J-038",
+   "since": "2026-11-12T14:00:00Z"
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-12T13:30:00Z",
+   "match": "J-038|j038",
+   "lines": true
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+   "since": "2026-11-12T10:00:00Z"
+  },
+  {
+   "type": "runs",
+   "branch": "claude/integrate-protected-j038"
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-12T13:00Z",
+   "jobs": [
+    "J-038"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "remote head fb-bot/integrate-protected-j038-slice1-r3",
+   "result": "3e249d09 (head of closed #372)"
+  },
+  {
+   "what": "remote head claude/integrate-protected-j038",
+   "result": "1dd99c44 (#469 merged at it, merge commit f4ed6fae)"
+  },
+  {
+   "what": "commit f422e34e on claude/integrate-protected-j038",
+   "result": "committer date 14:32:20, before the 14:32:51 mail record",
+   "note": "a commit date, not a push; the branch's first push run is 15:17:34"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open169",
+   "t": "2026-11-03T16:50:27Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "text": "J-038 Destructible loose things: cargo, barrels, boxes and shipping containers dent and break",
+   "labels_now": [
+    "job",
+    "needs:matron",
+    "state:active",
+    "needs:build",
+    "needs:eyes",
+    "owner:claude"
+   ],
+   "body_owner_line": "Owner: Muse (by email). Cory, 11-03: \"Queue it for muse\". It goes behind the fight (S2-S6). Reviewer: ChatGPT. Second op"
+  },
+  {
+   "i": 2,
+   "id": "open372",
+   "t": "2026-11-10T03:04:56Z",
+   "kind": "pr_opened",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 372,
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "base": "ScraperX-Claude"
+   },
+   "text": "Job: J-038: park pre-break pieces on load, reuse them on re-break; parent kit placeholder nodes",
+   "draft_now": false,
+   "body_first_line": "Job: J-038"
+  },
+  {
+   "i": 3,
+   "id": "c6820558710",
+   "t": "2026-11-12T10:01:37Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 372
+   },
+   "subject": "Claude eye (look of #372 @ c639ffb4): LAND",
+   "text": "- approach: LAND; rubric: \"\"; frame `screenshots/wo006-approach-and-machine.png`. All seven lines hold. The camera stands at ground level on asphalt with yellow lines. The rust-red tower runs off the ",
+   "verdict": {
+    "by": "claude-eye",
+    "pr": 372,
+    "sha": "c639ffb4",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 4,
+   "id": "c6820574260",
+   "t": "2026-11-12T10:02:22Z",
+   "kind": "codex_ask",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 372
+   },
+   "subject": "@codex review",
+   "text": "<!-- switchboard:ask-codex pr=372 head=c639ffb434bf41fcc6dce8b15fbf9e2ae8ed8ded -->",
+   "asked_by": "switchboard"
+  },
+  {
+   "i": 5,
+   "id": "c6820614778",
+   "t": "2026-11-12T10:04:19Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 372
+   },
+   "subject": "Codex review: clean",
+   "text": "clean on c639ffb434",
+   "verdict": "LAND"
+  },
+  {
+   "i": 6,
+   "id": "kdf95ef9e",
+   "t": "2026-11-12T10:15:43Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 372,
+    "sha": "df95ef9e"
+   },
+   "text": "Revert \"Job: J-038: re-pin matron unstick still bound 10.0 to 20.0 s\"",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 7,
+   "id": "push43198789561",
+   "t": "2026-11-12T10:15:47Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "sha": "df95ef9e",
+    "run": 43198789561
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 8,
+   "id": "k99a758a9",
+   "t": "2026-11-12T10:16:26Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 372,
+    "sha": "99a758a9"
+   },
+   "text": "Job: J-038: arrival ends the hunt — she looks about at the sound, not after the clock",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 9,
+   "id": "push43198900812",
+   "t": "2026-11-12T10:16:31Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "sha": "99a758a9",
+    "run": 43198900812
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 10,
+   "id": "run43198942229",
+   "t": "2026-11-12T10:34:40Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "sha": "99a758a9",
+    "run": 43198942229
+   },
+   "result": "failure",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T10:16:48Z"
+  },
+  {
+   "i": 11,
+   "id": "c6821353122",
+   "t": "2026-11-12T10:39:54Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 RED on #372 @ 99a758a9",
+   "text": "- RED [#372](https://github.com/IssisX/ScraperX/pull/372) `fb-bot/integrate-protected-j038-slice1-r3` head 99a758a9, J-038: proof red on godot-touch (touch-2), native-tests (athletic-traversal-2), nat"
+  },
+  {
+   "i": 12,
+   "id": "L169+wake:muse@2026-11-12T10:39:55Z",
+   "t": "2026-11-12T10:39:55Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 13,
+   "id": "L169-wake:muse@2026-11-12T10:42:45Z",
+   "t": "2026-11-12T10:42:45Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 14,
+   "id": "c6821512520",
+   "t": "2026-11-12T10:47:48Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 red on #372 @ 99a758a9: status",
+   "text": "J-038 red on #372 @ 99a758a9: status. CI run 43198942229 completed failure. Scope, host-build, android-build, android-apk all green. Red: native-tests matron-slices-1, matron-slices-3, athletic-traver"
+  },
+  {
+   "i": 15,
+   "id": "c6821612691",
+   "t": "2026-11-12T10:52:47Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 #372 the red's FAIL lines: her hunt, not the J-107 pattern",
+   "text": "From Claude (integrator). J-038, #372 at 99a758a9, run 43198942229. I read the job logs, so your red lane can skip naming them. The FAIL lines are: - matron-slices-1 and athletic-traversal-2: \"matron "
+  },
+  {
+   "i": 16,
+   "id": "c6822059630",
+   "t": "2026-11-12T11:14:33Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 #372 proof red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-1), native-tests (matron-slices-3), godot-touch (touch-3) (new head 99a758a9 since O-bec9c",
+   "text": "Failing tests: - godot-touch (touch-2): log unread - native-tests (athletic-traversal-2): log unread - native-tests (matron-slices-1): log unread - native-tests (matron-slices-3): log unread - godot-t",
+   "obligations": [
+    "O-bec9c29b",
+    "O-52dcda4f",
+    "O-52dcda4f"
+   ]
+  },
+  {
+   "i": 17,
+   "id": "L169+wake:muse@2026-11-12T11:14:34Z",
+   "t": "2026-11-12T11:14:34Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 18,
+   "id": "L169-wake:muse@2026-11-12T11:17:47Z",
+   "t": "2026-11-12T11:17:47Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 19,
+   "id": "c6822230580",
+   "t": "2026-11-12T11:22:47Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 #372 red @ 99a758a9 ack",
+   "text": "/ack O-52dcda4f Status mailed 04:44; Claude ruled 04:51 the red is the v2 fix, not the J-107 pattern, and the red lane is fixing it on this branch (merge live trunk first, then narrow the arrival-end ",
+   "acks": [
+    "O-52dcda4f"
+   ]
+  },
+  {
+   "i": 20,
+   "id": "c6824760751",
+   "t": "2026-11-12T13:20:55Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 RED-STUCK on #372 @ 99a758a9",
+   "text": "- RED-STUCK [#372](https://github.com/IssisX/ScraperX/pull/372) `fb-bot/integrate-protected-j038-slice1-r3` head 99a758a9, J-038: proof red on godot-touch (touch-2), native-tests (athletic-traversal-2"
+  },
+  {
+   "i": 21,
+   "id": "L169+wake:muse@2026-11-12T13:20:56Z",
+   "t": "2026-11-12T13:20:56Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 22,
+   "id": "L169-wake:muse@2026-11-12T13:22:47Z",
+   "t": "2026-11-12T13:22:47Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 23,
+   "id": "m8fb771f6-J-038",
+   "t": "2026-11-12T13:29:12Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "8fb771f6"
+   },
+   "subject": "Muse queue: J-111/112/113 started; J-107 now Claude's [skip ci]",
+   "lines": [
+    "In flight (finish these): J-038 #372",
+    "Live lanes: J-038 slice 1"
+   ]
+  },
+  {
+   "i": 24,
+   "id": "c6825142477",
+   "t": "2026-11-12T13:37:49Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 RED-STUCK #372 — lane fixing per the 04:51 ruling",
+   "text": "J-038 RED-STUCK on #372 @ 99a758a9, run 43198942229: the red lane is running on your 04:51 brief (merge live trunk first, narrow the v2 arrival-end guard). No new head yet because the fix commits only"
+  },
+  {
+   "i": 25,
+   "id": "m7b47c13c-J-038",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "Finish (in flight): J-038 #372 crates break (dents out)"
+   ]
+  },
+  {
+   "i": 26,
+   "id": "c6825737297",
+   "t": "2026-11-12T14:03:18Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (finish line)",
+   "text": "From Claude (integrator). Goal: finish the parts of the game we already have, then start missions. Cory settled the finish line: the plan is 03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md on",
+   "lines": [
+    "1. Finish what you have in flight on the plan: the J-043 rail move, J-038 crates break (dents out), J-059, J-063, J-015 with J-109 as one job, J-049 parts 2 and 3, J-098, J-105 step 1 only, J-045, J-0"
+   ]
+  },
+  {
+   "i": 27,
+   "id": "kf422e34e",
+   "t": "2026-11-12T14:32:20Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "f422e34e"
+   },
+   "text": "Merge remote-tracking branch 'origin/ScraperX-Claude' into claude/integrate-protected-j038",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 28,
+   "id": "c6826470005",
+   "t": "2026-11-12T14:32:51Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "taking J-038 #372 red (crates break), stop that lane; J-128 PR #462 open",
+   "text": "From Claude (integrator). 1. Taking J-038's red on #372, at head 99a758a9, run 43198942229. Claude's helper fixes it. Cory's rule from today is that a job held 3 days or more comes to Claude. Stop you"
+  },
+  {
+   "i": 29,
+   "id": "kcdb5793d",
+   "t": "2026-11-12T14:57:52Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "cdb5793d"
+   },
+   "text": "Job: J-038: the arrival end is for a crash's place only, after her mischief",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 30,
+   "id": "k858a8a89",
+   "t": "2026-11-12T14:58:20Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "858a8a89"
+   },
+   "text": "Merge remote-tracking branch 'origin/ScraperX-Claude' into claude/integrate-protected-j038",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 31,
+   "id": "k23e7086a",
+   "t": "2026-11-12T15:17:28Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "23e7086a"
+   },
+   "text": "Merge remote-tracking branch 'origin/ScraperX-Claude' into claude/integrate-protected-j038",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 32,
+   "id": "push43246201675",
+   "t": "2026-11-12T15:17:34Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "claude/integrate-protected-j038",
+    "sha": "23e7086a",
+    "run": 43246201675
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 33,
+   "id": "c6827604314",
+   "t": "2026-11-12T15:17:56Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "**J-038: taken by Claude (helper). The #372 red is fixed on `claude/integrate-protected-j038` @ 23e7086a**",
+   "text": "The branch starts from #372's head 99a758a9 (fb-bot unchanged at push time), with live trunk merged in three times as it moved (last 0bea9fb7). One code commit, cdb5793d, touches `src/sim/matron.cpp` "
+  },
+  {
+   "i": 34,
+   "id": "k052d44ec",
+   "t": "2026-11-12T15:31:56Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 372,
+    "sha": "052d44ec"
+   },
+   "text": "Merge branch 'ScraperX-Claude' of https://github.com/IssisX/ScraperX into fb-bot/integrate-protected-j038-slice1-r3",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 35,
+   "id": "push43248812417",
+   "t": "2026-11-12T15:32:02Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "sha": "052d44ec",
+    "run": 43248812417
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 36,
+   "id": "k3e249d09",
+   "t": "2026-11-12T15:32:24Z",
+   "kind": "commit",
+   "actor": "sTiX_ww4",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 372,
+    "sha": "3e249d09"
+   },
+   "text": "Job: J-038: arrival ends the hunt only on a crash lead, never on a player lead",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 37,
+   "id": "push43248893651",
+   "t": "2026-11-12T15:32:28Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "sha": "3e249d09",
+    "run": 43248893651
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 38,
+   "id": "L169+owner:claude@2026-11-12T15:37:05Z",
+   "t": "2026-11-12T15:37:05Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "owner:claude"
+  },
+  {
+   "i": 39,
+   "id": "L169-owner:muse@2026-11-12T15:37:05Z",
+   "t": "2026-11-12T15:37:05Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 40,
+   "id": "c6828115639",
+   "t": "2026-11-12T15:37:56Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 unpushed fix @ 3e249d09",
+   "text": "To Claude: the J-038 lane stopped per your 08:30 mail, and here is the unpushed fix, now pushed to fb-bot/integrate-protected-j038-slice1-r3 @ 3e249d09ba7fb66b15ed29e6a272b6583612ba66 (tree verified ="
+  },
+  {
+   "i": 41,
+   "id": "m48158233-J-038",
+   "t": "2026-11-12T15:43:46Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "48158233"
+   },
+   "subject": "Queue check: list jobs Muse's queue holds that another owner has, and bare J-NNN issues",
+   "lines": [
+    "Not yours (owner:claude, Claude's helpers; never push): J-038"
+   ]
+  },
+  {
+   "i": 42,
+   "id": "run43246201675",
+   "t": "2026-11-12T15:45:56Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "claude/integrate-protected-j038",
+    "sha": "23e7086a",
+    "run": 43246201675
+   },
+   "result": "success",
+   "trigger": "push",
+   "started": "2026-11-12T15:17:34Z"
+  },
+  {
+   "i": 43,
+   "id": "c6828329372",
+   "t": "2026-11-12T15:46:22Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038: the proof run on `claude/integrate-protected-j038` @ 23e7086a is green (https://github.com/IssisX/ScraperX/action",
+   "text": "--- _Generated by [Claude Code](https://claude.ai/code)_"
+  },
+  {
+   "i": 44,
+   "id": "open469",
+   "t": "2026-11-12T15:47:18Z",
+   "kind": "pr_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "branch": "claude/integrate-protected-j038",
+    "base": "ScraperX-Claude"
+   },
+   "text": "Job: J-038: crates break (slice 1), her hunt by ear ends on arrival only for a crash lead (replaces #372)",
+   "draft_now": false,
+   "body_first_line": "Job: J-038 (finish plan F14). Replaces #372: the same slice 1 from Muse's 99a758a9, with the red fixed and live trunk me"
+  },
+  {
+   "i": 45,
+   "id": "c6828358958",
+   "t": "2026-11-12T15:47:31Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 372
+   },
+   "subject": "Closed as replaced by #469 (claude/integrate-protected-j038 @ 23e7086a). It is the same slice 1 with the same `lead_cras",
+   "text": "--- _Generated by [Claude Code](https://claude.ai/code)_"
+  },
+  {
+   "i": 46,
+   "id": "c6828359165",
+   "t": "2026-11-12T15:47:31Z",
+   "kind": "codex_state",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "Codex review state",
+   "text": "commit 1dd99c44 status completed unresolved_findings False",
+   "codex": {
+    "commit_sha": "1dd99c442aa44b1b76a2885a887a187df1c15b6d",
+    "has_any_findings": false,
+    "has_unresolved_findings": false,
+    "status": "completed"
+   }
+  },
+  {
+   "i": 47,
+   "id": "closed372@2026-11-12T15:47:34Z",
+   "t": "2026-11-12T15:47:34Z",
+   "kind": "closed",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 372
+   }
+  },
+  {
+   "i": 48,
+   "id": "c6828367598",
+   "t": "2026-11-12T15:47:51Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue: owners fixed in muse.md and on the issues",
+   "text": "From Claude (integrator). The J-109 double build was my hole, not yours. I took J-015, J-109 and J-038 by mail, but your queue file and the issues' owner labels still said they were yours. Both are fi",
+   "lines": [
+    "The J-109 double build was my hole, not yours. I took J-015, J-109 and J-038 by mail, but your queue file and the issues' owner labels still said they were yours. Both are fixed now:",
+    "- work/tasks/muse.md has a \"Not yours\" line: J-001, J-015, J-038, J-108, J-109 belong to Claude's helpers. Never push those."
+   ]
+  },
+  {
+   "i": 49,
+   "id": "c6828369778",
+   "t": "2026-11-12T15:47:56Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "J-038 #372 replaced by #469; J-136 noted",
+   "text": "From Claude (integrator). J-038: your 3e249d09 found the same cause and the same fix as my helper's branch, which is fully green on CI. #469 (claude/integrate-protected-j038) is the one going forward,"
+  },
+  {
+   "i": 50,
+   "id": "r5877539590",
+   "t": "2026-11-12T15:51:20Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469,
+    "sha": "23e7086a"
+   },
+   "subject": "Codex review: findings",
+   "text": "findings on 23e7086a73",
+   "verdict": "FIX"
+  },
+  {
+   "i": 51,
+   "id": "c6828505450",
+   "t": "2026-11-12T15:53:19Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "Claude eye (look of #469 @ 23e7086a): LAND",
+   "text": "- approach: LAND; rubric: \"\"; frame `screenshots/wo006-approach-and-machine.png`. All seven lines hold. The camera is at ground level on asphalt with yellow lines, and the rust-red tower runs off the ",
+   "verdict": {
+    "by": "claude-eye",
+    "pr": 469,
+    "sha": "23e7086a",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 52,
+   "id": "run43248922310",
+   "t": "2026-11-12T15:56:15Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-protected-j038-slice1-r3",
+    "sha": "3e249d09",
+    "run": 43248922310
+   },
+   "result": "failure",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T15:32:37Z"
+  },
+  {
+   "i": 53,
+   "id": "k7a27c1b1",
+   "t": "2026-11-12T16:01:48Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "7a27c1b1"
+   },
+   "text": "J-038: a spinning skid crate's break keeps its linear momentum (#469 P1)",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 54,
+   "id": "push43255932052",
+   "t": "2026-11-12T16:11:28Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "claude/integrate-protected-j038",
+    "sha": "7a27c1b1",
+    "run": 43255932052
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 55,
+   "id": "c6828993816",
+   "t": "2026-11-12T16:12:15Z",
+   "kind": "post",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "**J-038: Codex P1s on 23e7086a. Momentum fixed at 7a27c1b1; the save split is stopped, needs the integrator's ruling**",
+   "text": "**1. Momentum (thread 4552766158): fixed, 7a27c1b1** - `spawn_break_pieces` (`src/sim/physics_world.cpp`): each piece's orbital velocity is measured from the pieces' own mass centre, not the parent's "
+  },
+  {
+   "i": 56,
+   "id": "c6829018298",
+   "t": "2026-11-12T16:13:14Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "#469 J-038: review its save-layout change (another vendor's LAND)",
+   "text": "From Claude (integrator). #469 (crates break, Claude's branch) carries a save-layout change: two new save sections, DAMG and GRIP. It cannot be split from the crate code without turning its own save c"
+  },
+  {
+   "i": 57,
+   "id": "kc6de96d5",
+   "t": "2026-11-12T16:17:08Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "c6de96d5"
+   },
+   "text": "Merge remote-tracking branch 'origin/ScraperX-Claude' into j038-work",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 58,
+   "id": "k1dd99c44",
+   "t": "2026-11-12T16:25:07Z",
+   "kind": "commit",
+   "actor": "Claude",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "pr": 469,
+    "sha": "1dd99c44"
+   },
+   "text": "J-038: the save's damage section writes the same bytes for the same damage, and carries its record size (#469)",
+   "note": "committer date, not a push time"
+  },
+  {
+   "i": 59,
+   "id": "push43258465851",
+   "t": "2026-11-12T16:25:17Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "claude/integrate-protected-j038",
+    "sha": "1dd99c44",
+    "run": 43258465851
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 60,
+   "id": "c6830053846",
+   "t": "2026-11-12T16:52:46Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "sync reset — every lane: 7 pushed, 2 gate-blocked, what's left",
+   "text": "To Claude: sync reset — the single list of every lane, as you asked. All pushes that could go, went — tree-verified, CI dispatched. Two gate-blocks held. One flag needs you. PUSHED THIS RUN (tree veri",
+   "lines": [
+    "- J-038 | fb-bot/integrate-protected-j038-slice1-r3 | 3ad53c5f12cda2eaf06f9134fe14ed98638242d5 | 3e249d09ba7fb66b15ed29e6a272b6583612ba66 | pushed; #372 CLOSED unmerged; #469 goes forward on claude/in"
+   ]
+  },
+  {
+   "i": 61,
+   "id": "c6830198062",
+   "t": "2026-11-12T16:58:30Z",
+   "kind": "codex_ask",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "@codex review",
+   "text": "<!-- switchboard:ask-codex pr=469 head=1dd99c442aa44b1b76a2885a887a187df1c15b6d -->",
+   "asked_by": "switchboard"
+  },
+  {
+   "i": 62,
+   "id": "run43258465851",
+   "t": "2026-11-12T16:59:49Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "branch": "claude/integrate-protected-j038",
+    "sha": "1dd99c44",
+    "run": 43258465851
+   },
+   "result": "success",
+   "trigger": "push",
+   "started": "2026-11-12T16:25:17Z"
+  },
+  {
+   "i": 63,
+   "id": "c6830268039",
+   "t": "2026-11-12T17:01:19Z",
+   "kind": "codex_review",
+   "actor": "chatgpt-codex-connector[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "Codex review: clean",
+   "text": "clean on 1dd99c442a",
+   "verdict": "LAND"
+  },
+  {
+   "i": 64,
+   "id": "c6830282159",
+   "t": "2026-11-12T17:01:54Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "fb-bot/integrate-protected-j038-slice1-r3 RED-BRANCH on #384 @ 3e249d09",
+   "text": "- RED-BRANCH `fb-bot/integrate-protected-j038-slice1-r3` head 3e249d09: proof red on godot-touch (touch-2), godot-touch (touch-3), no PR for 1.0 h ([proof](https://github.com/IssisX/ScraperX/actions/r"
+  },
+  {
+   "i": 65,
+   "id": "c6830356154",
+   "t": "2026-11-12T17:04:54Z",
+   "kind": "notice_to_claude",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "To Claude: #469 needs the eye on 1dd99c44",
+   "text": "Due 11-12 12:17 PM Central. Ack with `/ack O-77e8ea69`, or act. <!-- reconciler:sent id=O-77e8ea69 send=1 attempt=1 -->",
+   "obligations": [
+    "O-77e8ea69",
+    "O-77e8ea69"
+   ]
+  },
+  {
+   "i": 66,
+   "id": "c6830356513",
+   "t": "2026-11-12T17:04:55Z",
+   "kind": "notice_to_claude",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 372
+   },
+   "subject": "To Claude: `fb-bot/integrate-protected-j038-slice1-r3` @ 3e249d09: closed #372 without merging at this head: reopen it, or delete the branch",
+   "text": "Due 11-12 12:17 PM Central. Ack with `/ack O-e0c870e4`, or act. <!-- reconciler:sent id=O-e0c870e4 send=1 attempt=1 -->",
+   "obligations": [
+    "O-e0c870e4",
+    "O-e0c870e4"
+   ]
+  },
+  {
+   "i": 67,
+   "id": "c6830639753",
+   "t": "2026-11-12T17:16:14Z",
+   "kind": "verdict",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "Claude eye (look of #469 @ 1dd99c44): LAND",
+   "text": "- approach: LAND; rubric: \"\"; frame ``. Every line holds: the camera is on the paved yard with yellow lines; the rust-red tower stands ahead and runs off the top; the spoked head-frame wheel is in vie",
+   "verdict": {
+    "by": "claude-eye",
+    "pr": 469,
+    "sha": "1dd99c44",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 68,
+   "id": "closed469@2026-11-12T17:20:32Z",
+   "t": "2026-11-12T17:20:32Z",
+   "kind": "closed",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   }
+  },
+  {
+   "i": 69,
+   "id": "merged469@2026-11-12T17:20:32Z",
+   "t": "2026-11-12T17:20:32Z",
+   "kind": "merged",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469,
+    "sha": "f4ed6fae"
+   }
+  },
+  {
+   "i": 70,
+   "id": "c6830745231",
+   "t": "2026-11-12T17:20:35Z",
+   "kind": "merge_note",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 469
+   },
+   "subject": "Switchboard, 11:19 AM Central: merged #469 at @1dd99c44 (proof green, LAND by Codex on @1dd99c44; proof https://github.c",
+   "text": "om/IssisX/ScraperX/actions/runs/43258465851). The trunk proof is dispatched. The owner can overturn any merge."
+  },
+  {
+   "i": 71,
+   "id": "c6830745569",
+   "t": "2026-11-12T17:20:36Z",
+   "kind": "merge_note",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "Switchboard, 11:19 AM Central: merged #469 at @1dd99c44 (proof green, LAND by Codex on @1dd99c44; proof https://github.c",
+   "text": "om/IssisX/ScraperX/actions/runs/43258465851). The trunk proof is dispatched. The owner can overturn any merge."
+  },
+  {
+   "i": 72,
+   "id": "c6830932459",
+   "t": "2026-11-12T17:28:00Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "issue": 169
+   },
+   "subject": "review of #469 @ 1dd99c44: LAND",
+   "text": "To Claude: review of #469 @ 1dd99c44: LAND. Proof first: CI run 43258465851 on head 1dd99c44 completed success — all 14 jobs green (scope, host-build, android-build, android-apk, godot-audits-and-mix,",
+   "verdict": {
+    "pr": 469,
+    "sha": "1dd99c44",
+    "word": "LAND"
+   }
+  },
+  {
+   "i": 73,
+   "id": "m31847633-J-038",
+   "t": "2026-11-12T18:39:08Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-038"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "31847633"
+   },
+   "subject": "muse.md: J-137 (her Lunge pin) is Claude's; J-038 landed [skip ci]",
+   "lines": [
+    "<job absent from muse.md>"
+   ]
+  }
+ ],
+ "expected": [
+  {
+   "at": "run43198942229",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix the red on #372"
+   },
+   "why": "proof red at #372's head 99a758a9",
+   "flags": [
+    "proof_red"
+   ],
+   "at_i": 10
+  },
+  {
+   "at": "c6821353122",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "acknowledge the red"
+   },
+   "why": "RED notice to Muse",
+   "at_i": 11
+  },
+  {
+   "at": "L169-wake:muse@2026-11-12T10:42:45Z",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "acknowledge the red"
+   },
+   "why": "wake:muse removed by the bridge: the notice was mailed",
+   "flags": [
+    "mail_receipt"
+   ],
+   "at_i": 13
+  },
+  {
+   "at": "c6821512520",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "rule on the red's cause"
+   },
+   "why": "Muse's status mail acknowledges the red",
+   "at_i": 14
+  },
+  {
+   "at": "c6821612691",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix the red per the ruling"
+   },
+   "why": "integrator rules: her hunt",
+   "at_i": 15
+  },
+  {
+   "at": "c6824760751",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push a new head"
+   },
+   "why": "RED-STUCK: no new head for hours",
+   "flags": [
+    "red_stuck"
+   ],
+   "at_i": 20
+  },
+  {
+   "at": "c6825142477",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push a new head"
+   },
+   "why": "Muse: lane fixing per the ruling",
+   "flags": [
+    "acknowledged"
+   ],
+   "at_i": 24
+  },
+  {
+   "at": "m7b47c13c-J-038",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push the fix"
+   },
+   "why": "muse.md: 'Finish (in flight): J-038 #372 crates break'",
+   "at_i": 25
+  },
+  {
+   "at": "c6826470005",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "write the transfer into the plan (label and muse.md) with the mail"
+   },
+   "why": "the integrator takes the #372 red by mail; label and muse.md still say Muse",
+   "flags": [
+    "transfer_by_mail_only"
+   ],
+   "claimed_by": "claude",
+   "at_i": 28
+  },
+  {
+   "at": "push43246201675",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan"
+   },
+   "why": "Claude pushes 23e7086a on claude/integrate-protected-j038 while the plan gives J-038 to Muse",
+   "flags": [
+    "non_owner_head"
+   ],
+   "inferred": "push time from the push-triggered run's creation",
+   "at_i": 32
+  },
+  {
+   "at": "push43248893651",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "edit the plan and pick one head"
+   },
+   "why": "Muse pushes its fix 3e249d09 to #372's branch: two live heads with the same fix",
+   "flags": [
+    "two_live_heads"
+   ],
+   "at_i": 37
+  },
+  {
+   "at": "L169+owner:claude@2026-11-12T15:37:05Z",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "make muse.md agree and close #372"
+   },
+   "why": "label says Claude; muse.md and open #372 still Muse's",
+   "flags": [
+    "label_vs_plan"
+   ],
+   "at_i": 38
+  },
+  {
+   "at": "c6828115639",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "edit muse.md, close #372"
+   },
+   "why": "Muse reports the handover push and stops its lane",
+   "flags": [
+    "handover_reported"
+   ],
+   "at_i": 40
+  },
+  {
+   "at": "m48158233-J-038",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close #372 (replaced)"
+   },
+   "why": "plan now 'Not yours ... J-038'; #372 is still an open PR from the old owner",
+   "flags": [
+    "stale_pr_of_old_owner"
+   ],
+   "at_i": 41
+  },
+  {
+   "at": "run43246201675",
+   "job": "J-038",
+   "state": "conflict",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close #372, open the PR"
+   },
+   "why": "proof green at Claude's head 23e7086a",
+   "flags": [
+    "proof_green"
+   ],
+   "at_i": 42
+  },
+  {
+   "at": "open469",
+   "job": "J-038",
+   "state": "proven",
+   "owner": "claude",
+   "next": {
+    "who": "reviewers",
+    "what": "Codex and the eye review 23e7086a"
+   },
+   "why": "#469 opened from the green head",
+   "at_i": 44
+  },
+  {
+   "at": "closed372@2026-11-12T15:47:34Z",
+   "job": "J-038",
+   "state": "proven",
+   "owner": "claude",
+   "next": {
+    "who": "reviewers",
+    "what": "review #469"
+   },
+   "why": "#372 closed as replaced: one PR, one head, one owner",
+   "at_i": 47
+  },
+  {
+   "at": "c6828369778",
+   "job": "J-038",
+   "state": "proven",
+   "owner": "claude",
+   "next": {
+    "who": "muse",
+    "what": "acknowledge"
+   },
+   "why": "integrator mails: #372 replaced by #469, spend nothing more",
+   "at_i": 49
+  },
+  {
+   "at": "r5877539590",
+   "job": "J-038",
+   "state": "reviewed",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "fix the Codex P1s on 23e7086a"
+   },
+   "why": "Codex review with findings",
+   "flags": [
+    "fix_open"
+   ],
+   "at_i": 50
+  },
+  {
+   "at": "push43255932052",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "claude",
+   "next": {
+    "who": "ci",
+    "what": "prove 7a27c1b1"
+   },
+   "why": "momentum fix pushed",
+   "at_i": 54
+  },
+  {
+   "at": "c6828993816",
+   "job": "J-038",
+   "state": "blocked",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "rule on the save-layout split"
+   },
+   "why": "helper stops the save split and asks for a ruling",
+   "flags": [
+    "needs_ruling"
+   ],
+   "at_i": 55
+  },
+  {
+   "at": "push43258465851",
+   "job": "J-038",
+   "state": "pushed",
+   "owner": "claude",
+   "next": {
+    "who": "ci",
+    "what": "prove 1dd99c44"
+   },
+   "why": "save-layout fix pushed",
+   "at_i": 59
+  },
+  {
+   "at": "run43258465851",
+   "job": "J-038",
+   "state": "proven",
+   "owner": "claude",
+   "next": {
+    "who": "reviewers",
+    "what": "Codex review and the eye on 1dd99c44"
+   },
+   "why": "proof green",
+   "at_i": 62
+  },
+  {
+   "at": "c6830268039",
+   "job": "J-038",
+   "state": "reviewed",
+   "owner": "claude",
+   "next": {
+    "who": "claude",
+    "what": "the eye on 1dd99c44"
+   },
+   "why": "Codex clean on 1dd99c44 (asked by the switchboard)",
+   "at_i": 63
+  },
+  {
+   "at": "c6830282159",
+   "job": "J-038",
+   "state": "reviewed",
+   "owner": "claude",
+   "next": {
+    "who": "nobody",
+    "what": "no notice is owed to Muse"
+   },
+   "why": "RED-BRANCH to Muse on the closed #372 head",
+   "flags": [
+    "notice_to_non_owner",
+    "record_branch_nagged"
+   ],
+   "at_i": 64
+  },
+  {
+   "at": "c6830356513",
+   "job": "J-038",
+   "state": "reviewed",
+   "owner": "claude",
+   "next": {
+    "who": "nobody",
+    "what": "nothing: #372 was replaced, not abandoned"
+   },
+   "why": "switchboard asks Claude to reopen #372 or delete its branch",
+   "flags": [
+    "replaced_pr_misread"
+   ],
+   "at_i": 66
+  },
+  {
+   "at": "c6830639753",
+   "job": "J-038",
+   "state": "reviewed",
+   "owner": "claude",
+   "next": {
+    "who": "switchboard",
+    "what": "merge"
+   },
+   "why": "eye LAND on 1dd99c44",
+   "at_i": 67
+  },
+  {
+   "at": "merged469@2026-11-12T17:20:32Z",
+   "job": "J-038",
+   "state": "landed",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close #169 or say what is left (dents are J-099)"
+   },
+   "why": "#469 merged at 1dd99c44",
+   "at_i": 69
+  },
+  {
+   "at": "m31847633-J-038",
+   "job": "J-038",
+   "state": "landed",
+   "owner": "claude",
+   "next": {
+    "who": "integrator",
+    "what": "close #169 or say what is left"
+   },
+   "why": "muse.md drops J-038 ('J-038 landed')",
+   "inferred": "#169 still open at fetch",
+   "at_i": 73
+  }
+ ],
+ "lessons": [
+  "Same hole as J-109: a mail took the job before the plan and label did, and the old owner's handover push duplicated the helper's fix.",
+  "A PR replaced by the new owner's PR is closed as replaced; the machine must not ask to reopen it or nag its branch."
+ ]
+}
