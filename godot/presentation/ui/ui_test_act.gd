@@ -1694,14 +1694,22 @@ func _perf_night() -> bool:
 	return true
 
 
-# The fight slip on touch (J-036, fight S5): two quick lateral flicks on the
-# move stick throw a slip, the body moves ~0.4 m sideways out of her line,
-# no grab follows in the window. Staged with her woken and placed 2.5 m out,
-# hands held for the approach, freed at the press so the window is real.
-# Stage is Changed (2), not Pest (0): at Pest she stalks — under his gaze
-# she freezes, looked away she holds at her 3.0 m band — and never closes
-# to slip range (CI run 43681181291 failed this act at stage 0). The sweep
-# act proves a Changed Matron closes 2.5 m to 1.25 m.
+# The fight slip on touch (J-036, fight S5): the slip alone, ~0.4 m sideways
+# out of her line, no grab follows in the window. Staged with her woken and
+# placed 2.5 m out, hands held throughout (the free-hands grab is the native
+# test's `free` case, not this act's measurement). Stage is Changed (2), not
+# Pest (0): at Pest she stalks — under his gaze she freezes, looked away she
+# holds at her 3.0 m band — and never closes to slip range (CI run
+# 43681181291 failed this act at stage 0).
+# Claude's ruling (mail 1a1deaeb70de392e): measure the slip alone. He stands
+# still (no stick input) for the frames before and through the burst, so the
+# 1.74 m includes no walk — and the slip is pressed during her lunge
+# wind-up (turn == 1), when she has committed to a line and cannot re-aim.
+# The double-tap flicks are gone: any flick strong enough to register
+# (> 0.7) walks him, and the walk velocity carries through the burst
+# (traction is 0 during the slip), so the slip is requested directly — the
+# same native call the flicks end in. Her cooldown is the live game's, not
+# a fresh sim's, so this waits for her Turn rather than timing one.
 func _matron_slip_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if int(_matron_state()["state"]) == MATRON_STATE_DORMANT and not await _wake_matron(device):
@@ -1711,20 +1719,22 @@ func _matron_slip_touch(device: int) -> bool:
 	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - 2.5))
 	_native().debug_set_matron_stage(2)
 	await _face(Vector2(0.0, -1.0))
-	if not await _wait_until(func() -> bool: return _centre_gap() <= 1.25, 10.0):
+	# Close to slip range, or catch her wind-up wherever it finds her: the
+	# Turn can fire during the approach, and a wind-up stops her where she
+	# stands, so a bare gap wait would time out on a wind-up at a wider gap.
+	# The measurement is the slip alone, so the gap at the press does not
+	# matter — only that she is wound up and he is standing still.
+	if not await _wait_until(func() -> bool: return _centre_gap() <= 1.25 or int(_matron_state()["turn"]) == 1, 10.0):
 		return _fail("the changed Matron never closed into slip range")
-	_native().debug_hold_matron_hands(0.0)
+	# The wind-up: she stops dead, committed to her line.
+	if not await _wait_until(func() -> bool: return int(_matron_state()["turn"]) == 1, 20.0):
+		return _fail("she never wound up her lunge for the slip")
 	var slips := int(_native().get_strike_state()["slip_count"])
 	var start := _position()
-	_move_dir(device, Vector2(1.0, 0.0))
-	await _frames(8)
-	_move_dir(device, Vector2.ZERO)
-	await _frames(8)
-	_move_dir(device, Vector2(1.0, 0.0))
-	await _frames(8)
-	_move_dir(device, Vector2.ZERO)
+	# No stick input: the slip alone. (device is unused here by design.)
+	_native().request_slip(1)
 	if not await _wait_until(func() -> bool: return int(_native().get_strike_state()["slip_count"]) > slips, 2.0):
-		return _fail("the double-tap threw no slip")
+		return _fail("the slip request threw no slip")
 	await _frames(10)
 	_act_snap("slip-right-mid")
 	if not await _wait_until(func() -> bool: return not bool(_native().get_strike_state()["slip_active"]), 1.0):
@@ -1737,7 +1747,7 @@ func _matron_slip_touch(device: int) -> bool:
 		return _fail("she grabbed him inside the slip window")
 	_act_snap("slip-right-settled")
 	await _frames(5)
-	_detail = "double-tap slip right, %.2f m sideways, no grab" % moved.x
+	_detail = "slip right, %.2f m sideways, no grab" % moved.x
 	return true
 
 

@@ -972,35 +972,48 @@ SCRAPERX_SLICE("matron-jab", run_matron_jab);
 
 void run_matron_slip() {
     constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
-    // Hunted setup: she comes to him till the gap closes to press_gap_m.
-    // Stage is Changed (2), not Pest (0): at Pest she stalks — under his
-    // gaze she freezes, looked away she holds at her 3.0 m band — and
-    // never closes to the press gap (CI run 43681181291 failed this setup
-    // at stage 0). Changed hunts one pace tier faster than Dangerous
-    // (choose_pace), and the sweep touch act proves a Changed Matron
-    // closes 2.5 m to 1.25 m.
-    const auto hunt_to_gap = [&](Simulation &s, const double her_ahead_m, const int stage,
-                                 const double press_gap_m, const bool no_hands) {
+    constexpr int kWindup = static_cast<int>(scraperx::sim::Matron::Turn::Windup);
+    // Windup setup (Claude's ruling, mail 1a1deaeb70de392e): the slip is
+    // pressed during her lunge wind-up, when she has committed to a line
+    // and cannot re-aim. She stops dead for 0.9 s (81 ticks); the 20-tick
+    // slip window fits inside it, so neither her body nor her aim can
+    // touch the measurement. The Turn's clock restarts at launch (restore
+    // sets the 9 s cooldown), so a slow approach times her arrival at the
+    // press gap to the Turn: a fixed Creep (0.7 m/s) from 7.7 m out arrives
+    // at 1.25 m as the cooldown expires — she cannot arrive early (6.45 m
+    // at 0.7 m/s takes 9.2 s), so the Turn always finds her short of the
+    // gap, never on him. Stage is Changed (2), not Pest (0): at Pest she
+    // stalks — under his gaze she freezes, looked away she holds at her
+    // 3.0 m band — and never closes to the press gap (CI run 43681181291
+    // failed this setup at stage 0).
+    const auto windup_to_gap = [&](Simulation &s, const double her_ahead_m, const int stage,
+                                   const double press_gap_m, const bool no_hands) {
         s.place_matron_home(154.0F);
         for (int i = 0; i < 30; ++i) tick(s);
         const Vector3 p = s.snapshot().player_position;
         (void)s.set_facing(0.0, 1.0);
         s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
         if (!no_hands) s.debug_hold_matron_hands(30.0);
+        s.debug_fix_matron_pace(0);  // Creep: the slow approach, timed to the Turn
         for (int i = 0; i < 5 * 90 && s.matron_state().state != kHunting; ++i) tick(s);
         s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
-        bool entered = false;
-        for (int i = 0; i < 10 * 90 && !entered; ++i) {
+        bool wound = false;
+        for (int i = 0; i < 20 * 90 && !wound; ++i) {
             const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
             (void)s.set_facing(her.x - me.x, her.z - me.z);
             tick(s);
-            const Vector3 now = s.matron_state().position, here = s.snapshot().player_position;
-            entered = s.matron_state().state == kHunting &&
-                      std::hypot(now.x - here.x, now.z - here.z) <= press_gap_m;
+            wound = s.matron_state().turn == kWindup;
         }
-        require(entered, "slip: she hunts into slip range (setup)");
+        require(wound, "slip: she winds up her lunge at the press gap (setup)");
+        // She stands still in the wind-up; the press gap is what the
+        // approach timed it to. A gap outside this band means the timing
+        // missed, not that the slip is wrong.
+        const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
+        const double gap = std::hypot(her.x - me.x, her.z - me.z);
+        require(gap >= 0.60 && gap <= press_gap_m + 0.50,
+                "slip: the wind-up finds her at the press gap (setup)");
     };
-    // A slip from a hunted setup: he slips sideways out of her line (`side`:
+    // A slip from a windup setup: he slips sideways out of her line (`side`:
     // 1 right of his facing, -1 left).
     struct Slipped {
         std::uint64_t slips = 0;
@@ -1013,7 +1026,7 @@ void run_matron_slip() {
                                const int side, const bool no_hands = false) {
         Slipped out;
         Simulation s(InitialSpawn::Deck154);
-        hunt_to_gap(s, her_ahead_m, stage, press_gap_m, no_hands);
+        windup_to_gap(s, her_ahead_m, stage, press_gap_m, no_hands);
         const Vector3 me0 = s.snapshot().player_position;
         const auto &m0 = s.matron_state();
         const double fl = std::hypot(m0.position.x - me0.x, m0.position.z - me0.z);
@@ -1044,7 +1057,7 @@ void run_matron_slip() {
         out.grabs = s.matron_state().grabs - grabs0;
         return out;
     };
-    const Slipped right = slip_case(2.5, 2, 1.25, 1);
+    const Slipped right = slip_case(7.7, 2, 1.25, 1);
     std::cout << "  slip right: slips=" << right.slips << " lateral_m=" << right.lateral_m
               << " forward_m=" << right.forward_m << " cone=" << right.cone_before << "->" << right.cone_after
               << " grabs=" << right.grabs << " max_step_m=" << right.max_step_m << "\n";
@@ -1054,12 +1067,13 @@ void run_matron_slip() {
     require(right.cone_after < right.cone_before - 0.02, "slip: he leaves her facing line");
     require(right.grabs == 0, "slip: no grab follows in the window");
     require(right.max_step_m <= 0.20, "slip: no tick moves the body over 0.20 m");
-    const Slipped left = slip_case(2.5, 2, 1.25, -1);
+    const Slipped left = slip_case(7.7, 2, 1.25, -1);
     require(left.slips == 1 && left.lateral_m < -0.30 && left.lateral_m > -0.55,
             "slip: the left slip mirrors the right, ~0.4 m the other way");
-    // Free hands, pressed before her grab starts (1.5 m, outside her 1.40 m standoff):
-    // the slip beats her grab, none follows in the window.
-    const Slipped free = slip_case(2.5, 2, 1.5, 1, true);
+    // Free hands, pressed during her wind-up (1.25 m, outside the 0.85 m
+    // catch, so her grab has not started): the slip beats her grab, none
+    // follows in the window.
+    const Slipped free = slip_case(7.7, 2, 1.25, 1, true);
     require(free.slips == 1 && free.grabs == 0,
             "slip: free hands, the slip beats her grab - no grab follows in the window");
     // Control: the same free-hands setup, no slip — she grabs him in the
@@ -1068,7 +1082,7 @@ void run_matron_slip() {
     // anything; if this fails, the grab path is the blocker, not the slip.)
     {
         Simulation s(InitialSpawn::Deck154);
-        hunt_to_gap(s, 2.5, 2, 1.5, true);
+        windup_to_gap(s, 7.7, 2, 1.25, true);
         const std::uint32_t grabs0 = s.matron_state().grabs;
         bool grabbed = false;
         for (int i = 0; i < 150 && !grabbed; ++i) {
@@ -1078,8 +1092,8 @@ void run_matron_slip() {
         require(grabbed, "slip control: no slip, she grabs him in the window (setup)");
     }
     // Held: she has him (a completed grab), the slip is refused, nothing moves.
-    // Launched inside her grab range, no hunt_to_gap: she grabs before any
-    // gap wait could close, so the setup waits on the grab itself.
+    // Launched inside her grab range, no windup_to_gap: she grabs before any
+    // wind-up could start, so the setup waits on the grab itself.
     {
         Simulation s(InitialSpawn::Deck154);
         const Vector3 p = s.snapshot().player_position;
@@ -1139,7 +1153,7 @@ void run_matron_slip() {
     // Cooldown 1.2 s (108 ticks): a second slip inside it is refused, one after it goes.
     {
         Simulation s(InitialSpawn::Deck154);
-        hunt_to_gap(s, 2.5, 0, 1.25, false);
+        windup_to_gap(s, 7.7, 2, 1.25, false);
         (void)s.request_slip(1);
         for (int i = 0; i < 60; ++i) tick(s);
         require(s.snapshot().slip_count == 1, "slip cooldown: the first slip went (setup)");
@@ -1151,7 +1165,7 @@ void run_matron_slip() {
         for (int i = 0; i < 30; ++i) tick(s);
         require(s.snapshot().slip_count == 2, "slip: a slip after the 1.2 s cooldown goes");
     }
-    const Slipped again = slip_case(2.5, 0, 1.25, 1);
+    const Slipped again = slip_case(7.7, 2, 1.25, 1);
     require(again.lateral_m == right.lateral_m && again.cone_after == right.cone_after, "slip: the same inputs give the same slip, to the bit");
     std::cout << "PASS scraperx_sim matron slip: lateral_m=" << right.lateral_m << "\n";
 }
