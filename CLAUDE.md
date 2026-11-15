@@ -110,7 +110,7 @@ it to match, never ask him again.
 - Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
   loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
 - **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
-  a new job gets a fresh helper, never a resumed one (11-13). Helpers run Claude Code's default way: no forced foreground or background, fork mode at its default (Cory 11-15: "your default way of working"); stay free to
+  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the background; settings: fork mode off, progress summaries off (Cory 11-15 trial; judged in a new session by what he sees); stay free to
   talk and to take my pastes. Ask before EACH extra session; a yes covers one (11-14). Stopping a working helper
   is Cory's call (11-12).
 - **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
