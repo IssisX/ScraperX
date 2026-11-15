@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "sim/simulation.hpp"
+#include "sim/summit.hpp"
 
 namespace scraperx::sim {
 namespace {
@@ -89,6 +90,17 @@ void Objectives::update(const Simulation &simulation) noexcept {
                 break;
             default:
                 break;
+        }
+    }
+
+    if (!done_[static_cast<std::size_t>(Id::Mission8TopOut)]) {
+        // Mission 8, "Top out": the summit ending reached Home and the
+        // searchlight is lit. Both facts latch in the world — the ending
+        // only advances, the lamp never unlights — so the flag fires on the
+        // first tick that sees them together and never clears.
+        const auto summit = simulation.summit_state();
+        if (summit.ending == static_cast<std::uint8_t>(Summit::Ending::Home) && summit.lit) {
+            done_[static_cast<std::size_t>(Id::Mission8TopOut)] = true;
         }
     }
 }

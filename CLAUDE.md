@@ -7,8 +7,7 @@ This file is only the rules that change what an agent does. Add a rule here only
 ## Fundamentals (Cory 11-13)
 
 - One goal: Claude and Muse build the game. Judge the system by what lands.
-- Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top (11-13: a
-  day went to patches).
+- Fix the real cause. New breakage after a change is that change's first: undo it, never patch on top.
 - Build, test and read (API calls too) only what changed. Blocker first. A delay is a failure, never "wait".
 - Fix only what is measured broken, one small change at a time; no new machinery, no side projects.
 - Stay under every limit (GitHub calls, money, runners): check the meter before a batch.
@@ -32,7 +31,7 @@ it to match, never ask him again.
 - Grok only on work no other agent holds. The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06). Claude picks each helper's
   effort and tells him in one line; he changes it if he wants (11-13).
-- Claude types no clock time (11-11): name an event by its link; a time decision runs `date`.
+- Every time comes from the clock reading on his message, `date`, or the record (a post); never memory (11-14).
 
 ## Test only what a change reaches
 
@@ -86,8 +85,8 @@ it to match, never ask him again.
 - **Strengths (11-12):** Muse is free, so most work goes to it, debugging included; it is weaker at finding
   causes and can fail several times first. Claude's helpers take the hardest jobs, scored by `work/tasks/job-routing.md`: an
   unknown cause that blocks 2+ jobs or the climb or her chase, a Muse fix failed twice on the same failure, or
-  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; `plan.py give`); Muse
-  builds the fix they name. Never say "wait longer". Grok: math and risk. ChatGPT: research, specs,
+  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; `plan.py give`); Claude's
+  helpers build those fixes too; Muse keeps the easier work (11-14). Grok: math and risk. ChatGPT: research, specs,
   review. Slots full: the first slot that frees.
 - **Board:** the switchboard generates it from work/plan.md and remote work; nobody hand-edits ownership.
   Plan changes use tools/board/plan.py, refused mid-flight without a stop-and-push handoff.
@@ -111,8 +110,8 @@ it to match, never ask him again.
 - Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
   loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
 - **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
-  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the FOREGROUND,
-  parallel ones in one message: a background report is an extra wake on this big context (11-14). Ask before a 2nd session. Stopping a working helper
+  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the background (Cory 11-14); you stay free to
+  talk and to take my pastes. Ask before EACH extra session; a yes covers one (11-14). Stopping a working helper
   is Cory's call (11-12).
 - **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)
   current; after a compact re-read it, this file and the hourly file, and name what was lost (always something, 11-14).

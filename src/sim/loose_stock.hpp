@@ -124,7 +124,11 @@ public:
     // place, so east_west_begin() is count(). The bands' rings above
     // 396.25 m and the top decks are recorded the same way, and their
     // table places are taken by append_upper() after the east/west
-    // pieces; until it runs, upper_begin() is count().
+    // pieces; until it runs, upper_begin() is count(). A ring above
+    // 396.25 m left with no carryable piece gets one toolbox, recorded in
+    // its own list; its table places are taken by append_hightower()
+    // after the Matron's kinds, so no pre-existing piece or body moves at
+    // all, and until it runs, hightower_begin() is count().
     void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
     // Takes the east/west places dress_tower recorded, at the end of the
     // table (after the Matron's throwables), so the crane steel, the
@@ -148,6 +152,14 @@ public:
     // before it still load. Their bodies stay unbuilt (invalid
     // BodyIndex) until realize_upper.
     void append_upper();
+    // Takes the hightower places dress_tower recorded, at the end of the
+    // table (after the Matron's kinds), so every piece laid before them
+    // keeps the entity it had and saves made before them still load.
+    // Their bodies stay unbuilt (invalid BodyIndex) until realize_hightower.
+    void append_hightower();
+    // Builds the bodies dress_tower reserved for the hightower pieces,
+    // last of all, and returns their places in the table.
+    [[nodiscard]] std::vector<int> realize_hightower();
     // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
     // hook's reach after the tower's stock, so saves made before it line up:
     // two slabs of plate one on the other, and two beams side by side, the
@@ -170,8 +182,8 @@ public:
     static constexpr int kMatronThrowables = 3;
     // J-042: two more kinds by her deck's north band, west of the drum,
     // so what she takes and throws is no one kind: a 9 kg extinguisher and
-    // a 22 kg pallet. Laid last of all (after the deck's forklift and the
-    // upper stock), so
+    // a 22 kg pallet. Laid after the deck's forklift and the upper stock
+    // (the hightower stock comes after them), so
     // every earlier piece and body keeps its place. The kMatronKinds pieces
     // starting at matron_kinds_begin().
     void lay_matron_kinds();
@@ -194,16 +206,18 @@ public:
     }
     // Where each group begins in the table: static, then the tower's
     // spots, then the crane steel, the machine weights, the Matron's
-    // throwables, then the east/west stock, and last the upper stock, so
-    // saves made before a group line up. Until append_reserved() runs,
-    // the east/west begin is count(); until append_upper() runs, the
-    // upper begin is count().
+    // throwables, then the east/west stock, then the upper stock, then the
+    // Matron's kinds, and last the hightower stock, so saves made before a
+    // group line up. Until append_reserved() runs, the east/west begin is
+    // count(); until append_upper() runs, the upper begin is count();
+    // until append_hightower() runs, the hightower begin is count().
     [[nodiscard]] int crane_steel_begin() const noexcept { return crane_steel_begin_; }
     [[nodiscard]] int machine_weights_begin() const noexcept { return machine_weights_begin_; }
     [[nodiscard]] int matron_throwables_begin() const noexcept { return matron_throwables_begin_; }
     [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
     [[nodiscard]] int upper_begin() const noexcept { return upper_begin_; }
     [[nodiscard]] int matron_kinds_begin() const noexcept { return matron_kinds_begin_; }
+    [[nodiscard]] int hightower_begin() const noexcept { return hightower_begin_; }
     [[nodiscard]] int hung_slab_begin() const noexcept { return hung_slab_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
@@ -227,6 +241,10 @@ private:
     // recorded, waiting for append_upper() to take their table places
     // after the east/west pieces.
     std::vector<Placement> pending_upper_;
+    // The hightower toolboxes dress_tower recorded, one on each upper ring
+    // left with no carryable piece, waiting for append_hightower() to take
+    // their table places after the Matron's kinds.
+    std::vector<Placement> pending_hightower_;
     // Where each group begins in the table (see the accessors above).
     int crane_steel_begin_ = 0;
     int machine_weights_begin_ = 0;
@@ -234,6 +252,7 @@ private:
     int east_west_begin_ = 0;
     int upper_begin_ = 0;
     int matron_kinds_begin_ = 0;
+    int hightower_begin_ = 0;
     int hung_slab_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);

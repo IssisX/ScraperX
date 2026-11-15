@@ -155,10 +155,13 @@ PLAN_SHADOW_EVERY_H = 6
 # RAN the build (built_run), kept in the sweep state (gh.state["trunk_proof"]) until a newer such run replaces it, so
 # a red stays red until a green full proof clears it. Its jobs are read newest first, at most this many a sweep.
 TRUNK_RUN_READS = 6
+# J-072 (11-14): finished trunk runs judged skip-the-build, kept in the sweep state (gh.state["trunk_skipped"]),
+# newest last: passed over unread and uncounted, so more notes-only runs than one sweep reads never hide a red run.
+TRUNK_SKIPPED_KEPT = 50
 # The switch merges as "Merge pull request #483 from fb-bot/integrate-j129 (switchboard)"; GitHub's own merge names
 # the repo's owner first ("from IssisX/claude/integrate-wake-cut"), which trunk_proof strips.
 MERGE_FROM = re.compile(r"^Merge pull request #(\d+) from (\S+)")
-INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("RED-TRUNK", "MERGE-BY-HAND", "MERGED", "TO-CLAUDE", "TAKE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "FYI", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, never alone (11-13: every #282 comment wakes the subscribed integrator, so the digest-only
 # post 6854673147 woke it for nothing); held between sweeps in the state, so nothing is lost. FYI is a Muse mail that
@@ -168,6 +171,13 @@ DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN", "FYI"})
 MAX_DIGEST_ITEMS = 20                          # digest entries on one inbox comment; the rest ride on the next
 MAX_DIGEST_HELD = 200                          # digest entries kept between sweeps (timers["digest"]); past it the oldest
                                                # are dropped and named in the run's log (keep_held)
+# J-072 (11-14: #555 and #396 merged and the integrator found each only by hand): every merge into trunk is one
+# MERGED item, read from GitHub by each sweep whose inbox runs (merged_items): the closed PRs into trunk, newest
+# updated first, down to the cursor (gh.state["inbox"]["merged_at"], the newest merge listed). Never carried in the
+# run's state: an issue_comment run, which makes most merges, cannot save its cache (run 43610872384). The
+# integrator's own (claude/) merges post at once; Muse's ride the next post. With no cursor, MERGED_FIRST back only.
+MERGED_PAGES = 3                               # pages of 100 closed PRs read at most per sweep
+MERGED_FIRST = dt.timedelta(hours=1)
 MAX_INBOX_HELD = 200                           # wake items held between sweeps (gh.state["inbox"]["held"]), likewise
 MAX_RERUN_HEADS = 200                          # heads re-run, kept between sweeps (timers["rerun"]): one re-run per head
 # A Muse bridge title that is only "J-NNN started" (J-040 take_blow started: one name may sit between), or a bare ack.
@@ -241,6 +251,15 @@ MUSE_QUIET_AGAIN = dt.timedelta(hours=2)
 # #350 (J-124, J-078): a TO-CLAUDE ask that names a job stays open in the sweep state until a later Claude comment or
 # mail names the job, and is listed again at most once per ASK_AGAIN while it is open. At most MAX_OPEN_ASKS kept.
 ASK_AGAIN = dt.timedelta(hours=1)          # Cory 11-14: an ask to Claude is answered within the hour
+# J-072 (Cory 11-14: J-100, J-014 and J-053 failed twice in Muse's hands and the integrator missed all three): a Muse
+# job whose PR went red on two heads since its last green, on a same failure (same_failure) trunk's red proof does
+# not share, is one TAKE: Muse is mailed once to push what it has and stop (work/tasks/muse.md), and the integrator
+# is told at once, again at most once per ASK_AGAIN, until work/plan.md gives the job to claude. The sweep state
+# keeps each such branch's red heads since its last green ("red_heads") and the open takes ("takes").
+TAKE_HEADS_KEPT = 5
+MAX_TAKE_BRANCHES = 50
+MAX_TAKES = 50
+NUMBERS = re.compile(r"\d+(?:\.\d+)?")
 MAX_OPEN_ASKS = 50
 ASK_FIELDS = ("job", "target", "at", "listed", "said", "url")   # one open ask in the sweep state, every field a string
 JOB_NAMED = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")   # machine.JOB_ID
@@ -394,6 +413,21 @@ def hours(span: dt.timedelta) -> str:
 
 def red_jobs(proof: str) -> list[str]:
     return proof[len("red: "):].split(", ") if proof.startswith("red: ") else []
+
+
+def same_failure(test: str) -> str:
+    """J-072: a failing test as a TAKE compares it, "<job>: <FAIL line>" (red_tests) with its numbers cut, so the
+    same check failing by another measured amount on the next head is the same failure."""
+    job, _, line = test.partition(": ")
+    return f"{job}: {NUMBERS.sub('#', line)}"
+
+
+def take_mail(take: dict) -> str:
+    """J-072: Muse's TAKE line, plain words (work/tasks/mail-to-muse.md: no order, no override, no urgency)."""
+    return (f"the proof went red on two heads since its last green, on the same failing tests, listed below. By the rule in "
+            f"work/tasks/muse.md, a fix that fails twice on the same failure goes to Claude's helpers: please push what "
+            f"you have as it is, mail MUSE_TO_CLAUDE that you stopped {take['job']}, and take your next lane. The "
+            f"plan's next version names the job's new owner.")
 
 
 # J-104: a red notice names the failing tests, read from the failed jobs' logs (Muse's #108 answer: the check
@@ -670,6 +704,10 @@ def inbox_class(it: InboxItem) -> str:
         return "ride"
     if it.kind == "PLAN":
         return "hold" if it.dest in PLAN_WAKES else "ride"
+    if it.kind == "TAKE":   # J-072: a Muse job failed twice on the same failure is Claude's to take now
+        return "now"
+    if it.kind == "MERGED":   # J-072: the integrator's own merge wakes it at once; Muse's rides the next post
+        return "ride" if it.dest == "muse" else "now"
     return "hold"   # Muse's FIX-STUCK and RED-TWICE too: a fix failed twice is the integrator's to route (CLAUDE.md)
 
 
@@ -1647,6 +1685,153 @@ class Switch:
             self.gh.comment(ctx["issue"]["number"], line, f"merged-note on job issue #{ctx['issue']['number']}")
         return ""
 
+    def merged_items(self) -> list[InboxItem]:
+        """J-072: one MERGED item per PR merged into trunk since the cursor (MERGED_PAGES pages at most), read from
+        GitHub; the inbox's keys list each once. The newest merge's time is the next cursor, saved by inbox() once
+        its items are posted or held (merged_commit). Dest: Muse's (fb-bot/) rides the next post, any other at once."""
+        box = self.inbox_box()
+        cursor = parse_time(str(box.get("merged_at") or "")) or (self.now - MERGED_FIRST)
+        out: list[InboxItem] = []
+        newest, reached = cursor, False
+        for page in range(1, MERGED_PAGES + 1):
+            try:
+                got = self.gh.get(f"repos/{self.gh.repo}/pulls?state=closed&base={rules.TRUNK}&sort=updated"
+                                  f"&direction=desc&per_page=100&page={page}") or []
+            except RateLimited:
+                raise
+            except GitHubError as err:   # the cursor stays: the next sweep reads these merges again
+                self.out(f"NOTE        merges not read ({err_text(err)}): read next sweep")
+                return []
+            for pr in got if isinstance(got, list) else []:
+                updated, merged = parse_time(str(pr.get("updated_at") or "")), parse_time(str(pr.get("merged_at") or ""))
+                if updated is not None and updated < cursor:
+                    reached = True
+                    break
+                head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
+                ref, sha, number = str(head.get("ref") or ""), str(head.get("sha") or ""), pr.get("number")
+                if merged is None or merged < cursor or not sha or not isinstance(number, int) or number == INBOX_PR:
+                    continue
+                newest = max(newest, merged)
+                out.append(InboxItem("MERGED", f"#{number}", sha,
+                                     f"MERGED #{number} {untrusted(ref)} at {sha[:8]}: merged into {rules.TRUNK}; "
+                                     f"trunk's proof runs on the merge", "muse" if owner_of(ref) == "muse" else "claude"))
+            if reached or not isinstance(got, list) or len(got) < 100:
+                reached = True
+                break
+        if not reached:
+            self.out(f"NOTE        merges: {MERGED_PAGES} pages of closed PRs read without reaching {iso_z(cursor)}")
+        self.__dict__["_merged_next"] = iso_z(newest)
+        return out
+
+    def merged_commit(self, box: dict) -> None:
+        """J-072: the merge cursor moves once this sweep's MERGED items are posted or held. Never in a dry run."""
+        nxt = self.__dict__.pop("_merged_next", None)
+        if nxt and not getattr(self.gh, "dry_run", False):
+            box["merged_at"] = nxt
+            self.gh.state.pop("merged", None)   # the old state-held notices (#557), never read now
+
+    def plan_line(self, job: str):
+        """J-072: the job's line in work/plan.md, read once per run; None when it has none or the plan cannot be read."""
+        memo = self.__dict__.setdefault("_plan_owner", {})
+        if "model" not in memo:
+            try:
+                memo["model"] = self.read_plan().by_job()
+            except (AttributeError, RuntimeError) as err:
+                self.out(f"NOTE        work/plan.md not read ({err_text(err)})")
+                memo["model"] = None
+        return (memo["model"] or {}).get(job)
+
+    def plan_owner(self, job: str) -> str | None:
+        """J-072: the job's owner in work/plan.md, or None when the plan cannot be read (a TAKE then stays open)."""
+        line = self.plan_line(job)
+        return line.owner if line is not None else None
+
+    def plan_held(self, job: str) -> bool:
+        """J-072 (11-14, QUIET on #466 while J-015 was paused): the job has a `hold:` in work/plan.md, so its PR going
+        quiet is expected. An unread plan holds nothing: the nag still goes."""
+        line = self.plan_line(job) if job else None
+        return bool(line is not None and line.hold)
+
+    def note_red_head(self, f: rules.PrFacts, ctx: dict, rid) -> dict | None:
+        """J-072: a Muse job's PR head, once per sweep. A green (rid None) forgets the branch's reds. A red is kept
+        with its failures (red_tests, read once per head, then from the sweep state); when an earlier red head since
+        the last green shares one that trunk's red proof does not, the job is one open TAKE. Returns the job's open
+        TAKE, or None. Never in a dry run."""
+        state = getattr(self.gh, "state", None)
+        job = ctx.get("job") or ""
+        if not job or not isinstance(state, dict) or getattr(self.gh, "dry_run", False):
+            return None
+        takes = state["takes"] if isinstance(state.get("takes"), dict) else {}
+        memo = self.__dict__.setdefault("_red_noted", {})
+        if (f.head_ref, f.head_sha) in memo:
+            return memo[(f.head_ref, f.head_sha)]
+        heads = state["red_heads"] if isinstance(state.get("red_heads"), dict) else {}
+        state["red_heads"], state["takes"] = heads, takes
+        memo[(f.head_ref, f.head_sha)] = takes.get(job)
+        if rid is None:
+            heads.pop(f.head_ref, None)
+            return None
+        kept = [e for e in heads.get(f.head_ref) or [] if isinstance(e, dict) and isinstance(e.get("tests"), list)]
+        if any(e.get("head") == f.head_sha for e in kept):
+            return takes.get(job)
+        tests = self.red_tests(rid)
+        if any(t.endswith(f": {LOG_UNREAD}") for t in tests):
+            return takes.get(job)   # a log unread: this head is read again next sweep
+        failures = {same_failure(t) for t in tests} or {f"{j}: red" for j in red_jobs(f.proof)}
+        trunk = state["trunk_proof"] if isinstance(state.get("trunk_proof"), dict) else {}   # as trunk_proof keeps it
+        if str(trunk.get("state", "")).startswith("red"):   # a failure trunk shares is not this job's
+            failures -= {same_failure(t) for t in self.red_tests(trunk.get("run"))} | \
+                {f"{j}: red" for j in red_jobs(trunk["state"])}
+        shared = sorted({t for e in kept for t in e["tests"]} & failures)
+        heads.pop(f.head_ref, None)   # newest last, so the oldest branch goes first past the cap
+        heads[f.head_ref] = (kept + [{"head": f.head_sha, "run": rid, "tests": sorted(failures)[:20]}])[-TAKE_HEADS_KEPT:]
+        while len(heads) > MAX_TAKE_BRANCHES:
+            heads.pop(next(iter(heads)))
+        if shared and job not in takes and self.plan_owner(job) != "claude":
+            takes[job] = {"job": job, "pr": f.number, "branch": f.head_ref, "head": f.head_sha,
+                          "tests": [t[:MAX_FAIL_CHARS] for t in shared[:MAX_FAIL_LINES]], "at": iso_z(self.now),
+                          "listed": ""}
+            while len(takes) > MAX_TAKES:
+                takes.pop(next(iter(takes)))
+            self.out(f"TAKE        {job} #{f.number}: red twice on the same failure ({len(shared)} test line(s))")
+        memo[(f.head_ref, f.head_sha)] = takes.get(job)
+        return takes.get(job)
+
+    def take_items(self) -> list[InboxItem]:
+        """J-072: the integrator's TAKE items: each open take, at once and again at most once per ASK_AGAIN (a new key
+        per listing, the first keeps the bare head), until work/plan.md gives the job to claude, which closes it."""
+        state = getattr(self.gh, "state", None)
+        takes = state.get("takes") if isinstance(state, dict) else None
+        if not isinstance(takes, dict):
+            return []
+        out: list[InboxItem] = []
+        dry = getattr(self.gh, "dry_run", False)
+        for job, rec in list(takes.items()):
+            if not (isinstance(rec, dict) and all(isinstance(rec.get(k), str) for k in ("head", "branch", "listed"))
+                    and isinstance(rec.get("pr"), int) and isinstance(rec.get("tests"), list)):
+                takes.pop(job, None)
+                continue
+            if self.plan_owner(job) == "claude":
+                if not dry:
+                    takes.pop(job, None)
+                    self.out(f"TAKE        {job} closed: work/plan.md gives it to claude")
+                continue
+            last = parse_time(rec["listed"])
+            if last is not None and self.now - last < ASK_AGAIN:
+                continue
+            head = f"{rec['head']}@{iso_z(self.now)}" if last is not None else rec["head"]
+            age = hours(self.now - (parse_time(str(rec.get("at") or "")) or self.now))
+            out.append(InboxItem("TAKE", job, head,
+                                 f"TAKE {job} [#{rec['pr']}](https://github.com/{self.gh.repo}/pull/{rec['pr']}) "
+                                 f"{untrusted(rec['branch'])} head {rec['head'][:8]}: Muse's proof went red on two "
+                                 f"heads on the same failing tests, so Claude takes it (work/tasks/job-routing.md). "
+                                 f"Muse was mailed to push and stop. Give it to claude in work/plan.md and start a "
+                                 f"helper; listed each hour until the plan does (open {age})",
+                                 tests=tuple(str(t) for t in rec["tests"])))
+            if not dry:
+                rec["listed"] = iso_z(self.now)
+        return out
+
     # ---------- auto-open (J-047) ----------
     def prior_pr(self, branch: str, sha: str) -> bool:
         """Has this head of this branch ever been a PR's head (open, closed or merged)? The head filter names the
@@ -1891,6 +2076,7 @@ class Switch:
         self.digest_held = self.keep_held(digest, MAX_DIGEST_HELD, "digest")
         if not getattr(self.gh, "dry_run", False):   # kept until a comment carries it, even if the post fails
             box["held"] = [digest_record(it) for it in self.keep_held(wake, MAX_INBOX_HELD, "wake")]
+        self.merged_commit(box)   # J-072: its MERGED items are held (wake) or in the digest now, so the cursor moves
         if not wake or not (flush or self.inbox_due(wake, digest, last)):   # a digest alone never posts
             self.out("INBOX       nothing new" + (f"; {len(wake)} held for the next post (the hold)" if wake else "")
                      + (f"; {len(digest)} held for the digest (J-103)" if digest else ""))
@@ -2270,6 +2456,9 @@ class Switch:
         if not prefix:
             items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
+            items += self.take_items()   # J-072: Muse jobs failed twice on the same failure, until the plan says claude
+        if ripe is None and not prefix:
+            items += self.merged_items()   # J-072: merges into trunk since the cursor, read from GitHub
         if ripe is None:
             audience = ("muse", "both") if prefix else ("claude", "both")
             items += [it for it in self.trunk_items(runs, reported, prefix) if it.dest in audience]
@@ -2796,7 +2985,7 @@ class Switch:
             since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if since:
                 self.ripen(f.number, since + INBOX_FIX_STUCK)
-            if since and now - since >= INBOX_FIX_STUCK:
+            if since and now - since >= INBOX_FIX_STUCK and not self.plan_held(ctx.get("job") or ""):
                 name = self.team.agent_name.get(owner, owner)
                 out.append(item("FIX-STUCK", f"{plain('; '.join(d.reasons))}, and no new head from its owner "
                                              f"{name} for {hours(now - since)}", "both" if owner == "muse" else "claude"))
@@ -2824,10 +3013,16 @@ class Switch:
             rerun = self.outage_rerun(target, where, this) if this else None
             if rerun:
                 out.append(rerun)
+        if f.proof == "green" and owner == "muse":
+            self.note_red_head(f, ctx, None)   # J-072: a green ends the run of reds a TAKE counts
         if d.action == "FIX-CI" and not rerun:
             jobs = red_jobs(f.proof)
             both = "both" if owner == "muse" else "claude"
             rid = (this or {}).get("id") or ctx.get("run_id")   # the head's red proof run, whose logs name its tests
+            take = self.note_red_head(f, ctx, rid) if owner == "muse" else None
+            if take and mine:   # once per job: the key is the head the take was found at
+                out.append(InboxItem("TAKE", target, take["head"], f"TAKE {where}: {plain(take_mail(take))}", "muse",
+                                     tests=tuple(take["tests"])))
             ids = [r["id"] for r in runs_here]
             attempt = int((this or {}).get("run_attempt") or 1)
             if inbox_key(prefix + "RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
@@ -2847,7 +3042,7 @@ class Switch:
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if head_since:
                 self.ripen(f.number, head_since + INBOX_RED_STUCK)
-            if head_since and now - head_since >= INBOX_RED_STUCK and owner:
+            if head_since and now - head_since >= INBOX_RED_STUCK and owner and not self.plan_held(ctx.get("job") or ""):
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
                                              f"{hours(now - head_since)} ({proof_link})", owner, run_id=rid))
         if not rerun and not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
@@ -2857,7 +3052,8 @@ class Switch:
             idle = parse_time(ctx.get("updated_at") or "")
             if action and idle:
                 self.ripen(f.number, idle + dt.timedelta(hours=QUIET_HOURS))
-            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner:
+            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner \
+                    and not self.plan_held(ctx.get("job") or ""):   # J-072: a held job's PR is quiet by plan
                 out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}", owner))
         return [it for it in out if kept(it)]
 
@@ -3015,15 +3211,27 @@ class Switch:
         trunk = sorted((r for r in runs if r.get("head_branch") == rules.TRUNK and r.get("status") == "completed"),
                        key=lambda r: r.get("created_at") or "", reverse=True)
         checked = max(str(kept.get("checked") or ""), str(kept.get("created") or ""))
-        newest, done_all = (trunk[0].get("created_at") or "") if trunk else "", True
-        for i, r in enumerate(trunk):
+        # J-072 (11-14, run 43595346281): a trunk run still going when the sweep marks newer finished runs judged
+        # was never read once it went red. `checked` stays below the oldest unfinished trunk run not yet judged.
+        unfinished = [r.get("created_at") or "" for r in runs if r.get("head_branch") == rules.TRUNK
+                      and r.get("status") != "completed" and (r.get("created_at") or "") > checked]
+        below = min(unfinished) if unfinished else None
+        newest = next((r.get("created_at") or "" for r in trunk if below is None or (r.get("created_at") or "") < below), "")
+        done_all = True
+        skipped = [i for i in state.get("trunk_skipped") or [] if isinstance(i, int)][-TRUNK_SKIPPED_KEPT:]
+        was, reads = list(skipped), 0
+        for r in trunk:
             if r.get("id") == kept.get("run") or (r.get("created_at") or "") <= checked:
                 break   # nothing newer than the runs already judged
-            if i >= TRUNK_RUN_READS:
+            if r.get("id") in skipped:
+                continue   # judged skip-the-build on an earlier sweep: never read again
+            if reads >= TRUNK_RUN_READS:
                 done_all = False   # the rest wait for the next sweep: nothing past them is marked judged
                 break
+            reads += 1
             try:
                 if not built_run(self.run_jobs(r["id"])):
+                    skipped = (skipped + [r["id"]])[-TRUNK_SKIPPED_KEPT:]
                     continue   # the build was skipped: this run proves nothing about trunk's code
                 proof, url, rid, done = self.run_state(r)
             except RateLimited:
@@ -3054,6 +3262,8 @@ class Switch:
             kept = dict(kept, checked=newest)
         if not getattr(self.gh, "dry_run", False) and kept and isinstance(getattr(self.gh, "state", None), dict):
             self.gh.state["trunk_proof"] = kept
+        if not getattr(self.gh, "dry_run", False) and skipped != was and isinstance(getattr(self.gh, "state", None), dict):
+            self.gh.state["trunk_skipped"] = skipped
         self.__dict__["_trunk_proof"] = kept
         return kept
 

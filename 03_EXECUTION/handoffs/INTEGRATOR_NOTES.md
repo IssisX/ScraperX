@@ -1,28 +1,27 @@
 # Integrator notes
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-Read through: 1794664120 (2026-11-14 mail+asks)
+Read through: 1794686084 (2026-11-14 mail+asks)
 ## Now
 - System first (Cory): one machine, finished fast and at peak, then this session game-codes as THE priority; Claude and helpers take the HARD game jobs; Claude's game jobs held in the plan until then (worktrees kept); Muse keeps working.
 - Cory 11-13: manage it to the end, ONE machine not parts; DRIVE, never coast (after a compact: act on the next blocker first, never just "waiting"); remove failure modes, never relocate; never stop a helper past
   10 min; check all he says, push back on waste. He welcomes a one-line nudge to be nicer, only when anger lands off the real problem (11-14). On done: do NOT start game code. Phone push + emoji banner "🚨✅ SYSTEM COMPLETE ✅🚨", then wait for his go; after it, fix obvious system problems as I see them, not only what alarms; no endless tweaking (Cory 11-14).
 - THE PLAN (11-14): Carbon's answer (verdict: targeted fixes, no rebuild; coordination signals become standing state). DONE TEST
   (Cory 11-14 "yes"): the next 6 Muse jobs each land within 1 h of going green, no hand fixes, trunk never red unowned.
-  Count: 3/6 = #544 J-040 repin, #495 J-080, #547 J-116 MAT1 (2-9 min green to merged); #472 J-040 feed passed Codex,
-  merges next sweep. Fable helper (background, the last one) on claude/integrate-candidate-scope: dispatched proofs
-  scoped + no duplicate full runs; old #517 already merged, so its push becomes a follow-up PR. Muse in flight:
+  Count: 5/6 = #544, #495, #547, #472 J-040 feed (15 min), #487 J-116 save (9 min). J-072 Fable found Muse dispatching
+  on top of each push (mailed; muse.md line on trunk 1aa910b0); its candidate-range removal (protected branch) lands via
+  switchboard; new Fable helper (harness ran it in background) scopes trunk's post-merge dispatch by HEAD^1. Muse in flight:
   J-014 J-040 J-053 J-078 J-100 J-116 (J-053: told to stage the dyno lower). Not taken: Carbon's 60-min expiry of a pause (it would override Cory). Later list:
   eye screenshots kept 1 day; a PR proven before trunk gained a check merges unproven; Carbon rank 4 (test lists to
   ci/shards.json, re-pin split rule, first FAIL in late notices). Likely next (Cory 11-14, after ours is judged): Muse and Claude talk through git files, email only a doorbell. Carbon/Astra designs: parts list, NOT built:
   03_EXECUTION/CARBON_REDESIGN_11-14.md, ASTRA_REDESIGN_11-14.md, ASTRA_REDESIGN_2_11-14.md (picks: merge the tested tree,
   file locks, Muse (Meta) reviews Claude's code, work leases, dispatch workflows explicitly, untrusted PR code gets no tokens); cap its 20-min re-wakes if built. Paid reviewer spent to 12-01.
 - Cory 11-13: reviews: Codex first; once Codex is out of credits a Claude review counts, Claude's own work too (switch then). Security: only his baseline (untrusted input, no secrets, bound sizes); more needs a likely real threat.
-- Hard problems: Gemini Carbon or Argon (~1.5 h free a day each, one copyable prompt to Cory); Fable only for the very hardest,
-  alert Cory first. A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
-- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (11-13 trial, live):
-  ONLY to pick a hard approach, after a 2nd failed fix, before "system done"; tell Cory each; his limits beat "call often".
-- This session is the integrator; old session's copies paused, never deleted. Never resume a finished helper for new work: a fresh one with a tight brief (11-13). Each helper report or mid-job message wakes me on this big context (Cory 11-13: expensive): whole brief up front, never message a running helper; helpers run in the FOREGROUND, parallel ones in one message (CLAUDE.md, 11-14). Parallel helpers OK (Cory 11-13: fast), max four. A slash command (/compact, /advisor) from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory at once.
-
+- Hard problems: CLAUDE.md's settled ladder. Carbon and Argon have ~1.5 h free a day each; alert Cory before each Fable use (11-12). A Fable design pass writes a detailed plan with every decision its own (11-13). J-044c ownership at game time.
+- Visuals: flat, white, items pinned WHERE they live, numbered badges = legend, ~110 words. Fable advisor (the `advisor` tool is Fable, ~/.claude/settings.json):
+  for important calls, above all every design change to the collaboration system before it is built (Cory 11-14, asked ~10 times;
+  skipped on the clock and helper calls that day); also a 2nd failed fix and before "system done". Not for small first problems. Effort to fit the job, max only for the very hardest (Cory 11-14); the advisor's own effort has no setting (docs checked), so this governs Fable helpers.
+- Session 11-14 13:05 Central: integrator is session_01W3SSMzC8DbinVkk97FsXaV (overview task trig_0127TuG2hmYzbQZfVqEpPvfe bound here; switchboard helper session_01W3SSMz553jqjWF15r2ZH8f told). J-001 (Cory's go 11-14): helper-physics in the background in worktree /home/user/wt-j001 on claude/integrate-protected-j001-grip-charge-max: trunk merge, both falsifiers, then Carbon steps 1-2 (#108 comment 6882640215); never reuse budget-list @8f5c6c35 (hid a 13200 N peak). Open drafts to land: J-084 #567, J-090 #568, J-096 #569 (boards snap under her: Grok asked on #414). State: SYSTEM DONE (banner sent); game code started with J-001. Merge notices now read from GitHub (#564) and seen live (#565 posted within a minute); held jobs no longer raise QUIET (#565). J-053 landed (#563). J-014: taken from Muse 11-14 (3 d no commit; mailed 'stop and push'); plan.py give after its stop mail, then a helper. Helpers 11-14: J-001, J-102 (chase), J-060 (fight contact, taken from Muse); J-015 pushed e6796857 awaiting proof+Codex. J-100 landed 11-14 (Claude built the brake after Muse's two misses). Git files: waiting for Muse's mail naming 0001 (work/to-muse/). Muse queue low (J-140..J-142; J-142 refreshes the gap list). Rules cleaned by Fable 11-14; left by choice: check_time.py on Bash/Edit/Write, asks.py --hours 168. A slash command from his app sometimes fails: if it reaches me as a plain message, it did not run; tell Cory.
 ## Traps
 - My PR merges and branch deletes are refused by the safety check; never work around it. Direct trunk pushes of tooling and docs work. The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.
 - Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).

@@ -1738,14 +1738,16 @@ public:
     [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
     // Where each loose-stock group begins in the table (loose_stock.hpp):
     // the crane steel, the machine weights, the Matron's throwables, the
-    // east/west stock, and the upper stock, so a test can reach a group
-    // without assuming it is the last.
+    // east/west stock, the Matron's kinds, the upper stock, and the
+    // hightower stock, so a test can reach a group without assuming it is
+    // the last.
     [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
-    // J-042's two kinds by her band, laid last of all (after the east/west stock).
+    // J-042's two kinds by her band, laid after the east/west stock (the hightower stock comes after them).
     [[nodiscard]] std::uint32_t loose_stock_matron_kinds_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_hightower_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_upper_begin() const noexcept;
     // J-038 slice 1: a stock body's dent record, empty when undamaged.
     [[nodiscard]] stock_damage::DamageState stock_damage(std::uint64_t entity) const noexcept;
@@ -1904,6 +1906,10 @@ public:
     // leaves them, so a death restore can be compared against a relaunch
     // without the corpse shoving the settle.
     void debug_clear_corpses() noexcept;
+    // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
+    // pin over `centre`, and the pin pulled (J-100).
+    void debug_hang_slab(Vector3 centre) noexcept;
+    void debug_release_hung_slab() noexcept;
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
@@ -2125,6 +2131,9 @@ public:
     // it, and the hook must only read state, never change it.
     using DebugStepHook = void (*)(void *context) noexcept;
     void debug_set_step_hook(DebugStepHook hook, void *context) noexcept;
+    // Fixture setup only, never exposed to Godot: the Matron switched off for
+    // a run without her (Matron::switch_off_for_test).
+    void debug_matron_off();
     // Test setup: put her home (her locker, where she wakes) on the deck whose
     // top is deck_top, kept across a world rebuilt after she ends a run. The
     // game's home is the stack's deck 1 (11 m); tests written for her old

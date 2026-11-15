@@ -55,10 +55,11 @@ bool trace() { return std::getenv("SCRAPERX_SLAB_TRACE") != nullptr; }
 void tick(Simulation &s) { require(s.advance_frame(Simulation::kFixedStepSeconds).accepted, "slab-trap: tick accepted"); }
 
 std::uint32_t slab_of(const Simulation &s) {
-    // The cell's slab: the loose-stock table's last piece.
-    const std::uint32_t last = s.loose_stock_count() - 1;
+    // The cell's slab: the loose-stock table's last piece before the
+    // hightower toolboxes.
+    const std::uint32_t last = s.loose_stock_hightower_begin() - 1;
     require(s.loose_stock_piece(last).kind == static_cast<std::uint8_t>(LooseStock::Kind::PlateSlab),
-            "slab-trap: the table's last piece is the cell's plate slab");
+            "slab-trap: the table's last piece before the toolboxes is the cell's plate slab");
     return s.kit_body_index(LooseStock::kFirstEntity + last);
 }
 

@@ -741,8 +741,9 @@ struct S3Ride final {
 };
 
 // ---- The climb above 221 m (J-134, #460) -------------------------------------
-// These ride results live here, not in sim_tests_rides.cpp, so the one
-// chase-measurement scenario (sim_tests_matron_chase_bands.cpp) can read
+// These ride results live here, not in sim_tests_rides.cpp, so the
+// chase-measurement scenario (sim_tests_matron_chase_bands.cpp) and the
+// whole-climb scenario (sim_tests_canonical_ascent.cpp, J-084) can read
 // them without duplicating the structs.
 
 // What one swing of AS-012 saw, from the strap-in to the rack at the 242
@@ -787,6 +788,19 @@ struct MastRide final {
     double peak_speed = 0.0;
     double deck_y = 0.0;
     bool on_exit = false;
+    scraperx::sim::Snapshot end{};
+};
+
+// What one ride to the summit saw, from the parapet vault to the summit
+// receiver: the gondola crossed, the derrick luffed the boom up, and the
+// rider ended the ride standing on the summit.
+struct HighRide final {
+    bool vaulted = false;
+    bool crown_up = false;
+    double crown_s = 0.0;
+    bool on_crown_exit = false;
+    bool derrick_up = false;
+    double derrick_s = 0.0;
     scraperx::sim::Snapshot end{};
 };
 
@@ -884,6 +898,9 @@ bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes);
 MastRide mast_ride(scraperx::sim::Simulation &simulation);
 bool pitman_ride(scraperx::sim::Simulation &simulation, double *ride_seconds = nullptr);
 bool helix_ride(scraperx::sim::Simulation &simulation, double *ride_seconds = nullptr);
+HighRide high_ride(scraperx::sim::Simulation &simulation);
+void run_canonical_ascent();
+void run_canonical_ascent_matron();
 void run_incline();
 void run_wheel();
 void run_teeter();
@@ -966,6 +983,7 @@ void run_matron_kick();
 void run_matron_jab();
 void run_matron_traverse();
 void run_matron_pursuit();
+void run_matron_hung_load();
 void run_matron_chase();
 void run_matron_stand();
 void run_matron_shape();
@@ -1017,6 +1035,9 @@ void run_step2_movement();
 void run_twin();
 void run_twin_geometry();
 void run_twin_balconies();
+void run_twin_pitch();
+void run_twin_pitch_probe();
+void run_twin_pitch_probe_pump();
 void run_matron_remaining();
 
 void run_matron_player_independence();
