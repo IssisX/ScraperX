@@ -64,21 +64,25 @@ to 750 starts with a pull.
 Rules held: each a new action for him; no copies (no throw, no landing start, no pig in a pan, no her-weight
 start, no ram, no pendant); no machine touched (Cory 11-11, #424); **every ladder stays**, as her way and
 the easy backup, until J-105 replaces it. At most two rides in the set (1 and 5). His body gives 3.2-3.76 m a
-hang, 1.85 m a mantle, so the rest of a 22 m rise is poles, as in J-017's eight stages.
+hang, 1.85 m a mantle, so the rest of a 22 m rise is poles, as in J-017's eight stages. **New moves for him:
+none is a new body move.** 2, 4 and 6 put a move he already has on the climb for the first time; 1 and 5 are
+new rides. All are Cory's call.
 
 1. **340-352, the uphill zip** (ride). He jumps from a 2.2 m stand on TP-340 to a parked trolley's bar; his
    weight frees it; a counterweight over a sheave on the 352 ring hauls him up a cable over the plate, braked
    by his hand, and he drops onto the ring. Real: 93 kg on a 22 degree cable pulls 342 N down it against a
    50 kg weight's 490 N; about 1 m/s2, about 7 m/s over 27 m unbraked, held under 5.4 m/s by the 900 N hand
    brake (*est.*). Reuses the zipline's trolley, brake and buffer (`zipline.hpp`), kit rope. **New code:** a
-   park catch his weight frees on an uphill line. Medium.
+   park catch his weight frees on an uphill line. **Fall room not found:** 1:1 needs about 27 m of fall below
+   the sheave, past the plate; a 2:1 purchase halves it but needs a 100 kg weight. Medium.
 2. **440-462, the trapeze over the well.** Pole up a pier to a launch stand; catch a trapeze bar hung on 7 m
    rods under the 462 ring; pump it (Crouch at the bottom, the arms' 1500 N) and let go at the top of the swing
    onto a far stand 2.8 m higher (the yard's 2.2 to 5.0 m, out of a plain catch's reach); second pole to the
    ring. The well is 20 m wide here: room for the arc. Reuses `trapeze.hpp`. **New to the climb** (a yard toy
    today); **new code:** a second bar (the trapeze is one instance). Medium.
 3. **462-484: covered.** J-105's leg spiral (step 1 built) is planned to replace this ladder and I's; its next step is
-   Cory's call on #424. No J-082 design.
+   Cory's call on #424, and J-105 beyond step 1 is on the finish plan's stop list: until he un-parks it, I's
+   ladder, the only one on the played route, stays. No J-082 design.
 4. **484-506, the swing-pole launch.** Pole up to a lane; sprint off its end, catch a single bar over a 6 m
    gap, and Jump at the front of the swing: the arms add 2 m/s at 45 degrees to the swing's speed and he takes a
    lip about 1.5 m higher (*est.*); second pole to the ring. Reuses `launch_from_swing` (tested in
@@ -87,23 +91,22 @@ hang, 1.85 m a mantle, so the rest of a 22 m rise is poles, as in J-017's eight 
    the slide-jump's pole already tops out. He steps onto its deck and presses Action (the vertical machines' start, not yet checked for this
    module): 2500 kg of ballast lifts
    the 1000 kg deck and him, the motor only brakes (`gravity_balance.cpp`, -80 kN, ballast does the work).
-   **A parked machine put back** (rule 54: reuse first); travel cut from 25 to 22 m. Medium. It is a lift:
-   pick it only if you want a ride here.
+   **A parked machine put back** (rule 54: reuse first); travel cut from 25 to 22 m. The module is about 11 m
+   wide; L's cart runs up the south face's east end (FC:425), so the east face's north half is the candidate,
+   siting against L not checked. Medium. It is a lift: pick it only if you want a ride here.
 6. **616-640, the falling catch.** Pole up the 616 ring's inner face to a ledge; jump out across the 5.8 m
    well, fall past a rail under TP-640 and catch it at the chest (J-043's catch, `kBarSearchAimRise`), hand
    over hand to the hatch, hang up through it onto the plate. **New to the climb** (deck 154 only); no new
    code. Small to medium.
-7. **640-662, the flow jump** (beside M, a choice to the ride). A long run on TP-640, sprint held to flow's
-   9 m/s (`kFlowSpeedMps`) and carried through the air over a gap no sprint jump clears (over 8.98 m), the
-   hands on the lip of a raised deck, then a pole to the 662 deck. **New to the climb.** Room on TP-640 for the
-   run is not yet measured. Small to medium.
+7. **640-662: covered** by M for him, J-105's hatch chimney for her. (A flow jump, 9 m/s over a gap past
+   8.98 m, was looked at: TP-640 is 24 m square with M's shafts in it (MS:136), too small for the run.)
 8. **662-684: covered** by C4. 9. **684-706: covered** by N for him, J-105's hoist gallery for her.
    10. **706-728: covered** by C5 and the bait lift. 11. **728-750: covered** by O for him, J-105's north stair
    for her.
 12. **484-640 in one: Cory's glass air tube** (his own idea, 10-20, waiting on him under rule 64). It would
     take the place of 4, 5 and 6 at once.
 
-**Push back.** (a) 2, 4, 6 and 7 still climb most of their height on poles, J-017's pattern; if that reads
+**Push back.** (a) 2, 4 and 6 still climb most of their height on poles, J-017's pattern; if that reads
 as repetitive, only rides or 12 fix it. (b) The hook is found on the 220 ring, keeps once taken, reels 30 m
 and bites rungs and rails: it may already skip ring gaps (not checked). No design uses it. (c) The pulled
 starts of G to O stay, by Cory's 11-11 ruling; rule 53 calls that pull spent. That is his call, not J-082's.
