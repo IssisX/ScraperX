@@ -95,6 +95,11 @@ const FINGER_REST := 0.35
 # (rad) and the samples over it when the tip looks for the surface.
 const WRAP_MAX := 2.4
 const WRAP_STEPS := 48
+# The wrist's turn to the grip (J-088): how fast it eases to the surface's
+# long axis (rad/s). Fast enough to settle inside the check's 0.3 s grip
+# window, slow enough that the wrist never turns over rule 37's 20 rad/s
+# (the worst turn, ~1.3 rad, peaks near 13 rad/s).
+const WRIST_ALIGN_W := 10.0
 const TWIST_W := 14.0
 const HOLD_BLEND_W := 16.0
 # On all fours only above FOURS_ON_MPS, back up below FOURS_OFF_MPS, and
@@ -153,6 +158,9 @@ var _work_counts := Vector3i(-1, -1, -1)
 var _injury_restores := -1  # last restore generation seen; a change rewinds the injury view
 var _gait_mps := 0.0
 var _finger_shown := {}
+# Each wrist's rest turn (its local basis at setup), so a hand holding
+# nothing eases back to it after turning to a grip (J-088).
+var _wrist_base := {}
 var _twist := 0.0
 var _unwind_s := 0.0
 var _yaw_rate := 0.0
@@ -1402,8 +1410,9 @@ func perceived_target(data: Dictionary, player_position: Vector3) -> Vector3:
 # A held surface (leaf_surface, J-088) as the wrap and the probe read it:
 # kind 0 box, 1 cylinder, 2 capsule; size the box's half extents or
 # (radius, half height, 0); centre and rot the leaf shape's world frame;
-# inv the frame's inverse, for the distance. Empty when the data has no
-# surface for that grip.
+# inv the frame's inverse, for the distance; axis the surface's long axis
+# in the world, for the wrist's turn to the grip. Empty when the data has
+# no surface for that grip.
 func _grip_surface(source: Dictionary, prefix: String) -> Dictionary:
 	if not source.has(prefix + "_shape"):
 		return {}
@@ -1414,8 +1423,20 @@ func _grip_surface(source: Dictionary, prefix: String) -> Dictionary:
 	if size.length_squared() <= 1.0e-12:
 		return {}
 	var rot: Quaternion = source.get(prefix + "_rot", Quaternion.IDENTITY)
+	var rot_b := Basis(rot)
+	# The surface's long axis, in the world: local y for a cylinder or a
+	# capsule (the pipe, his shin), the longest half extent for a box (a
+	# rung, a rail, a beam). The wrist turns its knuckle line to it.
+	var ax := Vector3.UP
+	if kind == 0:
+		if size.x >= size.y and size.x >= size.z:
+			ax = Vector3.RIGHT
+		elif size.y >= size.z:
+			ax = Vector3.UP
+		else:
+			ax = Vector3.BACK
 	return {"kind": kind, "size": size, "centre": source.get(prefix + "_centre", Vector3.ZERO),
-		"inv": Basis(rot).inverse()}
+		"inv": rot_b.inverse(), "axis": rot_b * ax}
 
 
 # A point's signed distance to a held surface: negative inside the steel,
@@ -2401,6 +2422,37 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	var on_pipe := bool(data.get("on_pipe", false))
 	for hand in ["l", "r"]:
 		var surf := _hand_surface(data, hand, on_pipe)
+		# The wrist turns to the grip (J-088): the knuckle line along the
+		# held surface's long axis, so the fingers curl round it instead of
+		# along it. The arm puts the palm on the grip point but never turns
+		# the hand to the surface: on the ankle the knuckle line sat 54
+		# degrees off his shin and the fingers' arc never reached the
+		# surface (best 0.051 m off it); on the pipe 74 degrees off the
+		# beam, the fingers hovered 0.10 m over it. The wrist's position
+		# never moves, only its turn, eased like the fingers, never a snap;
+		# a hand holding nothing eases back to its rest turn.
+		var wrist_node: Node3D = _p["wr_" + hand]
+		if not _wrist_base.has(hand):
+			_wrist_base[hand] = wrist_node.transform.basis
+		var want_basis: Basis = _wrist_base[hand] as Basis
+		if not surf.is_empty():
+			var wrist_now: Transform3D = _rig.bone_world("wr_" + hand)
+			var elbow_now: Transform3D = _rig.bone_world("el_" + hand)
+			var s_axis := (surf["axis"] as Vector3).normalized()
+			if s_axis.dot(wrist_now.basis.x.normalized()) < 0.0:
+				s_axis = -s_axis
+			var w_y := wrist_now.basis.y.normalized()
+			var y_t := w_y - w_y.dot(s_axis) * s_axis
+			if y_t.length_squared() < 1.0e-6:
+				var w_z := wrist_now.basis.z.normalized()
+				y_t = w_z - w_z.dot(s_axis) * s_axis
+			y_t = y_t.normalized()
+			var want_world := Basis(s_axis, y_t, s_axis.cross(y_t))
+			want_basis = elbow_now.basis.inverse() * want_world
+		var wk := 1.0 if _pose_fresh else 1.0 - exp(-WRIST_ALIGN_W * delta)
+		var wt := wrist_node.transform
+		wt.basis = wt.basis.slerp(want_basis, wk)
+		wrist_node.transform = wt
 		var fingers: Array = _p["fingers_" + hand]
 		# The wrist as drawn last frame: the knuckle line is its x, the
 		# finger's rest direction its -y.
