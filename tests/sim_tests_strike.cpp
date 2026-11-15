@@ -982,10 +982,19 @@ void run_matron_slip() {
     // press gap to the Turn: a fixed Creep (0.7 m/s) from 7.7 m out arrives
     // at 1.25 m as the cooldown expires — she cannot arrive early (6.45 m
     // at 0.7 m/s takes 9.2 s), so the Turn always finds her short of the
-    // gap, never on him. Stage is Changed (2), not Pest (0): at Pest she
-    // stalks — under his gaze she freezes, looked away she holds at her
-    // 3.0 m band — and never closes to the press gap (CI run 43681181291
-    // failed this setup at stage 0).
+    // gap, never on him. But the approach is 9.2 s and her pursuit window
+    // is 9.0 s (kLoseTrackSeconds, from her last fresh lead): the player
+    // stands silent, so without a fresh lead she gives up the hunt
+    // (look_about) at 9.0 s, just as the Turn's clock expires — and the
+    // Turn, which needs her hunting him in sight, never fires (CI run
+    // 43705680310: no wind-up in the full 20 s wait). A hearing cue at
+    // where he stands, every 4 s, keeps the pursuit — and her walk at
+    // him, face on him — alive until the Turn fires. The cue is the
+    // test-only lead at the climber's feet (debug_matron_hear); the Turn
+    // still fires by its own sight rule, nothing here forces it. Stage is
+    // Changed (2), not Pest (0): at Pest she stalks — under his gaze she
+    // freezes, looked away she holds at her 3.0 m band — and never closes
+    // to the press gap (CI run 43681181291 failed this setup at stage 0).
     const auto windup_to_gap = [&](Simulation &s, const double her_ahead_m, const int stage,
                                    const double press_gap_m, const bool no_hands) {
         s.place_matron_home(154.0F);
@@ -1001,15 +1010,25 @@ void run_matron_slip() {
         for (int i = 0; i < 20 * 90 && !wound; ++i) {
             const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
             (void)s.set_facing(her.x - me.x, her.z - me.z);
+            // A fresh lead every 4 s: the pursuit window is 9 s, the
+            // approach is 9.2 s — without it she gives up at 9.0 s.
+            if (i % (4 * 90) == 0) s.debug_matron_hear({me.x, me.y - 0.9, me.z});
             tick(s);
             wound = s.matron_state().turn == kWindup;
         }
-        require(wound, "slip: she winds up her lunge at the press gap (setup)");
         // She stands still in the wind-up; the press gap is what the
         // approach timed it to. A gap outside this band means the timing
         // missed, not that the slip is wrong.
         const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
         const double gap = std::hypot(her.x - me.x, her.z - me.z);
+        // The setup's own evidence, in the test's measurement style: on a
+        // failure this line is what the CI log carries (run 43705680310
+        // carried only the FAIL line).
+        std::cout << "  slip setup: wound=" << wound << " gap=" << gap
+                  << " sees=" << s.matron_state().sees_player
+                  << " state=" << static_cast<int>(s.matron_state().state)
+                  << " speed=" << s.matron_state().speed << "\n";
+        require(wound, "slip: she winds up her lunge at the press gap (setup)");
         require(gap >= 0.60 && gap <= press_gap_m + 0.50,
                 "slip: the wind-up finds her at the press gap (setup)");
     };
