@@ -148,7 +148,7 @@ public:
     // Tests only (J-090): the runs of the hook's line that leave the steel,
     // the chest's to its nearest bend (or the bite) and, to her over bends,
     // the bite's to the first, that pass through a body the rope catches on:
-    // 1 the chest's, 2 the bite's.
+    // 1 the chest's, 2 the bite's, 4 one between two bends.
     [[nodiscard]] std::uint32_t hook_runs_blocked_for_test() const noexcept;
     // Tests only (J-090): the bends made and taken off at her end of the line
     // (bend_hook_line_at_bite), also counted in the line's wraps and unwraps.
@@ -526,6 +526,10 @@ private:
     [[nodiscard]] bool hook_line_blocked(JPH::RVec3 from, JPH::RVec3 to, JPH::RayCastResult &hit,
                                          JPH::BodyID also = {}) const noexcept;
 
+    // The bend a run fast at `to` takes on the body it now crosses, its free
+    // end come from `last` to `from` (bend_hook_line, bend_hook_line_at_bite).
+    [[nodiscard]] JPH::RVec3 hook_wrap_point(JPH::RVec3 from, JPH::RVec3 last, JPH::RVec3 to, JPH::BodyID also,
+                                             JPH::RayCastResult &edge) const noexcept;
     void bend_hook_line(JPH::BodyInterface &bodies) noexcept;
     // J-090: the same at the line's other end, to a bite that moves (her
     // body): off the bend nearest her if the run to her swung back round it,

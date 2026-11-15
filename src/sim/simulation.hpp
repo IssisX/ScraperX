@@ -1902,7 +1902,8 @@ public:
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
     // Tests only (never bound to the bridge, J-090): the runs of the hook's
     // line that leave the steel (the chest's, and the bite's in her) that
-    // pass through steel (1 the chest's, 2 the bite's). A rope that catches
+    // pass through steel (1 the chest's, 2 the bite's, 4 one between two
+    // bends). A rope that catches
     // on what it crosses has none.
     [[nodiscard]] std::uint32_t debug_hook_runs_blocked() const noexcept;
     // Tests only (J-090): the bends made at her end of the line, and taken off there.
