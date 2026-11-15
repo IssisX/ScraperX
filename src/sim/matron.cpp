@@ -4798,8 +4798,17 @@ void Matron::take_blow(const float dt) {
         impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
         const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
-        const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
-        if (its_above) {
+        // A from-above blow that started counts the drum's full stop: once
+        // the blow is from above, the same contact's later ticks count even
+        // after the drum has slowed below 4 m/s or dropped below her centre,
+        // till the contact ends (nothing left to give up this tick, or the
+        // blow window closes). The start still needs the drum entering
+        // faster than 4 m/s with its centre above hers, and the latch only
+        // carries inside one blow window (blow_quiet_ below the quiet ticks):
+        // a fresh blow's first tick never inherits the last blow's flag.
+        const bool above_counts = its_above || (blow_from_above_ && blow_quiet_ < kBlowQuietTicks && n.mass_kg >= kAboveMassKg);
+        const float overhead_ns = above_counts ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
+        if (above_counts) {
             above_share += overhead_ns / kMassKg;
         }
         environment_ns += std::max(given.Length(), overhead_ns);

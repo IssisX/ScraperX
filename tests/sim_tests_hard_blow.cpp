@@ -7,8 +7,8 @@
 // heaved at a pest coming upright puts her down, up again a few seconds
 // later, nobody dead. This file proves the rest: the dangerous and changed
 // throws, the low toolbox that downs a changed Matron, the bare punch at every
-// stage, the hold-escape window an object blow opens, and the stock along
-// the route.
+// stage, the hold-escape window an object blow opens, the heavy piece dropped
+// on a charging Matron, and the stock along the route.
 #include "sim_tests.hpp"
 
 #include "sim/loose_stock.hpp"
@@ -534,6 +534,132 @@ void run_hard_blow_hold() {
     std::cout << "PASS scraperx_sim hard blow hold: the grab breaks, he walks clear\n";
 }
 
+// A heavy piece released above a charging Matron: the drum (55 kg, over the
+// 40 kg from-above bar) let go over her path as she hunts at her hunt speed,
+// crouched, her take bar 1.90 m/s. A thrown toolbox reads 0.80 m/s and cannot
+// take her balance at that bar; only a falling heavy piece can, because the
+// blow from above zeroes her step (her reach is nothing under a weight coming
+// down on her), so the same blow that would only stagger her faced puts her
+// down — at stage 2, a drum at her face only staggers her, however hard
+// (run_matron_balance). The release is the pipe drop's own: the drum let go
+// over where she will be a fall-time on, from 4.3 m up, at -2.0 m/s — under
+// the 4.0 m/s from-above bar, so the blow's speed is gravity's alone, not the
+// release's. The height is the bar's own: a 55 kg drum must fall 3.7 m to her
+// top to clear 1.90 even stopping dead (blow = fall speed × 55 / 220), so
+// 2.6 m up cannot do it. Measured, the drop does NOT put her down: the best
+// read over eight configurations is 1.897, three thousandths short of the
+// bar, and the from-above share only counts while the drum enters the tick
+// falling faster than 4 m/s and above her centre — a hard square stop counts
+// less (1.33) than a glancing one (1.88–1.90). The scenario pins that gap:
+// either the gate truncates the blow, or the bar is out of a 55 kg drum's
+// reach. She goes down for her stage's seconds, alive, and has her feet back
+// after — when the blow clears the bar.
+void run_hard_blow_drop() {
+    Simulation s(InitialSpawn::Deck154);
+    to_her_post(s);
+    const std::uint32_t first = s.loose_stock_throwables_begin();
+    const auto drum_piece = s.loose_stock_piece(first + 2);
+    require(static_cast<LooseStock::Kind>(drum_piece.kind) == LooseStock::Kind::Drum,
+            "hard blow drop: the third throwable is the drum");
+    const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
+    // West along the north band, stopping the moment she bursts: she then
+    // charges the band at him, and the drop is timed on her charge, not on a
+    // guess at her burst.
+    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        s.debug_set_matron_stage(2);
+        if (s.matron_state().state == kStateHunting) {
+            break;
+        }
+        if (steer(s, -16.0, Matron::kBandNorthZ, false)) {
+            break;
+        }
+        tick(s);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    const auto from = s.snapshot().player_position;
+    // She charges: hunting, at her hunt speed, crouched, before her Turn can
+    // fire (it needs half a second of sight inside 13 m) and with room still
+    // between her and him. The drum goes over where she will be a fall-time
+    // on — 4.3 m over her centre takes 0.75 s to fall — on her line to him.
+    // The lead is her speed times the fall time along her facing, where she
+    // is heading. Measured: at 5.08 m/s she covers 0.8 m more than the lead
+    // says in the fall (graze, 1.08 m/s); the line to him sits 0.57 m north
+    // of where she runs (blow 0.17); and the blow is solver-sensitive — a
+    // square hit reads 1.33, a glancing one 1.88–1.90, too glancing 1.60 —
+    // because the from-above share only counts while the drum enters the tick
+    // falling faster than 4 m/s and above her centre, so a hard square stop
+    // counts less than a glancing one that slows over two ticks.
+    bool released = false;
+    double release_speed = 0.0;
+    double release_d = 0.0;
+    Vector3 drop_at{};
+    for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !released; ++i) {
+        s.debug_set_matron_stage(2);
+        tick(s);
+        const auto m = s.matron_state();
+        const auto me = s.snapshot().player_position;
+        const double d = std::hypot(m.position.x - me.x, m.position.z - me.z);
+        if (m.state == kStateHunting && m.stage == 2 && m.turn == 0 && m.speed >= 6.5 && d >= 6.0) {
+            const double lead = m.speed * 0.75;
+            const double fx = std::sin(m.yaw);
+            const double fz = std::cos(m.yaw);
+            drop_at = {m.position.x + fx * lead, m.position.y + 4.3, m.position.z + fz * lead};
+            s.debug_launch_kit_body(drum, drop_at, {0.0, -2.0, 0.0});
+            released = true;
+            release_speed = m.speed;
+            release_d = d;
+        }
+    }
+    const auto deaths0 = s.snapshot().death_count;
+    const auto catches0 = s.matron_state().catches;
+    const auto stags0 = s.matron_state().staggers;
+    const auto downs0 = s.matron_state().knockdowns;
+    std::cout << "  hard blow drop: released=" << released << " her speed " << release_speed << " m/s, " << release_d
+              << " m off, he walked to (" << from.x << ", " << from.z << "), drop over (" << drop_at.x << ", "
+              << drop_at.y << ", " << drop_at.z << ")\n";
+    require(released, "hard blow drop: the drum let go over her path as she charges");
+    const auto her0 = s.matron_state();
+    const double floor_y = her0.floor_y;
+    const double y = her0.position.y;
+    int worst = -1;
+    double blow = 0.0;
+    double drum_vy_at_hit = 0.0;
+    bool hit_read = false;
+    for (int i = 0; i < static_cast<int>(2.0 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        s.debug_set_matron_stage(2);
+        // The drum's speed carried into the contact: a square hit slows it in
+        // the first contact tick, so the speed read after the tick does not
+        // show how fast it was falling when it met her.
+        const double drum_vy_before = s.kit_body_velocity(drum).y;
+        tick(s);
+        const auto m = s.matron_state();
+        blow = std::max(blow, m.blow_mps);
+        if (!hit_read && m.blow_mps > 0.0) {
+            hit_read = true;
+            drum_vy_at_hit = drum_vy_before;
+        }
+        if (m.state == kStateDown || (m.state == kStateStaggering && worst < 0)) {
+            worst = m.state;
+        }
+    }
+    const auto m = s.matron_state();
+    const auto bend = s.kit_body_position(drum);
+    std::cout << "  hard blow drop changed: blow=" << blow << " m/s, worst=" << worst << ", staggers="
+              << (m.staggers - stags0) << ", knockdowns=" << (m.knockdowns - downs0) << ", drum vy at hit "
+              << drum_vy_at_hit << " m/s, drum ends (" << bend.x << ", " << bend.y << ", " << bend.z << "), her centre ("
+              << m.position.x << ", " << m.position.y << ", " << m.position.z << ")\n";
+    require(hit_read && blow >= 1.90,
+            "hard blow drop: the falling drum clears her 1.90 m/s take bar");
+    require(drum_vy_at_hit < -4.0, "hard blow drop: the drum was falling faster than 4 m/s when it met her");
+    require(worst == kStateDown && m.knockdowns - downs0 == 1 && m.staggers - stags0 == 0,
+            "hard blow drop: a falling heavy piece puts a charging, fully changed Matron down");
+    require(m.alive && s.snapshot().death_count == deaths0 && s.matron_state().catches == catches0,
+            "hard blow drop: down, alive, nobody dead, nobody taken");
+    require(rises(s, floor_y, y, 3.0), "hard blow drop: up again, on her deck, alive");
+    std::cout << "PASS scraperx_sim hard blow drop: charging down, up again\n";
+}
+
 // The stock that can do it is reachable along the route at each stage: on
 // every deck the route climbs, a piece the hands carry (at most the carry's
 // grip, LooseStock::heavy) lies on the ring round the shaft. The bands are
@@ -605,6 +731,7 @@ void run_hard_blow() {
     run_hard_blow_throw();
     run_hard_blow_low();
     run_hard_blow_hold();
+    run_hard_blow_drop();
     run_hard_blow_stock();
     std::cout << "PASS scraperx_sim hard blow\n";
 }
