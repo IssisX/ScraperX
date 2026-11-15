@@ -1348,6 +1348,7 @@ void Simulation::PhysicsWorld::bend_hook_line_at_bite(JPH::BodyInterface &bodies
             --hook_bend_count_;
             attach_hook_line_to_bite(bodies, free);
             ++hook_unwrap_count_;
+            ++hook_bite_unwrap_count_;
         }
     }
     const JPH::RVec3 first = hook_bend_point(bodies, 0);
@@ -1391,6 +1392,7 @@ void Simulation::PhysicsWorld::bend_hook_line_at_bite(JPH::BodyInterface &bodies
             ++hook_bend_count_;
             attach_hook_line_to_bite(bodies, free);
             ++hook_wrap_count_;
+            ++hook_bite_wrap_count_;
         }
     }
     hook_last_bite_ = bite;

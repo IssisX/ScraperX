@@ -1905,6 +1905,9 @@ public:
     // pass through steel (1 the chest's, 2 the bite's). A rope that catches
     // on what it crosses has none.
     [[nodiscard]] std::uint32_t debug_hook_runs_blocked() const noexcept;
+    // Tests only (J-090): the bends made at her end of the line, and taken off there.
+    [[nodiscard]] std::uint64_t debug_hook_bite_wraps() const noexcept;
+    [[nodiscard]] std::uint64_t debug_hook_bite_unwraps() const noexcept;
     // Tests only, never bound to the bridge. Optional placement holds the NPC
     // fixture between ticks; a null pointer only reads the last physical step.
     struct MatronFixtureSample {

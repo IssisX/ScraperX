@@ -150,6 +150,10 @@ public:
     // the bite's to the first, that pass through a body the rope catches on:
     // 1 the chest's, 2 the bite's.
     [[nodiscard]] std::uint32_t hook_runs_blocked_for_test() const noexcept;
+    // Tests only (J-090): the bends made and taken off at her end of the line
+    // (bend_hook_line_at_bite), also counted in the line's wraps and unwraps.
+    [[nodiscard]] std::uint64_t hook_bite_wraps_for_test() const noexcept { return hook_bite_wrap_count_; }
+    [[nodiscard]] std::uint64_t hook_bite_unwraps_for_test() const noexcept { return hook_bite_unwrap_count_; }
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
     // pin through its lifting eye over `centre`, and the pin pulled (J-100).
@@ -1379,6 +1383,8 @@ private:
     std::uint32_t hook_bend_count_ = 0;
     JPH::RVec3 hook_last_chest_ = JPH::RVec3::sZero();
     JPH::RVec3 hook_last_bite_ = JPH::RVec3::sZero();   // J-090: the bite in her, a tick ago
+    std::uint64_t hook_bite_wrap_count_ = 0;     // J-090: bends made at her end of the line
+    std::uint64_t hook_bite_unwrap_count_ = 0;   // and taken off there
     std::uint64_t hook_wrap_count_ = 0;
     std::uint64_t hook_unwrap_count_ = 0;
     std::uint64_t hook_bends_refused_ = 0;

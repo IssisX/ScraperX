@@ -108,6 +108,8 @@ struct Tug {
     int first_held_tick = -1;   // the first of them
     int tear_tick = -1;
     bool torn_free = false;     // on the tear tick: the hook out of her and in flight
+    double worst_over_m = 0.0;    // the line as it lies (chest, bends, bite) past the rope out
+    double worst_rope_drift_m = 0.0;   // the rope out, how far from what it was when the pull began
     int chest_run_blocked = 0;   // ticks the run from his chest passed through steel
     int bite_run_blocked = 0;    // ticks the run from her bite to its first bend passed through steel
     int ticks = 0;
@@ -124,6 +126,7 @@ Tug pull(Simulation &s, const int ticks, Each each) {
     const std::uint64_t tears0 = prev.hook_tear_count;
     const std::uint64_t stalls0 = prev.hook_stall_ticks;
     const std::uint64_t held0 = prev.hook_held_ticks;
+    const double rope0 = prev.hook_line_length;
     for (int i = 0; i < ticks; ++i) {
         each(i);
         require(s.advance_frame(kDt).accepted, "matron-hook: tick");
@@ -150,6 +153,12 @@ Tug pull(Simulation &s, const int ticks, Each each) {
         t.his_moved_m = std::max(t.his_moved_m, horizontal_distance(him0, n.player_position));
         t.his_lowest_y = std::min(t.his_lowest_y, n.player_position.y);
         t.most_bends = std::max(t.most_bends, n.hook_bend_count);
+        if (n.hook_state == 2 && n.hook_line_point_count >= 2) {
+            double lies = 0.0;
+            for (std::uint32_t k = 1; k < n.hook_line_point_count; ++k) lies += dist3(n.hook_line_points[k - 1], n.hook_line_points[k]);
+            t.worst_over_m = std::max(t.worst_over_m, lies - n.hook_line_length);
+            t.worst_rope_drift_m = std::max(t.worst_rope_drift_m, std::abs(n.hook_line_length - rope0));
+        }
         const std::uint32_t blocked = s.debug_hook_runs_blocked();
         t.chest_run_blocked += (blocked & 1U) != 0U ? 1 : 0;
         t.bite_run_blocked += (blocked & 2U) != 0U ? 1 : 0;
@@ -307,6 +316,67 @@ void tear() {
             "tear: torn by the jolt asked past the tines' hold (kHookTearImpulseNs), before a slip's kHookSlipTicks");
     require(t.torn_free, "tear: torn out of her, the hook springs back in flight (free to catch again)");
 }
+// Round a post (#568 review): on the yard's swing frame, hooked into her
+// from 7 m, he walks twice round the frame's north-west post (x -0.9,
+// z -19.26: 0.24 m square, 3.38 m tall) and she follows him round it. His
+// walk winds the line onto the post's edges; her following unwinds it from
+// her end (bend_hook_line_at_bite): the bend nearest her comes off each time
+// the run from her to the next swings clear. Every run stays out of the
+// steel, and the line is the same rope throughout: as long as it was cut at
+// the bite, and never lying longer than that.
+void round_the_post() {
+    Simulation s(InitialSpawn::SwingApproach);
+    require(s.advance_frame(0.4).accepted && s.request_hook_take() && s.advance_frame(kDt).accepted && s.snapshot().has_hook,
+            "post: the hook taken");
+    require(walk_to(s, -2.0, -18.3, 10.0, 0.2), "post: he walks to the north-west of the frame");
+    s.debug_place_matron({-8.0, 0.1, -14.0});
+    s.debug_hold_matron_grab(true);
+    s.debug_hold_matron_hands(60.0);
+    face(s, {-8.0, 1.0, -14.0});
+    require(s.advance_frame(2.0 * kDt).accepted, "post: she stands");
+    const MatronSnapshot m = s.matron_state();
+    const auto p = s.snapshot().player_position;
+    require(s.set_hook_aim(m.position.x - p.x, m.position.y + 0.3 - (p.y + 0.6), m.position.z - p.z) && s.request_hook_fire(),
+            "post: fired at her");
+    for (int i = 0; i < 90 * 3; ++i) {
+        face(s, s.matron_state().position);
+        require(s.advance_frame(kDt).accepted, "post: flight tick");
+        if (s.snapshot().hook_state != 1) break;
+    }
+    require_bitten({s.snapshot(), s.matron_state()}, "post");
+    // His walk, his back to her: twice round the post, then he waits.
+    struct Leg { double x, z; int ticks; };
+    const Leg legs[] = {{-2.0, -18.3, 150}, {0.1, -18.3, 120}, {0.1, -20.0, 80}, {-2.0, -20.0, 120}, {-2.0, -18.3, 80},
+                        {0.1, -18.3, 120},  {0.1, -20.0, 80},  {-2.0, -20.0, 120}, {-2.0, -18.3, 80}, {-2.0, -18.3, 200}};
+    int total = 0;
+    for (const Leg &leg : legs) total += leg.ticks;
+    const std::uint64_t unwraps0 = s.debug_hook_bite_unwraps();
+    const Tug t = pull(s, total, [&](const int i) {
+        int at = i;
+        const Leg *leg = &legs[0];
+        for (const Leg &l : legs) {
+            leg = &l;
+            if (at < l.ticks) break;
+            at -= l.ticks;
+        }
+        const auto q = s.snapshot().player_position;
+        const double dx = leg->x - q.x, dz = leg->z - q.z, d = std::hypot(dx, dz);
+        (void)s.set_move_input(d > 0.15 ? dx / d : 0.0, d > 0.15 ? dz / d : 0.0);
+        const auto her = s.matron_state().position;
+        face(s, {2.0 * q.x - her.x, q.y, 2.0 * q.z - her.z});
+    });
+    const std::uint64_t unwraps = s.debug_hook_bite_unwraps() - unwraps0;
+    print("post", t);
+    std::printf("  post: bends off her end %llu, line lying past the rope %.4f m, rope drift %.4f m\n",
+                static_cast<unsigned long long>(unwraps), t.worst_over_m, t.worst_rope_drift_m);
+    laws(t, "post");
+    require(!t.he_died && t.tears == 0 && s.snapshot().hook_in_matron, "post: the hook stays in her the whole walk");
+    require(t.most_bends >= 2, "post: his walk winds the line onto the post's edges");
+    require(unwraps > 0, "post: following him round, she takes the bend nearest her off the line");
+    require(t.chest_run_blocked == 0, "post: the run from his chest never passes through the post");
+    require(t.worst_rope_drift_m <= 1.0e-3, "post: the rope out stays what it was at the bite, its bends laid and freed");
+    require(t.worst_over_m <= 0.01, "post: the line as it lies is never longer than the rope out");
+}
 } // namespace
 
 void run_matron_hook() {
@@ -315,12 +385,13 @@ void run_matron_hook() {
     crossing();
     miss();
     tear();
+    round_the_post();
     // Determinism: the lip again, from nothing: the same, tick for tick.
     const Tug again = at_the_lip(false);
     std::printf("  determinism: fold %.17g vs %.17g, ticks %d vs %d\n", lip.fold, again.fold, lip.ticks, again.ticks);
     require(lip.ticks == again.ticks && lip.fold == again.fold && lip.peak_tension_n == again.peak_tension_n &&
                 lip.her_moved_m == again.her_moved_m,
             "matron-hook: two runs of the same tug are identical");
-    std::cout << "PASS scraperx_sim matron-hook: planted, lip, crossing, miss, tear, deterministic\n";
+    std::cout << "PASS scraperx_sim matron-hook: planted, lip, crossing, miss, tear, post, deterministic\n";
 }
 SCRAPERX_SLICE("matron-hook", run_matron_hook);
