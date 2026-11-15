@@ -1311,6 +1311,11 @@ struct Snapshot final {
     Vector3 strike_hit_normal{};
     std::uint8_t strike_part = 255;  // J-060: the part of her it met (Matron::PartRegion: 0 trunk and head, 1 forearm, 2 upper arm, 3 leg), 255 none
     double strike_impulse_ns = 0.0;
+    // The fight slip (S5): under way now, which side, ticks into its 20-tick
+    // burst, slips thrown this run. The view reads these, never the strike's move.
+    bool slip_active = false;    std::int8_t slip_side = 0;
+    std::uint32_t slip_ticks = 0;
+    std::uint64_t slip_count = 0;
     // The top of the route (kRouteTopEntityId) stood on, firm, outside a
     // traversal: latched with the simulation time and the deaths then.
     bool summit_reached = false;
@@ -1632,6 +1637,9 @@ public:
     [[nodiscard]] bool request_traversal() noexcept;
     // The Action button's punch, one-shot (physics_world_strike.cpp).
     [[nodiscard]] bool request_strike() noexcept;
+    // The fight slip, one-shot (physics_world_strike.cpp): side 1 right of his
+    // facing, -1 left. Refused where the slip cannot go, so it can be sent again.
+    [[nodiscard]] bool request_slip(int side) noexcept;
     // The gesture controls' "up", one-shot: the native picks the move, as
     // snapshot.up_move says (UpMove), and makes it through the same paths
     // as Jump and Action. Refused where up_move is None (a mantle, vault or
@@ -2163,6 +2171,8 @@ private:
     double look_pitch_input_ = 0.0;
     bool jump_requested_ = false;
     bool strike_requested_ = false;
+    bool slip_requested_ = false;
+    int slip_side_ = 1;
     bool traversal_requested_ = false;
     bool up_requested_ = false;
     bool release_requested_ = false;

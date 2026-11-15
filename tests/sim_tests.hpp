@@ -983,6 +983,7 @@ void run_matron_sweep();
 void run_matron_kick();
 void run_matron_jab();
 void run_matron_hook();   // J-090: his hook in her, the rope decides (sim_tests_matron_hook.cpp)
+void run_matron_slip();
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_hung_load();

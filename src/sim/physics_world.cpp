@@ -793,6 +793,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     effort_dt_ = delta_seconds;
     // A punch under way owns his hands (physics_world_strike.cpp).
     strike_owns_hands(commands);
+    // A slip under way owns his feet.
+    slip_owns_feet(commands);
     // WO-008: captured before anything this tick can change grounded_, so
     // it means exactly "was the player standing on something one tick ago."
     const bool was_grounded_before_tick = grounded_;
@@ -1087,6 +1089,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     grab_drive(bodies, delta_seconds);
     strike_step(bodies, commands, delta_seconds);
+    slip_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
         // Off the ground in her hand (or righting after): the speed it
         // carries into contact, for the fall rules once she lets go.

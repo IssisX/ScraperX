@@ -969,3 +969,184 @@ void run_matron_jab() {
     std::cout << "PASS scraperx_sim matron jab: impulse_ns=" << pest.impulse_ns << "\n";
 }
 SCRAPERX_SLICE("matron-jab", run_matron_jab);
+
+void run_matron_slip() {
+    constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
+    // Hunted setup: she comes to him till the gap closes to press_gap_m.
+    const auto hunt_to_gap = [&](Simulation &s, const double her_ahead_m, const int stage,
+                                 const double press_gap_m, const bool no_hands) {
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) tick(s);
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+        if (!no_hands) s.debug_hold_matron_hands(30.0);
+        for (int i = 0; i < 5 * 90 && s.matron_state().state != kHunting; ++i) tick(s);
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+        bool entered = false;
+        for (int i = 0; i < 10 * 90 && !entered; ++i) {
+            const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
+            (void)s.set_facing(her.x - me.x, her.z - me.z);
+            tick(s);
+            const Vector3 now = s.matron_state().position, here = s.snapshot().player_position;
+            entered = s.matron_state().state == kHunting &&
+                      std::hypot(now.x - here.x, now.z - here.z) <= press_gap_m;
+        }
+        require(entered, "slip: she hunts into slip range (setup)");
+    };
+    // A slip from a hunted setup: he slips sideways out of her line (`side`:
+    // 1 right of his facing, -1 left).
+    struct Slipped {
+        std::uint64_t slips = 0;
+        double lateral_m = 0.0, forward_m = 0.0;
+        double cone_before = 0.0, cone_after = 0.0;
+        std::uint32_t grabs = 0;
+        double max_step_m = 0.0;
+    };
+    const auto slip_case = [&](const double her_ahead_m, const int stage, const double press_gap_m,
+                               const int side, const bool no_hands = false) {
+        Slipped out;
+        Simulation s(InitialSpawn::Deck154);
+        hunt_to_gap(s, her_ahead_m, stage, press_gap_m, no_hands);
+        const Vector3 me0 = s.snapshot().player_position;
+        const auto &m0 = s.matron_state();
+        const double fl = std::hypot(m0.position.x - me0.x, m0.position.z - me0.z);
+        const double fx = (m0.position.x - me0.x) / fl, fz = (m0.position.z - me0.z) / fl;
+        const double rx = -fz, rz = fx;  // right of his facing at the press
+        const double to_x = (me0.x - m0.position.x) / fl, to_z = (me0.z - m0.position.z) / fl;
+        out.cone_before = std::sin(m0.yaw) * to_x + std::cos(m0.yaw) * to_z;
+        const std::uint64_t slips0 = s.snapshot().slip_count;
+        const std::uint32_t grabs0 = m0.grabs;
+        (void)s.request_slip(side);
+        Vector3 last = me0;
+        for (int i = 0; i < 50; ++i) {
+            tick(s);
+            const Vector3 now = s.snapshot().player_position;
+            out.max_step_m = std::max(out.max_step_m,
+                                      std::hypot(now.x - last.x, now.y - last.y, now.z - last.z));
+            last = now;
+            if (i == 19) {
+                out.lateral_m = (now.x - me0.x) * rx + (now.z - me0.z) * rz;
+                out.forward_m = (now.x - me0.x) * fx + (now.z - me0.z) * fz;
+                const auto &m = s.matron_state();
+                const double dx = now.x - m.position.x, dz = now.z - m.position.z;
+                const double dl = std::hypot(dx, dz);
+                out.cone_after = dl > 1.0e-6 ? (std::sin(m.yaw) * dx + std::cos(m.yaw) * dz) / dl : 1.0;
+            }
+        }
+        out.slips = s.snapshot().slip_count - slips0;
+        out.grabs = s.matron_state().grabs - grabs0;
+        return out;
+    };
+    const Slipped right = slip_case(2.5, 0, 1.25, 1);
+    std::cout << "  slip right: slips=" << right.slips << " lateral_m=" << right.lateral_m
+              << " forward_m=" << right.forward_m << " cone=" << right.cone_before << "->" << right.cone_after
+              << " grabs=" << right.grabs << " max_step_m=" << right.max_step_m << "\n";
+    require(right.slips == 1, "slip: one request throws one slip");
+    require(right.lateral_m > 0.30 && right.lateral_m < 0.55, "slip: ~0.4 m sideways in the slip window");
+    require(std::abs(right.forward_m) < 0.10, "slip: lateral only, no lurch toward or away from her");
+    require(right.cone_after < right.cone_before - 0.02, "slip: he leaves her facing line");
+    require(right.grabs == 0, "slip: no grab follows in the window");
+    require(right.max_step_m <= 0.20, "slip: no tick moves the body over 0.20 m");
+    const Slipped left = slip_case(2.5, 0, 1.25, -1);
+    require(left.slips == 1 && left.lateral_m < -0.30 && left.lateral_m > -0.55,
+            "slip: the left slip mirrors the right, ~0.4 m the other way");
+    // Free hands, pressed before her grab starts (1.5 m, outside her 1.40 m standoff):
+    // the slip beats her grab, none follows in the window.
+    const Slipped free = slip_case(2.5, 0, 1.5, 1, true);
+    require(free.slips == 1 && free.grabs == 0,
+            "slip: free hands, the slip beats her grab - no grab follows in the window");
+    // Control: the same free-hands setup, no slip — she grabs him in the
+    // window, so "no grab follows" above is the slip's doing, not an empty
+    // window. (J-044d: her grab must be live for the acceptance to mean
+    // anything; if this fails, the grab path is the blocker, not the slip.)
+    {
+        Simulation s(InitialSpawn::Deck154);
+        hunt_to_gap(s, 2.5, 0, 1.5, true);
+        const std::uint32_t grabs0 = s.matron_state().grabs;
+        bool grabbed = false;
+        for (int i = 0; i < 150 && !grabbed; ++i) {
+            tick(s);
+            grabbed = s.matron_state().grabs > grabs0;
+        }
+        require(grabbed, "slip control: no slip, she grabs him in the window (setup)");
+    }
+    // Held: she has him (a completed grab), the slip is refused, nothing moves.
+    // Launched inside her grab range, no hunt_to_gap: she grabs before any
+    // gap wait could close, so the setup waits on the grab itself.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
+        const std::uint32_t grabs0 = s.matron_state().grabs;
+        bool held = false;
+        for (int i = 0; i < 400 && !held; ++i) {
+            tick(s);
+            held = s.matron_state().grabs > grabs0;
+        }
+        require(held, "slip held: she holds him (setup)");
+        const std::uint64_t slips0 = s.snapshot().slip_count;
+        const Vector3 me0 = s.snapshot().player_position;
+        (void)s.request_slip(1);
+        for (int i = 0; i < 30; ++i) tick(s);
+        const Vector3 me1 = s.snapshot().player_position;
+        require(s.snapshot().slip_count == slips0 && std::hypot(me1.x - me0.x, me1.z - me0.z) < 0.02,
+                "slip: held, the slip is refused - no effect");
+    }
+    // Climbing: on the 154 m deck's ladder, the slip is refused.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "slip climb: settle");
+        require(walk_to(s, 3.5, -128.2, 16.0) && walk_to(s, 3.5, -129.8, 4.0) &&
+                    walk_to(s, 5.0, -129.6, 4.0, 0.08),
+                "slip climb: to the ladder's foot");
+        require(s.set_facing(0.0, 1.0) && s.advance_frame(0.4).accepted && s.request_traversal() &&
+                    s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "slip climb: the ladder taken (setup)");
+        const std::uint64_t slips0 = s.snapshot().slip_count;
+        const Vector3 me0 = s.snapshot().player_position;
+        (void)s.request_slip(1);
+        for (int i = 0; i < 30; ++i) tick(s);
+        const Vector3 me1 = s.snapshot().player_position;
+        require(s.snapshot().slip_count == slips0 && std::hypot(me1.x - me0.x, me1.z - me0.z) < 0.02,
+                "slip: climbing, the slip is refused - no effect");
+    }
+    // In flight: jumped, the slip is refused.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) tick(s);
+        (void)s.request_jump();
+        bool airborne = false;
+        for (int i = 0; i < 30 && !airborne; ++i) {
+            tick(s);
+            airborne = !s.snapshot().player_grounded;
+        }
+        require(airborne, "slip flight: airborne (setup)");
+        const std::uint64_t slips0 = s.snapshot().slip_count;
+        (void)s.request_slip(1);
+        for (int i = 0; i < 20; ++i) tick(s);
+        require(s.snapshot().slip_count == slips0, "slip: in flight, the slip is refused - no effect");
+    }
+    // Cooldown 1.2 s (108 ticks): a second slip inside it is refused, one after it goes.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        hunt_to_gap(s, 2.5, 0, 1.25, false);
+        (void)s.request_slip(1);
+        for (int i = 0; i < 60; ++i) tick(s);
+        require(s.snapshot().slip_count == 1, "slip cooldown: the first slip went (setup)");
+        (void)s.request_slip(-1);
+        for (int i = 0; i < 30; ++i) tick(s);
+        require(s.snapshot().slip_count == 1, "slip: a second slip inside 1.2 s is refused");
+        for (int i = 0; i < 30; ++i) tick(s);
+        (void)s.request_slip(-1);
+        for (int i = 0; i < 30; ++i) tick(s);
+        require(s.snapshot().slip_count == 2, "slip: a slip after the 1.2 s cooldown goes");
+    }
+    const Slipped again = slip_case(2.5, 0, 1.25, 1);
+    require(again.lateral_m == right.lateral_m && again.cone_after == right.cone_after, "slip: the same inputs give the same slip, to the bit");
+    std::cout << "PASS scraperx_sim matron slip: lateral_m=" << right.lateral_m << "\n";
+}
+SCRAPERX_SLICE("matron-slip", run_matron_slip);

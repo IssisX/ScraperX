@@ -322,6 +322,7 @@ var _fb_balance_s := 0.0
 var _fb_hang_slips := 0
 var _fb_swing_reaches := 0
 var _fb_trapeze_slips := 0
+var _fb_fight_slips := 0
 var _fb_strain_s := 0.0
 var _fb_haul_n := 0.0   # the pull in the hands on the pitman's line, N
 
@@ -407,6 +408,11 @@ func _update_body_feedback(delta: float) -> void:
 		_slip_jolt_depth = 1.0
 	_fb_hang_slips = hang_slips
 	_fb_trapeze_slips = trapeze_slips
+	# A fight slip (spec S5): the same slip haptic, on the slip's count edge.
+	var fight_slips := int(_ctx.get("strike", {}).get("slip_count", 0))
+	if fight_slips > _fb_fight_slips:
+		_haptic(&"slip")
+		_fb_fight_slips = fight_slips
 	var reaches := int(hands["swing_reaches"])
 	if reaches > _fb_swing_reaches:
 		_haptic(&"reach")
@@ -859,6 +865,14 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 				env = 1.0 - smoothstep(0.0, 1.0, clampf(sticks / 22.0, 0.0, 1.0))
 			dip += -0.15 * env
 			lateral_bob += 0.05 * env * (1.0 if int(strike.get("arm", 1)) == 1 else -1.0)
+	# A fight slip (spec §8.2): the view leans to the slip side with a slight
+	# roll through the slip's 20 ticks, then settles; the body carries the
+	# ~0.4 m, so the camera adds only the lean, never the distance twice.
+	if bool(strike.get("slip_active", false)):
+		var slip_env := sin(PI * clampf(float(strike.get("slip_ticks", 0)) / 20.0, 0.0, 1.0))
+		var slip_side := 1.0 if int(strike.get("slip_side", 1)) == 1 else -1.0
+		lateral_bob += 0.05 * slip_env * slip_side
+		bank += 0.05 * slip_env * slip_side
 	# Reduced motion: what moves the view by itself is turned down.
 	var motion := 0.25 if _reduced_motion else 1.0
 	dip *= motion

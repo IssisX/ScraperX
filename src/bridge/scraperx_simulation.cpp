@@ -65,6 +65,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_jump"),
                                 &ScraperXSimulation::request_jump);
     godot::ClassDB::bind_method(godot::D_METHOD("request_strike"), &ScraperXSimulation::request_strike);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_slip", "side"), &ScraperXSimulation::request_slip);
     godot::ClassDB::bind_method(godot::D_METHOD("get_strike_state"), &ScraperXSimulation::get_strike_state);
     godot::ClassDB::bind_method(godot::D_METHOD("request_traversal"),
                                 &ScraperXSimulation::request_traversal);
@@ -468,6 +469,10 @@ bool ScraperXSimulation::request_strike() {
     return simulation_->request_strike();
 }
 
+bool ScraperXSimulation::request_slip(const int side) {
+    return simulation_->request_slip(side);
+}
+
 // The player's strike, for the view (first_person_arms.gd, strike_feel.gd,
 // matron_view.gd, gore_view.gd, the audio): read only, nothing decided here.
 godot::Dictionary ScraperXSimulation::get_strike_state() const {
@@ -486,6 +491,10 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     out["hit_point"] = to_godot(p.strike_hit_point);
     out["hit_normal"] = to_godot(p.strike_hit_normal);
     out["impulse"] = p.strike_impulse_ns;
+    out["slip_active"] = p.slip_active;
+    out["slip_side"] = static_cast<std::int64_t>(p.slip_side);
+    out["slip_ticks"] = static_cast<std::int64_t>(p.slip_ticks);
+    out["slip_count"] = static_cast<std::int64_t>(p.slip_count);
     return out;
 }
 

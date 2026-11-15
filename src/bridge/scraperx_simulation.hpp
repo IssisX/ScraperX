@@ -35,6 +35,7 @@ public:
     [[nodiscard]] std::int64_t get_precision_landing_count() const;
     [[nodiscard]] bool request_jump();
     bool request_strike();
+    bool request_slip(int side);
     [[nodiscard]] godot::Dictionary get_strike_state() const;
     [[nodiscard]] bool request_traversal();
     [[nodiscard]] bool request_up();

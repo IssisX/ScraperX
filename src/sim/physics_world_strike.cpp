@@ -67,6 +67,10 @@ constexpr int kCrossReachTicks = 6;
 constexpr int kCrossRecoilTicks = 16;
 constexpr int kCrossContactTicks = 5;
 constexpr int kComboGraceTicks = 6;
+// The fight slip (S5): 20 ticks (~0.22 s) of lateral force, then a 1.2 s
+// (108-tick) cooldown before another may start.
+constexpr int kSlipTicks = 20;
+constexpr int kSlipCooldownTicks = 108;
 // How far her ankle may sit off level: a sweep's foot travels at his foot
 // height, rising at most about a shin-height off the level ankle. Beyond
 // that the ankle is out of the leg's arc, whatever the X/Z gap says.
@@ -524,6 +528,40 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     }
 }
 
+void Simulation::PhysicsWorld::slip_owns_feet(StepCommands &commands) const noexcept {
+    if (!slip_active_) {
+        return;
+    }
+    commands.strike_requested = false;
+    commands.jump_requested = false;
+    commands.traversal_requested = false;
+    commands.up_requested = false;
+}
+
+// The fight slip (S5): a lateral force burst from his legs, grounded only.
+void Simulation::PhysicsWorld::slip_step(JPH::BodyInterface &bodies, const StepCommands &commands,
+                                         const float dt) noexcept {
+    (void)dt;
+    if (slip_cooldown_ > 0) --slip_cooldown_;
+    if (slip_active_) {
+        bodies.AddForce(player_id_, slip_dir_ * strike::kPlayerSlipForceN);
+        if (++slip_ticks_ >= kSlipTicks) slip_active_ = false;
+        return;
+    }
+    if (!commands.slip_requested || slip_cooldown_ > 0) return;
+    const bool free = grip_ == nullptr && !player_free_rot_ && !matron_->claimed() &&
+                      traversal_state_ == TraversalState::None && !rolling() && !hands_on_a_machine() &&
+                      grounded_;
+    if (!free) return;
+    const JPH::Vec3 right(-facing_.GetZ(), 0.0F, facing_.GetX());
+    slip_dir_ = right * static_cast<float>(commands.slip_side);
+    slip_side_ = commands.slip_side;
+    slip_active_ = true;
+    slip_ticks_ = 0;
+    slip_cooldown_ = kSlipCooldownTicks;
+    ++slip_count_;
+}
+
 void Simulation::PhysicsWorld::strike_reset() noexcept {
     strike_forced_move_ = 255;
     strike_phase_ = StrikePhase::Guard;
@@ -542,6 +580,12 @@ void Simulation::PhysicsWorld::strike_reset() noexcept {
     strike_queued_move_ = 0;
     strike_grace_ = 0;
     matron_->clear_player_blow();
+    slip_active_ = false;
+    slip_ticks_ = 0;
+    slip_cooldown_ = 0;
+    slip_side_ = 1;
+    slip_dir_ = JPH::Vec3::sZero();
+    slip_count_ = 0;
 }
 
 void Simulation::PhysicsWorld::read_strike_state() noexcept {
@@ -558,6 +602,10 @@ void Simulation::PhysicsWorld::read_strike_state() noexcept {
     state_.strike_hit_normal = Vector3{strike_normal_.GetX(), strike_normal_.GetY(), strike_normal_.GetZ()};
     state_.strike_part = strike_landed_ || strike_contact_left_ > 0 ? strike_part_ : static_cast<std::uint8_t>(255);
     state_.strike_impulse_ns = strike_impulse_ns_;
+    state_.slip_active = slip_active_;
+    state_.slip_side = static_cast<std::int8_t>(slip_side_);
+    state_.slip_ticks = static_cast<std::uint32_t>(slip_ticks_);
+    state_.slip_count = slip_count_;
 }
 
 } // namespace scraperx::sim

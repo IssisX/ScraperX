@@ -113,6 +113,12 @@ bool Simulation::request_strike() noexcept {
     return true;
 }
 
+bool Simulation::request_slip(const int side) noexcept {
+    slip_requested_ = true;
+    slip_side_ = side >= 0 ? 1 : -1;
+    return true;
+}
+
 bool Simulation::request_traversal() noexcept {
     if (snapshot_.traversal_state == TraversalState::Mantling ||
         snapshot_.traversal_state == TraversalState::Vaulting) {
@@ -583,6 +589,8 @@ void Simulation::step_fixed() noexcept {
     commands.facing_z = facing_z_;
     commands.jump_requested = jump_requested_;
     commands.strike_requested = strike_requested_;
+    commands.slip_requested = slip_requested_;
+    commands.slip_side = slip_side_;
     commands.traversal_requested = traversal_requested_;
     commands.up_requested = up_requested_;
     commands.release_requested = release_requested_;
@@ -656,6 +664,7 @@ void Simulation::step_fixed() noexcept {
     hook_take_ = false;
     jump_requested_ = false;
     strike_requested_ = false;
+    slip_requested_ = false;
     traversal_requested_ = false;
     up_requested_ = false;
     release_requested_ = false;
