@@ -660,7 +660,8 @@ jobs:
           # again, nobody dead (touch_matron_heave). Her ammo, your ammo:
           # she rears back with his toolbox, a sidestep as it leaves her hands
           # and it misses, taken up again and thrown back into her
-          # (touch_matron_ammo). The bay on her deck: led
+          # (touch_matron_ammo). A punch comes, a double-tap right, and she
+          # slips past it (touch_matron_slip). The bay on her deck: led
           # round and the player east over its leaf, she drops under it and
           # holds it up on her palms, its motor stopped; UNHOOK the chain,
           # HOOK it onto the leaf, she lets go, the district starts again by
@@ -738,7 +739,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep perf_fight touch_matron_ammo touch_hook_her \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep perf_fight touch_matron_ammo touch_matron_slip touch_hook_her \
               touch_bay touch_slab_trap touch_canonical_ascent; do
             # The whole climb, grade to the route's top (J-084), took 407 s
             # and 432 s on a 4-core box; every other scenario keeps 400 s.
