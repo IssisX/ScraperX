@@ -48,7 +48,7 @@ it to match, never ask him again.
 - **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
   faster without waste; if the literal reading fails, do the sensible thing and say why. Speech-to-text mishears him (11-14): read for meaning; rough or
   unclear input gets one simple follow-up on what he means, never on wording.
-- SIMPLE AND CONCISE, every message (11-14, 11-15 "over and over"): everything that matters, in the fewest plain words (he is on a phone); no walls of text, but never leave out what he needs to know, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan (11-13). What happened, why, the fix; progress is what is left.
+- SIMPLE AND CONCISE, every message (11-14, 11-15): all that matters in the fewest plain words; no walls of text, never leaving out what he needs, no jargon, file names, shas or tech detail unless asked. Answer first. A question is not a plan (11-13). What happened, why, the fix; progress is what is left.
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; an online step carries its page's link, no other links. For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03). Still his: Claude
@@ -110,7 +110,7 @@ it to match, never ask him again.
 - Event-driven (11-10): the inbox wakes it; full runs (`work/tasks/integrator-hourly.md`) are the backstop: every agent
   loaded by strength, Muse's proposals ruled within the hour, every ask answered; Muse over its ceiling: finish and land.
 - **Claude sessions:** one Opus integrator; helpers are its sub-agents, at most four, each code-editing one in a worktree;
-  a new job gets a fresh helper, never a resumed one (11-13). Helpers run in the background (Cory 11-14); you stay free to
+  a new job gets a fresh helper, never a resumed one (11-13). Helpers start in the foreground, fork mode off, parallel ones in one message (the cheap way, 11-13/11-15); his message backgrounds them by itself, so you stay free to
   talk and to take my pastes. Ask before EACH extra session; a yes covers one (11-14). Stopping a working helper
   is Cory's call (11-12).
 - **Context:** no handoffs; keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most 30 lines)

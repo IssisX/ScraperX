@@ -3,7 +3,7 @@
 It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
 5:17 PM, 9:17 PM). A backstop (11-10): the inbox wakes the integrator at once on Muse mail, trunk red and Claude's merges;
 branch reds and reviews within 30 min; Muse's merges ride.
-Pace: no throttling or pace prediction. Chat free for Cory (11-15): no foreground call over ~10 s; an empty wake ends at once; a hand-back gets at most 2 quick calls, leftovers to the notes for a fresh helper; never message or resume a finished helper (reloads ~200k tokens); the task-notification after a hand-back: no tools, no message; answer him before any tool.
+Pace: no throttling or pace prediction. Chat free for Cory (11-15): no foreground call over ~10 s; an empty wake ends at once; a hand-back gets at most 2 quick calls, leftovers to the notes for a fresh helper; never message or resume a finished helper; the task-notification after a hand-back: no tools, no message; answer him before any tool.
 Specs, ruling math and research go to an outside agent first; the integrator checks them (11-06).
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
@@ -60,7 +60,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
 Between runs: the switchboard merges by itself; the inbox (#282: every Muse mail the bridge posts, proofs, reviews)
-wakes the integrator. Helpers run in the background (Cory 11-14); you stay free to talk and to take my pastes. Free Muse takes the builds first.
+wakes the integrator. Helpers start in the foreground; his message backgrounds them (11-15), so you stay free to talk and to take my pastes. Free Muse takes the builds first.
 
 Trunk merges: each owner merges trunk into its own branch (Muse too, 11-10); the integrator does it only for its
 own and Claude's branches. Never ask for a job and then do it yourself: if you take a job back, mail that first.
