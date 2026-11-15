@@ -1,5 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
 // The Matron's hold (matron.hpp, "Her hold"), at every stage: her hand goes
 // for the player's ankle, closes on it, she walks them upside down to the
 // shaft's rail, holds them out over the drop, tears an arm off (ArmPlay),
@@ -169,7 +167,6 @@ void Matron::report_held_load(const JPH::RVec3 her_pos, const JPH::RVec3 player_
 }
 
 void Matron::grip_lost(const bool torn, const bool fought) noexcept {
-    if (std::getenv("J001_PROBE")) std::fprintf(stderr, "PROBE grip_lost torn=%d fought=%d state=%d phase=%d hold_s=%.3f regrip=%d hand2_on=%d hand2_want=%d gp=%d\n", int(torn), int(fought), int(state_), hold_phase_, hold_s_, int(regrip_), int(hand2_on_), int(hand2_want_), int(grip_point_));
     const bool had = grip_on_;
     grip_on_ = false;
     if (!torn && regrip_ && holding_state(state_)) {
@@ -1395,7 +1392,6 @@ void Matron::reset_beats() noexcept {
 }
 
 void Matron::begin_regrip(const Grip point) noexcept {
-    if (std::getenv("J001_PROBE")) std::fprintf(stderr, "PROBE begin_regrip to=%d from=%d state=%d phase=%d hold_s=%.3f grip_on=%d hand2_on=%d hand2_want=%d fatal=%d bare=%d pin_here=%d\n", int(point), int(grip_point_), int(state_), hold_phase_, hold_s_, int(grip_on_), int(hand2_on_), int(hand2_want_), int(fatal_hold_), int(bare_lip_), int(pin_here_));
     grip_point_ = point;
     regrip_ = true;
     regrip_let_go_ = grip_on_;
@@ -1441,7 +1437,6 @@ void Matron::begin_pin() {
 }
 
 void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const float feet) {
-    if (std::getenv("J001_PROBE")) { static int ls = -1, lp = -1; if (int(state_) != ls || hold_phase_ != lp) { std::fprintf(stderr, "PROBE rail state=%d phase=%d hold_s=%.3f grip_on=%d regrip=%d hand2_on=%d\n", int(state_), hold_phase_, hold_s_, int(grip_on_), int(regrip_), int(hand2_on_)); ls = int(state_); lp = hold_phase_; } }
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const Vec3 out(rim_nx_, 0.0F, rim_nz_);
@@ -1503,7 +1498,6 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const float her_y = std::clamp(float(shoulder.GetY()), float(at.GetY()) - kHalfHeight, float(at.GetY()) + kHalfHeight);
         const float reach = Vec3(shoulder - RVec3(at.GetX(), her_y, at.GetZ())).Length() - kRadius;
         const bool still = bodies.GetLinearVelocity(player_).Length() < kFatalStillMps;
-        if (std::getenv("J001_PROBE")) { static int n = 0; if (++n % 9 == 0) std::fprintf(stderr, "PROBE win phase=%d hold_s=%.3f up_y=%.3f past=%.3f reach=%.3f v=%.3f bare=%d hand2_on=%d\n", hold_phase_, hold_s_, up.GetY(), past, reach, bodies.GetLinearVelocity(player_).Length(), int(bare_lip_), int(hand2_on_)); }
         if (up.GetY() < -kFatalHangDownY && past >= kFatalWindowPastM && reach <= kFatalReachM && still) {
             fatal_window_ = false;
             fatal_window_paused_ = false;
@@ -1540,41 +1534,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             const Vec3 his_v = physics_.GetBodyInterface().GetLinearVelocity(player_);
             const bool at_rest = Vec3(his_v.GetX(), 0.0F, his_v.GetZ()).Length() < 0.4F;
             const bool in = in_from_rail >= 0.4F && deck_close_below(player, feet);
-            if ((pin_here_ || (in && at_rest)) && std::getenv("J001_OLD")) { begin_regrip(Grip::Collar); break; }
             if (pin_here_ || (in && at_rest)) {
-                // Hand over hand up his body: her second hand takes his belt
-                // first (she steps in to his middle), and only then her first
-                // opens on his ankle for his collar. He is never out of her
-                // hands.
-                if (hand2_want_ != 2) {
-                    belt_wait_at_ = at;   // where she stands as her second hand goes out
-                }
-                hand2_want_ = 2;
-                if (hand2_on_ != 2) {
-                    // (Her first hand only holds his ankle meanwhile, at her
-                    // reaching pull: no haul on it to tear her grip.)
-                    pull_n_ = kHandReachPullN;
-                    pull2_n_ = kHandReachPullN;
-                    const RVec3 b = player_belt_;
-                    const float off = xz(ax, az, float(b.GetX()), float(b.GetZ()));
-                    walk_toward(dt, float(b.GetX()), float(b.GetZ()), off > kBeltStepInM ? std::min(0.4F, 1.5F * (off - kBeltStepInM)) : 0.0F);
-                    yaw_ = turn_to(yaw_, std::atan2(float(b.GetX()) - ax, float(b.GetZ()) - az), kHoldTurnRate, dt);
-                    // (Her first hand keeps his ankle where she drags it, by
-                    // where she stood, as she steps in.)
-                    pose_hand(dt, RVec3(belt_wait_at_.GetX(), feet + kDragHandUpM, belt_wait_at_.GetZ()) - out * 0.3F,
-                              kHandSpeedMps);
-                    pose_hand2(dt, b, kHandReachSpeedMps);
-                    if (std::getenv("J001_PROBE")) { static int n = 0; if (++n % 45 == 0) { const RVec3 sh = at + shoulder_local(); std::fprintf(stderr, "PROBE belt-reach hold_s=%.2f sh_to_belt=%.3f target2_to_belt=%.3f belt_y=%.3f feet=%.3f off=%.3f\n", hold_s_, Vec3(b - sh).Length(), Vec3(b - hand2_target_).Length(), float(b.GetY()), feet, xz(ax, az, float(b.GetX()), float(b.GetZ()))); } }
-                    if (hold_s_ > 2.0F * kPinReachS) {
-                        if (std::getenv("J001_PROBE")) std::fprintf(stderr, "PROBE belt-first timeout\n");
-                        back_in();
-                    }
-                    break;
-                }
-                pull_n_ = kHandPullN;
-                pull2_n_ = kHandPullN;
-                if (std::getenv("J001_PROBE")) { const RVec3 sh = at + shoulder_local(); std::fprintf(stderr, "PROBE belt-first took at hold_s=%.3f shoulder_to_belt=%.3f shoulder_to_ankle_hand=%.3f\n", hold_s_, Vec3(player_belt_ - sh).Length(), Vec3(hand_target_ - sh).Length()); }
-                hold_s_ = 0.0F;
                 begin_regrip(Grip::Collar);
                 break;   // the world opens her hand this tick
             } else if (in) {
@@ -1620,19 +1580,12 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             walk_toward(dt, float(c.GetX()), float(c.GetZ()), off > 0.55F ? std::min(0.9F, 0.4F + 1.5F * off) : 0.0F);
         }
         yaw_ = turn_to(yaw_, std::atan2(float(c.GetX()) - ax, float(c.GetZ()) - az), kHoldTurnRate, dt);
-        if (hand2_on_ == 2) {
-            // (His belt in her second hand, it goes with him as her first
-            // hand reaches his collar: held where her fingers closed on it,
-            // no push on him.)
-            pose_hand2(dt, player_belt_ + hand2_grip_off_, kHandSpeedMps);
-        }
         pose_hand(dt, c, kHandReachSpeedMps);
         if (grip_on_) {
             hold_phase_ = 1;
             hold_s_ = 0.0F;
         } else if (hold_s_ > kPinReachS) {
             // Up and away from her before her hand closed: the hold over.
-            hand2_want_ = 0;
             regrip_ = false;
             ++grab_misses_;
             state_ = State::Release;
@@ -1750,7 +1703,6 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // (The regular pin stands her on her spot before the window: the
         // looser bound left her a step east of it, and the whole pin —
         // hands and body — sat that step east of the drop's line.)
-        if (std::getenv("J001_PROBE") && !fatal_hold_) { static int n = 0; if (++n % 30 == 1) { const Vec3 u = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY(); std::fprintf(stderr, "PROBE haul hold_s=%.2f to_spot=%.3f yaw=%.3f him=(%.3f,%.3f,%.3f) up=(%.2f,%.2f,%.2f) pin_d=%.3f belt_d=%.3f mid_past=%.3f\n", hold_s_, to_spot, yaw_, float(middle.GetX()), float(middle.GetY()), float(middle.GetZ()), u.GetX(), u.GetY(), u.GetZ(), Vec3(pin - hand_target_).Length(), Vec3(belt - hand2_target_).Length(), mid_past); } }
         if ((to_spot < (fatal_hold_ ? 0.15F : 0.05F) && Vec3(pin - hand_target_).Length() < 0.05F &&
              Vec3(belt - hand2_target_).Length() < 0.05F && (!fatal_hold_ || mid_past > -0.1F)) ||
             hold_s_ > kPinHaulS) {
@@ -1871,30 +1823,14 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         if (hand2_on_ != 1) {
             pull2_n_ = kHandReachPullN;
             pose_hand2(dt, player_ankle_, kHandReachSpeedMps);
-<<<<<<< ours
-=======
-            if (std::getenv("J001_PROBE")) { static int n = 0; if (++n % 45 == 1) { const RVec3 sh = at + shoulder_local(); const Vec3 axis = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY(); std::fprintf(stderr, "PROBE p4 hold_s=%.2f sh_to_ankle=%.3f ankle_up=%.3f to_spot=%.3f up_y=%.3f t2_to_ankle=%.3f\n", hold_s_, Vec3(player_ankle_ - sh).Length(), float(player_ankle_.GetY()) - feet, to_spot, axis.GetY(), Vec3(player_ankle_ - hand2_target_).Length()); } }
-            if (std::getenv("J001_PROBE") && bare_lip && to_spot <= 0.2F) {
-                const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
-                const float past_lip = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
-                                       (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-                const Vec3 axis = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY();
-                std::fprintf(stderr, "PROBE bare hold_s=%.3f past_lip=%.3f up_y=%.3f ankle_to_target2=%.3f ankle_y=%.3f feet=%.3f\n", hold_s_, past_lip, axis.GetY(), Vec3(player_ankle_ - hand2_target_).Length(), float(player_ankle_.GetY()), feet);
-            }
->>>>>>> theirs
             if (hold_s_ > 2.0F * kHandoffS) {
                 back_in();
             }
         } else if (bare_lip) {
             // Over a bare lip, hand over hand: her second hand has his ankle
             // (his legs come up past her as he tips head first over it), and
-<<<<<<< ours
             // only then her first hand opens on his belt for his ankle. He is
             // never out of her hands over the drop.
-=======
-            // only then her first hand opens on his belt for his ankle. He
-            // is never out of her hands over the drop.
->>>>>>> theirs
             pull2_n_ = kHandPullN;
             bare_lip_ = true;
             begin_regrip(Grip::Ankle);
@@ -2330,7 +2266,6 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
 // not had it (and no test has her leave it); `then` follows it. False when
 // there is none to take.
 bool Matron::begin_armplay(const State then) {
-    if (std::getenv("J001_PROBE")) { const BodyInterface &b = physics_.GetBodyInterface(); const RVec3 h = b.GetPosition(body_); const RVec3 p = b.GetPosition(player_); const Vec3 u = b.GetRotation(player_).RotateAxisY(); std::fprintf(stderr, "PROBE armplay her=(%.3f,%.3f,%.3f) him=(%.3f,%.3f,%.3f) up=(%.3f,%.3f,%.3f) yaw=%.3f wrist=(%.3f,%.3f,%.3f)\n", float(h.GetX()), float(h.GetY()), float(h.GetZ()), float(p.GetX()), float(p.GetY()), float(p.GetZ()), u.GetX(), u.GetY(), u.GetZ(), yaw_, float(player_wrist_.GetX()), float(player_wrist_.GetY()), float(player_wrist_.GetZ())); }
     if (armplay_for_test_ == 0 || player_arms_left_ <= 0 || armplay_done_) {
         return false;
     }

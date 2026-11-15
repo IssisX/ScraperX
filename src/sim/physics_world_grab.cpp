@@ -619,7 +619,6 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
             std::max(0.0F, grip_strain_ns_ +
                                (std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) + fight_n) * dt -
                                Matron::kGripStrainDecay * dt);
-        if (std::getenv("J001_PROBE") && matron_->hand2_wants() == 2 && !matron_->regripping()) std::fprintf(stderr, "PROBE load=%.0f strain=%.1f over=%d floor=%.0f\n", grip_load_n_, grip_strain_ns_, grip_over_ticks_, matron_->grip_strain_floor_n());
         if (grip_over_ticks_ >= 2 || grip_strain_ns_ > Matron::kGripTearNs) {
             tear_grip(true);
         }

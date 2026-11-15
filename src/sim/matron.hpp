@@ -1302,10 +1302,6 @@ public:
     static constexpr float kHandoffS = 3.0F;
     static constexpr float kOverPushM = 0.15F;     // her belt hand out past its pin pose
     static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
-<<<<<<< ours
-=======
-    static constexpr float kBeltStepInM = 0.70F;   // his belt farther than this from her middle: she steps in for it, his ankle in her other hand
->>>>>>> theirs
     static constexpr float kBareLipBearM = 0.80F;  // a bare lip, his middle past it: her belt hand this far lower, tipping him over it
     static constexpr float kBareLipPushM = 0.50F;  // a bare lip: her belt hand out past its pin pose, sliding him off it
     static constexpr float kBareLipTipM = 0.25F;   // his middle this far past a bare lip: her fingers open on his belt
@@ -1997,11 +1993,7 @@ public:
     [[nodiscard]] bool grip_turns_freely() const noexcept {
         return state_ == State::Spare && grip_point_ == Grip::Ankle;
     }
-    // Her second hand's fingers closed at `at` (where on him: off his belt).
-    void hand2_taken(const JPH::RVec3 at) noexcept {
-        hand2_on_ = hand2_want_;
-        hand2_grip_off_ = JPH::Vec3(at - player_belt_);
-    }
+    void hand2_taken() noexcept { hand2_on_ = hand2_want_; }
     void hand2_lost() noexcept { hand2_on_ = 0; }
     void set_player_belt(const JPH::RVec3 belt) noexcept { player_belt_ = belt; }
     // Her trunk in a hold (her real arm's reach, kRealArmM): her hips over her
@@ -3037,8 +3029,6 @@ private:
     Grip grip_point_ = Grip::Ankle;
     bool regrip_ = false;                  // her first hand to take him by grip_point_ next
     bool regrip_let_go_ = false;           // and the world opens it first (take_regrip_let_go)
-    JPH::RVec3 belt_wait_at_ = JPH::RVec3::sZero();   // where she stood as her second hand went for his belt (step_rail)
-    JPH::Vec3 hand2_grip_off_ = JPH::Vec3::sZero();   // her second hand's grip, off his belt as it closed (hand2_taken)
     int hand2_want_ = 0;                   // her second hand for his ankle (1) or belt (2)
     int hand2_on_ = 0;                     // and on it
     JPH::RVec3 player_belt_ = JPH::RVec3::sZero();

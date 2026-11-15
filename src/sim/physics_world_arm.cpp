@@ -1,5 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
 // Arm loss (matron.hpp "ArmPlay"): her second hand on a wrist, pulling it
 // away from the body her other hand holds by the ankle. The wrist's load
 // past kArmHoldN, over time, past kArmTearNs tears the arm from the
@@ -252,7 +250,7 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
             hand2_grip_ = create_constraint(grip, hand2_id_, player_id_, false);
             if (hand2_grip_ != nullptr) {
                 hand2_grip_point_ = want2;
-                matron_->hand2_taken(hand);
+                matron_->hand2_taken();
             }
         }
     }
@@ -275,7 +273,6 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     traversal::Budget &account = matron_->limb_budget();
     account.velocity = relative_v;
     force = account.take_limb(force, static_cast<std::uint8_t>(effort::Path::Hand2Spring));
-    if (std::getenv("J001_PROBE") && hand2_grip_ != nullptr && matron_->regripping()) { static int n = 0; if (++n % 9 == 0) std::fprintf(stderr, "PROBE h2force=%.0f grip_on_body_d=%.3f\n", force.Length(), static_cast<float>(JPH::Vec3(matron_->hand2_target() - hand).Length())); }
     bodies.AddForce(hand2_id_, force);
     bodies.AddForce(matron_->body(), -force);
     JPH::Vec3 throw_v;
