@@ -18,7 +18,7 @@ J-008 builder #115 | Tower "258 down" leg under determinism math, and the stable
 J-001 claude #108 kept chatgpt/integrate-j001-swat-budget@50e1bf496782 kept fb-bot/integrate-j001-combined-armplay@b555dd6183ff kept fb-bot/integrate-j001-hold@35b67484fd15 | Her hold with real arms (5 beats)
 J-015 claude #122 kept fb-bot/integrate-j015-slice1@2f8b1f21d655 kept fb-bot/integrate-j015-wreck-way-on@a280fe6b127c kept fb-bot/integrate-protected-j015-magnet-grips@a949f76fee5c kept fb-bot/integrate-protected-j015-slice1@2ba17f22df23 kept fb-bot/integrate-protected-j015-wreck-way-on@aee6d79d9124 | A wrecked machine leaves a way on (PE 3)
 J-044 muse #242 kept chatgpt/integrate-j044-review-gate-20261109@55b8b3e22548 | Console-quality fighting: physically causal reactions, localized injuries, boxing-grade exchanges
-J-082 claude #400 kept fb-bot/integrate-protected-j082@9d24a3df2d7b hold: parked in live issue; reconcile pushed work before release | Above 340 m every stage is a new physical action, not another board and ladder (rules 52, 53, gap 1)
+J-082 claude #400 kept fb-bot/integrate-protected-j082@9d24a3df2d7b | Above 340 m every stage is a new physical action, not another board and ladder (rules 52, 53, gap 1)
 J-084 claude #402 kept fb-bot/integrate-j084@56a593ef90c1 | One scenario plays the whole climb, from the ground to the summit, on the canonical route (rules 56, 27)
 J-090 claude #408 | Hook her and let the rope decide: his grappling hook bites her body, and mass, footing and the line decide who moves
 J-093 claude #411 hold: paused by Cory 11-13: Claude does no game code until the collaboration system is done; pushed work kept | J-001's protected follow-ups: the rail reach near miss and the budget's unaccounted list (Claude)
