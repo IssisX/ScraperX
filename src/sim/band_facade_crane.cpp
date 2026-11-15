@@ -2,6 +2,7 @@
 #include "sim/simulation.hpp"
 
 #include <cmath>
+#include <cstdlib> //TEMPPROBE
 #include <vector>
 
 // AS-009, the Facade Crane Stack (Atlas band B05, 484 -> 640 m). Contract:
@@ -754,6 +755,76 @@ void build_slide_jump(std::vector<Part> &route) {
                          Material::Yellow));
 }
 
+// The swing-pole launch, 484 -> 506 (J-082 design 4, Cory 11-15), along z =
+// -154.5 in the well's south half, beside the boards and ladder, which stay
+// (her way, and his backup). A pole up a pier on the 484 ring's west band to a
+// lane at 494.0 running east; off its end a single bar hangs over a 6 m gap to
+// a block whose top is 1.5 m over the lane. Caught from a run, the bar swings
+// him forward; let go at the front of the swing and he drops short of the
+// block, Jump there (the swing's launch, kSwingLaunchMps) and he is thrown on
+// to its lip. A second pole climbs from the block beside a fascia girder on
+// the 506 ring's east band. A miss falls 9.75 m to a grating at the 484 ring,
+// joined to its south band.
+constexpr float kSpZ = -154.5F;
+constexpr float kSpDeck = 494.0F;
+constexpr float kSpLip = -2.0F;                 // the lane's east end
+float penv(const char *n, float d) { const char *v = std::getenv(n); return v ? static_cast<float>(std::atof(v)) : d; } //TEMPPROBE
+const float kSpBarX = penv("J082_BARX", -1.0F); //TEMPPROBE
+const float kSpBarY = kSpDeck + penv("J082_BARH", 3.1F); //TEMPPROBE
+const float kSpBlockFace = penv("J082_FACE", kSpLip + 6.0F); //TEMPPROBE
+constexpr float kSpBlockEast = 9.5F;
+const float kSpBlockTop = kSpDeck + penv("J082_LIPH", 1.5F); //TEMPPROBE
+constexpr float kSpPierX0 = -11.2F;
+constexpr float kSpPierX1 = -9.2F;
+
+void build_swing_launch(std::vector<Part> &route) {
+    const float lo = kSpZ - 2.0F;
+    const float hi = kSpZ + 2.0F;
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1, const float y) {
+        route.push_back(span({x0, y, z0}, {x1, y + 0.8F, z1}, Material::Yellow));
+    };
+    const float pole_x = 0.5F * (kSpPierX0 + kSpPierX1);
+    // The west pier on the ring, a wing south of the lane; the pole up the
+    // wing's south face.
+    route.push_back(span({kSpPierX0, 484.25F, lo - 2.0F}, {kSpPierX1, kSpDeck, hi}, Material::Concrete));
+    route.push_back(span({pole_x - 0.08F, 484.25F, lo - 2.0F - 0.22F}, {pole_x + 0.08F, kSpDeck - 0.2F, lo - 2.0F - 0.06F},
+                         Material::Yellow));
+    rail(kSpPierX0, kSpPierX0 + 0.08F, lo - 2.0F, hi, kSpDeck);                       // the west edge
+    rail(kSpPierX1 - 0.08F, kSpPierX1, lo - 2.0F, lo, kSpDeck);                       // the wing's east edge
+    rail(kSpPierX0, pole_x - 0.6F, lo - 2.0F, lo - 2.0F + 0.08F, kSpDeck);            // its south edge, open at the pole
+    rail(pole_x + 0.6F, kSpPierX1, lo - 2.0F, lo - 2.0F + 0.08F, kSpDeck);
+    // The lane, its steel under it, and the edge rails (none across the running line).
+    route.push_back(span({kSpPierX1, kSpDeck - 0.3F, lo}, {kSpLip, kSpDeck, hi}, Material::Galvanised));
+    route.push_back(span({kSpPierX1, kSpDeck - 1.0F, lo}, {kSpLip, kSpDeck - 0.3F, lo + 0.3F}, Material::Steel));
+    route.push_back(span({kSpPierX1, kSpDeck - 1.0F, hi - 0.3F}, {kSpLip, kSpDeck - 0.3F, hi}, Material::Steel));
+    rail(kSpPierX1, kSpLip, lo, lo + 0.08F, kSpDeck);
+    rail(kSpPierX0, kSpLip, hi - 0.08F, hi, kSpDeck);
+    // The bar (the monkey bars' section and length), on two rods from a girder
+    // across the well under the 506 ring.
+    route.push_back(box(JPH::Vec3(0.04F, 0.04F, 0.62F), JPH::Vec3(kSpBarX, kSpBarY, kSpZ), Material::Steel));
+    const float girder_y = 506.0F - 0.25F;
+    route.push_back(span({kSpBarX - 0.08F, girder_y - 0.3F, kWellZ - ring_inner(506.0F) - 0.5F},
+                         {kSpBarX + 0.08F, girder_y, kWellZ + ring_inner(506.0F) + 0.5F}, Material::Rust));
+    for (const float side : {-1.0F, 1.0F}) {
+        const float z = kSpZ + side * 0.66F;
+        route.push_back(span({kSpBarX - 0.02F, kSpBarY - 0.04F, z - 0.02F}, {kSpBarX + 0.02F, girder_y - 0.3F, z + 0.02F},
+                             Material::Steel));
+    }
+    // The block, from the ring's east band out over the well, railed but at its
+    // lip, and the grating under the gap, joined to the ring's south band.
+    route.push_back(span({kSpBlockFace, 484.25F, lo}, {kSpBlockEast, kSpBlockTop, hi}, Material::Concrete));
+    rail(kSpBlockFace + 0.5F, kSpBlockEast, lo, lo + 0.08F, kSpBlockTop);
+    rail(kSpBlockFace + 0.5F, kSpBlockEast, hi - 0.08F, hi, kSpBlockTop);
+    route.push_back(span({kSpLip, 484.05F, kWellZ - ring_inner(484.0F) - 0.2F}, {kSpBlockFace, 484.25F, hi},
+                         Material::Galvanised));
+    // The second pole stands 0.14 m off a fascia girder on the 506 ring's east
+    // inner edge (1.35 m deep and flush with the ring's top: a hang takes 1.2 m).
+    const float edge = ring_inner(506.0F);
+    route.push_back(span({edge - 0.2F, 504.9F, kSpZ - 1.3F}, {edge + 0.3F, 506.25F, kSpZ + 1.3F}, Material::Steel));
+    route.push_back(span({edge - 0.34F - 0.08F, kSpBlockTop, kSpZ - 0.08F}, {edge - 0.34F + 0.08F, 506.05F, kSpZ + 0.08F},
+                         Material::Yellow));
+}
+
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     for (float h = 484.0F; h < 615.9F; h += 22.0F) {
@@ -781,6 +852,7 @@ void build_climbing_route(kit::Kit &kit) {
         ladder(route, ring_inner(h + 22.0F) - 0.14F, kRouteZ, false, y1, h + 22.25F);
     }
     ladder(route, 0.5F * (kHatchX0 + kHatchX1), kHatchZ1 - 0.15F, true, 616.25F, kPlateTop);
+    if (std::getenv("J082_BASELINE") == nullptr) build_swing_launch(route);   //TEMPPROBE beside the 484 -> 506 boards and ladder, appended last
     (void)kit.add_body(Sim::kCraneRouteEntityId, route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
 }
 
