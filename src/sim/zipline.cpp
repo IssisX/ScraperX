@@ -14,6 +14,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <limits>
 #include <utility>
 
 namespace scraperx::sim {
@@ -110,7 +112,7 @@ bool Zipline::clear_of_machines(const RVec3 top, const RVec3 bottom, const std::
     return true;
 }
 
-bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
+bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor, const bool keeper_pin) {
     if (static_cast<int>(lines_.size()) >= kMaxLines || !floor_under(top_floor) || !floor_under(bottom_floor)) {
         return false;
     }
@@ -198,8 +200,25 @@ bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
     const Vec3 to_bottom(bottom_floor - top_floor);
     parts.push_back(box(Vec3(0.08F, 0.5F * kBottomPostM, 0.08F), to_bottom + Vec3(0.0F, 0.5F * kBottomPostM, 0.0F),
                         Material::Steel));
-    parts.push_back(member(Vec3(0.0F, kTopPostM, 0.0F), to_bottom + Vec3(0.0F, kBottomPostM, 0.0F), kCableRadius,
-                           Material::Steel));
+    // A keeper-pin line carries no cable member in the static body: the
+    // cable is a chain of segments, held by the pin (J-095). The pin's
+    // slot is in the top post, on the stand's side, low enough for a hand
+    // on the deck or the stand: a shelf under the pin and cheeks either
+    // side of it, as the crane's pin sits in its frame.
+    if (keeper_pin) {
+        // The bracket the pin lies on, reaching south from the post to
+        // under the pin's far end: a shelf under the pin and cheeks
+        // either side of it, as the crane's pin sits in its frame.
+        const Vec3 bracket_at = post_at + run * (kPinRunM - 0.1F) + Vec3(0.0F, kPinSeatHeightM, 0.0F);
+        parts.push_back(box(Vec3(0.06F, 0.02F, 0.4F), bracket_at - Vec3(0.0F, 0.05F, 0.0F), Material::Steel));
+        for (const float side : {-1.0F, 1.0F}) {
+            parts.push_back(box(Vec3(0.01F, 0.04F, 0.4F), bracket_at + across * (side * 0.045F),
+                                Material::Steel));
+        }
+    } else {
+        parts.push_back(member(Vec3(0.0F, kTopPostM, 0.0F), to_bottom + Vec3(0.0F, kBottomPostM, 0.0F), kCableRadius,
+                               Material::Steel));
+    }
     Line line;
     line.top = top;
     line.bottom = bottom;
@@ -214,9 +233,197 @@ bool Zipline::add_line(const RVec3 top_floor, const RVec3 bottom_floor) {
     line.trolley_m = kParkM;
     line.block_m = length - kStopMarginM - travel;   // its rest: kBufferM short of the stop
     line.parked = true;
+    line.keeper_pin = keeper_pin;
     line.body = kit_.add_body(kFirstLineEntity + lines_.size(), parts, top_floor, Quat::sIdentity(), 0.0F, 0.6F);
+    if (keeper_pin) {
+        build_chain(line, static_cast<int>(lines_.size()));
+    }
     lines_.push_back(line);
     return true;
+}
+
+// J-095: the chain for a keeper-pin line. The segments lie end to end on
+// the old cable line, each a dynamic kit cylinder of 30 mm wire rope
+// (3.5 kg/m), joined to the next by a direct rope of length 0 — the two
+// joint points coincident, a ball joint that cannot stretch, so the
+// pinned chain, exactly the anchor distance long and held at both ends,
+// lies straight on the line and cannot sag. The bottom segment hinges at
+// the bottom anchor; the top segment is held by the pin catch. The pin
+// is a small steel bar in its slot on the top post, a handle the hands
+// take. Adjacent segments do not collide: their ends meet at the joint,
+// and a contact there would fight the rope.
+void Zipline::build_chain(Line &line, const int index) {
+    const float length = line.length;
+    const int count = static_cast<int>(std::ceil(length / kCableSegmentM));
+    const float pitch = length / static_cast<float>(count);
+    const Vec3 direction = line.direction;
+    const Quat rotation = Quat::sFromTo(Vec3::sAxisY(), direction);
+    const std::uint64_t base = static_cast<std::uint64_t>(index) * 64U;
+    line.cable_count = count;
+    line.cable_pitch = pitch;
+    line.cable_segments.reserve(static_cast<std::size_t>(count));
+    for (int i = 0; i < count; ++i) {
+        const RVec3 centre = line.top + direction * (static_cast<float>(i) * pitch + 0.5F * pitch);
+        const Part segment{Vec3(kCableRadius, 0.5F * pitch, kCableRadius), Vec3::sZero(), Quat::sIdentity(),
+                           Material::Steel, Part::Shape::Cylinder, 0.0F};
+        const kit::BodyIndex seg =
+            kit_.add_body(kFirstCableEntity + base + static_cast<std::uint64_t>(i), {segment}, centre, rotation,
+                          kCableMassPerM * pitch, 0.6F);
+        line.cable_segments.push_back(seg);
+        if (i > 0) {
+            kit_.disable_collision(line.cable_segments[static_cast<std::size_t>(i - 1)], seg);
+            line.cable_ropes.push_back(kit_.add_direct_rope(line.cable_segments[static_cast<std::size_t>(i - 1)],
+                                                            Vec3(0.0F, 0.5F * pitch, 0.0F), seg,
+                                                            Vec3(0.0F, -0.5F * pitch, 0.0F), 0.0F, 0.0F));
+        }
+    }
+    // The pin, a steel bar along the line's run in its slot on the post.
+    const Vec3 run = Vec3(direction.GetX(), 0.0F, direction.GetZ()).NormalizedOr(Vec3::sAxisZ());
+    const Vec3 across(-run.GetZ(), 0.0F, run.GetX());
+    const Vec3 post_at = across * 0.95F;
+    const RVec3 pin_at = line.top_floor + post_at + run * kPinRunM + Vec3(0.0F, kPinSeatHeightM, 0.0F);
+    const Part pin{Vec3(0.03F, 0.03F, 0.25F), Vec3::sZero(), Quat::sIdentity(), Material::Steel, Part::Shape::Box,
+                   0.0F};
+    line.pin_body = kit_.add_body(kPinEntityId + base, {pin}, pin_at, Quat::sFromTo(Vec3::sAxisZ(), run), 0.5F, 0.6F);
+    kit_.set_carry(line.pin_body, kit::CarryKind::Handle, Vec3::sZero());
+    line.pin_catch = kit_.add_pin_catch(line.cable_segments.front(), line.pin_body, kPinToleranceM, 0.05F);
+    // The hinge: the bottom segment's far end on the bottom anchor.
+    {
+        JPH::PointConstraintSettings hinge;
+        hinge.mSpace = JPH::EConstraintSpace::WorldSpace;
+        hinge.mPoint1 = line.bottom;
+        hinge.mPoint2 = line.bottom;
+        const JPH::BodyID ids[2] = {kit_.body_id(line.body), kit_.body_id(line.cable_segments.back())};
+        JPH::BodyLockMultiWrite lock(physics_.GetBodyLockInterface(), ids, 2);
+        if (lock.GetBody(0) != nullptr && lock.GetBody(1) != nullptr) {
+            line.bottom_hinge =
+                static_cast<JPH::PointConstraint *>(hinge.Create(*lock.GetBody(0), *lock.GetBody(1)));
+            physics_.AddConstraint(line.bottom_hinge);
+        }
+    } // the hinge's lock is out before the welds take theirs
+    weld_chain(line);
+}
+
+// J-095: the pin welds. The inter-segment ropes alone stretch under the
+// chain's weight — a 5.5 m catenary at mid-span while pinned, the joints
+// opening a few centimetres each under the load, the iterative solver
+// never quite pulling them back. So while the pin is in, each segment is
+// welded to the static body at its seat: the pinned chain lies straight
+// on the line, exactly as the static cable did. The welds come off on
+// the release, and the chain falls on its ropes.
+void Zipline::weld_chain(Line &line) {
+    const Vec3 direction = line.direction;
+    const Quat rotation = Quat::sFromTo(Vec3::sAxisY(), direction);
+    for (int i = 0; i < line.cable_count; ++i) {
+        const RVec3 centre =
+            line.top + direction * (static_cast<float>(i) * line.cable_pitch + 0.5F * line.cable_pitch);
+        JPH::FixedConstraintSettings weld;
+        weld.mSpace = JPH::EConstraintSpace::WorldSpace;
+        weld.mAutoDetectPoint = false;
+        weld.mPoint1 = centre;
+        weld.mPoint2 = centre;
+        weld.mAxisX1 = rotation * JPH::Vec3::sAxisX();
+        weld.mAxisY1 = rotation * JPH::Vec3::sAxisY();
+        weld.mAxisX2 = rotation * JPH::Vec3::sAxisX();
+        weld.mAxisY2 = rotation * JPH::Vec3::sAxisY();
+        const JPH::BodyID ids[2] = {kit_.body_id(line.body),
+                                    kit_.body_id(line.cable_segments[static_cast<std::size_t>(i)])};
+        JPH::BodyLockMultiWrite lock(physics_.GetBodyLockInterface(), ids, 2);
+        if (lock.GetBody(0) == nullptr || lock.GetBody(1) == nullptr) {
+            continue;
+        }
+        JPH::Ref<JPH::FixedConstraint> fixed =
+            static_cast<JPH::FixedConstraint *>(weld.Create(*lock.GetBody(0), *lock.GetBody(1)));
+        physics_.AddConstraint(fixed);
+        line.cable_welds.push_back(fixed);
+    }
+}
+
+void Zipline::unweld_chain(Line &line) {
+    for (JPH::Ref<JPH::FixedConstraint> &weld : line.cable_welds) {
+        if (weld != nullptr) {
+            physics_.RemoveConstraint(weld);
+            weld = nullptr;
+        }
+    }
+    line.cable_welds.clear();
+}
+
+JPH::RVec3 Zipline::segment_centre(const Line &line, const int segment) const {
+    return kit_.body_position(line.cable_segments[static_cast<std::size_t>(segment)]);
+}
+
+JPH::RVec3 Zipline::segment_point(const Line &line, const int segment, const JPH::RVec3 at) const {
+    const JPH::RVec3 centre = segment_centre(line, segment);
+    const JPH::Vec3 axis = kit_.body_rotation(line.cable_segments[static_cast<std::size_t>(segment)]) *
+                           JPH::Vec3::sAxisY();
+    const float along = std::clamp(JPH::Vec3(at - centre).Dot(axis), -0.5F * line.cable_pitch, 0.5F * line.cable_pitch);
+    return centre + axis * along;
+}
+
+// J-095: pulling the pin lifts it clear of its slot, out of its hole.
+// The kit's pre_step sees it past its tolerance and unlatches the catch
+// on the next tick; pin_pulled is set here, at once, so a pull is a pull
+// the moment it is made. A line with no keeper pin has no pin to pull.
+void Zipline::pull_pin(const int line) {
+    if (line < 0 || line >= static_cast<int>(lines_.size())) {
+        return;
+    }
+    Line &held = lines_[static_cast<std::size_t>(line)];
+    if (!held.keeper_pin || held.pin_pulled) {
+        return;
+    }
+    held.pin_pulled = true;
+    const JPH::RVec3 at = kit_.body_position(held.pin_body);
+    kit_.place_body(held.pin_body, at + JPH::Vec3(0.0F, 0.5F, 0.0F), kit_.body_rotation(held.pin_body));
+}
+
+bool Zipline::pin_pulled(const int line) const noexcept {
+    if (line < 0 || line >= static_cast<int>(lines_.size())) {
+        return false;
+    }
+    return lines_[static_cast<std::size_t>(line)].pin_pulled;
+}
+
+RVec3 Zipline::cable_top(const int line) const {
+    const Line &held = lines_[static_cast<std::size_t>(line)];
+    if (!held.keeper_pin) {
+        return held.top;
+    }
+    // The cable's near end is the top segment's centre, pinned or not:
+    // while pinned it sits 0.4 m below the anchor, and reading the anchor
+    // instead hides a chain that fell early and pollutes the first
+    // velocity sample with the offset.
+    return segment_centre(held, 0);
+}
+
+RVec3 Zipline::cable_nearest(const int line, const RVec3 at) const {
+    const Line &held = lines_[static_cast<std::size_t>(line)];
+    if (!held.keeper_pin) {
+        return held.top;
+    }
+    // The nearest point on the nearest segment, pinned or released: the
+    // hands hold the cable itself, not a segment's centre a metre away,
+    // and reading the anchor while pinned hides a chain that fell early.
+    float best_distance = std::numeric_limits<float>::max();
+    JPH::RVec3 best_point = held.top;
+    for (int i = 0; i < held.cable_count; ++i) {
+        const JPH::RVec3 point = segment_point(held, i, at);
+        const float distance = JPH::Vec3(at - point).Length();
+        if (distance < best_distance) {
+            best_distance = distance;
+            best_point = point;
+        }
+    }
+    return best_point;
+}
+
+RVec3 Zipline::pin_position(const int line) const {
+    const Line &held = lines_[static_cast<std::size_t>(line)];
+    if (!held.keeper_pin) {
+        return held.top;
+    }
+    return kit_.body_position(held.pin_body);
 }
 
 int Zipline::at_hand(const RVec3 hands, const float reach, RVec3 &bar) const {
@@ -249,6 +456,7 @@ void Zipline::clip_other(const int index, const BodyID body, const Vec3 hands_of
     unclip_other();
     other_ = body;
     other_on_cable_ = on_cable;
+    other_hands_offset_ = hands_offset;
     attach(index, body, hands_offset, on_cable, other_slider_, other_state_);
 }
 
@@ -301,11 +509,21 @@ RVec3 Zipline::bar() const {
 }
 
 void Zipline::unclip() {
+    remove_rope(rope_);
     detach(slider_, state_);
 }
 
 void Zipline::unclip_other() {
+    remove_rope(other_rope_);
     detach(other_slider_, other_state_);
+    other_hands_offset_ = JPH::Vec3::sZero();
+}
+
+void Zipline::remove_rope(Ref<kit::RopeConstraint> &rope) {
+    if (rope != nullptr) {
+        physics_.RemoveConstraint(rope);
+        rope = nullptr;
+    }
 }
 
 void Zipline::detach(Ref<SliderConstraint> &slider, State &state) {
@@ -320,6 +538,8 @@ void Zipline::detach(Ref<SliderConstraint> &slider, State &state) {
     state.braking = false;
     state.hand_brake = 0.0F;
     state.hands_load_n = 0.0F;
+    state.rope_riding = false;
+    state.rope_segment = -1;
 }
 
 void Zipline::set_hand_brake(const float squeeze) noexcept {
@@ -331,13 +551,116 @@ void Zipline::set_other_brake(const float squeeze) noexcept {
 }
 
 void Zipline::post_step(const float delta_seconds) {
-    track(slider_, state_, player_, false, delta_seconds);
-    track(other_slider_, other_state_, other_, other_on_cable_, delta_seconds);
+    // A pulled pin releases the chain: the kit's pre_step unlatches the
+    // catch once the pin is past its tolerance, and the riders move from
+    // the static slider onto the falling chain in this step. The pin may
+    // have been pulled by the debug pull (pin_pulled already set) or taken
+    // in hand (the catch alone says so); either way the catch is the
+    // release, and the transfer runs once.
+    for (int i = 0; i < static_cast<int>(lines_.size()); ++i) {
+        Line &line = lines_[static_cast<std::size_t>(i)];
+        if (!line.keeper_pin || line.cable_transferred || kit_.catch_latched(line.pin_catch)) {
+            continue;
+        }
+        line.pin_pulled = true;
+        unweld_chain(line);
+        transfer_riders(line, i);
+        line.cable_transferred = true;
+    }
+    track(slider_, state_, player_, false, delta_seconds, rope_);
+    track(other_slider_, other_state_, other_, other_on_cable_, delta_seconds, other_rope_);
+}
+
+// J-095: the riders on a released line move onto the falling chain. Each
+// rider's slider comes off the static body and a transfer rope ties the
+// rider's hands to the nearest point on the nearest segment — her forearms
+// over the cable, his hands on the bar. The rope, not a velocity write,
+// carries the rider with the cable: the rider's acceleration matches the
+// cable's through it.
+void Zipline::transfer_riders(Line &line, const int index) {
+    (void)line;
+    // DIAG J-095: remove once the transfer is proven.
+    std::printf("  zipline pin: DIAG transfer line %d player slider %d line %d, other slider %d line %d\n", index,
+                slider_ != nullptr, state_.line, other_slider_ != nullptr, other_state_.line);
+    if (slider_ != nullptr && state_.line == index) {
+        transfer(index, player_, hands_offset_, kTransferRopeHisM, slider_, state_, rope_);
+    }
+    if (other_slider_ != nullptr && other_state_.line == index) {
+        transfer(index, other_, other_hands_offset_, kTransferRopeHerM, other_slider_, other_state_, other_rope_);
+    }
+}
+
+void Zipline::transfer(const int index, const JPH::BodyID body, const JPH::Vec3 hands_offset,
+                       const float max_length, Ref<SliderConstraint> &slider, State &state,
+                       Ref<kit::RopeConstraint> &rope) {
+    Line &line = lines_[static_cast<std::size_t>(index)];
+    const BodyInterface &bodies = physics_.GetBodyInterfaceNoLock();
+    const RVec3 hands = bodies.GetPosition(body) + hands_offset;
+    // The nearest segment, and the nearest point on it to the hands.
+    int best = 0;
+    float best_distance = std::numeric_limits<float>::max();
+    RVec3 best_point = line.top;
+    for (int i = 0; i < line.cable_count; ++i) {
+        const RVec3 point = segment_point(line, i, hands);
+        const float distance = Vec3(hands - point).Length();
+        if (distance < best_distance) {
+            best = i;
+            best_distance = distance;
+            best_point = point;
+        }
+    }
+    // The slider comes off; the state stays a ride, now on the rope.
+    if (slider != nullptr) {
+        physics_.RemoveConstraint(slider);
+        slider = nullptr;
+    }
+    remove_rope(rope);
+    JPH::PulleyConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mBodyPoint1 = hands;
+    settings.mBodyPoint2 = best_point;
+    settings.mFixedPoint1 = best_point;
+    settings.mFixedPoint2 = best_point;
+    settings.mMinLength = 0.0F;
+    settings.mMaxLength = max_length;
+    const JPH::BodyID ids[2] = {body, kit_.body_id(line.cable_segments[static_cast<std::size_t>(best)])};
+    JPH::BodyLockMultiWrite lock(physics_.GetBodyLockInterface(), ids, 2);
+    if (lock.GetBody(0) == nullptr || lock.GetBody(1) == nullptr) {
+        return;
+    }
+    rope = new kit::RopeConstraint(*lock.GetBody(0), *lock.GetBody(1), settings, true);
+    physics_.AddConstraint(rope);
+    // DIAG J-095: remove once the transfer is proven.
+    const JPH::RVec3 seg_centre = segment_centre(line, best);
+    std::printf("  zipline pin: DIAG rope to segment %d, hands (%.2f, %.2f, %.2f) point (%.2f, %.2f, %.2f) "
+                "gap %.3f max %.2f centre (%.2f, %.2f, %.2f)\n",
+                best, float(hands.GetX()), float(hands.GetY()), float(hands.GetZ()), float(best_point.GetX()),
+                float(best_point.GetY()), float(best_point.GetZ()), best_distance, max_length,
+                float(seg_centre.GetX()), float(seg_centre.GetY()), float(seg_centre.GetZ()));
+    state.rope_riding = true;
+    state.rope_segment = best;
 }
 
 void Zipline::track(const Ref<SliderConstraint> &slider, State &state, const BodyID body, const bool on_cable,
-                    const float delta_seconds) {
+                    const float delta_seconds, const Ref<kit::RopeConstraint> &rope) {
     if (slider == nullptr) {
+        // On the falling chain: the place is the segment's arc length, the
+        // speed the rider's velocity along the segment's axis, and the load
+        // the transfer rope's pull this step.
+        if (!state.rope_riding || state.line < 0 || state.line >= static_cast<int>(lines_.size())) {
+            return;
+        }
+        const Line &line = lines_[static_cast<std::size_t>(state.line)];
+        if (state.rope_segment < 0 || state.rope_segment >= line.cable_count) {
+            return;
+        }
+        const JPH::Vec3 axis = kit_.body_rotation(line.cable_segments[static_cast<std::size_t>(state.rope_segment)]) *
+                               JPH::Vec3::sAxisY();
+        state.along_m = static_cast<float>(state.rope_segment) * line.cable_pitch + 0.5F * line.cable_pitch;
+        state.speed_mps = physics_.GetBodyInterfaceNoLock().GetLinearVelocity(body).Dot(axis);
+        state.hands_load_n =
+            rope != nullptr ? std::abs(rope->GetTotalLambdaPosition()) / std::max(delta_seconds, 1.0e-4F) : 0.0F;
+        state.braking = false;
         return;
     }
     Line &line = lines_[static_cast<std::size_t>(state.line)];
@@ -369,6 +692,32 @@ void Zipline::restore() {
         line.trolley_m = kParkM;
         line.block_m = line.length - kStopMarginM - line.brake_m;
         line.parked = true;
+        if (!line.keeper_pin) {
+            continue;
+        }
+        // A load resets to the pinned state: the chain back on the line,
+        // the pin back in its hole, at rest, so the kit's pre_step
+        // relatches the catch on the next tick.
+        line.pin_pulled = false;
+        line.cable_transferred = false;
+        unweld_chain(line);
+        const Vec3 direction = line.direction;
+        const Quat rotation = Quat::sFromTo(Vec3::sAxisY(), direction);
+        BodyInterface &bodies = physics_.GetBodyInterface();
+        for (int i = 0; i < line.cable_count; ++i) {
+            const kit::BodyIndex seg = line.cable_segments[static_cast<std::size_t>(i)];
+            const RVec3 centre =
+                line.top + direction * (static_cast<float>(i) * line.cable_pitch + 0.5F * line.cable_pitch);
+            kit_.place_body(seg, centre, rotation);
+            bodies.SetLinearAndAngularVelocity(kit_.body_id(seg), Vec3::sZero(), Vec3::sZero());
+        }
+        const Vec3 run = Vec3(direction.GetX(), 0.0F, direction.GetZ()).NormalizedOr(Vec3::sAxisZ());
+        const Vec3 across(-run.GetZ(), 0.0F, run.GetX());
+        const RVec3 pin_at =
+            line.top_floor + across * 0.95F + run * kPinRunM + Vec3(0.0F, kPinSeatHeightM, 0.0F);
+        kit_.place_body(line.pin_body, pin_at, Quat::sFromTo(Vec3::sAxisZ(), run));
+        bodies.SetLinearAndAngularVelocity(kit_.body_id(line.pin_body), Vec3::sZero(), Vec3::sZero());
+        weld_chain(line);
     }
 }
 

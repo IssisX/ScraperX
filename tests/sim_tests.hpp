@@ -869,6 +869,7 @@ void run_climb_moves();
 void run_wall_chain();
 void run_up_controls();
 void run_zipline();
+void run_zipline_pin();  // J-095 #413: the keeper pin on the yard line
 void run_corpse();
 void run_arm_break();
 void run_wind_own_drive();

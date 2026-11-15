@@ -315,7 +315,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     reserved.push_back(hook_practice_ground());
     zipline_ = std::make_unique<Zipline>(physics_system_, *kit_, player_id_, std::move(reserved));
     corpses_ = std::make_unique<Corpses>(physics_system_, object_layers::kCorpse);
-    (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0));
+    (void)zipline_->add_line(JPH::RVec3(-2.0, 22.0, -125.5), JPH::RVec3(-2.0, 0.0, -72.0), true);
     // Across the well, from the band's inner edge (the top post 1.4 m in from
     // it, its stand toward the well hugging the edge, the rest of the band
     // open; the bottom post a meter and a half in from the far band's) to the

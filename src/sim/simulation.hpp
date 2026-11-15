@@ -1928,6 +1928,14 @@ public:
     [[nodiscard]] std::uint32_t zipline_count() const noexcept;
     [[nodiscard]] ZiplineLine zipline_line(std::uint32_t index) const noexcept;
     [[nodiscard]] Vector3 zipline_bar() const noexcept;
+    // J-095 #413: the keeper pin on a line (see sim/zipline.hpp). Pulling
+    // it releases the cable's near end; the cable is then a rope of
+    // segments, hinged at its far end.
+    void debug_pull_zipline_pin(int line) noexcept;
+    [[nodiscard]] bool zipline_pin_pulled(int line) const noexcept;
+    [[nodiscard]] Vector3 zipline_cable_top(int line) const noexcept;
+    [[nodiscard]] Vector3 zipline_cable_nearest(int line, Vector3 at) const noexcept;
+    [[nodiscard]] Vector3 zipline_pin_position(int line) const noexcept;
     // The corpses (sim/corpse.hpp), oldest first: each part's place and turn,
     // and whether the corpse has come to rest. Parts: Corpses::Part.
     struct CorpsePart {

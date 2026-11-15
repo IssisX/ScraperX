@@ -323,7 +323,11 @@ void Matron::ride_line() {
     } else {
         line_stall_s_ = 0.0F;
     }
-    if (at_end && ((still && (down_here || line_stall_s_ >= 2.0F)) || (!still && carried_lands))) {
+    // On the falling chain (J-095) there is no end to arrive at: down on a
+    // floor under her and still, she lets go, without the at_end gate.
+    // After the drape she is on the ground and the cable is down.
+    if ((at_end && ((still && (down_here || line_stall_s_ >= 2.0F)) || (!still && carried_lands))) ||
+        (ride.rope_riding && still && down_here)) {
         zipline_->unclip_other();
         on_line_ = false;
         line_stall_s_ = 0.0F;

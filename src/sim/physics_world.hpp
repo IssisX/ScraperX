@@ -156,6 +156,7 @@ public:
     // The crane's remote within the hands' reach in its cabinet.
     [[nodiscard]] bool yard_crane_remote_in_reach() const noexcept;
     [[nodiscard]] const Zipline &zipline() const noexcept { return *zipline_; }
+    [[nodiscard]] Zipline &zipline() noexcept { return *zipline_; }
     [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     [[nodiscard]] const ImpactLedger &impacts() const noexcept { return *impacts_; }

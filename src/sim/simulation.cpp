@@ -1133,6 +1133,27 @@ Vector3 Simulation::zipline_bar() const noexcept {
     return to_sim_vector(physics_world_->zipline().bar());
 }
 
+void Simulation::debug_pull_zipline_pin(const int line) noexcept {
+    physics_world_->zipline().pull_pin(line);
+}
+
+bool Simulation::zipline_pin_pulled(const int line) const noexcept {
+    return physics_world_->zipline().pin_pulled(line);
+}
+
+Vector3 Simulation::zipline_cable_top(const int line) const noexcept {
+    return to_sim_vector(physics_world_->zipline().cable_top(line));
+}
+
+Vector3 Simulation::zipline_cable_nearest(const int line, const Vector3 at) const noexcept {
+    return to_sim_vector(physics_world_->zipline().cable_nearest(
+        line, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z))));
+}
+
+Vector3 Simulation::zipline_pin_position(const int line) const noexcept {
+    return to_sim_vector(physics_world_->zipline().pin_position(line));
+}
+
 Simulation::CorpsePart Simulation::corpse_part(const std::uint32_t corpse, const std::uint32_t part) const noexcept {
     const Corpses::PartPose pose =
         physics_world_->corpses().part(static_cast<int>(corpse), static_cast<int>(part));

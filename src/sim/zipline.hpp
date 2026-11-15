@@ -44,6 +44,7 @@
 
 #include <Jolt/Jolt.h>
 
+#include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
@@ -103,6 +104,36 @@ public:
     // line's footings leave to the one working it.
     static constexpr float kWorkingRoomM = 2.0F;
 
+    // The keeper pin (J-095 #413): one pin holds a line's cable. The pin is
+    // a small steel body in the top bracket, carried as a handle; pulling it
+    // out of its hole releases the cable's near end, and the cable becomes a
+    // rope of segments (kCableMassPerM), hinged at its far end, that goes
+    // slack and drapes. The free end falls; it does not rise.
+    static constexpr std::uint64_t kPinEntityId = 2400;
+    static constexpr std::uint64_t kFirstCableEntity = 2401;
+    static constexpr int kMaxCableSegments = 30;
+    // 30 mm steel wire rope, about 3.5 kg a metre (solid steel at that
+    // section is 5.5 kg/m; a wire rope's fill is about 0.63 of solid).
+    static constexpr float kCableMassPerM = 3.5F;
+    static constexpr float kCableSegmentM = 2.0F;  // a segment's length
+    static constexpr float kPinToleranceM = 0.15F; // the pull that clears the hole
+    // The pin sits in a slot on the top post, low enough that a hand on the
+    // deck or the stand can pull it: the pick-up's reach is 1.2 m from the
+    // body's centre, and it is refused while hanging, so a pin at the
+    // anchor (4.8 m up) could never be pulled by hand. The post's saddle
+    // bracket is the anchor; the pin in the post below it is the keeper.
+    static constexpr float kPinSeatHeightM = 2.5F; // the pin over the top floor
+    // The pin's centre along the line's run from the top post: far enough
+    // south that the pin (0.5 m long along the run) clears the post's
+    // south face, or the solver ejects it out of the penetration at
+    // build. (First seated at 0.1 m: the pin passed through the post and
+    // fell to the floor below before the player reached the stand.)
+    static constexpr float kPinRunM = 0.45F;
+    // A transfer rope's most: her forearms over the cable, his hands on the
+    // bar 0.28 m under it.
+    static constexpr float kTransferRopeHerM = 0.15F;
+    static constexpr float kTransferRopeHisM = 0.35F;
+
     struct Line {
         JPH::RVec3 top;        // the top anchor
         JPH::RVec3 bottom;     // the bottom anchor
@@ -117,7 +148,23 @@ public:
         float trolley_m = 0.0F;  // the trolley's place down the line from the top anchor
         float block_m = 0.0F;    // the block's
         bool parked = true;      // the trolley on its hook at the top
+        bool keeper_pin = false; // the cable is a chain held by the keeper pin (J-095)
         kit::BodyIndex body{};
+        // The chain (a keeper-pin line only): its segments, the ropes
+        // joining them end to end, the pin in its slot on the top post,
+        // the catch holding the top segment while the pin is seated, and
+        // the hinge at the bottom anchor the chain swings about. The
+        // welds hold each segment to the static body while pinned (below).
+        std::vector<kit::BodyIndex> cable_segments;
+        std::vector<kit::RopeIndex> cable_ropes;
+        std::vector<JPH::Ref<JPH::FixedConstraint>> cable_welds;
+        kit::BodyIndex pin_body{};
+        kit::CatchIndex pin_catch{};
+        JPH::Ref<JPH::PointConstraint> bottom_hinge;
+        int cable_count = 0;
+        float cable_pitch = 0.0F;
+        bool pin_pulled = false;       // the pin is out of its hole
+        bool cable_transferred = false; // the riders moved onto the falling chain
     };
     struct State {
         bool riding = false;
@@ -128,6 +175,8 @@ public:
         float hand_brake = 0.0F;   // the squeeze, 0..1
         float hands_load_n = 0.0F; // what the bar puts on the hands, this step
         std::uint64_t rides = 0;
+        bool rope_riding = false;  // on the falling chain, by a transfer rope (J-095)
+        int rope_segment = -1;     // the chain segment the rope holds
     };
 
     // `reserved`: ground no line's footings may take (the places the player
@@ -139,8 +188,21 @@ public:
 
     // A line from a top post standing on top_floor to a bottom post on
     // bottom_floor, built only if it fits (see above): false where it does
-    // not, and nothing is built.
-    bool add_line(JPH::RVec3 top_floor, JPH::RVec3 bottom_floor);
+    // not, and nothing is built. `keeper_pin`: the cable is a chain held by
+    // the keeper pin (J-095) instead of a member of the static body.
+    bool add_line(JPH::RVec3 top_floor, JPH::RVec3 bottom_floor, bool keeper_pin = false);
+    // Pull the keeper pin out of its hole (the player's pull, or a test's):
+    // the cable's near end is released.
+    void pull_pin(int line);
+    // Whether the pin on `line` has been pulled.
+    [[nodiscard]] bool pin_pulled(int line) const noexcept;
+    // The cable's near end: the top anchor, or the top segment's centre
+    // on a keeper-pin line (pinned or released).
+    [[nodiscard]] JPH::RVec3 cable_top(int line) const;
+    // The nearest point on the cable to `at`: the top anchor while pinned.
+    [[nodiscard]] JPH::RVec3 cable_nearest(int line, JPH::RVec3 at) const;
+    // Where the keeper pin sits (its seat while pinned).
+    [[nodiscard]] JPH::RVec3 pin_position(int line) const;
     // The line whose parked trolley's bar is within `reach` of `hands` (the
     // caller holds the bar over the head: kSwingMinHandRise): its index and
     // the bar, or -1.
@@ -202,7 +264,25 @@ private:
                 JPH::Ref<JPH::SliderConstraint> &slider, State &state);
     void detach(JPH::Ref<JPH::SliderConstraint> &slider, State &state);
     void track(const JPH::Ref<JPH::SliderConstraint> &slider, State &state, JPH::BodyID body, bool on_cable,
-               float delta_seconds);
+               float delta_seconds, const JPH::Ref<kit::RopeConstraint> &rope);
+    // The chain for a keeper-pin line (J-095): its segments end to end on
+    // the line, the pin in its slot, the catch, and the bottom hinge.
+    void build_chain(Line &line, int index);
+    // The pin welds: each segment welded to the static body at its seat
+    // while pinned, off on the release.
+    void weld_chain(Line &line);
+    void unweld_chain(Line &line);
+    // The pin out: the riders on `line` move from the static slider onto
+    // the falling chain, each by a transfer rope to its nearest segment.
+    void transfer_riders(Line &line, int index);
+    void transfer(int index, JPH::BodyID body, JPH::Vec3 hands_offset, float max_length,
+                  JPH::Ref<JPH::SliderConstraint> &slider, State &state,
+                  JPH::Ref<kit::RopeConstraint> &rope);
+    void remove_rope(JPH::Ref<kit::RopeConstraint> &rope);
+    // Where a chain segment sits on the line, and the nearest point on a
+    // segment to `at`.
+    [[nodiscard]] JPH::RVec3 segment_centre(const Line &line, int segment) const;
+    [[nodiscard]] JPH::RVec3 segment_point(const Line &line, int segment, JPH::RVec3 at) const;
     JPH::Ref<JPH::SliderConstraint> slider_;
     JPH::Vec3 hands_offset_ = JPH::Vec3::sZero();
     State state_{};
@@ -210,6 +290,10 @@ private:
     JPH::Ref<JPH::SliderConstraint> other_slider_;
     State other_state_{};
     bool other_on_cable_ = false;
+    JPH::Vec3 other_hands_offset_ = JPH::Vec3::sZero();
+    // The transfer ropes (J-095): the riders' holds on the falling chain.
+    JPH::Ref<kit::RopeConstraint> rope_;
+    JPH::Ref<kit::RopeConstraint> other_rope_;
 };
 
 } // namespace scraperx::sim
